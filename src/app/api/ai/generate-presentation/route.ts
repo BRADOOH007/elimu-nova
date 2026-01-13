@@ -247,15 +247,14 @@ Make sure to:
 Generate exactly ${slideCount} slides with this format. Each slide MUST have an Image Prompt and Layout specified.`
 
     // Use OpenAI AI to generate the content
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'X-Title': 'ElimuNova AI Presentation Generator'
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: 'gpt-4',
         messages: [
           {
             role: 'user',
