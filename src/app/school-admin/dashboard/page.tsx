@@ -44,8 +44,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from 'sonner'
-import { toast } from 'sonner'
-import { toast } from 'sonner'
 
 interface DashboardStats {
   totalTeachers: { value: number; change: string }

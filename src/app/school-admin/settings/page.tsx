@@ -303,8 +303,9 @@ export default function SchoolAdminSettingsPage() {
       console.error('Error deleting setting:', error)
       toast.error('Failed to delete setting')
     }
-  }  ret
-urn (
+  }
+
+  return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
       {/* Settings content would go here */}
