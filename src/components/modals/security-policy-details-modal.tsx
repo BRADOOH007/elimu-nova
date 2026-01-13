@@ -142,9 +142,7 @@ export default function SecurityPolicyDetailsModal({
   const handleDelete = async () => {
     if (!policy) return
 
-    if (!confirm('Are you sure you want to delete this security policy? This action cannot be undone.')) {
-      return
-    }
+    // Confirmation removed - using toast notifications only
 
     setLoading(true)
     try {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { OpenRouterAI } from '@/lib/openrouter-ai';
+import { OpenAIService } from '@/lib/openai-service';
 
 export async function POST(req: NextRequest) {
   try {
@@ -193,7 +193,7 @@ Make it engaging, hands-on, and relevant to real-world applications.`;
     // Simulate AI generation (replace with actual AI service)
     console.log('API received data:', { type, subject, grade, topic, title: generatedTitle, description, lessonPlanId, duration, difficulty, requirements });
     
-    const generatedContent = await generateAIContentWithOpenRouter(type, prompt, {
+    const generatedContent = await generateAIContentWithOpenAI(type, prompt, {
       subject,
       grade,
       topic,
@@ -227,7 +227,7 @@ Make it engaging, hands-on, and relevant to real-world applications.`;
   }
 }
 
-async function generateAIContentWithOpenRouter(
+async function generateAIContentWithOpenAI(
   type: string, 
   prompt: string, 
   context: {
@@ -243,10 +243,10 @@ async function generateAIContentWithOpenRouter(
   }
 ): Promise<string> {
   try {
-    console.log('Generating AI content with OpenRouter for type:', type);
+    console.log('Generating AI content with OpenAI for type:', type);
     
     if (type === 'assignment') {
-      // Use direct OpenRouter API for assignment generation
+      // Use direct OpenAI API for assignment generation
       const systemPrompt = `You are an expert teacher creating student assignments. Generate clear, engaging assignment content based on the teacher's requirements.
 
 Teacher Requirements:
@@ -294,7 +294,7 @@ Make it practical, clear, and focused on what students need to DO.`;
       });
 
       if (!response.ok) {
-        throw new Error(`OpenRouter API error: ${response.status}`);
+        throw new Error(`OpenAI API error: ${response.status}`);
       }
 
       const data = await response.json();
@@ -330,7 +330,7 @@ ${prompt}
 
 Make it comprehensive, engaging, and appropriate for ${context.grade} level students studying ${context.subject}.`;
 
-    // Use OpenRouter's general chat completion
+    // Use OpenAI's general chat completion
     // Since makeRequest is private, we'll use a different approach
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -352,7 +352,7 @@ Make it comprehensive, engaging, and appropriate for ${context.grade} level stud
     });
 
     if (!response.ok) {
-      throw new Error(`OpenRouter API error: ${response.status}`);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -361,7 +361,7 @@ Make it comprehensive, engaging, and appropriate for ${context.grade} level stud
     return aiResponse;
     
   } catch (error) {
-    console.error('Error generating AI content with OpenRouter:', error);
+    console.error('Error generating AI content with OpenAI:', error);
     
     // Fallback to basic content generation
     return generateFallbackContent(type, context);

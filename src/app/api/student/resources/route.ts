@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { OpenRouterAI } from '@/lib/openrouter-ai'
+import { OpenAIService } from '@/lib/openai-service'
 
 // GET - Fetch student resources
 export async function GET(request: NextRequest) {
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate AI resource content
-    const aiResource = await OpenRouterAI.generateAIResource({
+    const aiResource = await OpenAIAI.generateAIResource({
       type,
       subject,
       topic,

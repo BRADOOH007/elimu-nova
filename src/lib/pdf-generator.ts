@@ -24,8 +24,8 @@ export interface ReportData {
     id: string
     name: string
     email: string
-    address: string
-    phone: string
+    address?: string
+    phone?: string
   } | null
 }
 
@@ -44,7 +44,7 @@ export class PDFGenerator {
       title: reportData.title,
       subject: `Report - ${reportData.type}`,
       author: `${reportData.generatedByUser.firstName} ${reportData.generatedByUser.lastName}`,
-      creator: 'EduGenius AI',
+      creator: 'ElimuNova AI',
       keywords: 'report, education, analytics',
     })
 
@@ -76,7 +76,7 @@ export class PDFGenerator {
     doc.setTextColor(255, 255, 255)
     doc.setFontSize(20)
     doc.setFont('helvetica', 'bold')
-    doc.text('EduGenius AI', 25, 35)
+    doc.text('ElimuNova AI', 25, 35)
     
     // Report title
     doc.setTextColor(0, 0, 0)
@@ -181,49 +181,343 @@ export class PDFGenerator {
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(0, 0, 0)
     
-    // Parse and display content
+    // Parse and display content in a structured way
     try {
       const content = JSON.parse(reportData.content)
-      const contentText = JSON.stringify(content, null, 2)
-      const contentLines = doc.splitTextToSize(contentText, 170)
       
-      // Check if content fits on current page
-      if (yPosition + (contentLines.length * 4) > 250) {
-        doc.addPage()
-        yPosition = 20
+      // Handle different report types with structured display
+      if (content.analytics) {
+        yPosition = this.addAnalyticsContent(content.analytics, yPosition)
+      } else if (content.financial) {
+        yPosition = this.addFinancialContent(content.financial, yPosition)
+      } else if (content.academic) {
+        yPosition = this.addAcademicContent(content.academic, yPosition)
+      } else if (content.userActivity) {
+        yPosition = this.addUserActivityContent(content.userActivity, yPosition)
+      } else if (content.systemHealth) {
+        yPosition = this.addSystemHealthContent(content.systemHealth, yPosition)
+      } else {
+        yPosition = this.addGenericContent(content, yPosition)
       }
-      
-      doc.text(contentLines, 20, yPosition)
-      yPosition += contentLines.length * 4 + 10
     } catch (error) {
-      doc.text('Content could not be parsed as JSON', 20, yPosition)
+      doc.text('Content could not be parsed', 20, yPosition)
       yPosition += 10
     }
     
     // Filters
     if (reportData.filters) {
       yPosition += 10
+      
+      // Check if we need a new page
+      if (yPosition > 250) {
+        doc.addPage()
+        yPosition = 20
+      }
+      
       doc.setFont('helvetica', 'bold')
-      doc.text('Filters Applied:', 20, yPosition)
-      yPosition += 5
+      doc.setTextColor(59, 130, 246)
+      doc.text('Applied Filters:', 20, yPosition)
+      yPosition += 8
       
       doc.setFont('helvetica', 'normal')
+      doc.setTextColor(0, 0, 0)
+      
       try {
         const filters = JSON.parse(reportData.filters)
-        const filterText = JSON.stringify(filters, null, 2)
-        const filterLines = doc.splitTextToSize(filterText, 170)
-        
-        // Check if filters fit on current page
-        if (yPosition + (filterLines.length * 4) > 250) {
-          doc.addPage()
-          yPosition = 20
-        }
-        
-        doc.text(filterLines, 20, yPosition)
+        Object.entries(filters).forEach(([key, value]) => {
+          const filterText = `${key.replace(/([A-Z])/g, ' $1').trim()}: ${Array.isArray(value) ? value.join(', ') : String(value)}`
+          doc.text(`• ${filterText}`, 25, yPosition)
+          yPosition += 5
+        })
       } catch (error) {
-        doc.text('Filters could not be parsed as JSON', 20, yPosition)
+        doc.text('Filters could not be parsed', 25, yPosition)
       }
     }
+  }
+
+  private addAnalyticsContent(analytics: any, startY: number): number {
+    const { doc } = this
+    let yPosition = startY
+    
+    // Metrics section
+    if (analytics.metrics) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Key Metrics:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(analytics.metrics).forEach(([key, value]) => {
+        const metricName = key.replace(/([A-Z])/g, ' $1').trim()
+        const metricValue = typeof value === 'number' ? value.toLocaleString() : String(value)
+        doc.text(`• ${metricName}: ${metricValue}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 5
+    }
+    
+    // Trends section
+    if (analytics.trends) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Trends:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(analytics.trends).forEach(([key, trend]: [string, any]) => {
+        const trendName = key.replace(/([A-Z])/g, ' $1').trim()
+        const direction = trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '→'
+        doc.text(`• ${trendName}: ${direction} ${trend.percentage}%`, 25, yPosition)
+        yPosition += 5
+      })
+    }
+    
+    return yPosition
+  }
+
+  private addFinancialContent(financial: any, startY: number): number {
+    const { doc } = this
+    let yPosition = startY
+    
+    // Revenue section
+    if (financial.revenue) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Revenue:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(financial.revenue).forEach(([key, value]) => {
+        const label = key.replace(/([A-Z])/g, ' $1').trim()
+        const amount = typeof value === 'number' ? `$${value.toLocaleString()}` : String(value)
+        doc.text(`• ${label}: ${amount}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 5
+    }
+    
+    // Expenses section
+    if (financial.expenses) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Expenses:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(financial.expenses).forEach(([key, value]) => {
+        const label = key.replace(/([A-Z])/g, ' $1').trim()
+        const amount = typeof value === 'number' ? `$${value.toLocaleString()}` : String(value)
+        doc.text(`• ${label}: ${amount}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 5
+    }
+    
+    // Breakdown section
+    if (financial.breakdown) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Financial Breakdown:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(financial.breakdown).forEach(([key, value]) => {
+        const label = key.replace(/([A-Z])/g, ' $1').trim()
+        const amount = typeof value === 'number' ? `$${value.toLocaleString()}` : String(value)
+        doc.text(`• ${label}: ${amount}`, 25, yPosition)
+        yPosition += 5
+      })
+    }
+    
+    return yPosition
+  }
+
+  private addAcademicContent(academic: any, startY: number): number {
+    const { doc } = this
+    let yPosition = startY
+    
+    // Students section
+    if (academic.students) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Student Statistics:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(academic.students).forEach(([key, value]) => {
+        const label = key.replace(/([A-Z])/g, ' $1').trim()
+        doc.text(`• ${label}: ${value}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 5
+    }
+    
+    // Performance section
+    if (academic.performance) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Performance Metrics:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(academic.performance).forEach(([key, value]) => {
+        const label = key.replace(/([A-Z])/g, ' $1').trim()
+        doc.text(`• ${label}: ${value}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 5
+    }
+    
+    // Subjects section
+    if (academic.subjects) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Subject Performance:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(academic.subjects).forEach(([subject, data]: [string, any]) => {
+        doc.text(`• ${subject}: ${data.average || 'N/A'} (${data.grade || 'N/A'})`, 25, yPosition)
+        yPosition += 5
+      })
+    }
+    
+    return yPosition
+  }
+
+  private addUserActivityContent(userActivity: any, startY: number): number {
+    const { doc } = this
+    let yPosition = startY
+    
+    // Active users section
+    if (userActivity.activeUsers) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Active Users:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(userActivity.activeUsers).forEach(([key, value]) => {
+        const label = key.replace(/([A-Z])/g, ' $1').trim()
+        doc.text(`• ${label}: ${value}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 5
+    }
+    
+    // Sessions section
+    if (userActivity.sessions) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Session Data:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(userActivity.sessions).forEach(([key, value]) => {
+        const label = key.replace(/([A-Z])/g, ' $1').trim()
+        doc.text(`• ${label}: ${value}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 5
+    }
+    
+    // Recent activities (limit to 5)
+    if (userActivity.activities && Array.isArray(userActivity.activities)) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Recent Activities:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      userActivity.activities.slice(0, 5).forEach((activity: any) => {
+        const activityText = `${activity.action || 'Unknown'} by ${activity.user || 'Unknown'}`
+        doc.text(`• ${activityText}`, 25, yPosition)
+        yPosition += 5
+      })
+    }
+    
+    return yPosition
+  }
+
+  private addSystemHealthContent(systemHealth: any, startY: number): number {
+    const { doc } = this
+    let yPosition = startY
+    
+    // Uptime section
+    if (systemHealth.uptime) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('System Uptime:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      doc.text(`• Uptime: ${systemHealth.uptime.percentage || 'N/A'}%`, 25, yPosition)
+      yPosition += 10
+    }
+    
+    // Performance section
+    if (systemHealth.performance) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Performance Metrics:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(systemHealth.performance).forEach(([key, value]) => {
+        const label = key.replace(/([A-Z])/g, ' $1').trim()
+        const unit = key.includes('Time') ? 'ms' : key.includes('Usage') ? '%' : ''
+        doc.text(`• ${label}: ${value}${unit}`, 25, yPosition)
+        yPosition += 5
+      })
+      yPosition += 5
+    }
+    
+    // Services section
+    if (systemHealth.services) {
+      doc.setFont('helvetica', 'bold')
+      doc.text('Service Status:', 20, yPosition)
+      yPosition += 8
+      
+      doc.setFont('helvetica', 'normal')
+      Object.entries(systemHealth.services).forEach(([service, status]) => {
+        const serviceName = service.replace(/([A-Z])/g, ' $1').trim()
+        doc.text(`• ${serviceName}: ${status}`, 25, yPosition)
+        yPosition += 5
+      })
+    }
+    
+    return yPosition
+  }
+
+  private addGenericContent(content: any, startY: number): number {
+    const { doc } = this
+    let yPosition = startY
+    
+    doc.setFont('helvetica', 'bold')
+    doc.text('Report Data:', 20, yPosition)
+    yPosition += 8
+    
+    doc.setFont('helvetica', 'normal')
+    
+    // Display key-value pairs in a structured way
+    Object.entries(content).forEach(([key, value]) => {
+      const label = key.replace(/([A-Z])/g, ' $1').trim()
+      
+      if (typeof value === 'object' && value !== null) {
+        doc.text(`• ${label}:`, 25, yPosition)
+        yPosition += 5
+        
+        if (Array.isArray(value)) {
+          value.slice(0, 3).forEach((item) => {
+            const itemText = typeof item === 'object' ? JSON.stringify(item).substring(0, 50) + '...' : String(item)
+            doc.text(`  - ${itemText}`, 30, yPosition)
+            yPosition += 4
+          })
+          if (value.length > 3) {
+            doc.text(`  ... and ${value.length - 3} more items`, 30, yPosition)
+            yPosition += 4
+          }
+        } else {
+          Object.entries(value).slice(0, 3).forEach(([subKey, subValue]) => {
+            doc.text(`  - ${subKey}: ${String(subValue)}`, 30, yPosition)
+            yPosition += 4
+          })
+        }
+      } else {
+        const displayValue = typeof value === 'number' ? value.toLocaleString() : String(value)
+        doc.text(`• ${label}: ${displayValue}`, 25, yPosition)
+        yPosition += 5
+      }
+    })
+    
+    return yPosition
   }
 
   private addFooter(reportData: ReportData): void {
@@ -243,7 +537,7 @@ export class PDFGenerator {
       doc.setTextColor(100, 100, 100)
       
       // Left side
-      doc.text(`EduGenius AI Report - ${reportData.title}`, 20, 285)
+      doc.text(`ElimuNova AI Report - ${reportData.title}`, 20, 285)
       
       // Right side
       doc.text(`Page ${i} of ${pageCount}`, 170, 285)

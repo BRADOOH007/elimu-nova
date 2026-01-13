@@ -186,9 +186,7 @@ export default function SchedulePage() {
   }
 
   const handleDeleteEvent = async (eventId: string) => {
-    if (!confirm('Are you sure you want to delete this schedule item?')) {
-      return
-    }
+    // Confirmation removed - using toast notifications only
 
     try {
       const response = await fetch(`/api/teacher/schedules/${eventId}`, {

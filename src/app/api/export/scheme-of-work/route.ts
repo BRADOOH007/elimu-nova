@@ -262,36 +262,62 @@ function parseSchemeContent(content: string, lessonsPerWeek: number = 5, lessonD
   let currentLesson: any = null
   let weekNumber = 1
   let lessonNumber = 1
+  let currentSection = ''
+  
+  console.log('Debug - Starting to parse content with', lines.length, 'lines')
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim()
     
-    // Debug logging
-    if (i < 20) {
+    // Debug logging for first 30 lines
+    if (i < 30) {
       console.log(`Debug parsing line ${i}:`, line)
     }
     
     // Check for week headers (Week 1:, Week 2:, etc.)
-    if (line.match(/^\*\*Week\s+\d+:/i) || line.match(/^Week\s+\d+:/i)) {
+    if (line.match(/^\*\*Week\s+\d+/i) || line.match(/^Week\s+\d+/i) || line.match(/^#{1,3}\s*Week\s+\d+/i)) {
       // Save previous week if exists
-      if (currentWeek) {
+      if (currentWeek && currentWeek.lessons.length > 0) {
         weeks.push(currentWeek)
       }
       
+      // Extract week number
+      const weekMatch = line.match(/Week\s+(\d+)/i)
+      weekNumber = weekMatch ? parseInt(weekMatch[1]) : weekNumber
+      
+      console.log('Debug - Found week header:', line, 'Week number:', weekNumber)
+      
       // Start new week
-      weekNumber = parseInt(line.match(/Week\s+(\d+)/i)?.[1] || '1')
       currentWeek = {
         weekNumber,
         lessons: []
       }
       lessonNumber = 1
       currentLesson = null
+      currentSection = ''
     }
-    // Check for lesson headers (**Lesson X: or Topic:)
-    else if (line.match(/^\*\*Lesson\s+\d+:/i) || line.match(/^\*\*Topic:/i) || line.match(/^Topic:/i)) {
+    // Check for lesson headers (Lesson X:, Topic:, or numbered lessons)
+    else if (line.match(/^\*\*Lesson\s+\d+/i) || 
+             line.match(/^Lesson\s+\d+/i) || 
+             line.match(/^\*\*Topic:/i) || 
+             line.match(/^Topic:/i) ||
+             line.match(/^#{3,4}\s*Lesson/i) ||
+             line.match(/^\d+\.\s*\*\*.*\*\*$/)) {
+      
       console.log('Debug - Found lesson header:', line)
-      const topicTitle = line.replace(/^\*\*Lesson\s+\d+:\s*/i, '').replace(/^\*\*Topic:\s*/i, '').replace(/^Topic:\s*/i, '').replace(/\*\*$/, '').trim()
-      console.log('Debug - Extracted title:', topicTitle)
+      
+      // Extract lesson title
+      let topicTitle = line
+        .replace(/^\*\*Lesson\s+\d+:\s*/i, '')
+        .replace(/^Lesson\s+\d+:\s*/i, '')
+        .replace(/^\*\*Topic:\s*/i, '')
+        .replace(/^Topic:\s*/i, '')
+        .replace(/^#{3,4}\s*/i, '')
+        .replace(/^\d+\.\s*/i, '')
+        .replace(/^\*\*|\*\*$/g, '')
+        .trim()
+      
+      console.log('Debug - Extracted lesson title:', topicTitle)
       
       // If we don't have a current week, create one
       if (!currentWeek) {
@@ -310,70 +336,68 @@ function parseSchemeContent(content: string, lessonsPerWeek: number = 5, lessonD
       // Start new lesson
       currentLesson = {
         lessonNumber,
-        title: topicTitle,
+        title: topicTitle || `Lesson ${lessonNumber}`,
         objectives: [],
         activities: [],
         resources: [],
         assessment: [],
         duration: lessonDuration
       }
+      currentSection = ''
     }
-    // Check for objectives (**Objectives: or Objectives:)
-    else if (line.match(/^\*\*Objectives?:/i) || line.match(/^Objectives?:/i)) {
-      console.log('Debug - Found objectives section:', line)
-      if (currentLesson) {
-        // Get next few lines for objectives
-        let j = i + 1
-        while (j < lines.length && lines[j].trim() && !lines[j].match(/^\*\*(Teaching Activities|Resources|Assessment|Cross-curricular|Differentiation|Homework)/i)) {
-          const objLine = lines[j].trim()
-          if (objLine.startsWith('•') || objLine.startsWith('-') || objLine.match(/^\d+\./)) {
-            currentLesson.objectives.push(objLine.replace(/^[•\-\d+\.]\s*/, '').trim())
-          }
-          j++
+    // Check for section headers
+    else if (line.match(/^\*\*Objectives?:/i) || line.match(/^Objectives?:/i) || line.match(/^Learning Objectives?:/i)) {
+      currentSection = 'objectives'
+      console.log('Debug - Found objectives section')
+    }
+    else if (line.match(/^\*\*Teaching Activities:/i) || line.match(/^Teaching Activities:/i) || line.match(/^Activities:/i)) {
+      currentSection = 'activities'
+      console.log('Debug - Found activities section')
+    }
+    else if (line.match(/^\*\*Resources/i) || line.match(/^Resources/i) || line.match(/^Materials:/i)) {
+      currentSection = 'resources'
+      console.log('Debug - Found resources section')
+    }
+    else if (line.match(/^\*\*Assessment:/i) || line.match(/^Assessment:/i) || line.match(/^Evaluation:/i)) {
+      currentSection = 'assessment'
+      console.log('Debug - Found assessment section')
+    }
+    // Process content based on current section
+    else if (currentLesson && currentSection && line.trim()) {
+      // Clean up the line
+      let cleanLine = line
+        .replace(/^[-•*]\s*/, '')  // Remove bullet points
+        .replace(/^\d+\.\s*/, '')  // Remove numbers
+        .trim()
+      
+      if (cleanLine) {
+        console.log(`Debug - Adding to ${currentSection}:`, cleanLine)
+        
+        switch (currentSection) {
+          case 'objectives':
+            currentLesson.objectives.push(cleanLine)
+            break
+          case 'activities':
+            currentLesson.activities.push(cleanLine)
+            break
+          case 'resources':
+            currentLesson.resources.push(cleanLine)
+            break
+          case 'assessment':
+            currentLesson.assessment.push(cleanLine)
+            break
         }
-        i = j - 1
       }
     }
-    // Check for activities (**Teaching Activities: or Teaching Activities:)
-    else if (line.match(/^\*\*Teaching Activities:/i) || line.match(/^Teaching Activities:/i)) {
-      if (currentLesson) {
-        let j = i + 1
-        while (j < lines.length && lines[j].trim() && !lines[j].match(/^\*\*(Resources|Assessment|Cross-curricular|Differentiation|Homework)/i)) {
-          const actLine = lines[j].trim()
-          if (actLine.startsWith('•') || actLine.startsWith('-') || actLine.match(/^\d+\./)) {
-            currentLesson.activities.push(actLine.replace(/^[•\-\d+\.]\s*/, '').trim())
-          }
-          j++
+    // If we have a lesson but no specific section, try to extract content
+    else if (currentLesson && line.trim() && !line.match(/^\*\*/)) {
+      // This might be general lesson content - add to activities if no specific section
+      if (!currentSection) {
+        const cleanLine = line.replace(/^[-•*]\s*/, '').replace(/^\d+\.\s*/, '').trim()
+        if (cleanLine && cleanLine.length > 10) { // Only add substantial content
+          currentLesson.activities.push(cleanLine)
+          console.log('Debug - Adding general content to activities:', cleanLine)
         }
-        i = j - 1
-      }
-    }
-    // Check for resources (**Resources and Materials: or Resources and Materials:)
-    else if (line.match(/^\*\*Resources and Materials:/i) || line.match(/^Resources and Materials:/i)) {
-      if (currentLesson) {
-        let j = i + 1
-        while (j < lines.length && lines[j].trim() && !lines[j].match(/^\*\*(Assessment|Cross-curricular|Differentiation|Homework)/i)) {
-          const resLine = lines[j].trim()
-          if (resLine.startsWith('•') || resLine.startsWith('-') || resLine.match(/^\d+\./)) {
-            currentLesson.resources.push(resLine.replace(/^[•\-\d+\.]\s*/, '').trim())
-          }
-          j++
-        }
-        i = j - 1
-      }
-    }
-    // Check for assessment (**Assessment: or Assessment:)
-    else if (line.match(/^\*\*Assessment:/i) || line.match(/^Assessment:/i)) {
-      if (currentLesson) {
-        let j = i + 1
-        while (j < lines.length && lines[j].trim() && !lines[j].match(/^\*\*(Cross-curricular|Differentiation|Homework)/i)) {
-          const assLine = lines[j].trim()
-          if (assLine.startsWith('•') || assLine.startsWith('-') || assLine.match(/^\d+\./)) {
-            currentLesson.assessment.push(assLine.replace(/^[•\-\d+\.]\s*/, '').trim())
-          }
-          j++
-        }
-        i = j - 1
       }
     }
   }
@@ -382,9 +406,12 @@ function parseSchemeContent(content: string, lessonsPerWeek: number = 5, lessonD
   if (currentLesson && currentWeek) {
     currentWeek.lessons.push(currentLesson)
   }
-  if (currentWeek) {
+  if (currentWeek && currentWeek.lessons.length > 0) {
     weeks.push(currentWeek)
   }
+  
+  console.log('Debug - Final parsed weeks:', weeks.length)
+  console.log('Debug - Weeks structure:', JSON.stringify(weeks, null, 2))
   
   return weeks
 }

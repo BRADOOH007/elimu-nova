@@ -77,8 +77,12 @@ export class PresentationGenerator {
       let generatedImages: Map<string, string> = new Map()
       
       if (request.generateImages) {
+        console.log('🖼️ Image generation enabled, generating images for slides...')
         this.generationProgress(30, 'Generating AI images...')
         generatedImages = await this.generateSlideImages(request.slides, request.imageStyle)
+        console.log(`✅ Generated ${generatedImages.size} images for presentation`)
+      } else {
+        console.log('⚠️ Image generation disabled')
       }
 
       this.generationProgress(70, 'Creating content slides...')
@@ -131,9 +135,8 @@ export class PresentationGenerator {
           
           const result = await imageGenerationService.generateImage({
             prompt,
-            style: (style as any) || 'educational',
-            size: '1024x1024',
-            quality: 'standard'
+            style: style === 'vivid' ? 'vivid' : 'natural',
+            size: '1024x1024'
           })
 
           if (result && result.url) {
@@ -193,12 +196,20 @@ export class PresentationGenerator {
    * Apply advanced theme with comprehensive styling
    */
   private applyAdvancedTheme(themeName: string, options?: PresentationRequest['options']) {
+    // Helper function to ensure color is a valid string
+    const validateColor = (color: any): string => {
+      if (typeof color === 'string' && color.length > 0) {
+        return color.replace(/^#/, '') // Remove # if present
+      }
+      return '000000' // Default to black if invalid
+    }
+
     const themes = {
       education: {
         background: { color: 'FFFFFF' },
-        titleColor: options?.primaryColor || '2E5090',
+        titleColor: validateColor(options?.primaryColor) || '2E5090',
         textColor: '333333',
-        accentColor: options?.accentColor || '4472C4',
+        accentColor: validateColor(options?.accentColor) || '4472C4',
         secondaryColor: 'E8F0FE',
         fontFamily: options?.fontFamily || 'Calibri',
         headerFont: 'Calibri Bold',
@@ -209,9 +220,9 @@ export class PresentationGenerator {
       },
       modern: {
         background: { color: 'F8F9FA' },
-        titleColor: options?.primaryColor || '1A1A1A',
+        titleColor: validateColor(options?.primaryColor) || '1A1A1A',
         textColor: '2D3748',
-        accentColor: options?.accentColor || '00BCD4',
+        accentColor: validateColor(options?.accentColor) || '00BCD4',
         secondaryColor: 'E2E8F0',
         fontFamily: options?.fontFamily || 'Segoe UI',
         headerFont: 'Segoe UI Semibold',
@@ -222,9 +233,9 @@ export class PresentationGenerator {
       },
       professional: {
         background: { color: 'FFFFFF' },
-        titleColor: options?.primaryColor || '1A237E',
+        titleColor: validateColor(options?.primaryColor) || '1A237E',
         textColor: '212121',
-        accentColor: options?.accentColor || '3F51B5',
+        accentColor: validateColor(options?.accentColor) || '3F51B5',
         secondaryColor: 'F3F4F6',
         fontFamily: options?.fontFamily || 'Arial',
         headerFont: 'Arial Bold',
@@ -235,9 +246,9 @@ export class PresentationGenerator {
       },
       colorful: {
         background: { color: 'FFFFFF' },
-        titleColor: options?.primaryColor || 'E91E63',
+        titleColor: validateColor(options?.primaryColor) || 'E91E63',
         textColor: '37474F',
-        accentColor: options?.accentColor || 'FF9800',
+        accentColor: validateColor(options?.accentColor) || 'FF9800',
         secondaryColor: 'FFF3E0',
         fontFamily: options?.fontFamily || 'Comic Sans MS',
         headerFont: 'Comic Sans MS Bold',
@@ -248,9 +259,9 @@ export class PresentationGenerator {
       },
       minimal: {
         background: { color: 'FAFAFA' },
-        titleColor: options?.primaryColor || '263238',
+        titleColor: validateColor(options?.primaryColor) || '263238',
         textColor: '455A64',
-        accentColor: options?.accentColor || '607D8B',
+        accentColor: validateColor(options?.accentColor) || '607D8B',
         secondaryColor: 'ECEFF1',
         fontFamily: options?.fontFamily || 'Helvetica',
         headerFont: 'Helvetica Bold',

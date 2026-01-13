@@ -64,7 +64,7 @@ export function SubscriptionGuard({
               </CardTitle>
               <CardDescription className="text-gray-600 text-lg">
                 Your {subscription.isTrial ? 'free trial' : 'subscription'} has expired. 
-                Upgrade to continue using EduGenius AI.
+                Upgrade to continue using ElimuNova AI.
               </CardDescription>
             </>
           ) : (

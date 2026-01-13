@@ -124,9 +124,7 @@ export default function SystemSettingDetailsModal({
   const handleDelete = async () => {
     if (!setting) return
 
-    if (!confirm('Are you sure you want to delete this system setting? This action cannot be undone.')) {
-      return
-    }
+    // Confirmation removed - using toast notifications only
 
     setLoading(true)
     try {

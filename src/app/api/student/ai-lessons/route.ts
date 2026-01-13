@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { OpenRouterAI } from '@/lib/openrouter-ai'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function GET(req: NextRequest) {
   try {
@@ -73,14 +73,14 @@ export async function GET(req: NextRequest) {
           const learningStyle = 'visual' // Could be determined from analytics in the future
 
           // Generate AI-powered content based on the lesson plan
-          const aiContent = await OpenRouterAI.generateLessonContent(
+          const aiContent = await OpenOpenAIService.generateLessonContent(
             shared.lessonPlan,
             studentLevel,
             learningStyle
           )
 
           // Generate AI insights for this specific lesson
-          const aiInsights = await OpenRouterAI.generateStudentInsights({
+          const aiInsights = await OpenOpenAIService.generateStudentInsights({
             ...studentData,
             currentLesson: shared.lessonPlan
           })

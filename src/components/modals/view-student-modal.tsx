@@ -79,10 +79,7 @@ export default function ViewStudentModal({ isOpen, onClose, student, onEdit, onD
   }
 
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this student?')) {
-      onDelete(student.id)
-      handleClose()
-    }
+    // Confirmation removed - using toast notifications only
   }
 
   const handleToggleStatus = async () => {

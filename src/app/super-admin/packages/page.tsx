@@ -380,9 +380,7 @@ export default function PackagesPage() {
                         size="sm"
                         onClick={async (e) => {
                           e.stopPropagation()
-                          if (confirm(`Are you sure you want to delete ${pkg.name}? This action cannot be undone.`)) {
-                            try {
-                              const response = await fetch(`/api/packages/${pkg.id}`, {
+                          // Confirmation removed - using toast notifications only`, {
                                 method: 'DELETE',
                               })
                               if (response.ok) {

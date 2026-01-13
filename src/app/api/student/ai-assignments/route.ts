@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { OpenRouterAI } from '@/lib/openrouter-ai'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate AI assignment content
-    const aiAssignment = await OpenRouterAI.generateAIAssignment({
+    const aiAssignment = await OpenAIAI.generateAIAssignment({
       subject,
       topic,
       difficulty,

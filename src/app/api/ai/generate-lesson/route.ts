@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { OpenRouterAI } from '@/lib/openrouter-ai'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,8 +14,8 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { subject, topic, grade, difficulty, learningStyle } = body
 
-    // Generate AI lesson using OpenRouter
-    const aiLessonData = await OpenRouterAI.generateAILesson(
+    // Generate AI lesson using OpenAI
+    const aiLessonData = await OpenAIAI.generateAILesson(
       subject,
       topic,
       grade || 'Grade 8',
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       lesson: aiLesson,
-      message: 'AI lesson generated successfully using OpenRouter'
+      message: 'AI lesson generated successfully using OpenAI'
     })
 
   } catch (error) {

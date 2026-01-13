@@ -50,6 +50,7 @@ import {
   Lock
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { useToast } from "@/hooks/use-toast"
 import CreateClassModal from "@/components/modals/create-class-modal"
 import EnrollStudentModal from "@/components/modals/enroll-student-modal"
 import EditStudentModal from "@/components/modals/edit-student-modal"
@@ -90,6 +91,7 @@ interface Class {
 }
 
 export default function TeacherStudentsPage() {
+  const { toast } = useToast()
   const [students, setStudents] = useState<Student[]>([])
   const [classes, setClasses] = useState<Class[]>([])
   const [loading, setLoading] = useState(true)
@@ -180,73 +182,34 @@ export default function TeacherStudentsPage() {
   }
 
   const handleDeleteStudent = async (studentId: string) => {
-    if (!confirm('Are you sure you want to delete this student?')) return
-
     try {
       const response = await fetch(`/api/teacher/students/${studentId}`, {
         method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setStudents(students.filter(student => student.id !== studentId))
-      } else {
-        console.error('Failed to delete student')
-      }
-    } catch (error) {
-      console.error('Error deleting student:', error)
-    }
-  }
-
-  const handleDeleteClass = async (classId: string) => {
-    if (!confirm('Are you sure you want to delete this class? This will unassign all students from this class.')) return
-
-    try {
-      const response = await fetch(`/api/teacher/classes/${classId}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setClasses(classes.filter(cls => cls.id !== classId))
-        fetchStudents() // Refresh students to update class assignments
-      } else {
-        console.error('Failed to delete class')
-      }
-    } catch (error) {
-      console.error('Error deleting class:', error)
-    }
-  }
-
-  const handleToggleStudentStatus = async (studentId: string, currentStatus: string) => {
-    try {
-      const response = await fetch(`/api/teacher/students/${studentId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          isActive: currentStatus === 'Inactive'
-        })
       })
 
       if (response.ok) {
         fetchStudents()
+        toast({
+          title: "Student Deleted Successfully",
+          description: "The student has been permanently removed.",
+          variant: "success",
+        })
       } else {
-        console.error('Failed to update student status')
+        const error = await response.json()
+        toast({
+          variant: "destructive",
+          title: "Delete Failed",
+          description: error.error || "Unable to delete student. Please try again.",
+        })
       }
     } catch (error) {
-      console.error('Error updating student status:', error)
+      console.error('Error deleting student:', error)
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Network error occurred. Please check your connection and try again.",
+      })
     }
-  }
-
-  const handleGenerateCredentials = (student: Student) => {
-    setSelectedStudent(student)
-    setShowPasswordModal(true)
-  }
-
-  const handlePasswordSuccess = () => {
-    fetchStudents()
-    setShowPasswordModal(false)
-    setSelectedStudent(null)
   }
 
   const handleViewPassword = (student: Student) => {
@@ -254,105 +217,79 @@ export default function TeacherStudentsPage() {
     setShowViewPasswordModal(true)
   }
 
-  const handlePasswordViewSuccess = () => {
-    fetchStudents()
-    setShowViewPasswordModal(false)
-    setSelectedStudent(null)
-  }
-
-  const handleShareLessonPlan = (classData: Class) => {
-    setSelectedClass(classData)
-    setShowShareModal(true)
-  }
-
   const filteredStudents = students.filter(student => {
     const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.email.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || 
-                         (statusFilter === 'active' && student.status === 'Active') ||
-                         (statusFilter === 'inactive' && student.status === 'Inactive')
-    const matchesClass = classFilter === 'all' || 
-                        (classFilter === 'unassigned' && !student.class) ||
-                        (student.class && student.class.id === classFilter)
+    const matchesStatus = statusFilter === 'all' || student.status === statusFilter
+    const matchesClass = classFilter === 'all' || student.class?.id === classFilter
     
     return matchesSearch && matchesStatus && matchesClass
   })
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading students and classes...</p>
-        </div>
-      </div>
-    )
-  }
+  const filteredClasses = classes.filter(cls => 
+    cls.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cls.subject.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Students & Classes Management</h1>
-          <p className="text-gray-600 mt-1">Manage your students, classes, and enrollments</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Students</span>
+          </h1>
+          <p className="text-gray-600">Manage your students and classes</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex space-x-2">
           <Button 
             onClick={() => setShowCreateClassModal(true)}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+            variant="outline"
+            className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300"
           >
-            <School className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Create Class
           </Button>
           <Button 
             onClick={() => setShowEnrollModal(true)}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
           >
-            <UserPlus className="w-4 h-4 mr-2" />
+            <UserPlus className="mr-2 h-4 w-4" />
             Enroll Student
-        </Button>
-      </div>
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-white/70 backdrop-blur-sm border-0 shadow-sm">
-          <TabsTrigger value="students" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white">
-            <Users className="w-4 h-4 mr-2" />
-            Students ({students.length})
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-blue-50 to-purple-50">
+          <TabsTrigger value="students" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <Users className="mr-2 h-4 w-4" />
+            Students
           </TabsTrigger>
-          <TabsTrigger value="classes" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-600 data-[state=active]:to-emerald-600 data-[state=active]:text-white">
-            <School className="w-4 h-4 mr-2" />
-            Classes ({classes.length})
+          <TabsTrigger value="classes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <School className="mr-2 h-4 w-4" />
+            Classes
           </TabsTrigger>
         </TabsList>
 
         {/* Students Tab */}
         <TabsContent value="students" className="space-y-6">
-          {/* Search and Filters */}
-          <Card className="bg-gradient-to-br from-white via-purple-50 to-blue-50 shadow-lg backdrop-blur-sm border-0">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-                <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                    placeholder="Search students by name or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                />
-              </div>
+          {/* Filters */}
+          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search students..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300"
+                  />
+                </div>
+                
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-48 bg-white/70 backdrop-blur-sm border-0 shadow-sm">
+                  <SelectTrigger className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -361,342 +298,301 @@ export default function TeacherStudentsPage() {
                     <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
+
                 <Select value={classFilter} onValueChange={setClassFilter}>
-                  <SelectTrigger className="w-full sm:w-48 bg-white/70 backdrop-blur-sm border-0 shadow-sm">
+                  <SelectTrigger className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300">
                     <SelectValue placeholder="Filter by class" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Classes</SelectItem>
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                    {classes.map((cls) => (
+                    {classes.map(cls => (
                       <SelectItem key={cls.id} value={cls.id}>
-                        {cls.name} ({cls.subject})
+                        {cls.name} - {cls.grade}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-          </div>
-        </CardContent>
-      </Card>
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm('')
+                    setStatusFilter('all')
+                    setClassFilter('all')
+                  }}
+                  className="bg-gradient-to-r from-white via-gray-50 to-gray-100 border-0 shadow-sm hover:shadow-md transition-all duration-300"
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Students Table */}
-          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold text-gray-900">Students List</CardTitle>
-              <CardDescription>
-                {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {filteredStudents.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-none">
-                        <TableHead className="border-none">Student</TableHead>
-                        <TableHead className="border-none">Email</TableHead>
-                        <TableHead className="border-none">Class</TableHead>
-                        <TableHead className="border-none">Status</TableHead>
-                        <TableHead className="border-none">Join Date</TableHead>
-                        <TableHead className="border-none">Credentials</TableHead>
-                        <TableHead className="border-none">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : filteredStudents.length === 0 ? (
+            <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+              <CardContent className="text-center py-12">
+                <Users className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No students found</h3>
+                <p className="text-gray-600 mb-4">
+                  {searchTerm || statusFilter !== 'all' || classFilter !== 'all' 
+                    ? 'Try adjusting your filters or search terms.'
+                    : 'Enroll your first student to get started.'
+                  }
+                </p>
+                <Button 
+                  onClick={() => setShowEnrollModal(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Enroll Student
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+              <CardContent className="p-0">
+                <div className="overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="">
+                        <th className="font-semibold text-gray-900 text-left p-4">Student</th>
+                        <th className="font-semibold text-gray-900 text-left p-4">Class</th>
+                        <th className="font-semibold text-gray-900 text-left p-4">Status</th>
+                        <th className="font-semibold text-gray-900 text-left p-4">Join Date</th>
+                        <th className="font-semibold text-gray-900 text-left p-4">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
                       {filteredStudents.map((student) => (
-                        <TableRow key={student.id} className="border-none hover:bg-blue-50/50">
-                          <TableCell className="border-none">
+                        <tr key={student.id} className="hover:bg-blue-50/50 transition-colors">
+                          <td className="p-4">
                             <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                                <User className="w-5 h-5 text-white" />
+                              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-medium text-sm">
+                                {student.name.charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <p className="font-semibold text-gray-900">{student.name}</p>
-                                {student.phone && (
-                                  <p className="text-sm text-gray-500">{student.phone}</p>
-                                )}
+                                <div className="font-medium text-gray-900">{student.name}</div>
+                                <div className="text-sm text-gray-500">{student.email}</div>
                               </div>
                             </div>
-                          </TableCell>
-                          <TableCell className="border-none">
-                            <div className="flex items-center space-x-2">
-                              <Mail className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm">{student.email}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="border-none">
+                          </td>
+                          <td className="p-4">
                             {student.class ? (
-                              <div className="flex items-center space-x-2">
-                                <BookOpen className="w-4 h-4 text-blue-500" />
-                                <div>
-                                  <p className="text-sm font-medium text-blue-600">{student.class.name}</p>
-                                  <p className="text-xs text-gray-500">{student.class.subject} - {student.class.grade}</p>
-                                </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{student.class.name}</div>
+                                <div className="text-sm text-gray-500">{student.class.grade}</div>
                               </div>
                             ) : (
-                              <span className="text-sm text-gray-400">No class assigned</span>
+                              <span className="text-gray-400">No class assigned</span>
                             )}
-                          </TableCell>
-                          <TableCell className="border-none">
-                            <Badge className={
-                              student.status === 'Active' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }>
+                          </td>
+                          <td className="p-4">
+                            <Badge 
+                              variant={student.status === 'active' ? 'default' : 'secondary'}
+                              className={student.status === 'active' 
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                              }
+                            >
+                              {student.status === 'active' ? (
+                                <UserCheck className="mr-1 h-3 w-3" />
+                              ) : (
+                                <UserX className="mr-1 h-3 w-3" />
+                              )}
                               {student.status}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="border-none">
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm">{formatDate(student.joinDate)}</span>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Calendar className="mr-1 h-4 w-4" />
+                              {new Date(student.joinDate).toLocaleDateString()}
                             </div>
-                          </TableCell>
-                          <TableCell className="border-none">
-                            {student.credentials ? (
-                              <div className="flex items-center space-x-2">
-                                <Key className="w-4 h-4 text-green-500" />
-                                <span className="text-sm text-green-600">Set</span>
-                              </div>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleGenerateCredentials(student)}
-                                className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
-                              >
-                                <Key className="w-4 h-4 mr-1" />
-                                Set Password
-                              </Button>
-                            )}
-                          </TableCell>
-                          <TableCell className="border-none">
+                          </td>
+                          <td className="p-4">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Button variant="ghost" size="sm">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
+                              <DropdownMenuContent align="end" className="w-48">
                                 <DropdownMenuItem onClick={() => handleViewStudent(student)}>
-                                  <Eye className="w-4 h-4 mr-2" />
+                                  <Eye className="mr-2 h-4 w-4" />
                                   View Details
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleViewPassword(student)}>
-                                  <Lock className="w-4 h-4 mr-2" />
-                                  View Password
-                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleEditStudent(student)}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit Student
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleViewPassword(student)}>
+                                  <Key className="mr-2 h-4 w-4" />
+                                  View Credentials
                                 </DropdownMenuItem>
                                 <DropdownMenuItem 
-                                  onClick={() => handleToggleStudentStatus(student.id, student.status)}
-                                >
-                                  {student.status === 'Active' ? (
-                                    <>
-                                      <UserX className="w-4 h-4 mr-2" />
-                                      Deactivate
-                                    </>
-                                  ) : (
-                                    <>
-                                      <UserCheck className="w-4 h-4 mr-2" />
-                                      Activate
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
                                   onClick={() => handleDeleteStudent(student.id)}
                                   className="text-red-600"
                                 >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Student
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No students found</h3>
-                  <p className="text-gray-500 mb-4">
-                    {searchTerm || statusFilter !== 'all' || classFilter !== 'all'
-                      ? 'Try adjusting your search or filter criteria'
-                      : 'Get started by enrolling your first student'
-                    }
-                  </p>
-                  {(!searchTerm && statusFilter === 'all' && classFilter === 'all') && (
-                    <Button 
-                      onClick={() => setShowEnrollModal(true)}
-                      className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Enroll First Student
-            </Button>
-                  )}
-                </div>
-              )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Classes Tab */}
         <TabsContent value="classes" className="space-y-6">
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {classes.map((cls) => (
-              <Card key={cls.id} className="bg-gradient-to-br from-white via-green-50 to-emerald-50 shadow-lg backdrop-blur-sm border-0 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                      <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
-                        {cls.name}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                        {cls.subject} • {cls.grade}
-                    </CardDescription>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="hover:bg-white/50">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
-                        <DropdownMenuItem onClick={() => handleShareLessonPlan(cls)}>
-                          <BookOpen className="w-4 h-4 mr-2" />
-                          Share Lesson Plans
-                      </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteClass(cls.id)} className="text-red-600">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                          Delete Class
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                      <Badge className="bg-green-100 text-green-800">
-                        {cls.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Users className="w-4 h-4 mr-1" />
-                        {cls.studentCount} students
-                    </div>
-                  </div>
-                  
-                    {cls.description && (
-                      <p className="text-sm text-gray-600 line-clamp-2">{cls.description}</p>
-                    )}
-                  
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Calendar className="w-4 h-4 mr-2" />
-                      Created {formatDate(cls.createdAt)}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-          {classes.length === 0 && (
-            <Card className="bg-gradient-to-br from-white via-gray-50 to-blue-50 shadow-lg backdrop-blur-sm border-0">
-              <CardContent className="p-12 text-center">
-                <School className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No classes created</h3>
-                <p className="text-gray-500 mb-4">Create your first class to start organizing students</p>
+          {/* Classes Grid */}
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : filteredClasses.length === 0 ? (
+            <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+              <CardContent className="text-center py-12">
+                <School className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No classes found</h3>
+                <p className="text-gray-600 mb-4">
+                  Create your first class to organize your students.
+                </p>
                 <Button 
                   onClick={() => setShowCreateClassModal(true)}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
                 >
-                  <School className="w-4 h-4 mr-2" />
-                  Create First Class
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Class
                 </Button>
               </CardContent>
             </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredClasses.map((cls) => (
+                <Card key={cls.id} className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0 hover:shadow-xl transition-all duration-300">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-semibold text-gray-900">
+                          {cls.name}
+                        </CardTitle>
+                        <CardDescription className="mt-2">
+                          <span className="flex items-center space-x-2 text-sm text-gray-600">
+                            <GraduationCap className="h-4 w-4" />
+                            <span>{cls.grade}</span>
+                            <span>•</span>
+                            <span>{cls.subject}</span>
+                          </span>
+                        </CardDescription>
+                      </div>
+                      <Badge 
+                        variant={cls.isActive ? 'default' : 'secondary'}
+                        className={cls.isActive 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                        }
+                      >
+                        {cls.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Users className="h-4 w-4 mr-2" />
+                        <span>{cls.studentCount} students</span>
+                      </div>
+                      
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>Created {new Date(cls.createdAt).toLocaleDateString()}</span>
+                      </div>
+
+                      {cls.description && (
+                        <p className="text-sm text-gray-600 line-clamp-2">
+                          {cls.description}
+                        </p>
+                      )}
+
+                      <div className="flex items-center justify-between pt-2">
+                        <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800">
+                          {cls.subject}
+                        </Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedClass(cls)}
+                          className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300"
+                        >
+                          <Settings className="h-4 w-4 mr-1" />
+                          Manage
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </TabsContent>
       </Tabs>
 
       {/* Modals */}
-      <CreateClassModal
-        isOpen={showCreateClassModal}
-        onClose={() => setShowCreateClassModal(false)}
-        onSuccess={handleClassSuccess}
-      />
+      {showCreateClassModal && (
+        <CreateClassModal
+          isOpen={showCreateClassModal}
+          onClose={() => setShowCreateClassModal(false)}
+          onSuccess={handleClassSuccess}
+        />
+      )}
 
-      <EnrollStudentModal
-        isOpen={showEnrollModal}
-        onClose={() => setShowEnrollModal(false)}
-        onSuccess={handleEnrollSuccess}
-        classes={classes}
-      />
+      {showEnrollModal && (
+        <EnrollStudentModal
+          isOpen={showEnrollModal}
+          onClose={() => setShowEnrollModal(false)}
+          onSuccess={handleEnrollSuccess}
+        />
+      )}
 
-      <EditStudentModal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false)
-          setSelectedStudent(null)
-        }}
-        onSuccess={handleEditSuccess}
-        student={selectedStudent}
-        classes={classes}
-      />
+      {showEditModal && selectedStudent && (
+        <EditStudentModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={handleEditSuccess}
+          student={selectedStudent}
+        />
+      )}
 
-      <ViewStudentModal
-        isOpen={showViewModal}
-        onClose={() => {
-          setShowViewModal(false)
-          setSelectedStudent(null)
-        }}
-        student={selectedStudent}
-        onEdit={handleEditStudent}
-        onDelete={handleDeleteStudent}
-        onGenerateCredentials={(studentId) => {
-          const student = students.find(s => s.id === studentId)
-          if (student) handleGenerateCredentials(student)
-        }}
-      />
+      {showViewModal && selectedStudent && (
+        <ViewStudentModal
+          isOpen={showViewModal}
+          onClose={() => setShowViewModal(false)}
+          student={selectedStudent}
+          onEdit={handleEditStudent}
+          onDelete={handleDeleteStudent}
+          onGenerateCredentials={() => {}}
+        />
+      )}
 
-      <ShareLessonPlanModal
-        isOpen={showShareModal}
-        onClose={() => {
-          setShowShareModal(false)
-          setSelectedClass(null)
-        }}
-        onSuccess={() => {
-          setShowShareModal(false)
-          setSelectedClass(null)
-        }}
-        classData={selectedClass}
-      />
-
-      <GeneratePasswordModal
-        isOpen={showPasswordModal}
-        onClose={() => {
-          setShowPasswordModal(false)
-          setSelectedStudent(null)
-        }}
-        onSuccess={handlePasswordSuccess}
-        studentName={selectedStudent?.name || 'Student'}
-        studentId={selectedStudent?.id || ''}
-      />
-
-      <ViewStudentPasswordModal
-        isOpen={showViewPasswordModal}
-        onClose={() => {
-          setShowViewPasswordModal(false)
-          setSelectedStudent(null)
-        }}
-        onPasswordGenerated={handlePasswordViewSuccess}
-        student={selectedStudent}
-      />
+      {showViewPasswordModal && selectedStudent && (
+        <ViewStudentPasswordModal
+          isOpen={showViewPasswordModal}
+          onClose={() => setShowViewPasswordModal(false)}
+          student={selectedStudent}
+        />
+      )}
     </div>
   )
 }
+     

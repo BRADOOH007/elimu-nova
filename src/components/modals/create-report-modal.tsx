@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,12 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Loader2, FileText, Plus, Calendar, Clock, BarChart3, DollarSign, GraduationCap, Users, Activity, Settings } from 'lucide-react'
-
-interface School {
-  id: string
-  name: string
-}
+import { Loader2, Plus, Info } from 'lucide-react'
 
 interface CreateReportModalProps {
   isOpen: boolean
@@ -34,53 +29,15 @@ export default function CreateReportModal({
   onReportCreated
 }: CreateReportModalProps) {
   const [loading, setLoading] = useState(false)
-  const [dataLoading, setDataLoading] = useState(false)
-  const [schools, setSchools] = useState<School[]>([])
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     type: 'ANALYTICS',
-    content: '{}',
-    filters: '',
-    schoolId: 'all-schools',
     isPublic: false,
     scheduledAt: '',
     expiresAt: ''
   })
   const { toast } = useToast()
-
-  // Fetch schools when modal opens
-  const fetchSchools = async () => {
-    setDataLoading(true)
-    try {
-      const response = await fetch('/api/schools?limit=100')
-      if (response.ok) {
-        const data = await response.json()
-        setSchools(data.schools || [])
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to fetch schools data",
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching schools:', error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch schools data",
-      })
-    } finally {
-      setDataLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchSchools()
-    }
-  }, [isOpen])
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -90,102 +47,64 @@ export default function CreateReportModal({
   }
 
   const generateSampleContent = (type: string) => {
-    const baseContent = {
-      generatedAt: new Date().toISOString(),
-      reportType: type,
-      summary: {
-        totalRecords: Math.floor(Math.random() * 1000) + 100,
-        dateRange: {
-          from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          to: new Date().toISOString().split('T')[0]
-        }
-      }
-    }
-
     switch (type) {
       case 'ANALYTICS':
         return {
-          ...baseContent,
-          metrics: {
-            totalUsers: Math.floor(Math.random() * 500) + 50,
-            activeUsers: Math.floor(Math.random() * 300) + 30,
-            pageViews: Math.floor(Math.random() * 10000) + 1000,
-            bounceRate: (Math.random() * 0.4 + 0.2).toFixed(2),
-            avgSessionDuration: Math.floor(Math.random() * 300) + 60
-          },
-          charts: [
-            { name: 'User Growth', value: Math.floor(Math.random() * 100) + 20 },
-            { name: 'Page Views', value: Math.floor(Math.random() * 1000) + 500 },
-            { name: 'Engagement', value: Math.floor(Math.random() * 100) + 30 }
-          ]
+          analytics: {
+            metrics: {
+              totalUsers: 0,
+              activeUsers: 0,
+              sessionDuration: 0,
+              pageViews: 0,
+              bounceRate: 0,
+              conversionRate: 0
+            },
+            trends: {
+              userGrowth: { direction: 'stable', percentage: 0 },
+              engagement: { direction: 'stable', percentage: 0 }
+            }
+          }
         }
       case 'FINANCIAL':
         return {
-          ...baseContent,
-          financials: {
-            totalRevenue: Math.floor(Math.random() * 50000) + 10000,
-            monthlyRevenue: Math.floor(Math.random() * 5000) + 1000,
-            expenses: Math.floor(Math.random() * 20000) + 5000,
-            profit: Math.floor(Math.random() * 30000) + 5000,
-            currency: 'KSH'
-          },
-          breakdown: [
-            { category: 'Subscriptions', amount: Math.floor(Math.random() * 20000) + 5000 },
-            { category: 'One-time Payments', amount: Math.floor(Math.random() * 10000) + 2000 },
-            { category: 'Renewals', amount: Math.floor(Math.random() * 15000) + 3000 }
-          ]
+          financial: {
+            revenue: { total: 0, recurring: 0, oneTime: 0 },
+            expenses: { total: 0, operational: 0, marketing: 0 },
+            breakdown: {}
+          }
         }
       case 'ACADEMIC':
         return {
-          ...baseContent,
           academic: {
-            totalStudents: Math.floor(Math.random() * 500) + 100,
-            totalTeachers: Math.floor(Math.random() * 50) + 10,
-            totalClasses: Math.floor(Math.random() * 20) + 5,
-            averageGrade: (Math.random() * 2 + 3).toFixed(1),
-            completionRate: (Math.random() * 0.3 + 0.7).toFixed(2)
-          },
-          subjects: [
-            { name: 'Mathematics', students: Math.floor(Math.random() * 100) + 20 },
-            { name: 'English', students: Math.floor(Math.random() * 100) + 20 },
-            { name: 'Science', students: Math.floor(Math.random() * 100) + 20 },
-            { name: 'History', students: Math.floor(Math.random() * 100) + 20 }
-          ]
+            students: { total: 0, active: 0, graduated: 0 },
+            performance: { average: 0, median: 0, improvement: 0 },
+            attendance: { rate: 0, trend: 'stable' },
+            subjects: {}
+          }
         }
       case 'USER_ACTIVITY':
         return {
-          ...baseContent,
-          activity: {
-            totalLogins: Math.floor(Math.random() * 1000) + 100,
-            uniqueUsers: Math.floor(Math.random() * 200) + 50,
-            peakHours: ['9:00 AM', '2:00 PM', '7:00 PM'],
-            mostActiveDay: 'Monday',
-            avgSessionTime: Math.floor(Math.random() * 60) + 15
-          },
-          topActions: [
-            { action: 'Login', count: Math.floor(Math.random() * 500) + 100 },
-            { action: 'View Dashboard', count: Math.floor(Math.random() * 300) + 50 },
-            { action: 'Create Content', count: Math.floor(Math.random() * 100) + 20 },
-            { action: 'Download Report', count: Math.floor(Math.random() * 50) + 10 }
-          ]
+          userActivity: {
+            activeUsers: { total: 0, daily: 0, weekly: 0 },
+            sessions: { total: 0, averageDuration: 0 },
+            activities: []
+          }
         }
       case 'SYSTEM_HEALTH':
         return {
-          ...baseContent,
-          system: {
-            uptime: (Math.random() * 0.1 + 0.95).toFixed(3),
-            responseTime: Math.floor(Math.random() * 200) + 100,
-            errorRate: (Math.random() * 0.02).toFixed(4),
-            activeConnections: Math.floor(Math.random() * 100) + 10,
-            memoryUsage: (Math.random() * 0.3 + 0.4).toFixed(2)
-          },
-          alerts: [
-            { level: 'info', message: 'System running normally', timestamp: new Date().toISOString() },
-            { level: 'warning', message: 'High memory usage detected', timestamp: new Date(Date.now() - 3600000).toISOString() }
-          ]
+          systemHealth: {
+            uptime: { percentage: 0 },
+            performance: { responseTime: 0, throughput: 0 },
+            errors: { rate: 0, critical: 0 },
+            services: {}
+          }
         }
       default:
-        return baseContent
+        return {
+          summary: 'Report generated successfully',
+          timestamp: new Date().toISOString(),
+          data: {}
+        }
     }
   }
 
@@ -203,9 +122,15 @@ export default function CreateReportModal({
 
     setLoading(true)
     try {
-      // Generate sample content based on report type
-      const sampleContent = generateSampleContent(formData.type)
+      // Generate appropriate content structure based on report type
+      const content = generateSampleContent(formData.type)
       
+      // Generate basic filters
+      const filters = {
+        dateRange: 'Last 30 days',
+        generatedAt: new Date().toISOString()
+      }
+
       const response = await fetch('/api/reports', {
         method: 'POST',
         headers: {
@@ -213,30 +138,28 @@ export default function CreateReportModal({
         },
         body: JSON.stringify({
           ...formData,
-          content: JSON.stringify(sampleContent),
-          schoolId: formData.schoolId && formData.schoolId !== 'all-schools' ? formData.schoolId : null,
+          content: JSON.stringify(content),
+          filters: JSON.stringify(filters),
           scheduledAt: formData.scheduledAt || null,
           expiresAt: formData.expiresAt || null
         }),
       })
 
       if (response.ok) {
-        const reportData = await response.json()
-        onReportCreated(reportData)
+        const newReport = await response.json()
+        onReportCreated(newReport)
         setFormData({
           title: '',
           description: '',
           type: 'ANALYTICS',
-          content: '{}',
-          filters: '',
-          schoolId: 'all-schools',
           isPublic: false,
           scheduledAt: '',
           expiresAt: ''
         })
+        onClose()
         toast({
           title: "Success",
-          description: "Report created successfully",
+          description: "Report created successfully. You can now edit it to add your data.",
         })
       } else {
         const error = await response.json()
@@ -258,39 +181,20 @@ export default function CreateReportModal({
     }
   }
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'ANALYTICS': return BarChart3
-      case 'FINANCIAL': return DollarSign
-      case 'ACADEMIC': return GraduationCap
-      case 'USER_ACTIVITY': return Users
-      case 'SYSTEM_HEALTH': return Activity
-      case 'CUSTOM': return Settings
-      default: return FileText
-    }
-  }
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
-        <DialogHeader className="sticky top-0 bg-gradient-to-br from-white via-blue-50 to-purple-50 z-10 pb-4">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
+        <DialogHeader>
           <DialogTitle className="edugenius-text-gradient-blue flex items-center">
-            <FileText className="w-5 h-5 mr-2" />
+            <Plus className="w-5 h-5 mr-2" />
             Create New Report
           </DialogTitle>
           <DialogDescription>
-            Create a new report with custom filters and settings. Fill in the required information below.
+            Create a new report. The system will generate a template structure that you can edit later.
           </DialogDescription>
         </DialogHeader>
 
-        {dataLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-            <span className="ml-3 text-gray-500">Loading schools data...</span>
-          </div>
-        ) : (
-        <form onSubmit={handleSubmit} className="space-y-6 pb-4">
-          {/* Basic Information */}
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Report Title *</Label>
@@ -298,9 +202,9 @@ export default function CreateReportModal({
                 id="title"
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                placeholder="Enter report title"
-                required
                 className="edugenius-glass"
+                placeholder="e.g., Monthly Analytics Report"
+                required
               />
             </div>
             <div className="space-y-2">
@@ -310,42 +214,12 @@ export default function CreateReportModal({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ANALYTICS">
-                    <div className="flex items-center">
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Analytics
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="FINANCIAL">
-                    <div className="flex items-center">
-                      <DollarSign className="w-4 h-4 mr-2" />
-                      Financial
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="ACADEMIC">
-                    <div className="flex items-center">
-                      <GraduationCap className="w-4 h-4 mr-2" />
-                      Academic
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="USER_ACTIVITY">
-                    <div className="flex items-center">
-                      <Users className="w-4 h-4 mr-2" />
-                      User Activity
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="SYSTEM_HEALTH">
-                    <div className="flex items-center">
-                      <Activity className="w-4 h-4 mr-2" />
-                      System Health
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="CUSTOM">
-                    <div className="flex items-center">
-                      <Settings className="w-4 h-4 mr-2" />
-                      Custom
-                    </div>
-                  </SelectItem>
+                  <SelectItem value="ANALYTICS">📊 Analytics Report</SelectItem>
+                  <SelectItem value="FINANCIAL">💰 Financial Report</SelectItem>
+                  <SelectItem value="ACADEMIC">🎓 Academic Report</SelectItem>
+                  <SelectItem value="USER_ACTIVITY">👥 User Activity Report</SelectItem>
+                  <SelectItem value="SYSTEM_HEALTH">🔧 System Health Report</SelectItem>
+                  <SelectItem value="CUSTOM">📋 Custom Report</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -357,53 +231,28 @@ export default function CreateReportModal({
               id="description"
               value={formData.description}
               onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Enter report description (optional)"
               className="edugenius-glass"
               rows={3}
+              placeholder="Describe what this report contains and its purpose"
             />
           </div>
 
-          {/* School Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="schoolId">School (Optional)</Label>
-            <Select value={formData.schoolId} onValueChange={(value) => handleInputChange('schoolId', value)}>
-              <SelectTrigger className="edugenius-glass">
-                <SelectValue placeholder="Select school (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all-schools">All Schools</SelectItem>
-                {schools && schools.length > 0 ? (
-                  schools.map((school) => (
-                    <SelectItem key={school.id} value={school.id}>
-                      {school.name}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-schools" disabled>
-                    No schools available
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-start space-x-2">
+              <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-blue-900">Report Content</h4>
+                <p className="text-sm text-blue-700 mt-1">
+                  The system will create a template structure based on your selected report type. 
+                  After creation, you can edit the report to add your actual data and customize the content.
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Filters */}
-          <div className="space-y-2">
-            <Label htmlFor="filters">Filters (JSON)</Label>
-            <Textarea
-              id="filters"
-              value={formData.filters}
-              onChange={(e) => handleInputChange('filters', e.target.value)}
-              placeholder='Enter filters as JSON (e.g., {"dateRange": "30d", "status": "active"})'
-              className="edugenius-glass"
-              rows={3}
-            />
-          </div>
-
-          {/* Scheduling */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="scheduledAt">Scheduled At (Optional)</Label>
+              <Label htmlFor="scheduledAt">Schedule For (Optional)</Label>
               <Input
                 id="scheduledAt"
                 type="datetime-local"
@@ -411,6 +260,7 @@ export default function CreateReportModal({
                 onChange={(e) => handleInputChange('scheduledAt', e.target.value)}
                 className="edugenius-glass"
               />
+              <p className="text-xs text-gray-500">Leave empty for immediate creation</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="expiresAt">Expires At (Optional)</Label>
@@ -421,21 +271,20 @@ export default function CreateReportModal({
                 onChange={(e) => handleInputChange('expiresAt', e.target.value)}
                 className="edugenius-glass"
               />
+              <p className="text-xs text-gray-500">Leave empty for no expiration</p>
             </div>
           </div>
 
-          {/* Public Access */}
           <div className="flex items-center space-x-2">
             <Switch
               id="isPublic"
               checked={formData.isPublic}
               onCheckedChange={(checked) => handleInputChange('isPublic', checked)}
             />
-            <Label htmlFor="isPublic">Make this report public</Label>
+            <Label htmlFor="isPublic">Make this report publicly accessible</Label>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-4">
+          <div className="flex items-center justify-end space-x-2 pt-4">
             <Button
               type="button"
               variant="outline"
@@ -450,20 +299,14 @@ export default function CreateReportModal({
               className="edugenius-button"
             >
               {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
-                <>
-                  <FileText className="w-4 h-4 mr-2" />
-                  Create Report
-                </>
+                <Plus className="w-4 h-4 mr-2" />
               )}
+              Create Report
             </Button>
           </div>
         </form>
-        )}
       </DialogContent>
     </Dialog>
   )

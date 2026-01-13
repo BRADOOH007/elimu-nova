@@ -1,14 +1,17 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import React from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CreateUserModal } from "@/components/modals/create-user-modal"
 import { UserDetailsModal } from "@/components/modals/user-details-modal"
 import { useToast } from "@/hooks/use-toast"
+import { useDeleteConfirmation } from "@/components/ui/delete-confirmation-dialog"
 import { 
   Search,
   Filter,
@@ -77,6 +80,7 @@ interface UsersResponse {
 
 export default function UsersPage() {
   const { toast } = useToast()
+  const { showDeleteConfirmation, DeleteConfirmationDialog } = useDeleteConfirmation()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -89,7 +93,7 @@ export default function UsersPage() {
   
   // Filters and search
   const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState('all')
+  const [activeTab, setActiveTab] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [sortBy, setSortBy] = useState('createdAt')
   const [sortOrder, setSortOrder] = useState('desc')
@@ -112,7 +116,7 @@ export default function UsersPage() {
         page: page.toString(),
         limit: pagination.limit.toString(),
         ...(searchQuery && { search: searchQuery }),
-        ...(roleFilter !== 'all' && { role: roleFilter }),
+        ...(activeTab !== 'all' && { role: activeTab }),
         ...(statusFilter !== 'all' && { status: statusFilter }),
         sortBy,
         sortOrder
@@ -155,7 +159,7 @@ export default function UsersPage() {
     }, 500) // Debounce search
 
     return () => clearTimeout(timeoutId)
-  }, [searchQuery, roleFilter, statusFilter, sortBy, sortOrder])
+  }, [searchQuery, activeTab, statusFilter, sortBy, sortOrder])
 
   // Handle pagination
   const handlePageChange = (newPage: number) => {
@@ -252,6 +256,24 @@ export default function UsersPage() {
   const schoolAdmins = users.filter(user => user.role === 'SCHOOL_ADMIN').length
   const teachers = users.filter(user => user.role === 'TEACHER').length
   const students = users.filter(user => user.role === 'STUDENT').length
+
+  // Get current tab info
+  const getCurrentTabInfo = () => {
+    switch (activeTab) {
+      case 'STUDENT':
+        return { name: 'Students', count: students, icon: User }
+      case 'TEACHER':
+        return { name: 'Teachers', count: teachers, icon: GraduationCap }
+      case 'SCHOOL_ADMIN':
+        return { name: 'School Admins', count: schoolAdmins, icon: School }
+      case 'SUPER_ADMIN':
+        return { name: 'Super Admins', count: superAdmins, icon: Shield }
+      default:
+        return { name: 'All Users', count: totalUsers, icon: Users }
+    }
+  }
+
+  const currentTabInfo = getCurrentTabInfo()
 
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -424,75 +446,107 @@ export default function UsersPage() {
         </Card>
       </div>
 
-      {/* Filters and Search */}
+      {/* Role Tabs and Filters */}
       <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search users by name, email, or phone..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-5 mb-6">
+              <TabsTrigger value="all" className="flex items-center space-x-2">
+                <Users className="w-4 h-4" />
+                <span>All Users</span>
+                <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                  {totalUsers}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="STUDENT" className="flex items-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>Students</span>
+                <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
+                  {students}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="TEACHER" className="flex items-center space-x-2">
+                <GraduationCap className="w-4 h-4" />
+                <span>Teachers</span>
+                <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
+                  {teachers}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="SCHOOL_ADMIN" className="flex items-center space-x-2">
+                <School className="w-4 h-4" />
+                <span>School Admins</span>
+                <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                  {schoolAdmins}
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="SUPER_ADMIN" className="flex items-center space-x-2">
+                <Shield className="w-4 h-4" />
+                <span>Super Admins</span>
+                <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">
+                  {superAdmins}
+                </span>
+              </TabsTrigger>
+            </TabsList>
+            
+            {/* Search and Additional Filters */}
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search users by name, email, or phone..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="createdAt">Date Created</SelectItem>
+                    <SelectItem value="name">Name</SelectItem>
+                    <SelectItem value="email">Email</SelectItem>
+                    <SelectItem value="lastLogin">Last Login</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={sortOrder} onValueChange={setSortOrder}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue placeholder="Order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Descending</SelectItem>
+                    <SelectItem value="asc">Ascending</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-            <div className="flex gap-4">
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
-                  <SelectItem value="SCHOOL_ADMIN">School Admin</SelectItem>
-                  <SelectItem value="TEACHER">Teacher</SelectItem>
-                  <SelectItem value="STUDENT">Student</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-40">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="createdAt">Date Created</SelectItem>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="lastLogin">Last Login</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={sortOrder} onValueChange={setSortOrder}>
-                <SelectTrigger className="w-32">
-                  <SelectValue placeholder="Order" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Descending</SelectItem>
-                  <SelectItem value="asc">Ascending</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+          </Tabs>
         </CardContent>
       </Card>
 
       {/* Users Table */}
       <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
         <CardHeader>
-          <CardTitle className="edugenius-text-gradient-blue">Users List</CardTitle>
+          <CardTitle className="edugenius-text-gradient-blue flex items-center space-x-2">
+            {React.createElement(currentTabInfo.icon, { className: "w-5 h-5" })}
+            <span>{currentTabInfo.name}</span>
+          </CardTitle>
           <CardDescription>
-            Showing {users.length} of {pagination.total} users
+            Showing {users.length} of {pagination.total} {activeTab === 'all' ? 'users' : currentTabInfo.name.toLowerCase()}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -506,12 +560,12 @@ export default function UsersPage() {
               <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
               <p className="text-gray-500 mb-4">
-                {searchQuery || roleFilter !== 'all' || statusFilter !== 'all'
+                {searchQuery || activeTab !== 'all' || statusFilter !== 'all'
                   ? 'Try adjusting your search or filters' 
                   : 'Get started by adding your first user'
                 }
               </p>
-              {!searchQuery && roleFilter === 'all' && statusFilter === 'all' && (
+              {!searchQuery && activeTab === 'all' && statusFilter === 'all' && (
                 <Button onClick={() => setCreateUserOpen(true)} className="edugenius-button">
                   <Plus className="w-4 h-4 mr-2" />
                   Add First User
@@ -609,31 +663,42 @@ export default function UsersPage() {
                           <Button 
                             variant="ghost" 
                             size="sm"
-                            onClick={async (e) => {
+                            onClick={(e) => {
                               e.stopPropagation()
-                              if (confirm(`Are you sure you want to delete ${user.firstName} ${user.lastName}? This action cannot be undone.`)) {
-                                try {
-                                  const response = await fetch(`/api/users/${user.id}`, {
-                                    method: 'DELETE',
-                                  })
-                                  if (response.ok) {
-                                    handleUserDeleted(user.id)
-                                  } else {
-                                    const error = await response.json()
+                              showDeleteConfirmation(
+                                'Delete User',
+                                'Are you sure you want to delete this user? This will permanently remove all their data, assignments, and access to the system.',
+                                `${user.firstName} ${user.lastName}`,
+                                async () => {
+                                  try {
+                                    const response = await fetch(`/api/users/${user.id}`, {
+                                      method: 'DELETE',
+                                    })
+                                    if (response.ok) {
+                                      handleUserDeleted(user.id)
+                                      toast({
+                                        title: "User Deleted Successfully",
+                                        description: `${user.firstName} ${user.lastName} has been permanently removed.`,
+                                        variant: "success",
+                                      })
+                                    } else {
+                                      const error = await response.json()
+                                      toast({
+                                        variant: "destructive",
+                                        title: "Delete Failed",
+                                        description: error.error || "Unable to delete user. Please try again.",
+                                      })
+                                    }
+                                  } catch (error) {
+                                    console.error('Error deleting user:', error)
                                     toast({
                                       variant: "destructive",
-                                      title: "Error",
-                                      description: error.error || "Failed to delete user",
+                                      title: "Delete Failed",
+                                      description: "Network error occurred. Please check your connection and try again.",
                                     })
                                   }
-                                } catch (error) {
-                                  toast({
-                                    variant: "destructive",
-                                    title: "Error",
-                                    description: "Failed to delete user",
-                                  })
                                 }
-                              }
+                              )
                             }}
                             className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700"
                             title="Delete User"
@@ -701,6 +766,7 @@ export default function UsersPage() {
         onUserUpdated={handleUserUpdated}
         onUserDeleted={handleUserDeleted}
       />
+      <DeleteConfirmationDialog />
     </div>
   )
 }

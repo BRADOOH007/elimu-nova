@@ -199,9 +199,7 @@ export default function PackageDetailsModal({
   }
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete "${packageData?.name}"? This action cannot be undone.`)) {
-      return
-    }
+    // Confirmation removed - using toast notifications only
 
     try {
       const response = await fetch(`/api/packages/${packageId}`, {

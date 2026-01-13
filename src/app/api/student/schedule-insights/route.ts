@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { OpenRouterAI } from '@/lib/openrouter-ai'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -161,7 +161,7 @@ async function generateAIScheduleInsights(data: any): Promise<any> {
       recentAssignments: data.recentAssignments
     }
 
-    const aiResponse = await OpenRouterAI.generateAITutorResponse({
+    const aiResponse = await OpenOpenAIService.generateAITutorResponse({
       sessionType: 'progress_review',
       question: 'Please analyze my upcoming schedule and provide insights, recommendations, and study planning advice based on my classes, assignments, and study patterns.',
       context,

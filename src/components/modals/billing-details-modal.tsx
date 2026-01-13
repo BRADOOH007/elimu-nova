@@ -231,9 +231,7 @@ export function BillingDetailsModal({
   const handleDelete = async () => {
     if (!billingId) return
 
-    if (!confirm('Are you sure you want to delete this billing record? This action cannot be undone.')) {
-      return
-    }
+    // Confirmation removed - using toast notifications only
 
     setDeleting(true)
     try {

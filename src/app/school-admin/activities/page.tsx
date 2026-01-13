@@ -212,9 +212,7 @@ export default function ActivitiesPage() {
   }
 
   const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Are you sure you want to delete this activity?')) {
-      return
-    }
+    // Confirmation removed - using toast notifications only
 
     try {
       const response = await fetch(`/api/school-admin/activities/${activityId}`, {

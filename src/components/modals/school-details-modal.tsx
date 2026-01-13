@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { useDeleteConfirmation } from "@/components/ui/delete-confirmation-dialog"
 import { 
   X, 
   Save, 
@@ -79,9 +80,9 @@ export function SchoolDetailsModal({
   onSchoolDeleted 
 }: SchoolDetailsModalProps) {
   const { toast } = useToast()
+  const { showDeleteConfirmation, DeleteConfirmationDialog } = useDeleteConfirmation()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [deleting, setDeleting] = useState(false)
   const [editing, setEditing] = useState(false)
   const [schoolData, setSchoolData] = useState<SchoolData | null>(null)
   const [formData, setFormData] = useState({
@@ -181,21 +182,18 @@ export function SchoolDetailsModal({
   }
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this school? This action cannot be undone.')) {
-      return
-    }
+    if (!schoolData) return
 
     try {
-      setDeleting(true)
       const response = await fetch(`/api/schools/${schoolId}`, {
         method: 'DELETE'
       })
       
       if (response.ok) {
         toast({
+          title: "School Deleted Successfully",
+          description: `${schoolData.name} has been permanently removed from the system.`,
           variant: "success",
-          title: "School Deleted",
-          description: "School has been deleted successfully!",
         })
         
         if (onSchoolDeleted) {
@@ -208,7 +206,7 @@ export function SchoolDetailsModal({
         toast({
           variant: "destructive",
           title: "Delete Failed",
-          description: errorData.error || 'Failed to delete school',
+          description: errorData.error || 'Unable to delete school. Please try again.',
         })
       }
     } catch (error) {
@@ -216,15 +214,24 @@ export function SchoolDetailsModal({
       toast({
         variant: "destructive",
         title: "Delete Failed",
-        description: "Failed to delete school. Please try again.",
+        description: "Network error occurred. Please check your connection and try again.",
       })
-    } finally {
-      setDeleting(false)
     }
   }
 
+  const handleDeleteClick = () => {
+    if (!schoolData) return
+    
+    showDeleteConfirmation(
+      'Delete School',
+      'Are you sure you want to delete this school? This will permanently remove all school data, users, and associated records.',
+      schoolData.name,
+      handleDelete
+    )
+  }
+
   const handleClose = () => {
-    if (!saving && !deleting) {
+    if (!saving) {
       setEditing(false)
       setFormData({
         name: '',
@@ -241,10 +248,11 @@ export function SchoolDetailsModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <>
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <School className="w-6 h-6 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">
@@ -266,26 +274,22 @@ export function SchoolDetailsModal({
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={handleDelete}
-                  disabled={deleting}
+                  onClick={handleDeleteClick}
                   className="text-red-600 hover:text-red-700"
                 >
-                  {deleting ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4 mr-2" />
-                  )}
+                  <Trash2 className="w-4 h-4 mr-2" />
                   Delete
                 </Button>
               </>
             )}
-            <Button variant="ghost" size="sm" onClick={handleClose} disabled={saving || deleting}>
+            <Button variant="ghost" size="sm" onClick={handleClose} disabled={saving}>
               <X className="w-5 h-5" />
             </Button>
           </div>
         </div>
 
-        <div className="overflow-y-auto max-h-[calc(90vh-120px)] p-6">
+        {/* Content - Scrollable */}
+        <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -495,9 +499,9 @@ export function SchoolDetailsModal({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer - Always visible when editing */}
         {editing && (
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
             <Button variant="outline" onClick={() => setEditing(false)} disabled={saving}>
               Cancel
             </Button>
@@ -522,5 +526,7 @@ export function SchoolDetailsModal({
         )}
       </div>
     </div>
+    <DeleteConfirmationDialog />
+  </>
   )
 }

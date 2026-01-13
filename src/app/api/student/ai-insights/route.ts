@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { OpenRouterAI } from '@/lib/openrouter-ai'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
       streakDays: student.analytics?.streakDays || 0
     }
 
-    // Generate AI insights using OpenRouter
-    const insights = await OpenRouterAI.generateStudentInsights(studentData)
+    // Generate AI insights using OpenAI
+    const insights = await OpenOpenAIService.generateStudentInsights(studentData)
 
     return NextResponse.json(insights)
 

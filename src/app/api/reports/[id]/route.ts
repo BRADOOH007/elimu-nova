@@ -5,23 +5,21 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is super admin
+    // Only super admins can access reports
     if (session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { id } = await params
     const report = await prisma.report.findUnique({
-      where: { id },
+      where: { id: params.id },
       include: {
         generatedByUser: {
           select: {
@@ -50,65 +48,61 @@ export async function GET(
     return NextResponse.json(report)
   } catch (error) {
     console.error('Error fetching report:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is super admin
+    // Only super admins can update reports
     if (session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { 
+    const {
       title,
       description,
       type,
       status,
       content,
       filters,
-      schoolId,
       isPublic,
       scheduledAt,
       expiresAt
     } = body
 
-    const { id } = await params
-    
-    // Check if report exists
-    const existingReport = await prisma.report.findUnique({
-      where: { id }
-    })
-
-    if (!existingReport) {
-      return NextResponse.json({ error: 'Report not found' }, { status: 404 })
+    if (!title || !type) {
+      return NextResponse.json(
+        { error: 'Title and type are required' },
+        { status: 400 }
+      )
     }
 
-    // Update report
     const report = await prisma.report.update({
-      where: { id },
+      where: { id: params.id },
       data: {
-        ...(title && { title }),
-        ...(description !== undefined && { description }),
-        ...(type && { type }),
-        ...(status && { status }),
-        ...(content && { content }),
-        ...(filters !== undefined && { filters }),
-        ...(schoolId !== undefined && { schoolId }),
-        ...(isPublic !== undefined && { isPublic }),
-        ...(scheduledAt && { scheduledAt: new Date(scheduledAt) }),
-        ...(expiresAt && { expiresAt: new Date(expiresAt) })
+        title,
+        description,
+        type,
+        status,
+        content,
+        filters,
+        isPublic,
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        updatedAt: new Date()
       },
       include: {
         generatedByUser: {
@@ -134,45 +128,38 @@ export async function PUT(
     return NextResponse.json(report)
   } catch (error) {
     console.error('Error updating report:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is super admin
+    // Only super admins can delete reports
     if (session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { id } = await params
-    
-    // Check if report exists
-    const existingReport = await prisma.report.findUnique({
-      where: { id }
-    })
-
-    if (!existingReport) {
-      return NextResponse.json({ error: 'Report not found' }, { status: 404 })
-    }
-
-    // Delete report
     await prisma.report.delete({
-      where: { id }
+      where: { id: params.id }
     })
 
-    return NextResponse.json({ message: 'Report deleted successfully' })
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting report:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

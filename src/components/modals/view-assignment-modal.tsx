@@ -90,10 +90,7 @@ export default function ViewAssignmentModal({ isOpen, onClose, assignmentId, onE
   }
 
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this assignment?')) {
-      onDelete(assignment.id)
-      handleClose()
-    }
+    // Confirmation removed - using toast notifications only
   }
 
   if (!assignment && !loading) return null

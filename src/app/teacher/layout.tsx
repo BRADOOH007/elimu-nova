@@ -13,10 +13,10 @@ import {
   Brain,
   ClipboardList,
   Users2,
-  Presentation,
   Sparkles,
   Mail,
-  CreditCard
+  CreditCard,
+  CheckSquare
 } from 'lucide-react'
 
 export default function TeacherLayout({
@@ -33,7 +33,8 @@ export default function TeacherLayout({
     { icon: BookOpen, label: "Lesson Plans", href: "/teacher/lesson-plans" },
     { icon: FileText, label: "Schemes of Work", href: "/teacher/schemes-of-work" },
     { icon: ClipboardList, label: "Assignments", href: "/teacher/assignments" },
-    { icon: Brain, label: "AI Content Hub", href: "/teacher/ai-content" },
+    { icon: CheckSquare, label: "Rubrics", href: "/teacher/rubrics" },
+    { icon: Sparkles, label: "AI Tools", href: "/teacher/ai-tools" },
     { icon: Users, label: "Students", href: "/teacher/students" },
     { 
       icon: Mail, 

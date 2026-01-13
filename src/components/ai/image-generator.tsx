@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Image as ImageIcon, Download, Loader2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
+import { safeApiRequest } from '@/lib/api-utils'
 
 export default function ImageGenerator() {
   const { data: session, status } = useSession()
@@ -37,12 +38,8 @@ export default function ImageGenerator() {
     setGeneratedImage(null)
 
     try {
-      const response = await fetch('/api/ai/generate-image', {
+      const result = await safeApiRequest('/api/ai/generate-image', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
         body: JSON.stringify({
           prompt,
           style,
@@ -50,32 +47,31 @@ export default function ImageGenerator() {
           size,
           quality
         }),
+        errorMessage: 'Failed to generate image'
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.details || 'Failed to generate image')
-      }
-
-      const data = await response.json()
-      
-      if (data.success && data.imageUrl) {
-        setGeneratedImage(data.imageUrl)
-        setImageMetadata({
-          source: data.source,
-          message: data.message,
-          generatedAt: new Date().toISOString()
-        })
-        
-        if (data.source === 'placeholder') {
-          toast.success(`Image generated! ${data.message}`)
+      if (result.success && result.data) {
+        const data = result.data
+        if (data.success && data.imageUrl) {
+          setGeneratedImage(data.imageUrl)
+          setImageMetadata({
+            source: data.source,
+            message: data.message,
+            generatedAt: new Date().toISOString(),
+            savedImage: data.saved_image
+          })
+          
+          if (data.source === 'placeholder') {
+            toast.success(`Image generated! ${data.message}`)
+          } else {
+            toast.success('AI image generated successfully!')
+          }
         } else {
-          toast.success('AI image generated successfully!')
+          throw new Error(data.message || 'No image URL in response')
         }
       } else {
-        throw new Error('No image URL in response')
+        throw new Error(result.error || 'Failed to generate image')
       }
-
     } catch (error) {
       console.error('Error generating image:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to generate image')
@@ -199,15 +195,36 @@ export default function ImageGenerator() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="size">Size</Label>
+              <Label htmlFor="size">Size & Cost</Label>
               <Select value={size} onValueChange={setSize} disabled={isGenerating}>
                 <SelectTrigger id="size">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1024x1024">Square (1024x1024)</SelectItem>
-                  <SelectItem value="1792x1024">Landscape (1792x1024)</SelectItem>
-                  <SelectItem value="1024x1792">Portrait (1024x1792)</SelectItem>
+                  <SelectItem value="512x512">
+                    <div className="flex items-center justify-between w-full">
+                      <span>💰 Small (512×512)</span>
+                      <span className="text-xs text-green-600 ml-2">Economy</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="1024x1024">
+                    <div className="flex items-center justify-between w-full">
+                      <span>📄 Square (1024×1024)</span>
+                      <span className="text-xs text-blue-600 ml-2">Standard</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="1536x1024">
+                    <div className="flex items-center justify-between w-full">
+                      <span>🖼️ Landscape (1536×1024)</span>
+                      <span className="text-xs text-orange-600 ml-2">Premium</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="1024x1536">
+                    <div className="flex items-center justify-between w-full">
+                      <span>📋 Portrait (1024×1536)</span>
+                      <span className="text-xs text-purple-600 ml-2">Premium</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -249,12 +266,15 @@ export default function ImageGenerator() {
           {/* Generated Image */}
           {generatedImage && (
             <div className="space-y-4">
-              <div className="rounded-xl overflow-hidden shadow-lg">
-                <img
-                  src={generatedImage}
-                  alt="Generated"
-                  className="w-full h-auto"
-                />
+              <div className="rounded-xl overflow-hidden shadow-lg bg-white p-4">
+                <div className="max-w-full max-h-96 mx-auto flex items-center justify-center">
+                  <img
+                    src={generatedImage}
+                    alt="Generated"
+                    className="max-w-full max-h-full w-auto h-auto rounded-lg object-contain"
+                    style={{ maxHeight: '384px', maxWidth: '100%' }}
+                  />
+                </div>
               </div>
 
               {imageMetadata && (

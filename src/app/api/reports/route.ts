@@ -6,12 +6,11 @@ import { prisma } from '@/lib/prisma'
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is super admin
+    // Only super admins can access all reports
     if (session.user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
@@ -25,129 +24,36 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'createdAt'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
 
+    const skip = (page - 1) * limit
+
+    // Build where clause
     const where: any = {}
     
-    // Search filter
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } }
       ]
     }
-    
-    // Type filter
-    if (type && type !== 'all') {
+
+    if (type) {
       where.type = type
     }
-    
-    // Status filter
-    if (status && status !== 'all') {
+
+    if (status) {
       where.status = status
     }
 
-    // Sort configuration
-    const orderBy: any = {}
-    if (sortBy === 'title') {
-      orderBy.title = sortOrder
-    } else if (sortBy === 'type') {
-      orderBy.type = sortOrder
-    } else if (sortBy === 'status') {
-      orderBy.status = sortOrder
-    } else if (sortBy === 'updatedAt') {
-      orderBy.updatedAt = sortOrder
-    } else {
-      orderBy.createdAt = sortOrder
-    }
+    // Get total count
+    const total = await prisma.report.count({ where })
 
-    const [reports, total] = await Promise.all([
-      prisma.report.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy,
-        include: {
-          generatedByUser: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true
-            }
-          },
-          school: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          }
-        }
-      }),
-      prisma.report.count({ where })
-    ])
-
-    const pages = Math.ceil(total / limit)
-
-    return NextResponse.json({
-      reports,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages
-      }
-    })
-  } catch (error) {
-    console.error('Error fetching reports:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const body = await request.json()
-    const { 
-      title,
-      description,
-      type,
-      content,
-      filters,
-      schoolId,
-      isPublic,
-      scheduledAt,
-      expiresAt
-    } = body
-
-    // Validate required fields
-    if (!title || !type) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    // Create report
-    const report = await prisma.report.create({
-      data: {
-        title,
-        description,
-        type,
-        content: content || '{}',
-        filters: filters || null,
-        generatedBy: session.user.id,
-        schoolId: schoolId || null,
-        isPublic: isPublic || false,
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
-        status: 'DRAFT'
+    // Get reports with pagination
+    const reports = await prisma.report.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: {
+        [sortBy]: sortOrder
       },
       include: {
         generatedByUser: {
@@ -162,7 +68,96 @@ export async function POST(request: NextRequest) {
           select: {
             id: true,
             name: true,
+            email: true,
+            address: true,
+            phone: true
+          }
+        }
+      }
+    })
+
+    const pages = Math.ceil(total / limit)
+
+    return NextResponse.json({
+      reports,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching reports:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Only super admins can create reports
+    if (session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const {
+      title,
+      description,
+      type,
+      content,
+      filters,
+      isPublic,
+      scheduledAt,
+      expiresAt,
+      schoolId
+    } = body
+
+    if (!title || !type) {
+      return NextResponse.json(
+        { error: 'Title and type are required' },
+        { status: 400 }
+      )
+    }
+
+    const report = await prisma.report.create({
+      data: {
+        title,
+        description,
+        type,
+        status: 'DRAFT',
+        content: content || '{}',
+        filters: filters || null,
+        isPublic: isPublic || false,
+        scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        generatedBy: session.user.id,
+        schoolId: schoolId || null
+      },
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
             email: true
+          }
+        },
+        school: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            address: true,
+            phone: true
           }
         }
       }
@@ -171,6 +166,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(report, { status: 201 })
   } catch (error) {
     console.error('Error creating report:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
   }
 }

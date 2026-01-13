@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     
     const apiKey = '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'
     
-    console.log('Using OpenRouter API Key:', apiKey.substring(0, 20) + '...')
+    console.log('Using OpenAI API Key:', apiKey.substring(0, 20) + '...')
     
     const openai = new OpenAI({
       apiKey: apiKey,

@@ -143,20 +143,18 @@ export default function RubricsPage() {
   }
 
   const handleDelete = async (rubricId: string) => {
-    if (confirm('Are you sure you want to delete this rubric?')) {
-      try {
-        const response = await fetch(`/api/rubrics/${rubricId}`, {
-          method: 'DELETE'
-        })
-        if (response.ok) {
-          setRubrics(prev => prev.filter(r => r.id !== rubricId))
-        } else {
-          alert('Error deleting rubric')
-        }
-      } catch (error) {
-        console.error('Error deleting rubric:', error)
+    try {
+      const response = await fetch(`/api/rubrics/${rubricId}`, {
+        method: 'DELETE'
+      })
+      if (response.ok) {
+        setRubrics(prev => prev.filter(r => r.id !== rubricId))
+      } else {
         alert('Error deleting rubric')
       }
+    } catch (error) {
+      console.error('Error deleting rubric:', error)
+      alert('Error deleting rubric')
     }
   }
 

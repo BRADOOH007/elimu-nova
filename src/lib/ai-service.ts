@@ -1,4 +1,4 @@
-// AI Service for generating educational content using OpenRouter API
+// AI Service for generating educational content using OpenAI API
 
 export interface LessonPlanRequest {
   subject: string
@@ -35,7 +35,7 @@ export interface AIResponse {
   }
 }
 
-// AI service using OpenRouter API
+// AI service using OpenAI API
 export class AIService {
   private static instance: AIService
   private apiKey: string

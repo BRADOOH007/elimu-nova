@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useToast } from '@/hooks/use-toast'
 import CreateAssignmentModal from '@/components/modals/create-assignment-modal'
 import EditAssignmentModal from '@/components/modals/edit-assignment-modal'
 import ViewAssignmentModal from '@/components/modals/view-assignment-modal'
@@ -77,6 +78,7 @@ interface Assignment {
 }
 
 export default function AssignmentsPage() {
+  const { toast } = useToast()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -148,74 +150,53 @@ export default function AssignmentsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this assignment?')) return
-    
     try {
       const response = await fetch(`/api/assignments/${id}`, {
         method: 'DELETE'
       })
-      
+
       if (response.ok) {
-        setAssignments(prev => prev.filter(assignment => assignment.id !== id))
+        setAssignments(assignments.filter(a => a.id !== id))
+        toast({
+          title: "Assignment Deleted Successfully",
+          description: "The assignment has been permanently removed.",
+          variant: "success",
+        })
       } else {
-        console.error('Failed to delete assignment')
+        const error = await response.json()
+        toast({
+          variant: "destructive",
+          title: "Delete Failed",
+          description: error.error || "Unable to delete assignment. Please try again.",
+        })
       }
     } catch (error) {
       console.error('Error deleting assignment:', error)
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Network error occurred. Please check your connection and try again.",
+      })
     }
   }
 
-  const handleDownload = (id: string) => {
-    // Download assignment
-    console.log('Download assignment:', id)
-  }
-
-  const refreshAssignments = async () => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams()
-      if (searchTerm) params.append('search', searchTerm)
-      if (statusFilter !== 'all') params.append('status', statusFilter)
-      
-      const response = await fetch(`/api/assignments?${params.toString()}`)
-      if (response.ok) {
-        const data = await response.json()
-        setAssignments(data.assignments || [])
-      }
-    } catch (error) {
-      console.error('Error refreshing assignments:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleModalSuccess = () => {
-    refreshAssignments()
-  }
-
-  const handleCloseModals = () => {
+  const handleAssignmentCreated = () => {
     setShowCreateModal(false)
-    setShowEditModal(false)
-    setShowViewModal(false)
-    setShowAIGenerator(false)
-    setSelectedAssignment(null)
-    setViewAssignmentId(null)
+    // Refresh assignments
+    window.location.reload()
   }
 
-  const handleAIGeneratorSuccess = (content: any) => {
-    // Handle the generated content - could save it as a new assignment
-    console.log('Generated content:', content)
-    // You could automatically create an assignment with the generated content
-    refreshAssignments()
+  const handleAssignmentUpdated = () => {
+    setShowEditModal(false)
+    setSelectedAssignment(null)
+    // Refresh assignments
+    window.location.reload()
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading assignments...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
@@ -223,30 +204,34 @@ export default function AssignmentsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Assignments</h1>
-          <p className="text-gray-600 mt-1">Manage and organize your assignments</p>
+          <p className="text-gray-600">Create and manage assignments for your students</p>
         </div>
-        <div className="flex gap-3">
-          <Button 
-            onClick={() => setShowAIGenerator(true)} 
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+        <div className="flex space-x-3">
+          <Button
+            onClick={() => setShowAIGenerator(true)}
+            variant="outline"
+            className="flex items-center space-x-2"
           >
-            <Brain className="w-4 h-4 mr-2" />
-            AI Generator
+            <Brain className="w-4 h-4" />
+            <span>AI Generator</span>
           </Button>
-          <Button onClick={handleCreateNew} className="bg-purple-600 hover:bg-purple-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Create New Assignment
+          <Button
+            onClick={handleCreateNew}
+            className="flex items-center space-x-2"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create Assignment</span>
           </Button>
         </div>
       </div>
 
-      {/* Search and Filter */}
-      <Card className="bg-gradient-to-br from-white via-purple-50 to-blue-50 shadow-lg backdrop-blur-sm border-0">
+      {/* Search and Filters */}
+      <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -254,7 +239,7 @@ export default function AssignmentsPage() {
                   placeholder="Search assignments..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                  className="pl-10"
                 />
               </div>
             </div>
@@ -262,7 +247,7 @@ export default function AssignmentsPage() {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 bg-white/70 backdrop-blur-sm border-0 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All Status</option>
                 <option value="PENDING">Pending</option>
@@ -270,182 +255,154 @@ export default function AssignmentsPage() {
                 <option value="GRADED">Graded</option>
                 <option value="OVERDUE">Overdue</option>
               </select>
-              <Button 
-                variant="outline" 
-                onClick={refreshAssignments}
-                disabled={loading}
-                className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Assignments Grid */}
-      {assignments.length === 0 ? (
-        <Card className="bg-gradient-to-br from-white via-gray-50 to-blue-50 shadow-lg backdrop-blur-sm border-0">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {assignments.map((assignment) => (
+          <Card key={assignment.id} className="hover:shadow-lg transition-shadow">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
+                    {assignment.title}
+                  </CardTitle>
+                  <CardDescription className="mt-2 line-clamp-3">
+                    {assignment.description}
+                  </CardDescription>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleView(assignment.id)}>
+                      <Eye className="w-4 h-4 mr-2" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleEdit(assignment)}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleDelete(assignment.id)}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Status and Due Date */}
+                <div className="flex items-center justify-between">
+                  <Badge className={getStatusColor(assignment.status)}>
+                    {getStatusIcon(assignment.status)}
+                    <span className="ml-1">{assignment.status}</span>
+                  </Badge>
+                  <div className="flex items-center text-sm text-gray-500">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    {new Date(assignment.dueDate).toLocaleDateString()}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="flex items-center">
+                    <Users className="w-4 h-4 mr-2 text-blue-500" />
+                    <span>{assignment.stats.totalStudents} Students</span>
+                  </div>
+                  <div className="flex items-center">
+                    <FileText className="w-4 h-4 mr-2 text-green-500" />
+                    <span>{assignment.stats.totalSubmissions} Submissions</span>
+                  </div>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Progress</span>
+                    <span>{Math.round((assignment.stats.totalSubmissions / assignment.stats.totalStudents) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full" 
+                      style={{ 
+                        width: `${(assignment.stats.totalSubmissions / assignment.stats.totalStudents) * 100}%` 
+                      }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {assignments.length === 0 && (
+        <Card>
           <CardContent className="p-12 text-center">
-            <ClipboardList className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <ClipboardList className="w-16 h-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">No assignments found</h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 mb-6">
               {searchTerm || statusFilter !== 'all' 
-                ? 'Try adjusting your search or filter criteria.' 
-                : 'Get started by creating your first assignment.'}
+                ? 'Try adjusting your search or filters' 
+                : 'Create your first assignment to get started'
+              }
             </p>
-            <Button onClick={handleCreateNew} className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Assignment
-            </Button>
+            {!searchTerm && statusFilter === 'all' && (
+              <Button onClick={handleCreateNew}>
+                <Plus className="w-4 h-4 mr-2" />
+                Create Assignment
+              </Button>
+            )}
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {assignments.map((assignment) => (
-            <Card key={assignment.id} className="bg-gradient-to-br from-white via-purple-50 to-blue-50 shadow-lg backdrop-blur-sm border-0 hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
-                      {assignment.title}
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {assignment.lessonPlan ? `${assignment.lessonPlan.subject} • ${assignment.lessonPlan.grade}` : 'General Assignment'}
-                    </CardDescription>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="hover:bg-white/50">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
-                      <DropdownMenuItem onClick={() => handleView(assignment.id)}>
-                        <Eye className="w-4 h-4 mr-2" />
-                        View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(assignment)}>
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDownload(assignment.id)}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Download
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(assignment.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Badge className={`${getStatusColor(assignment.status)} flex items-center gap-1`}>
-                      {getStatusIcon(assignment.status)}
-                      {assignment.status.charAt(0).toUpperCase() + assignment.status.slice(1).toLowerCase()}
-                    </Badge>
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Clock className="w-4 h-4 mr-1" />
-                      Due {new Date(assignment.dueDate).toLocaleDateString()}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Users className="w-4 h-4 mr-2" />
-                    {assignment.stats.totalStudents} students assigned
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-gray-500">
-                    <ClipboardList className="w-4 h-4 mr-2" />
-                    {assignment.stats.totalSubmissions} submissions
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-gray-500">
-                    <User className="w-4 h-4 mr-2" />
-                    {assignment.teacher.name}
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Created {new Date(assignment.createdAt).toLocaleDateString()}
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="pt-2">
-                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-                      <span>Submission Progress</span>
-                      <span>{assignment.stats.totalStudents > 0 ? Math.round((assignment.stats.totalSubmissions / assignment.stats.totalStudents) * 100) : 0}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${assignment.stats.totalStudents > 0 ? (assignment.stats.totalSubmissions / assignment.stats.totalStudents) * 100 : 0}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2 pt-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
-                      onClick={() => handleView(assignment.id)}
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      View
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1 bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
-                      onClick={() => handleEdit(assignment)}
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
       )}
 
       {/* Modals */}
       <CreateAssignmentModal
         isOpen={showCreateModal}
-        onClose={handleCloseModals}
-        onSuccess={handleModalSuccess}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={handleAssignmentCreated}
       />
 
       <EditAssignmentModal
         isOpen={showEditModal}
-        onClose={handleCloseModals}
-        onSuccess={handleModalSuccess}
+        onClose={() => setShowEditModal(false)}
         assignment={selectedAssignment}
+        onSuccess={handleAssignmentUpdated}
       />
 
       <ViewAssignmentModal
         isOpen={showViewModal}
-        onClose={handleCloseModals}
+        onClose={() => setShowViewModal(false)}
         assignmentId={viewAssignmentId}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
+        onEdit={(assignment) => {
+          setShowViewModal(false)
+          handleEdit(assignment)
+        }}
+        onDelete={(id) => {
+          setShowViewModal(false)
+          handleDelete(id)
+        }}
       />
 
-      <AIGeneratorModal
-        isOpen={showAIGenerator}
-        onClose={handleCloseModals}
-        onSuccess={handleAIGeneratorSuccess}
-      />
+      {showAIGenerator && (
+        <AIGeneratorModal
+          isOpen={showAIGenerator}
+          onClose={() => setShowAIGenerator(false)}
+        />
+      )}
     </div>
   )
 }

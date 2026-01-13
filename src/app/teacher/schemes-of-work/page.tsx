@@ -48,6 +48,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useToast } from '@/hooks/use-toast'
 import SchemeOfWorkModal from '@/components/modals/scheme-of-work-modal'
 
 interface Topic {
@@ -91,6 +92,7 @@ interface SchemeOfWork {
 }
 
 export default function SchemesOfWorkPage() {
+  const { toast } = useToast()
   const [schemesOfWork, setSchemesOfWork] = useState<SchemeOfWork[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -100,6 +102,7 @@ export default function SchemesOfWorkPage() {
   const [isViewModalOpen, setViewModalOpen] = useState(false)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [schemeOfWorkToShare, setSchemeOfWorkToShare] = useState<SchemeOfWork | null>(null)
+  const [schemeToShare, setSchemeToShare] = useState<SchemeOfWork | null>(null)
   const [students, setStudents] = useState<any[]>([])
   const [classes, setClasses] = useState<any[]>([])
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
@@ -138,6 +141,30 @@ export default function SchemesOfWorkPage() {
       }
     }
     fetchSchemesOfWork()
+  }, [])
+
+  // Fetch students and classes for sharing
+  useEffect(() => {
+    const fetchStudentsAndClasses = async () => {
+      try {
+        // Fetch students
+        const studentsResponse = await fetch('/api/teacher/students')
+        if (studentsResponse.ok) {
+          const studentsData = await studentsResponse.json()
+          setStudents(studentsData.students || [])
+        }
+
+        // Fetch classes
+        const classesResponse = await fetch('/api/teacher/classes')
+        if (classesResponse.ok) {
+          const classesData = await classesResponse.json()
+          setClasses(classesData.classes || [])
+        }
+      } catch (error) {
+        console.error('Error fetching students and classes:', error)
+      }
+    }
+    fetchStudentsAndClasses()
   }, [])
 
   // Refresh schemes when returning from create page
@@ -284,30 +311,42 @@ export default function SchemesOfWorkPage() {
   }
 
   const handleDeleteScheme = async (schemeId: string) => {
-    if (!confirm('Are you sure you want to delete this scheme of work?')) return
-
     try {
       const response = await fetch(`/api/schemes-of-work/${schemeId}`, {
-        method: 'DELETE',
+        method: 'DELETE'
       })
 
       if (response.ok) {
         setSchemesOfWork(prev => prev.filter(scheme => scheme.id !== schemeId))
-        alert('Scheme of work deleted successfully!')
+        toast({
+          title: "Scheme Deleted Successfully",
+          description: "The scheme of work has been permanently removed.",
+          variant: "success",
+        })
       } else {
-        alert('Error deleting scheme of work')
+        const error = await response.json()
+        toast({
+          variant: "destructive",
+          title: "Delete Failed",
+          description: error.error || "Unable to delete scheme of work. Please try again.",
+        })
       }
     } catch (error) {
-      alert('Error deleting scheme of work')
+      console.error('Error deleting scheme of work:', error)
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: "Network error occurred. Please check your connection and try again.",
+      })
     }
   }
 
-  const handleEditScheme = (scheme: SchemeOfWork) => {
-    setEditingScheme(scheme)
-    setIsEditModalOpen(true)
-  }
+  const handleSaveSchemeOfWork = async () => {
+    if (!generatedContent) {
+      alert('No content to save')
+      return
+    }
 
-  const handleSave = async () => {
     try {
       const response = await fetch('/api/schemes-of-work', {
         method: 'POST',
@@ -315,18 +354,17 @@ export default function SchemesOfWorkPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: `${formData.subject}`,
+          title: `${formData.subject} - ${formData.grade}`,
           subject: formData.subject,
           grade: formData.grade,
-          term: '',
-          duration: formData.duration,
           content: {
             generatedContent,
-            objectives: formData.objectives.filter(obj => obj.trim() !== ''),
-            topics: formData.topics.filter(topic => topic.trim() !== ''),
-            duration: formData.duration
-          },
-          objectives: formData.objectives.filter(obj => obj.trim() !== '').join('; ')
+            duration: formData.duration,
+            topics: formData.topics.filter(topic => topic.trim()),
+            objectives: formData.objectives.filter(obj => obj.trim()),
+            lessonsPerWeek: 5,
+            totalLessons: formData.duration * 5
+          }
         }),
       })
 
@@ -377,102 +415,14 @@ export default function SchemesOfWorkPage() {
   }
 
   const handleDeleteSchemeOfWork = async (schemeOfWork: SchemeOfWork) => {
-    if (!confirm('Are you sure you want to delete this scheme of work?')) return
-
-    try {
-      const response = await fetch(`/api/schemes-of-work/${schemeOfWork.id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        setSchemesOfWork(prev => prev.filter(sw => sw.id !== schemeOfWork.id))
-        alert('Scheme of work deleted successfully!')
-      } else {
-        alert('Error deleting scheme of work')
-      }
-    } catch (error) {
-      alert('Error deleting scheme of work')
-    }
+    await handleDeleteScheme(schemeOfWork.id)
   }
 
-  const handleShare = async (schemeOfWork: SchemeOfWork) => {
-    setSchemeOfWorkToShare(schemeOfWork)
-    setIsShareModalOpen(true)
-
-    // Fetch students and classes
-    try {
-      const [studentsRes, classesRes] = await Promise.all([
-        fetch('/api/teacher/students'),
-        fetch('/api/teacher/classes')
-      ])
-
-      if (studentsRes.ok) {
-        const studentsData = await studentsRes.json()
-        setStudents(studentsData.students || [])
-        console.log('Fetched students:', studentsData.students?.length || 0)
-      } else {
-        console.error('Failed to fetch students:', studentsRes.status, studentsRes.statusText)
-      }
-
-      if (classesRes.ok) {
-        const classesData = await classesRes.json()
-        setClasses(classesData.classes || [])
-        console.log('Fetched classes:', classesData.classes?.length || 0)
-      } else {
-        console.error('Failed to fetch classes:', classesRes.status, classesRes.statusText)
-      }
-    } catch (error) {
-      console.error('Error fetching students and classes:', error)
-    }
+  const handleEditScheme = (schemeOfWork: SchemeOfWork) => {
+    router.push(`/teacher/schemes-of-work/edit/${schemeOfWork.id}`)
   }
 
-  const confirmShare = async () => {
-    if (!schemeOfWorkToShare) return
-
-    setSharing(true)
-    try {
-      const response = await fetch('/api/schemes-of-work/share', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          schemeOfWorkId: schemeOfWorkToShare.id,
-          studentIds: selectedStudents,
-          classId: selectedClass || undefined
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Share successful:', data)
-        alert(`Scheme of work shared successfully with ${data.sharedCount} students!`)
-        setIsShareModalOpen(false)
-        setSelectedStudents([])
-        setSelectedClass('')
-        setSchemeOfWorkToShare(null)
-        
-        // Refresh the schemes list to update shared count
-        const refreshResponse = await fetch('/api/schemes-of-work')
-        if (refreshResponse.ok) {
-          const refreshData = await refreshResponse.json()
-          setSchemesOfWork(refreshData.schemesOfWork || [])
-        }
-      } else {
-        const errorData = await response.json()
-        console.error('Share error:', errorData)
-        alert(`Error sharing scheme of work: ${errorData.error || 'Unknown error'}`)
-      }
-    } catch (error) {
-      console.error('Error sharing scheme of work:', error)
-      alert('Error sharing scheme of work')
-    } finally {
-      setSharing(false)
-    }
-  }
-
-  const handleDownload = async (format: 'pdf' | 'word') => {
-    setDownloading(format)
+  const handleDownloadScheme = async (format: 'pdf' | 'word', schemeOfWork: SchemeOfWork) => {
     try {
       const response = await fetch('/api/export/scheme-of-work', {
         method: 'POST',
@@ -480,12 +430,14 @@ export default function SchemesOfWorkPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          content: generatedContent,
-          title: `${formData.subject} - ${formData.term}`,
-          subject: formData.subject,
-          grade: formData.grade,
-          term: formData.term,
-          duration: formData.duration,
+          content: schemeOfWork.content.generatedContent || '',
+          title: schemeOfWork.title,
+          subject: schemeOfWork.subject,
+          grade: schemeOfWork.grade,
+          duration: schemeOfWork.duration || schemeOfWork.content.duration || 12,
+          lessonsPerWeek: 5,
+          lessonDuration: 45,
+          topics: schemeOfWork.content.topics || [],
           format: format
         }),
       })
@@ -495,66 +447,92 @@ export default function SchemesOfWorkPage() {
         const url = window.URL.createObjectURL(blob)
         const element = document.createElement('a')
         element.href = url
-        element.download = `${formData.subject}-scheme-of-work.${format === 'pdf' ? 'html' : 'doc'}`
+        element.download = `${schemeOfWork.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_scheme_of_work.${format === 'pdf' ? 'html' : 'doc'}`
         document.body.appendChild(element)
         element.click()
         document.body.removeChild(element)
         window.URL.revokeObjectURL(url)
       } else {
-        alert('Error generating document')
+        toast({
+          variant: "destructive",
+          title: "Download Failed",
+          description: "Unable to generate document. Please try again.",
+        })
       }
     } catch (error) {
-      alert('Error downloading document')
-    } finally {
-      setDownloading(null)
+      console.error('Error downloading scheme of work:', error)
+      toast({
+        variant: "destructive",
+        title: "Download Failed",
+        description: "Network error occurred. Please check your connection and try again.",
+      })
     }
   }
 
-  const handleDownloadScheme = async (format: 'pdf' | 'word', schemeOfWork: SchemeOfWork) => {
-    setDownloading(format)
+  const handleShare = (schemeOfWork: SchemeOfWork) => {
+    setSchemeToShare(schemeOfWork)
+    setIsShareModalOpen(true)
+  }
+
+  const confirmShare = async () => {
+    if (!schemeToShare) return
+
+    setSharing(true)
     try {
-      const response = await fetch('/api/export/scheme-of-work', {
+      const response = await fetch('/api/schemes-of-work/share', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          schemeOfWorkId: schemeOfWork.id,
-          format
+          schemeOfWorkId: schemeToShare.id,
+          studentIds: selectedStudents,
+          classId: selectedClass || undefined
         }),
       })
 
       if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${schemeOfWork.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-scheme-of-work.${format === 'pdf' ? 'html' : 'doc'}`
-        document.body.appendChild(a)
-        a.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+        const data = await response.json()
+        toast({
+          title: "Scheme Shared Successfully",
+          description: `Scheme of work shared with ${data.sharedCount} students!`,
+          variant: "success",
+        })
+        setIsShareModalOpen(false)
+        setSelectedStudents([])
+        setSelectedClass('')
+        setSchemeToShare(null)
       } else {
-        alert('Error downloading file')
+        toast({
+          variant: "destructive",
+          title: "Share Failed",
+          description: "Unable to share scheme of work. Please try again.",
+        })
       }
     } catch (error) {
-      alert('Error downloading file')
+      console.error('Error sharing scheme of work:', error)
+      toast({
+        variant: "destructive",
+        title: "Share Failed",
+        description: "Network error occurred. Please check your connection and try again.",
+      })
     } finally {
-      setDownloading(null)
+      setSharing(false)
     }
   }
 
+  // Filter schemes of work
   const filteredSchemesOfWork = schemesOfWork.filter(sw => {
     const matchesSearch = sw.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          sw.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          sw.grade.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSubject = !subjectFilter || sw.subject === subjectFilter;
-    const matchesGrade = !gradeFilter || sw.grade === gradeFilter;
-    return matchesSearch && matchesSubject && matchesGrade;
-  });
+                         sw.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         sw.grade.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSubject = !subjectFilter || sw.subject === subjectFilter
+    const matchesGrade = !gradeFilter || sw.grade === gradeFilter
+    return matchesSearch && matchesSubject && matchesGrade
+  })
 
-  const subjects = [...new Set(schemesOfWork.map(sw => sw.subject))].sort();
-  const grades = [...new Set(schemesOfWork.map(sw => sw.grade))].sort();
+  const subjects = [...new Set(schemesOfWork.map(sw => sw.subject))].sort()
+  const grades = [...new Set(schemesOfWork.map(sw => sw.grade))].sort()
 
   return (
     <div className="space-y-6">
@@ -775,14 +753,12 @@ export default function SchemesOfWorkPage() {
             </DialogHeader>
 
             <div className="space-y-4">
-              {selectedSchemeOfWork?.content?.generatedContent || selectedSchemeOfWork?.content?.content || selectedSchemeOfWork?.content ? (
+              {selectedSchemeOfWork?.content?.generatedContent || selectedSchemeOfWork?.content ? (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-semibold text-gray-900 mb-2">Scheme of Work Content</h4>
                   <div className="prose prose-sm max-w-none">
                     <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
                       {selectedSchemeOfWork.content?.generatedContent || 
-                       selectedSchemeOfWork.content?.content || 
-                       selectedSchemeOfWork.content || 
                        'No content available'}
                     </div>
                   </div>
@@ -822,7 +798,7 @@ export default function SchemesOfWorkPage() {
                 Share Scheme of Work
               </DialogTitle>
               <DialogDescription>
-                Share "{schemeOfWorkToShare?.title}" with your students
+                Share "{schemeToShare?.title}" with your students
               </DialogDescription>
             </DialogHeader>
 
@@ -834,14 +810,20 @@ export default function SchemesOfWorkPage() {
                 </label>
                 <Select value={selectedClass} onValueChange={setSelectedClass}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a class" />
+                    <SelectValue placeholder={classes.length > 0 ? "Select a class" : "No classes available"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {classes.map((cls) => (
-                      <SelectItem key={cls.id} value={cls.id}>
-                        {cls.name} - {cls.grade}
+                    {classes.length > 0 ? (
+                      classes.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id}>
+                          {cls.name} - {cls.grade}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-classes" disabled>
+                        No classes found
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -852,27 +834,35 @@ export default function SchemesOfWorkPage() {
                   Or Share with Individual Students
                 </label>
                 <div className="max-h-60 overflow-y-auto border rounded-md p-3 space-y-2">
-                  {students.map((student) => (
-                    <div key={student.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={student.id}
-                        checked={selectedStudents.includes(student.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedStudents(prev => [...prev, student.id])
-                          } else {
-                            setSelectedStudents(prev => prev.filter(id => id !== student.id))
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={student.id}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {student.name} - {student.grade}
-                      </label>
+                  {students.length > 0 ? (
+                    students.map((student) => (
+                      <div key={student.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={student.id}
+                          checked={selectedStudents.includes(student.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedStudents(prev => [...prev, student.id])
+                            } else {
+                              setSelectedStudents(prev => prev.filter(id => id !== student.id))
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={student.id}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          {student.user?.firstName} {student.user?.lastName} - {student.class?.name || student.grade}
+                        </label>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No students found</p>
+                      <p className="text-xs">Make sure you have enrolled students in your classes</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 

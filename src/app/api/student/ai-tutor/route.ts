@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { NotificationGenerator } from '@/lib/notification-generator'
-import { OpenRouterAI } from '@/lib/openrouter-ai'
+import { OpenAIService } from '@/lib/openai-service'
 
 // POST - Create AI tutor session
 export async function POST(request: NextRequest) {
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       providedContext: context
     }
 
-    // Generate AI response using OpenRouter AI
+    // Generate AI response using OpenAI AI
     const aiResponse = await generateAIResponse({
       sessionType,
       subject,
@@ -343,8 +343,8 @@ async function generateAIResponse({
       question
     }
 
-    // Use OpenRouter AI to generate response
-    const aiResponse = await OpenRouterAI.generateAITutorResponse(aiContext)
+    // Use OpenAI AI to generate response
+    const aiResponse = await OpenOpenAIService.generateAITutorResponse(aiContext)
     return aiResponse
 
   } catch (error) {

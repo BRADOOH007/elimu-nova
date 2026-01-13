@@ -2,7 +2,73 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { OpenRouterAI } from '@/lib/openrouter-ai';
+import { OpenAIService } from '@/lib/openai-service';
+
+// Helper function to find the best rubric for an assignment
+async function findBestRubricForAssignment(assignment: any) {
+  try {
+    // Get the teacher's rubrics
+    const rubrics = await prisma.aIGeneratedContent.findMany({
+      where: {
+        teacherId: assignment.teacherId,
+        type: 'RUBRIC'
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    })
+
+    if (rubrics.length === 0) return null
+
+    // Try to parse assignment content to get subject/grade info
+    let assignmentSubject = ''
+    let assignmentGrade = ''
+    
+    try {
+      const assignmentContent = JSON.parse(assignment.content)
+      assignmentSubject = assignmentContent.subject || ''
+      assignmentGrade = assignmentContent.grade || ''
+    } catch (error) {
+      // Assignment content might not be JSON
+    }
+
+    // Find the most compatible rubric
+    const compatibleRubric = rubrics.find(rubric => 
+      (assignmentSubject && rubric.subject.toLowerCase().includes(assignmentSubject.toLowerCase())) ||
+      (assignmentGrade && rubric.grade.toLowerCase().includes(assignmentGrade.toLowerCase())) ||
+      rubric.title.toLowerCase().includes(assignment.title.toLowerCase())
+    )
+
+    if (compatibleRubric) {
+      try {
+        return typeof compatibleRubric.content === 'string' 
+          ? JSON.parse(compatibleRubric.content) 
+          : compatibleRubric.content
+      } catch (error) {
+        console.error('Error parsing rubric content:', error)
+        return null
+      }
+    }
+
+    // If no compatible rubric found, use the most recent one
+    const latestRubric = rubrics[0]
+    if (latestRubric) {
+      try {
+        return typeof latestRubric.content === 'string' 
+          ? JSON.parse(latestRubric.content) 
+          : latestRubric.content
+      } catch (error) {
+        console.error('Error parsing rubric content:', error)
+        return null
+      }
+    }
+
+    return null
+  } catch (error) {
+    console.error('Error finding rubric for assignment:', error)
+    return null
+  }
+}
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -84,14 +150,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Auto-grade using AI
     let updatedSubmission = submission
     try {
-      const grading = await OpenRouterAI.gradeSubmission({
+      const rubricData = await findBestRubricForAssignment(submission.assignment)
+      const grading = await OpenAIService.gradeSubmission({
         assignmentTitle: submission.assignment.title,
-        assignmentDescription: (submission as any).assignment.description,
-        assignmentContent: (submission as any).assignment.content,
-        rubric: null,
-        studentAnswer: content,
-        subject: null,
-        gradeLevel: null
+        assignmentInstructions: (submission as any).assignment.description || '',
+        submissionContent: content,
+        rubric: rubricData ? JSON.stringify(rubricData) : undefined,
+        maxPoints: 100
       })
 
       updatedSubmission = await prisma.submission.update({

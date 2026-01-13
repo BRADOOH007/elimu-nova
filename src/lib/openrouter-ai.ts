@@ -1,12 +1,12 @@
 const OPENROUTER_API_KEY = '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'
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 
-interface OpenRouterMessage {
+interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
 }
 
-interface OpenRouterResponse {
+interface OpenAIResponse {
   choices: Array<{
     message: {
       content: string
@@ -14,10 +14,10 @@ interface OpenRouterResponse {
   }>
 }
 
-export class OpenRouterAI {
-  private static async makeRequest(messages: OpenRouterMessage[], model: string = 'meta-llama/llama-3.1-8b-instruct') {
+export class OpenAIAI {
+  private static async makeRequest(messages: OpenAIMessage[], model: string = 'meta-llama/llama-3.1-8b-instruct') {
     try {
-      console.log('Making OpenRouter API request to:', `${OPENROUTER_BASE_URL}/chat/completions`)
+      console.log('Making OpenAI API request to:', `${OPENROUTER_BASE_URL}/chat/completions`)
       console.log('Using model:', 'meta-llama/llama-3.1-8b-instruct')
       
       const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
@@ -36,20 +36,20 @@ export class OpenRouterAI {
         })
       })
 
-      console.log('OpenRouter API response status:', response.status)
-      console.log('OpenRouter API response headers:', Object.fromEntries(response.headers.entries()))
+      console.log('OpenAI API response status:', response.status)
+      console.log('OpenAI API response headers:', Object.fromEntries(response.headers.entries()))
 
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('OpenRouter API error response:', errorText)
-        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorText}`)
+        console.error('OpenAI API error response:', errorText)
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`)
       }
 
-      const data: OpenRouterResponse = await response.json()
-      console.log('OpenRouter API success, response length:', data.choices?.[0]?.message?.content?.length || 0)
+      const data: OpenAIResponse = await response.json()
+      console.log('OpenAI API success, response length:', data.choices?.[0]?.message?.content?.length || 0)
       return data.choices[0]?.message?.content || 'No response generated'
     } catch (error) {
-      console.error('OpenRouter API error:', error)
+      console.error('OpenAI API error:', error)
       throw error
     }
   }
@@ -93,7 +93,7 @@ Please generate a comprehensive, personalized lesson that adapts the teacher's c
 
 Format the response in markdown with clear headings and structure.`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -136,7 +136,7 @@ Return your response as a JSON object with this structure:
 
 Make it comprehensive, engaging, and educational. Include practical examples, interactive elements, and clear learning objectives.`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -242,7 +242,7 @@ Return as JSON with this structure:
 - Cover all learning objectives
 - Include various question types`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -299,7 +299,7 @@ Structure your response as markdown with clear headings and bullet points.`
 
 Make the notes clear, organized, and helpful for studying.`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -353,7 +353,7 @@ ${JSON.stringify(studentData, null, 2)}
 
 Provide personalized recommendations based on their learning patterns and performance.`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -471,7 +471,7 @@ ${data.description ? `Teacher's special notes: ${data.description}` : ''}
 
 Remember: Be warm, encouraging, and make the student feel supported!`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -579,7 +579,7 @@ As the AI Teacher, analyze this data and provide comprehensive insights in the f
 
     const userPrompt = `Based on the student's data and available teaching materials, provide comprehensive AI teacher insights. Focus on creating a personalized learning experience that uses all available curriculum materials to ensure the student's success.`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -749,7 +749,7 @@ Suggest a quick exercise or way to apply what they learned
 
 Remember: Be conversational, warm, and make learning feel exciting! Use their name, show enthusiasm, and make them feel supported. You're not just teaching - you're inspiring! 🌟`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -886,7 +886,7 @@ Make the content:
 
     const userPrompt = `Create a ${data.type} resource for ${data.topic} in ${data.subject} for grade ${data.grade}. The resource should be comprehensive and help the student understand the topic thoroughly.`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -931,20 +931,20 @@ Make the content:
     }
   }
 
-  // Generate AI content using OpenRouter
+  // Generate AI content using OpenAI
   static async generateAIContent(prompt: string, options?: {
     maxTokens?: number
     temperature?: number
     model?: string
   }): Promise<string> {
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'user', content: prompt }
     ]
 
     return await this.makeRequest(messages, options?.model)
   }
 
-  // Grade a student's submission against an assignment using OpenRouter
+  // Grade a student's submission against an assignment using OpenAI
   static async gradeSubmission(input: {
     assignmentTitle: string
     assignmentDescription?: string | null
@@ -970,7 +970,7 @@ Student Submission:\n${input.studentAnswer.slice(0, 6000)}
 
 Return JSON with shape { "grade": 0-100, "feedback": "specific, constructive feedback with strengths and improvements" }.`
 
-    const messages: OpenRouterMessage[] = [
+    const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
@@ -993,4 +993,4 @@ Return JSON with shape { "grade": 0-100, "feedback": "specific, constructive fee
 }
 
 // Export the generateAIContent function for backward compatibility
-export const generateAIContent = OpenRouterAI.generateAIContent
+export const generateAIContent = OpenOpenAIService.generateAIContent

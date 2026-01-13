@@ -452,28 +452,33 @@ export default function ReportsPage() {
                         size="sm"
                         onClick={async (e) => {
                           e.stopPropagation()
-                          if (confirm(`Are you sure you want to delete "${report.title}"? This action cannot be undone.`)) {
-                            try {
-                              const response = await fetch(`/api/reports/${report.id}`, {
-                                method: 'DELETE',
-                              })
-                              if (response.ok) {
-                                handleReportDeleted(report.id)
-                              } else {
-                                const error = await response.json()
-                                toast({
-                                  variant: "destructive",
-                                  title: "Error",
-                                  description: error.error || "Failed to delete report",
-                                })
-                              }
-                            } catch (error) {
+                          const confirmed = window.confirm(`Are you sure you want to delete "${report.title}"? This action cannot be undone.`)
+                          
+                          if (!confirmed) {
+                            return
+                          }
+                          
+                          try {
+                            const response = await fetch(`/api/reports/${report.id}`, {
+                              method: 'DELETE',
+                            })
+                            if (response.ok) {
+                              handleReportDeleted(report.id)
+                            } else {
+                              const error = await response.json()
                               toast({
                                 variant: "destructive",
                                 title: "Error",
-                                description: "Failed to delete report",
+                                description: error.error || "Failed to delete report",
                               })
                             }
+                          } catch (error) {
+                            console.error('Error deleting report:', error)
+                            toast({
+                              variant: "destructive",
+                              title: "Error",
+                              description: "Failed to delete report",
+                            })
                           }
                         }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700"
