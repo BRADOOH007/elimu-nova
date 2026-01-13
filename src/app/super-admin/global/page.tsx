@@ -228,4 +228,11 @@ export default function GlobalSettingsPage() {
       console.error('Error deleting setting:', error)
       toast.error('Failed to delete setting')
     }
-  }
+  }  ret
+urn (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">Global Settings</h1>
+      {/* Global settings content would go here */}
+    </div>
+  )
+}

@@ -114,4 +114,11 @@ export default function MeetingsPage() {
       console.error('Error deleting meeting:', error)
       toast.error('Failed to delete meeting')
     }
-  }
+  }  
+return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">Meetings</h1>
+      {/* Meetings content would go here */}
+    </div>
+  )
+}

@@ -403,11 +403,6 @@ export default function PackagesPage() {
                             })
                           }
                         }}
-                      >
-                              })
-                            }
-                          }
-                        }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700"
                         title="Delete Package"
                       >

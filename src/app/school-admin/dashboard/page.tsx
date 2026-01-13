@@ -43,6 +43,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { toast } from 'sonner'
+import { toast } from 'sonner'
+import { toast } from 'sonner'
 
 interface DashboardStats {
   totalTeachers: { value: number; change: string }
@@ -174,3 +177,11 @@ export default function SchoolAdminDashboard() {
       toast.error('Failed to delete teacher')
     }
   }
+  re
+turn (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">School Admin Dashboard</h1>
+      {/* Dashboard content would go here */}
+    </div>
+  )
+}

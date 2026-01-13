@@ -123,4 +123,11 @@ export default function TeachersPage() {
       console.error('Error deleting teacher:', error)
       toast.error('Failed to delete teacher')
     }
-  }
+  }  return
+ (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">Teachers</h1>
+      {/* Teachers content would go here */}
+    </div>
+  )
+}

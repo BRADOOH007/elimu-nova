@@ -123,4 +123,11 @@ export default function StudentsPage() {
       console.error('Error deleting student:', error)
       toast.error('Failed to delete student')
     }
-  }
+  }  re
+turn (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold text-gray-900">Students</h1>
+      {/* Students content would go here */}
+    </div>
+  )
+}
