@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { OpenAIService } from '@/lib/openai-service'
-import ImageStorageService from '@/lib/image-storage-service'
+import VercelBlobStorage from '@/lib/vercel-blob-storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       quality
     })
 
-    // Save the image to storage
+    // Save the image to Vercel Blob storage
     const sizeMapping = {
       '512x512': 'SMALL_512',
       '1024x1024': 'MEDIUM_1024',
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
     const imageType = style === 'educational' || style === 'diagram' ? 'DIAGRAM' : 'GENERAL'
 
-    const savedImage = await ImageStorageService.saveAIImage({
+    const savedImage = await VercelBlobStorage.saveAIImage({
       imageUrl: result.url,
       topic: prompt.substring(0, 100), // Use first 100 chars of prompt as topic
       prompt,
@@ -58,16 +58,11 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Track usage
-    await ImageStorageService.trackImageUsage(
-      savedImage.id,
-      session.user.id,
-      'generation',
-      'image_generator'
-    )
+    // Track usage (optional - can be implemented later)
+    // await VercelBlobStorage.trackImageUsage(savedImage.id, session.user.id, 'generation', 'image_generator')
 
     return NextResponse.json({
-      imageUrl: savedImage.storedUrl, // Use stored URL instead of temporary OpenAI URL
+      imageUrl: savedImage.storedUrl, // Use Vercel Blob URL
       success: true,
       source: 'openai-dalle-3',
       revisedPrompt: result.revisedPrompt,

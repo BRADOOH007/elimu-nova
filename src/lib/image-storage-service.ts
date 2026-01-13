@@ -125,27 +125,49 @@ export class ImageStorageService {
 
   /**
    * Save AI-generated image with full metadata
+   * For production, we'll use the OpenAI URL directly until cloud storage is implemented
    */
   static async saveAIImage(request: SaveImageRequest): Promise<SaveImageResponse> {
     try {
-      // Initialize storage if needed
-      await this.initializeStorage()
-
-      // Generate unique filename
+      // Generate unique filename for reference
       const filename = this.generateFilename(request.topic, request.userId, request.type)
 
-      // Download and save image
-      const { fileSize, dimensions } = await this.downloadAndSaveImage(request.imageUrl, filename)
+      // In production, use OpenAI URL directly (temporary solution)
+      // In development, try to download and save locally
+      let storedUrl = request.imageUrl // Default to OpenAI URL
+      let fileSize = 0
+      let dimensions = { width: 1024, height: 1024 }
 
-      // Create public URL
-      const storedUrl = `${this.PUBLIC_URL_PREFIX}/${filename}`
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          // Only try local storage in development
+          await this.initializeStorage()
+          const downloadResult = await this.downloadAndSaveImage(request.imageUrl, filename)
+          storedUrl = `${this.PUBLIC_URL_PREFIX}/${filename}`
+          fileSize = downloadResult.fileSize
+          dimensions = downloadResult.dimensions
+        } catch (error) {
+          console.warn('Local storage failed, using OpenAI URL:', error)
+          // Fall back to OpenAI URL
+        }
+      } else {
+        // In production, get image info without downloading
+        try {
+          const response = await fetch(request.imageUrl, { method: 'HEAD' })
+          if (response.ok) {
+            fileSize = parseInt(response.headers.get('content-length') || '0')
+          }
+        } catch (error) {
+          console.warn('Could not get image size:', error)
+        }
+      }
 
       // Save to database
       const savedImage = await prisma.aIGeneratedImage.create({
         data: {
           filename,
           originalUrl: request.imageUrl,
-          storedUrl,
+          storedUrl, // This will be the OpenAI URL in production
           topic: request.topic,
           prompt: request.prompt,
           type: request.type,
@@ -162,7 +184,7 @@ export class ImageStorageService {
         }
       })
 
-      console.log(`✅ Image saved: ${filename} (${fileSize} bytes)`)
+      console.log(`✅ Image saved: ${filename} (${fileSize} bytes) - URL: ${storedUrl.substring(0, 50)}...`)
 
       return {
         id: savedImage.id,
