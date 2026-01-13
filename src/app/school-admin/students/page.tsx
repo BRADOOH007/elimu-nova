@@ -108,3 +108,19 @@ export default function StudentsPage() {
 
   const handleDeleteStudent = async (studentId: string) => {
     // Confirmation removed - using toast notifications only
+    try {
+      const response = await fetch(`/api/school-admin/students/${studentId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setStudents(prev => prev.filter(s => s.id !== studentId))
+        toast.success('Student deleted successfully')
+      } else {
+        toast.error('Failed to delete student')
+      }
+    } catch (error) {
+      console.error('Error deleting student:', error)
+      toast.error('Failed to delete student')
+    }
+  }

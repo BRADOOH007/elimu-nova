@@ -213,3 +213,19 @@ export default function GlobalSettingsPage() {
 
   const handleDelete = async (id: string) => {
     // Confirmation removed - using toast notifications only
+    try {
+      const response = await fetch(`/api/super-admin/global/${id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setSettings(prev => prev.filter(s => s.id !== id))
+        toast.success('Setting deleted successfully')
+      } else {
+        toast.error('Failed to delete setting')
+      }
+    } catch (error) {
+      console.error('Error deleting setting:', error)
+      toast.error('Failed to delete setting')
+    }
+  }

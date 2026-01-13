@@ -380,24 +380,30 @@ export default function PackagesPage() {
                         size="sm"
                         onClick={async (e) => {
                           e.stopPropagation()
-                          // Confirmation removed - using toast notifications only`, {
-                                method: 'DELETE',
-                              })
-                              if (response.ok) {
-                                handlePackageDeleted(pkg.id)
-                              } else {
-                                const error = await response.json()
-                                toast({
-                                  variant: "destructive",
-                                  title: "Error",
-                                  description: error.error || "Failed to delete package",
-                                })
-                              }
-                            } catch (error) {
+                          // Confirmation removed - using toast notifications only
+                          try {
+                            const response = await fetch(`/api/super-admin/packages/${pkg.id}`, {
+                              method: 'DELETE',
+                            })
+                            if (response.ok) {
+                              handlePackageDeleted(pkg.id)
+                            } else {
+                              const error = await response.json()
                               toast({
                                 variant: "destructive",
                                 title: "Error",
-                                description: "Failed to delete package",
+                                description: error.error || "Failed to delete package",
+                              })
+                            }
+                          } catch (error) {
+                            toast({
+                              variant: "destructive",
+                              title: "Error",
+                              description: "Failed to delete package",
+                            })
+                          }
+                        }}
+                      >
                               })
                             }
                           }

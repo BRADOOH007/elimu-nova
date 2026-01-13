@@ -108,3 +108,19 @@ export default function TeachersPage() {
 
   const handleDeleteTeacher = async (teacherId: string) => {
     // Confirmation removed - using toast notifications only
+    try {
+      const response = await fetch(`/api/school-admin/teachers/${teacherId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setTeachers(prev => prev.filter(t => t.id !== teacherId))
+        toast.success('Teacher deleted successfully')
+      } else {
+        toast.error('Failed to delete teacher')
+      }
+    } catch (error) {
+      console.error('Error deleting teacher:', error)
+      toast.error('Failed to delete teacher')
+    }
+  }

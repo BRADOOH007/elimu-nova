@@ -99,3 +99,19 @@ export default function MeetingsPage() {
 
   const handleDeleteMeeting = async (meetingId: string) => {
     // Confirmation removed - using toast notifications only
+    try {
+      const response = await fetch(`/api/school-admin/meetings/${meetingId}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setMeetings(prev => prev.filter(m => m.id !== meetingId))
+        toast.success('Meeting deleted successfully')
+      } else {
+        toast.error('Failed to delete meeting')
+      }
+    } catch (error) {
+      console.error('Error deleting meeting:', error)
+      toast.error('Failed to delete meeting')
+    }
+  }

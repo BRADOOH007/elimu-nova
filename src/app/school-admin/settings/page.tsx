@@ -288,3 +288,19 @@ export default function SchoolAdminSettingsPage() {
   // Handle delete setting
   const handleDeleteSetting = async (setting: SchoolSetting) => {
     // Confirmation removed - using toast notifications only
+    try {
+      const response = await fetch(`/api/school-admin/settings/${setting.id}`, {
+        method: 'DELETE'
+      })
+      
+      if (response.ok) {
+        setSettings(prev => prev.filter(s => s.id !== setting.id))
+        toast.success('Setting deleted successfully')
+      } else {
+        toast.error('Failed to delete setting')
+      }
+    } catch (error) {
+      console.error('Error deleting setting:', error)
+      toast.error('Failed to delete setting')
+    }
+  }
