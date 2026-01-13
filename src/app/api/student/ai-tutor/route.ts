@@ -344,7 +344,7 @@ async function generateAIResponse({
     }
 
     // Use OpenAI AI to generate response
-    const aiResponse = await OpenOpenAIService.generateAITutorResponse(aiContext)
+    const aiResponse = await OpenAIService.generateAITutorResponse(aiContext)
     return aiResponse
 
   } catch (error) {

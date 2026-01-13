@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Generate AI insights using OpenAI
-    const insights = await OpenOpenAIService.generateStudentInsights(studentData)
+    const insights = await OpenAIService.generateStudentInsights(studentData)
 
     return NextResponse.json(insights)
 

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const { lesson, studentLevel, learningStyle } = body
 
     // Generate personalized lesson content using OpenAI
-    const content = await OpenOpenAIService.generateLessonContent(lesson, studentLevel, learningStyle)
+    const content = await OpenAIService.generateLessonContent(lesson, studentLevel, learningStyle)
 
     return NextResponse.json({
       content,

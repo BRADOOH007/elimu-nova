@@ -73,14 +73,14 @@ export async function GET(req: NextRequest) {
           const learningStyle = 'visual' // Could be determined from analytics in the future
 
           // Generate AI-powered content based on the lesson plan
-          const aiContent = await OpenOpenAIService.generateLessonContent(
+          const aiContent = await OpenAIService.generateLessonContent(
             shared.lessonPlan,
             studentLevel,
             learningStyle
           )
 
           // Generate AI insights for this specific lesson
-          const aiInsights = await OpenOpenAIService.generateStudentInsights({
+          const aiInsights = await OpenAIService.generateStudentInsights({
             ...studentData,
             currentLesson: shared.lessonPlan
           })

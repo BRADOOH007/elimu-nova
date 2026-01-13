@@ -274,7 +274,7 @@ async function generateAIProgressInsights(data: any): Promise<any> {
       recentAISessions: data.recentAISessions
     }
 
-    const aiResponse = await OpenOpenAIService.generateAITutorResponse({
+    const aiResponse = await OpenAIService.generateAITutorResponse({
       sessionType: 'progress_review',
       question: 'Please provide comprehensive progress analysis and recommendations for this student',
       context,

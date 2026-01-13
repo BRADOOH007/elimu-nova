@@ -1,3 +1,5 @@
+import { OpenAIService } from './openai-service'
+
 const OPENROUTER_API_KEY = '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'
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 
@@ -993,4 +995,4 @@ Return JSON with shape { "grade": 0-100, "feedback": "specific, constructive fee
 }
 
 // Export the generateAIContent function for backward compatibility
-export const generateAIContent = OpenOpenAIService.generateAIContent
+export const generateAIContent = OpenAIService.generateAIContent

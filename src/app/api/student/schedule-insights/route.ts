@@ -161,7 +161,7 @@ async function generateAIScheduleInsights(data: any): Promise<any> {
       recentAssignments: data.recentAssignments
     }
 
-    const aiResponse = await OpenOpenAIService.generateAITutorResponse({
+    const aiResponse = await OpenAIService.generateAITutorResponse({
       sessionType: 'progress_review',
       question: 'Please analyze my upcoming schedule and provide insights, recommendations, and study planning advice based on my classes, assignments, and study patterns.',
       context,
