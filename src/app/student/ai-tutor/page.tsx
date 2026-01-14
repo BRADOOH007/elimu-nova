@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { FormattedMessage } from "@/components/ai/formatted-message"
 import { 
   Brain, 
   Send, 
@@ -315,29 +316,12 @@ export default function AutonomousAITutorPage() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {messages.map((message, index) => (
-                <div
+                <FormattedMessage
                   key={index}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      message.role === 'user'
-                        ? 'bg-blue-500 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
-                  >
-                    {message.role === 'assistant' && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <Bot className="w-4 h-4" />
-                        <span className="text-xs font-semibold">AI Tutor</span>
-                      </div>
-                    )}
-                    <p className="whitespace-pre-wrap">{message.content}</p>
-                    <p className="text-xs opacity-70 mt-1">
-                      {message.timestamp.toLocaleTimeString()}
-                    </p>
-                  </div>
-                </div>
+                  content={message.content}
+                  role={message.role}
+                  timestamp={message.timestamp}
+                />
               ))}
               {isLoading && (
                 <div className="flex justify-start">
