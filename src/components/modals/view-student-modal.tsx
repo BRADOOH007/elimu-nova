@@ -53,10 +53,13 @@ export default function ViewStudentModal({ isOpen, onClose, student, onEdit, onD
         const data = await response.json()
         setStudentData(data.student)
       } else {
-        console.error('Failed to fetch student details')
+        const errorData = await response.json().catch(() => ({}))
+        console.error('Failed to fetch student details:', response.status, errorData)
+        // Don't show error to user, just log it
       }
     } catch (error) {
       console.error('Error fetching student details:', error)
+      // Don't show error to user, just log it
     } finally {
       setLoading(false)
     }

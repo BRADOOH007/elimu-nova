@@ -562,6 +562,7 @@ export default function TeacherStudentsPage() {
           isOpen={showEnrollModal}
           onClose={() => setShowEnrollModal(false)}
           onSuccess={handleEnrollSuccess}
+          classes={classes}
         />
       )}
 
