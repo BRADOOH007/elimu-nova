@@ -28,11 +28,9 @@ export async function GET(req: NextRequest) {
 
     console.log('✅ Teacher found:', teacher.id, 'School:', teacher.schoolId)
 
-    // Get students - for independent teachers, get students assigned to them directly
+    // Get students - only students created by this specific teacher
     const students = await prisma.student.findMany({
-      where: teacher.schoolId ? {
-        schoolId: teacher.schoolId
-      } : {
+      where: {
         teacherId: teacher.id
       },
       include: {
@@ -64,10 +62,10 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    console.log(`✅ Found ${students.length} students in school ${teacher.schoolId}`)
+    console.log(`✅ Found ${students.length} students created by teacher ${teacher.id}`)
     
     if (students.length === 0) {
-      console.log('⚠️ No students found in this school')
+      console.log('⚠️ No students found for this teacher')
     } else {
       console.log('Students:', students.map(s => s.user.email).join(', '))
     }
