@@ -345,7 +345,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
                 <SelectTrigger className="bg-white border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <SelectValue placeholder="Select a lesson plan" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-[300px] overflow-y-auto">
                   {lessonPlans.map((lessonPlan) => (
                     <SelectItem key={lessonPlan.id} value={lessonPlan.id}>
                       {lessonPlan.title} - {lessonPlan.subject} ({lessonPlan.grade})
