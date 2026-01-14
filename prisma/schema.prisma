@@ -630,6 +630,21 @@ model StudentProgress {
   feedback     String?
   teacherId    String
   studentId    String
+  
+  // NEW: Autonomous Tutor Fields (nullable for migration)
+  classId         String?
+  subject         String         @default("General")
+  topic           String         @default("General Progress")
+  masteryScore    Int            @default(0) // 0-100
+  lastPracticedAt DateTime?
+  commonMistakes  Json?          // Array of common mistakes
+  preferredDifficulty String     @default("medium") // "easy", "medium", "hard"
+  engagementProfile Json?        // Likes quizzes, stories, attention span, etc.
+  streak          Int            @default(0) // Consecutive days of practice
+  xp              Int            @default(0) // Experience points
+  totalQuestions  Int            @default(0)
+  correctAnswers  Int            @default(0)
+  
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -637,6 +652,8 @@ model StudentProgress {
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  @@index([studentId, subject])
+  @@index([classId, subject])
   @@map("student_progress")
 }
 
@@ -684,6 +701,7 @@ model StudentAnalytics {
 model AITutorSession {
   id          String   @id @default(cuid())
   studentId   String
+  classId     String?  // CRITICAL: Enforce class isolation (nullable for migration)
   sessionType String   // "lesson", "assignment_help", "progress_review", "general_help"
   subject     String?
   topic       String?
@@ -692,11 +710,23 @@ model AITutorSession {
   context     String?  // JSON context about the student's current work
   rating      Int?     // Student rating of the response (1-5)
   isHelpful   Boolean?
+  
+  // NEW: Autonomous Tutor Fields
+  mode            String?  // "teach", "practice", "quiz", "revise"
+  conversationHistory Json? // Last 10 messages for context
+  currentQuestion Json?    // Current question being asked
+  isCorrect       Boolean? // Was the last answer correct?
+  hintsGiven      Int      @default(0)
+  timeSpent       Int      @default(0) // Seconds spent in session
+  
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
 
   // Relationships
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  @@index([studentId, classId])
+  @@index([studentId, subject])
   @@map("ai_tutor_sessions")
 }
 
@@ -1105,4 +1135,138 @@ enum ActivityType {
   REPORT_GENERATED
   PACKAGE_UPDATED
   OTHER
+}
+
+// ============================================
+// AUTONOMOUS AI TUTOR MODELS
+// ============================================
+
+model TutorSession {
+  id              String   @id @default(cuid())
+  studentId       String
+  classId         String
+  subject         String
+  topic           String
+  mode            String   // "teach", "practice", "quiz", "revise"
+  
+  // Session state
+  currentStep     Int      @default(0)
+  totalSteps      Int      @default(5)
+  progress        Int      @default(0) // 0-100
+  isCompleted     Boolean  @default(false)
+  
+  // Conversation tracking
+  last10Messages  Json     // Array of last 10 messages
+  currentQuestion Json?    // Current question being asked
+  questionsAsked  Int      @default(0)
+  correctAnswers  Int      @default(0)
+  hintsGiven      Int      @default(0)
+  
+  // Performance
+  timeSpent       Int      @default(0) // Seconds
+  xpEarned        Int      @default(0)
+  
+  // Metadata
+  lessonPlanId    String?
+  schemeOfWorkId  String?
+  metadata        Json?    // Additional context
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  completedAt     DateTime?
+
+  @@index([studentId, classId])
+  @@index([studentId, subject])
+  @@index([isCompleted])
+  @@map("tutor_sessions")
+}
+
+model ClassSchedule {
+  id          String   @id @default(cuid())
+  classId     String
+  schoolId    String
+  teacherId   String
+  
+  // Schedule details
+  dayOfWeek   Int      // 0 = Sunday, 1 = Monday, etc.
+  startTime   String   // "09:00" format
+  endTime     String   // "10:00" format
+  subject     String
+  
+  // Optional details
+  room        String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  
+  // Recurrence
+  recurring   Boolean  @default(true)
+  startDate   DateTime // When this schedule starts
+  endDate     DateTime? // When this schedule ends (optional)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([classId, dayOfWeek])
+  @@index([schoolId])
+  @@map("class_schedules")
+}
+
+model TutorQuestion {
+  id              String   @id @default(cuid())
+  subject         String
+  topic           String
+  grade           String
+  difficulty      String   // "easy", "medium", "hard"
+  
+  // Question content
+  questionType    String   // "mcq", "short_answer", "fill_blank", "true_false"
+  questionText    String   @db.Text
+  options         Json?    // For MCQ
+  correctAnswer   String   @db.Text
+  explanation     String   @db.Text
+  
+  // Metadata
+  hints           Json?    // Array of hints
+  commonMistakes  Json?    // Array of common mistakes
+  relatedTopics   String[] // Related topics
+  
+  // AI generation
+  isAIGenerated   Boolean  @default(true)
+  generatedBy     String?  // User ID who generated/approved
+  
+  // Usage tracking
+  timesAsked      Int      @default(0)
+  timesCorrect    Int      @default(0)
+  averageTime     Int      @default(0) // Average time to answer in seconds
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([subject, topic, difficulty])
+  @@index([grade, subject])
+  @@map("tutor_questions")
+}
+
+enum TutorMode {
+  TEACH
+  PRACTICE
+  QUIZ
+  REVISE
+  ASSESSMENT
+}
+
+enum QuestionType {
+  MCQ
+  SHORT_ANSWER
+  FILL_BLANK
+  TRUE_FALSE
+  MATCHING
+  ORDERING
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+  EXPERT
 }

@@ -36,11 +36,9 @@ export async function GET(request: NextRequest) {
     console.log('✅ Student found:', student.id)
 
     // Get the most recent lesson plan from the student's teacher
-    const recentLessonPlan = await prisma.lessonPlan.findFirst({
+    const recentLessonPlan = student.teacherId ? await prisma.lessonPlan.findFirst({
       where: {
-        teacherId: student.teacherId,
-        // Optionally filter by class if needed
-        // classId: student.classId
+        teacherId: student.teacherId
       },
       orderBy: {
         createdAt: 'desc'
@@ -54,7 +52,7 @@ export async function GET(request: NextRequest) {
         schemeOfWorkId: true,
         createdAt: true
       }
-    })
+    }) : null
 
     console.log('📖 Recent lesson plan:', recentLessonPlan?.title || 'None found')
 
@@ -168,7 +166,7 @@ export async function GET(request: NextRequest) {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const todaySchedule = await prisma.schedule.findMany({
+    const todaySchedule = student.schoolId ? await prisma.schedule.findMany({
       where: {
         schoolId: student.schoolId,
         startTime: {
@@ -183,7 +181,7 @@ export async function GET(request: NextRequest) {
       orderBy: {
         startTime: 'asc'
       }
-    })
+    }) : []
 
     console.log('📅 Today\'s schedule:', todaySchedule.length, 'classes')
 

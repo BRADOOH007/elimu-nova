@@ -38,6 +38,13 @@ export async function POST(
 
     // Handle 'current' lesson ID - get the most recent lesson plan
     if (params.lessonId === 'current') {
+      if (!student.teacherId) {
+        return NextResponse.json({ 
+          error: 'No teacher assigned',
+          message: 'You need a teacher to access lesson plans. Try the AI Tutor for independent learning!'
+        }, { status: 404 })
+      }
+
       lessonPlan = await prisma.lessonPlan.findFirst({
         where: {
           teacherId: student.teacherId
@@ -53,7 +60,7 @@ export async function POST(
       if (!lessonPlan) {
         return NextResponse.json({ 
           error: 'No lesson plan available',
-          message: 'Your teacher hasn\'t created any lesson plans yet'
+          message: 'Your teacher hasn\'t created any lesson plans yet. Try the AI Tutor for personalized learning!'
         }, { status: 404 })
       }
     } else {
@@ -204,9 +211,12 @@ export async function POST(
       ],
       
       // Teacher info
-      teacher: {
+      teacher: student.teacher ? {
         name: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`,
         email: student.teacher.user.email
+      } : {
+        name: 'AI Teacher',
+        email: 'ai@elimunova.com'
       }
     }
 

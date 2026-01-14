@@ -215,11 +215,16 @@ export default function StudentDashboard() {
 
   const fetchAITeacherInsights = async () => {
     try {
+      console.log('📚 Fetching AI teacher insights...')
       const response = await fetch('/api/student/ai-teacher-insights')
+      console.log('AI insights response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('AI insights data:', data)
         setAiInsights(data)
       } else {
+        console.log('AI insights API failed, using fallback data')
         // Set fallback data if API fails
         setAiInsights({
           currentLesson: {
@@ -292,16 +297,32 @@ export default function StudentDashboard() {
 
   const startAILesson = async (lessonId: string) => {
     try {
+      console.log('🎓 Starting AI lesson:', lessonId)
       const response = await fetch(`/api/student/ai-lessons/${lessonId}/start`, {
         method: 'POST'
       })
+      
+      console.log('Response status:', response.status)
+      
       if (response.ok) {
         const data = await response.json()
+        console.log('Lesson data received:', data)
         setCurrentAILesson(data.lesson)
         setShowAIChat(true)
+      } else {
+        let errorData: any = {}
+        try {
+          errorData = await response.json()
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError)
+          errorData = { message: `Server error: ${response.status} ${response.statusText}` }
+        }
+        console.error('Failed to start lesson:', errorData)
+        alert(errorData.message || errorData.error || 'Failed to start lesson. Please try again.')
       }
     } catch (err) {
       console.error('Error starting AI lesson:', err)
+      alert('An error occurred while starting the lesson. Please try again.')
     }
   }
 
