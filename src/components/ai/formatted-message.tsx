@@ -3,6 +3,7 @@
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Bot } from 'lucide-react'
+import { cleanAIText } from '@/lib/clean-ai-text'
 
 interface FormattedMessageProps {
   content: string
@@ -23,6 +24,9 @@ export function FormattedMessage({ content, role, timestamp }: FormattedMessageP
       </div>
     )
   }
+
+  // Clean the content before rendering — removes raw ** and # symbols
+  const cleanedContent = cleanAIText(content)
 
   return (
     <div className="flex justify-start">
@@ -90,7 +94,7 @@ export function FormattedMessage({ content, role, timestamp }: FormattedMessageP
               hr: ({ node, ...props }) => <hr className="my-4 border-gray-300" {...props} />,
             }}
           >
-            {content}
+            {cleanedContent}
           </ReactMarkdown>
         </div>
         

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { cleanAIText } from '@/lib/clean-ai-text'
 import { 
   BookOpen, 
   Clock, 
@@ -868,7 +869,7 @@ export default function StudentDashboard() {
                         ? 'bg-green-100 text-green-900' 
                         : 'bg-white text-gray-700'
                     }`}>
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      <p className="text-sm whitespace-pre-wrap">{cleanAIText(message.content)}</p>
                       <p className="text-xs text-gray-500 mt-1">
                         {message.timestamp.toLocaleTimeString()}
                       </p>

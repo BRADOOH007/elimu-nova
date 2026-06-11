@@ -56,16 +56,10 @@ export default function EnrollStudentModal({ isOpen, onClose, onSuccess, classes
       newErrors.lastName = 'Last name is required'
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid'
+    // Email is optional — if provided it must be valid
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email format is invalid'
     }
-
-    // Class selection is optional for independent teachers
-    // if (!formData.classId) {
-    //   newErrors.classId = 'Class selection is required'
-    // }
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -131,7 +125,10 @@ export default function EnrollStudentModal({ isOpen, onClose, onSuccess, classes
 
   const handleCopyCredentials = () => {
     if (successData) {
-      const text = `Email: ${successData.email}\nPassword: ${successData.password}`
+      const displayLogin = successData.email.endsWith('@student.local')
+        ? successData.email.replace('@student.local', '')
+        : successData.email
+      const text = `Username: ${displayLogin}\nPassword: ${successData.password}`
       navigator.clipboard.writeText(text)
     }
   }
@@ -167,19 +164,28 @@ export default function EnrollStudentModal({ isOpen, onClose, onSuccess, classes
 
               <div className="space-y-3 bg-white p-4 rounded-lg border border-green-200">
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Email</Label>
-                  <p className="text-gray-900 font-mono bg-gray-50 p-2 rounded">{successData.email}</p>
+                  <Label className="text-sm font-medium text-gray-700">Username / Login</Label>
+                  <p className="text-gray-900 font-mono bg-gray-50 p-2 rounded">
+                    {successData.email.endsWith('@student.local')
+                      ? successData.email.replace('@student.local', '')
+                      : successData.email}
+                  </p>
+                  {successData.email.endsWith('@student.local') && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      (or full email: {successData.email})
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">Temporary Password</Label>
+                  <Label className="text-sm font-medium text-gray-700">Password</Label>
                   <p className="text-gray-900 font-mono bg-gray-50 p-2 rounded">{successData.password}</p>
                 </div>
               </div>
 
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm text-yellow-800">
-                  <strong>Important:</strong> Please share these credentials with the student. 
-                  They should change their password after first login.
+                  <strong>Important:</strong> Please share these credentials with the student.
+                  The password is permanent — they can use it every time they log in.
                 </p>
               </div>
             </div>
@@ -269,7 +275,7 @@ export default function EnrollStudentModal({ isOpen, onClose, onSuccess, classes
             
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-              Email Address <span className="text-red-500">*</span>
+              Email Address <span className="text-gray-400 font-normal text-xs">(Optional)</span>
             </Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -278,7 +284,7 @@ export default function EnrollStudentModal({ isOpen, onClose, onSuccess, classes
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="student@example.com"
+                placeholder="student@example.com (leave blank to auto-generate)"
                 className="pl-10 bg-white border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
@@ -288,6 +294,9 @@ export default function EnrollStudentModal({ isOpen, onClose, onSuccess, classes
                 {errors.email}
               </p>
             )}
+            <p className="text-xs text-gray-500">
+              If left blank, a login username will be auto-generated from the student&apos;s name.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -375,7 +384,7 @@ export default function EnrollStudentModal({ isOpen, onClose, onSuccess, classes
             </h4>
             <div className="space-y-2 text-sm text-gray-700">
               <p><strong>Name:</strong> {formData.firstName || '—'} {formData.lastName || '—'}</p>
-              <p><strong>Email:</strong> {formData.email || 'Email will appear here'}</p>
+              <p><strong>Email/Login:</strong> {formData.email || 'Auto-generated from name'}</p>
               {formData.phone && <p><strong>Phone:</strong> {formData.phone}</p>}
               {formData.address && <p><strong>Address:</strong> {formData.address}</p>}
               <p><strong>Class:</strong> {

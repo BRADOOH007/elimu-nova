@@ -117,16 +117,17 @@ export default function SignInPage() {
               
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
+                  Email or Username
                 </label>
                 <Input
                   id="email"
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="email@example.com or username"
                   required
                   className="edugenius-input"
+                  autoComplete="username"
                 />
               </div>
 

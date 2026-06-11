@@ -4,6 +4,19 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
+/** Extract any real address from the combined address field */
+function extractRealAddress(address: string | null): string | null {
+  if (!address) return null;
+  if (!address.startsWith('PWD:')) return address;
+  const parts = address.split('\n---\n');
+  return parts.length > 1 ? parts[1] : null;
+}
+
+/** Build the address field with stored password */
+function buildAddressWithPassword(plainPassword: string, realAddress: string | null): string {
+  return realAddress ? `PWD:${plainPassword}\n---\n${realAddress}` : `PWD:${plainPassword}`;
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
@@ -33,9 +46,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       include: {
         user: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
-            email: true
+            email: true,
+            address: true
           }
         }
       }
@@ -48,41 +63,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Use provided password or generate one
     let finalPassword = password;
     if (generatePassword || resetPassword || !finalPassword) {
-      // Generate a more secure random password
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-      let generatedPassword = '';
-      for (let i = 0; i < 12; i++) {
-        generatedPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      finalPassword = generatedPassword;
+      const adjectives = ['Blue', 'Green', 'Happy', 'Brave', 'Swift', 'Bright', 'Calm', 'Bold'];
+      const nouns = ['Lion', 'Star', 'River', 'Eagle', 'Mountain', 'Sunrise', 'Ocean', 'Forest'];
+      const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+      const noun = nouns[Math.floor(Math.random() * nouns.length)];
+      const num = Math.floor(100 + Math.random() * 900);
+      finalPassword = `${adj}${noun}${num}`;
     }
 
-    // Validate password strength
-    if (finalPassword.length < 8) {
-      return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
+    if (finalPassword.length < 6) {
+      return NextResponse.json({ error: 'Password must be at least 6 characters long' }, { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(finalPassword, 12);
 
-    // Update user with new password
+    // Preserve any real address, update stored password
+    const realAddress = extractRealAddress(student.user.address);
+    const newAddress = buildAddressWithPassword(finalPassword, realAddress);
+
+    // Update user with new password and stored plain password
     await prisma.user.update({
       where: { id: student.userId },
       data: {
-        password: hashedPassword
+        password: hashedPassword,
+        address: newAddress
       }
     });
 
-    // Store credentials in a way that can be retrieved later
-    // For now, we'll return them directly
     const credentials = {
-      username: student.user.email, // Use email as username for login
+      username: student.user.email,
       password: finalPassword
     };
 
     return NextResponse.json({
       credentials,
-      password: finalPassword, // Include the plain password for display
-      message: 'Student credentials generated successfully'
+      password: finalPassword,
+      message: 'Student password updated successfully'
     });
 
   } catch (error) {

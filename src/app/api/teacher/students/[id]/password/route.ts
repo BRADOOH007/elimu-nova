@@ -3,6 +3,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+/** Extract the stored plain password from the address field */
+function extractStoredPassword(address: string | null): string | null {
+  if (!address) return null;
+  const match = address.match(/^PWD:([^\n]+)/);
+  return match ? match[1] : null;
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,7 +41,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             email: true,
             firstName: true,
             lastName: true,
-            password: true
+            password: true,
+            address: true
           }
         }
       }
@@ -44,7 +52,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Student not found or access denied' }, { status: 404 });
     }
 
-    // Return student info with password status
+    const storedPassword = extractStoredPassword(student.user.address);
+
     return NextResponse.json({
       success: true,
       student: {
@@ -52,7 +61,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         email: student.user.email,
         name: `${student.user.firstName} ${student.user.lastName}`,
         hasPassword: !!student.user.password,
-        passwordSet: !!student.user.password
+        passwordSet: !!student.user.password,
+        // Return stored plain password if available
+        plainPassword: storedPassword
       }
     });
 

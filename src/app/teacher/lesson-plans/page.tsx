@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import { 
   BookOpen, 
   Plus,
@@ -337,13 +338,16 @@ export default function LessonPlansPage() {
           </h1>
           <p className="text-gray-600">Manage your AI-generated lesson plans</p>
         </div>
-        <Button 
-          onClick={() => router.push('/teacher/lesson-plans/create')}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Create New
-        </Button>
+        <div className="flex items-center gap-3">
+          <DocumentUploadButton docType="lesson-plan" />
+          <Button 
+            onClick={() => router.push('/teacher/lesson-plans/create')}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create New
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

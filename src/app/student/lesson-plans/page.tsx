@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { cleanAIText } from '@/lib/clean-ai-text'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import CustomLessonModal from '@/components/custom-lesson-modal'
@@ -924,10 +925,9 @@ export default function StudentLessonPlansPage() {
               <div className="prose max-w-none">
                 <div 
                   className="whitespace-pre-wrap text-sm leading-relaxed"
-                  dangerouslySetInnerHTML={{ 
-                    __html: selectedAILesson.generatedContent.replace(/\n/g, '<br>') 
-                  }}
-                />
+                >
+                  {cleanAIText(selectedAILesson.generatedContent)}
+                </div>
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">

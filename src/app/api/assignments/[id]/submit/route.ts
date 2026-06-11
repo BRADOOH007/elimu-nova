@@ -70,13 +70,14 @@ async function findBestRubricForAssignment(assignment: any) {
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'STUDENT') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     const { content, attachments = [] } = body;
 
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Check if assignment exists and student has access
     const assignment = await prisma.assignment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         students: true
       }
@@ -108,7 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Check if already submitted
     const existingSubmission = await prisma.submission.findFirst({
       where: {
-        assignmentId: params.id,
+        assignmentId: id,
         studentId: student.id
       }
     });
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: {
         content,
         attachments,
-        assignmentId: params.id,
+        assignmentId: id,
         studentId: student.id
       },
       include: {

@@ -70,6 +70,10 @@ export default function ViewStudentPasswordModal({
       if (response.ok) {
         const data = await response.json()
         setHasPassword(data.student.hasPassword)
+        // Show the stored plain password if available
+        if (data.student.plainPassword) {
+          setPassword(data.student.plainPassword)
+        }
       } else {
         console.error('Failed to fetch password info')
       }
@@ -189,7 +193,16 @@ export default function ViewStudentPasswordModal({
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-gray-500" />
-                <span className="text-sm font-medium">{student.email}</span>
+                <div>
+                  <span className="text-sm font-medium">
+                    {student.email.endsWith('@student.local')
+                      ? student.email.replace('@student.local', '')
+                      : student.email}
+                  </span>
+                  <span className="text-xs text-gray-400 ml-2">
+                    {student.email.endsWith('@student.local') ? '(username login)' : '(email login)'}
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
@@ -317,15 +330,19 @@ export default function ViewStudentPasswordModal({
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-indigo-600 font-bold">•</span>
-                <span>Use their email: <strong>{student.email}</strong></span>
+                <span>Login with username: <strong>
+                  {student.email.endsWith('@student.local')
+                    ? student.email.replace('@student.local', '')
+                    : student.email}
+                </strong></span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-indigo-600 font-bold">•</span>
-                <span>Use the password shown above</span>
+                <span>Use the password shown above — it stays the same every time</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-indigo-600 font-bold">•</span>
-                <span>They can change their password after first login</span>
+                <span>Contact you (the teacher) if they forget their password</span>
               </li>
             </ul>
           </div>

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { cleanAIText } from '@/lib/clean-ai-text'
 import { 
   Brain, 
   Send, 
@@ -287,7 +288,7 @@ export default function HopePage() {
                           </div>
                         ) : (
                           <>
-                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            <p className="text-sm whitespace-pre-wrap">{cleanAIText(message.content)}</p>
                             <div className={`flex items-center justify-between mt-2 ${
                               message.type === 'user' ? 'text-green-100' : 'text-gray-500'
                             }`}>

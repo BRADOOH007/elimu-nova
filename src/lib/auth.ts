@@ -4,13 +4,26 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
 
+/** Resolve a login identifier (email or username) to a full email for DB lookup.
+ *  Students may log in with just their username (the part before @student.local).
+ */
+async function resolveLoginEmail(identifier: string): Promise<string> {
+  const trimmed = identifier.trim().toLowerCase()
+
+  // If it looks like a full email, use it directly
+  if (trimmed.includes('@')) return trimmed
+
+  // Otherwise treat it as a student username — append the domain
+  return `${trimmed}@student.local`
+}
+
 export const authOptions: NextAuthOptions = {
   // adapter: PrismaAdapter(prisma) as any, // Commented out for JWT strategy
   providers: [
     CredentialsProvider({
       name: 'credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        email: { label: 'Email or Username', type: 'text' },
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
@@ -21,9 +34,12 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
+        const loginEmail = await resolveLoginEmail(credentials.email)
+        console.log('🔍 Resolved login email:', loginEmail)
+
         const user = await prisma.user.findUnique({
           where: {
-            email: credentials.email
+            email: loginEmail
           },
           include: {
             schoolAdmin: {
@@ -51,7 +67,7 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!user) {
-          console.log('❌ User not found')
+          console.log('❌ User not found for:', loginEmail)
           return null
         }
         

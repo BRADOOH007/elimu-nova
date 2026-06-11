@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { cleanAIText } from "@/lib/clean-ai-text"
 import { Badge } from "@/components/ui/badge"
 import { 
   TrendingUp, 
@@ -481,7 +482,7 @@ export default function ProgressPage() {
               </div>
               <div className="prose max-w-none">
                 <div className="whitespace-pre-wrap text-gray-700 leading-relaxed mb-6">
-                  {progressData.aiInsights.analysis}
+                  {cleanAIText(progressData.aiInsights.analysis)}
                 </div>
               </div>
             </div>

@@ -128,8 +128,11 @@ export async function GET(req: NextRequest) {
         status: isOverdue ? 'OVERDUE' : assignment.status,
         createdAt: assignment.createdAt,
         updatedAt: assignment.updatedAt,
+        subject: assignment.lessonPlan?.subject || '',
         teacher: {
           id: assignment.teacher.id,
+          firstName: assignment.teacher.user.firstName,
+          lastName: assignment.teacher.user.lastName,
           name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
           email: assignment.teacher.user.email
         },

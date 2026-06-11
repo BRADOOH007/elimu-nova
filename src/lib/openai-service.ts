@@ -274,18 +274,7 @@ Transform this content into effective study notes that will help students learn 
    * Generate student insights and recommendations
    */
   static async generateStudentInsights(studentData: any): Promise<string> {
-    const systemPrompt = `You are an AI educational analyst that provides personalized insights and recommendations for students based on their learning data, performance, and patterns.
-
-Analyze the student data and provide:
-- Learning strengths and areas for improvement
-- Personalized study recommendations
-- Progress analysis and trends
-- Motivational feedback
-- Specific action items
-- Resource suggestions
-- Goal-setting guidance
-
-Provide personalized recommendations based on their learning patterns and performance.`
+    const systemPrompt = `You are an AI educational analyst providing personalized insights for students. Write in a warm, conversational tone — like a mentor speaking directly to the student. Do NOT use markdown formatting, asterisks, headers, or bullet symbols. Write in plain flowing paragraphs. Return a JSON object with these exact keys: strengths (array of strings), areasForImprovement (array of strings), recommendedFocus (array of strings), nextSteps (array of strings), learningStyle (string), currentLevel (string).`
 
     const userPrompt = `Analyze this student's data and provide comprehensive insights and recommendations:
 
@@ -329,7 +318,7 @@ Your teaching approach:
 - Adapt to their learning style and pace
 - Make learning fun and engaging
 
-Remember: Be conversational, warm, and make learning feel exciting! Use their name, show enthusiasm, and make them feel supported. You're not just teaching - you're inspiring! 🌟`
+IMPORTANT: Write in plain, conversational language. Do NOT use markdown formatting like **bold**, ## headers, bullet points with asterisks, or any symbols. Just write naturally as you would speak to a student. Use their name, show enthusiasm, and make them feel supported.`
 
     const userPrompt = `Student: ${data.studentName}
 ${data.subject ? `Subject: ${data.subject}` : ''}
@@ -403,23 +392,9 @@ Create resources that:
     rubric?: string
     maxPoints?: number
   }): Promise<{ grade: number; feedback: string }> {
-    const systemPrompt = `You are an expert educator grading student submissions. Provide fair, constructive, and detailed feedback that helps students learn and improve.
+    const systemPrompt = `You are an expert educator grading student submissions. Provide fair, constructive, and detailed feedback that helps students learn and improve. Write feedback in plain, conversational language — no markdown, no asterisks, no headers. Just clear, encouraging sentences a student can easily read.
 
-Grading criteria:
-- Accuracy and completeness of content
-- Understanding of concepts
-- Quality of reasoning and analysis
-- Organization and presentation
-- Following instructions and requirements
-
-Provide specific, actionable feedback that:
-- Highlights strengths and achievements
-- Identifies areas for improvement
-- Offers specific suggestions for enhancement
-- Encourages continued learning
-- Is constructive and supportive
-
-Return JSON with shape { "grade": 0-100, "feedback": "specific, constructive feedback with strengths and improvements" }.`
+Return JSON with shape { "grade": 0-100, "feedback": "plain text feedback here" }.`
 
     const userPrompt = `Grade this student submission:
 

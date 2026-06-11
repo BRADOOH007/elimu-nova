@@ -330,13 +330,19 @@ export default function AssignmentsPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Progress</span>
-                    <span>{Math.round((assignment.stats.totalSubmissions / assignment.stats.totalStudents) * 100)}%</span>
+                    <span>
+                      {assignment.stats.totalStudents > 0
+                        ? `${Math.round((assignment.stats.totalSubmissions / assignment.stats.totalStudents) * 100)}%`
+                        : '0%'}
+                    </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
                       className="bg-blue-600 h-2 rounded-full" 
                       style={{ 
-                        width: `${(assignment.stats.totalSubmissions / assignment.stats.totalStudents) * 100}%` 
+                        width: assignment.stats.totalStudents > 0
+                          ? `${Math.min(100, Math.round((assignment.stats.totalSubmissions / assignment.stats.totalStudents) * 100))}%`
+                          : '0%'
                       }}
                     ></div>
                   </div>

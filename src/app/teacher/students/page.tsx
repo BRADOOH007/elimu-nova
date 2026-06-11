@@ -377,7 +377,11 @@ export default function TeacherStudentsPage() {
                               </div>
                               <div>
                                 <div className="font-medium text-gray-900">{student.name}</div>
-                                <div className="text-sm text-gray-500">{student.email}</div>
+                                <div className="text-sm text-gray-500">
+                                  {student.email.endsWith('@student.local')
+                                    ? `@${student.email.replace('@student.local', '')}`
+                                    : student.email}
+                                </div>
                               </div>
                             </div>
                           </td>

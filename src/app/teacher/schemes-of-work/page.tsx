@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import { 
   FileText, 
   Loader2, 
@@ -543,10 +544,14 @@ export default function SchemesOfWorkPage() {
             </h1>
             <p className="text-gray-600">Generate and manage AI-powered schemes of work for your classes</p>
           </div>
-          <Button onClick={() => router.push('/teacher/schemes-of-work/create')} className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
-            <Plus className="mr-2 h-4 w-4" />
-            Create New
-          </Button>
+          <div className="flex items-center gap-3">
+            <DocumentUploadButton docType="scheme-of-work" />
+            <DocumentUploadButton docType="curriculum" label="Upload Curriculum" />
+            <Button onClick={() => router.push('/teacher/schemes-of-work/create')} className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New
+            </Button>
+          </div>
         </div>
 
         {/* Filters */}

@@ -27,7 +27,10 @@ import {
   BookOpen,
   Target,
   TrendingUp,
-  Zap
+  Zap,
+  Paperclip,
+  X,
+  File
 } from "lucide-react"
 
 interface Assignment {
@@ -80,6 +83,12 @@ export default function AssignmentsPage() {
   const [aiInsights, setAiInsights] = useState<AIInsights | null>(null)
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showAIHelp, setShowAIHelp] = useState(false)
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
+  const [submitContent, setSubmitContent] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitResult, setSubmitResult] = useState<{ grade?: number; feedback?: string } | null>(null)
+  const [attachments, setAttachments] = useState<Array<{ url: string; name: string; type: string }>>([])
+  const [isUploading, setIsUploading] = useState(false)
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
 
@@ -232,6 +241,71 @@ export default function AssignmentsPage() {
     setShowAIHelp(true)
   }
 
+  const handleOpenSubmit = (assignment: Assignment) => {
+    setSelectedAssignment(assignment)
+    setSubmitContent("")
+    setSubmitResult(null)
+    setAttachments([])
+    setShowSubmitModal(true)
+  }
+
+  const handleSubmitAssignment = async () => {
+    if (!selectedAssignment || (!submitContent.trim() && attachments.length === 0)) return
+    setIsSubmitting(true)
+    try {
+      const res = await fetch(`/api/assignments/${selectedAssignment.id}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: submitContent || '(See attached file)',
+          attachments: attachments.map(a => a.url)
+        })
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to submit')
+      setSubmitResult({
+        grade: data.submission?.grade,
+        feedback: data.submission?.feedback
+      })
+      await fetchAssignments()
+    } catch (err) {
+      setSubmitResult({ feedback: err instanceof Error ? err.message : 'Submission failed' })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setIsUploading(true)
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        const res = await fetch('/api/student/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Upload failed')
+        setAttachments(prev => [...prev, { url: data.url, name: data.name, type: data.type }])
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setIsUploading(false)
+      // Reset file input
+      e.target.value = ''
+    }
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index))
+  }
+
   const handleView = (assignmentId: string) => {
     router.push(`/student/assignments/${assignmentId}`)
   }
@@ -275,7 +349,7 @@ export default function AssignmentsPage() {
 
       {/* AI Insights Banner */}
       {aiInsights && (
-        <Card className=" border-0bg-gradient-to-r from-blue-50 via-purple-50 to-cyan-50 shadow-lg">
+        <Card className="border-0 bg-gradient-to-r from-blue-50 via-purple-50 to-cyan-50 shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-start space-x-4">
               <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -285,12 +359,12 @@ export default function AssignmentsPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Learning Insights</h3>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Learning Style: <span className="font-medium">{aiInsights.learningStyle}</span></p>
-                    <p className="text-sm text-gray-600 mb-1">Current Level: <span className="font-medium">{aiInsights.currentLevel}</span></p>
+                    <p className="text-sm text-gray-600 mb-1">Learning Style: <span className="font-medium">{aiInsights.learningStyle || '—'}</span></p>
+                    <p className="text-sm text-gray-600 mb-1">Current Level: <span className="font-medium">{aiInsights.currentLevel || '—'}</span></p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Focus Areas: {aiInsights.recommendedFocus.slice(0, 2).join(', ')}</p>
-                    <p className="text-sm text-gray-600">Next Steps: {aiInsights.nextSteps[0]}</p>
+                    <p className="text-sm text-gray-600 mb-1">Focus Areas: {(aiInsights.recommendedFocus ?? []).slice(0, 2).join(', ') || '—'}</p>
+                    <p className="text-sm text-gray-600">Next Steps: {(aiInsights.nextSteps ?? [])[0] || '—'}</p>
                   </div>
                 </div>
               </div>
@@ -301,7 +375,7 @@ export default function AssignmentsPage() {
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-4 gap-6">
-        <Card className=" border-0bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
+        <Card className="border-0 bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -313,7 +387,7 @@ export default function AssignmentsPage() {
           </CardContent>
         </Card>
 
-        <Card className=" border-0bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg">
+        <Card className="border-0 bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -327,7 +401,7 @@ export default function AssignmentsPage() {
           </CardContent>
         </Card>
 
-        <Card className=" border-0bg-gradient-to-br from-yellow-500 to-orange-600 text-white shadow-lg">
+        <Card className="border-0 bg-gradient-to-br from-yellow-500 to-orange-600 text-white shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -341,7 +415,7 @@ export default function AssignmentsPage() {
           </CardContent>
         </Card>
 
-        <Card className=" border-0bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg">
+        <Card className="border-0 bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -357,7 +431,7 @@ export default function AssignmentsPage() {
       </div>
 
       {/* Filters and Actions */}
-      <Card className=" border-0shadow-lg">
+      <Card className="border-0 shadow-lg">
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex flex-col md:flex-row gap-4 flex-1">
@@ -471,7 +545,9 @@ export default function AssignmentsPage() {
                           AI Help
                         </Button>
                         {assignment.status === 'PENDING' && (
-                          <Button size="sm" className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white">
+                          <Button size="sm" className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                            onClick={() => handleOpenSubmit(assignment)}
+                          >
                             <Upload className="w-4 h-4 mr-2" />
                             Submit
                           </Button>
@@ -597,6 +673,123 @@ export default function AssignmentsPage() {
               </div>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Submit Assignment Modal */}
+      <Dialog open={showSubmitModal} onOpenChange={(open) => {
+        if (!open) { setShowSubmitModal(false); setSubmitResult(null); setSubmitContent(""); setAttachments([]) }
+      }}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Upload className="w-5 h-5 mr-2 text-green-600" />
+              Submit Assignment
+            </DialogTitle>
+            <DialogDescription>
+              {selectedAssignment?.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          {submitResult ? (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                  <span className="font-semibold text-green-800">Submitted successfully!</span>
+                </div>
+                {submitResult.grade !== undefined && submitResult.grade !== null && (
+                  <p className="text-green-700 font-medium">AI Grade: {Math.round(submitResult.grade)}%</p>
+                )}
+                {submitResult.feedback && (
+                  <p className="text-sm text-green-700 mt-2 whitespace-pre-wrap">{submitResult.feedback}</p>
+                )}
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={() => setShowSubmitModal(false)}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+                  Done
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              {selectedAssignment && (
+                <div className="p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+                  <p className="font-medium mb-1">{selectedAssignment.description}</p>
+                  <p className="text-blue-600">Due: {new Date(selectedAssignment.dueDate).toLocaleDateString()}</p>
+                </div>
+              )}
+
+              {/* Text answer */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Your Answer <span className="font-normal text-gray-400">(optional if uploading a file)</span></label>
+                <Textarea
+                  value={submitContent}
+                  onChange={(e) => setSubmitContent(e.target.value)}
+                  placeholder="Type your answer here..."
+                  rows={6}
+                  className="resize-none"
+                />
+              </div>
+
+              {/* File upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Attach Files <span className="font-normal text-gray-400">(images, PDF, Word, text — max 10MB each)</span></label>
+                <label className={`flex items-center gap-3 px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer transition-colors
+                  ${isUploading ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.txt"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                  />
+                  {isUploading ? (
+                    <><Loader2 className="w-5 h-5 text-blue-500 animate-spin" /><span className="text-sm text-blue-600">Uploading...</span></>
+                  ) : (
+                    <><Paperclip className="w-5 h-5 text-gray-400" /><span className="text-sm text-gray-600">Click to attach files</span></>
+                  )}
+                </label>
+
+                {/* Attachment list */}
+                {attachments.length > 0 && (
+                  <div className="space-y-2">
+                    {attachments.map((att, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                        <File className="w-4 h-4 text-blue-500 shrink-0" />
+                        <a href={att.url} target="_blank" rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:underline truncate flex-1">
+                          {att.name}
+                        </a>
+                        <button onClick={() => removeAttachment(i)} className="text-gray-400 hover:text-red-500 shrink-0">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowSubmitModal(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmitAssignment}
+                  disabled={isSubmitting || isUploading || (!submitContent.trim() && attachments.length === 0)}
+                  className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
+                >
+                  {isSubmitting ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Submitting...</>
+                  ) : (
+                    <><Upload className="w-4 h-4 mr-2" />Submit for AI Grading</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
