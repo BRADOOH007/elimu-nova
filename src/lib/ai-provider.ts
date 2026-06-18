@@ -82,7 +82,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     cerebrasModel   = process.env.CEREBRAS_MODEL   || 'gpt-oss-120b',
     deepseekModel   = useReasoner ? 'deepseek-reasoner' : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
     geminiModel     = process.env.GEMINI_MODEL     || 'gemini-2.5-flash',
-    groqModel       = process.env.GROQ_MODEL       || 'llama-3.1-8b-instant',
+    groqModel       = process.env.GROQ_MODEL       || 'llama-3.3-70b',
     openrouterModel = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
     openaiModel     = process.env.OPENAI_MODEL     || 'gpt-4o-mini',
   } = opts
