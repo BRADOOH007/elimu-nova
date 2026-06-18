@@ -27,14 +27,14 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/logo-white-removebg-preview.png', sizes: '32x32',   type: 'image/png' },
-      { url: '/logo-white-removebg-preview.png', sizes: '16x16',   type: 'image/png' },
-      { url: '/logo-white-removebg-preview.png', sizes: '192x192', type: 'image/png' },
-      { url: '/logo-white-removebg-preview.png', sizes: '512x512', type: 'image/png' },
+      { url: '/logo-black.png', sizes: '32x32',   type: 'image/png' },
+      { url: '/logo-black.png', sizes: '16x16',   type: 'image/png' },
+      { url: '/logo-black.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logo-black.png', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/logo-white-removebg-preview.png',
+    shortcut: '/logo-black.png',
     apple: [
-      { url: '/logo-white-removebg-preview.png', sizes: '180x180', type: 'image/png' },
+      { url: '/logo-black.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   manifest: '/manifest.json',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     title: "ElimuNova AI - Intelligent Education Platform",
     description: "Transform education with AI-powered lesson plans, schemes of work, and personalized learning experiences.",
     type: "website",
-    images: ['/logo-64.png'],
+    images: ['/logo-black.png'],
   },
 };
 
@@ -54,11 +54,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="light" style={{ colorScheme: 'light' }}>
       <head>
-        <link rel="icon" href="/logo-white-removebg-preview.png" type="image/png" sizes="32x32" />
-        <link rel="icon" href="/logo-white-removebg-preview.png" type="image/png" sizes="16x16" />
-        <link rel="shortcut icon" href="/logo-white-removebg-preview.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logo-white-removebg-preview.png" />
-        <meta name="msapplication-TileImage" content="/logo-white-removebg-preview.png" />
+        <link rel="icon" href="/logo-black.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/logo-black.png" type="image/png" sizes="16x16" />
+        <link rel="shortcut icon" href="/logo-black.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo-black.png" />
+        <meta name="msapplication-TileImage" content="/logo-black.png" />
         <meta name="msapplication-TileColor" content="#667eea" />
       </head>
       <body
