@@ -18,11 +18,21 @@ interface AIConfig {
 
 const PROVIDERS = [
   {
+    id:       'cerebras',
+    label:    'Cerebras',
+    keyField: 'ai_provider_cerebras_key',
+    badge:    'Primary — 2,000 tokens/sec',
+    desc:     'gpt-oss-120b — world\'s fastest inference. Free tier. Used as primary for all ElimuNova AI tasks.',
+    envVar:   'CEREBRAS_API_KEY',
+    docsUrl:  'https://cloud.cerebras.ai',
+    color:    'indigo',
+  },
+  {
     id:       'gemini',
     label:    'Google Gemini',
     keyField: 'ai_provider_gemini_key',
-    badge:    'Primary — Free tier',
-    desc:     'Gemini 2.5 Flash. Free tier, fast, great for Kenyan CBC curriculum. Recommended as primary.',
+    badge:    'Backup — Free 1,000 RPD',
+    desc:     'Gemini 2.5 Flash. Free tier, fast, great for Kenyan CBC curriculum. Recommended as backup.',
     envVar:   'GEMINI_API_KEY',
     docsUrl:  'https://aistudio.google.com/app/apikey',
     color:    'blue',
@@ -31,8 +41,8 @@ const PROVIDERS = [
     id:       'groq',
     label:    'Groq',
     keyField: 'ai_provider_groq_key',
-    badge:    'Backup — Ultra Fast Free',
-    desc:     'Llama 3.1 8B via Groq. Fastest inference on the market, free tier, good fallback.',
+    badge:    'Fallback — Ultra Fast Free',
+    desc:     'Llama 3.1 8B via Groq. Fastest open-model inference, free tier, good fallback.',
     envVar:   'GROQ_API_KEY',
     docsUrl:  'https://console.groq.com/keys',
     color:    'orange',
@@ -52,7 +62,7 @@ const PROVIDERS = [
     label:    'OpenAI Direct',
     keyField: 'ai_provider_openai_key',
     badge:    'Premium',
-    desc:     'Direct OpenAI API. Use for highest quality when OpenRouter is unavailable.',
+    desc:     'Direct OpenAI API. Use for highest quality when all other providers are unavailable.',
     envVar:   'OPENAI_API_KEY',
     docsUrl:  'https://platform.openai.com/api-keys',
     color:    'green',
@@ -115,6 +125,7 @@ export default function AIConfigPage() {
   }
 
   const colorMap: Record<string, string> = {
+    indigo: 'border-indigo-200 bg-indigo-50/50',
     blue:   'border-blue-200 bg-blue-50/50',
     orange: 'border-orange-200 bg-orange-50/50',
     purple: 'border-purple-200 bg-purple-50/50',

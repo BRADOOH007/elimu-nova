@@ -1,18 +1,20 @@
 /**
  * ElimuNova AI Provider — shared across EduGenius and TutorBot.
  *
- * Waterfall priority (same as TutorBot's ai-fallback.ts):
- *   1. Gemini 2.5 Flash   — primary, free tier, fast, Kenyan curriculum-aware
- *   2. Groq llama-3.1-8b  — backup, ultra-fast inference
- *   3. OpenRouter          — sk-or-v1-... fallback
- *   4. OpenAI direct       — last resort
+ * Waterfall priority:
+ *   1. Cerebras         — gpt-oss-120b, 2,000 tokens/sec, free tier (FASTEST)
+ *   2. Gemini 2.5 Flash — free tier, 1,000 RPD, CBC curriculum-aware
+ *   3. Groq llama       — free tier, ultra-fast open models
+ *   4. OpenRouter       — sk-or-v1-... multi-model fallback
+ *   5. OpenAI direct    — last resort
  *
- * All keys come from environment variables — NO hardcoded keys.
- * Model selection is stored in the database (AIModelConfig) so super admin
- * can update the active model without a redeploy.
+ * All keys from environment variables — never hardcoded.
+ * Model selection configurable by super admin via /api/super-admin/ai-config.
  */
 
-export type AIProvider = 'gemini' | 'groq' | 'openrouter' | 'openai'
+import Cerebras from '@cerebras/cerebras_cloud_sdk'
+
+export type AIProvider = 'cerebras' | 'gemini' | 'groq' | 'openrouter' | 'openai'
 
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant'
@@ -20,39 +22,36 @@ export interface AIMessage {
 }
 
 export interface AICallOptions {
-  messages:       AIMessage[]
-  maxTokens?:     number
-  temperature?:   number
-  // Per-task model overrides (used when super admin sets specific models)
+  messages:          AIMessage[]
+  maxTokens?:        number
+  temperature?:      number
+  cerebrasModel?:    string
   geminiModel?:      string
   groqModel?:        string
   openrouterModel?:  string
   openaiModel?:      string
-  // Task context for logging
-  taskType?:      string
-  schoolId?:      string
+  taskType?:         string
+  schoolId?:         string
 }
 
 export interface AICallResult {
-  content:       string
-  provider:      AIProvider
-  model:         string
-  tokensUsed?:   number
-  latencyMs?:    number
+  content:     string
+  provider:    AIProvider
+  model:       string
+  tokensUsed?: number
+  latencyMs?:  number
 }
 
+/* ── URLs ── */
 const GEMINI_URL     = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
 const GROQ_URL       = 'https://api.groq.com/openai/v1/chat/completions'
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions'
 
-async function callProvider(
-  url:      string,
-  apiKey:   string,
-  model:    string,
-  messages: AIMessage[],
-  maxTokens = 2000,
-  temperature = 0.7,
+/* ── Generic HTTP provider call ── */
+async function callHTTP(
+  url: string, apiKey: string, model: string,
+  messages: AIMessage[], maxTokens = 2000, temperature = 0.7,
 ): Promise<{ content: string; tokensUsed?: number }> {
   const res = await fetch(url, {
     method:  'POST',
@@ -64,85 +63,115 @@ async function callProvider(
     },
     body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
   })
-
   if (!res.ok) {
     const err = await res.text().catch(() => '')
-    throw new Error(`${url} returned ${res.status}: ${err.slice(0, 200)}`)
+    throw new Error(`${url} → ${res.status}: ${err.slice(0, 200)}`)
   }
-
   const data = await res.json()
-  const content    = data?.choices?.[0]?.message?.content || ''
-  const tokensUsed = data?.usage?.total_tokens
-  return { content, tokensUsed }
+  return {
+    content:    data?.choices?.[0]?.message?.content || '',
+    tokensUsed: data?.usage?.total_tokens,
+  }
 }
 
 /**
- * Main entry point — tries each provider in order until one succeeds.
+ * Main AI call — tries each provider in waterfall order.
  */
 export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   const {
     messages,
-    maxTokens     = 2000,
-    temperature   = 0.7,
+    maxTokens        = 2000,
+    temperature      = 0.7,
+    cerebrasModel    = process.env.CEREBRAS_MODEL    || 'gpt-oss-120b',
     geminiModel      = process.env.GEMINI_MODEL      || 'gemini-2.5-flash',
     groqModel        = process.env.GROQ_MODEL        || 'llama-3.1-8b-instant',
     openrouterModel  = process.env.OPENROUTER_MODEL  || 'openai/gpt-4o-mini',
     openaiModel      = process.env.OPENAI_MODEL      || 'gpt-4o-mini',
   } = opts
 
+  const CEREBRAS_KEY   = process.env.CEREBRAS_API_KEY
   const GEMINI_KEY     = process.env.GEMINI_API_KEY
   const GROQ_KEY       = process.env.GROQ_API_KEY
   const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY
   const OPENAI_KEY     = process.env.OPENAI_API_KEY
 
-  if (!GEMINI_KEY && !GROQ_KEY && !OPENROUTER_KEY && !OPENAI_KEY) {
-    throw new Error('No AI keys configured. Set at least one of: GEMINI_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY, OPENAI_API_KEY')
+  if (!CEREBRAS_KEY && !GEMINI_KEY && !GROQ_KEY && !OPENROUTER_KEY && !OPENAI_KEY) {
+    throw new Error('No AI keys configured. Set at least CEREBRAS_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY')
   }
 
   const errors: string[] = []
-  const startTime = Date.now()
+  const start = Date.now()
 
-  // ── 1. Gemini 2.5 Flash ─────────────────────────────────────────────────
+  // ── 1. Cerebras (fastest — 2,000+ tokens/sec) ───────────────────────────
+  if (CEREBRAS_KEY) {
+    try {
+      const client = new Cerebras({ apiKey: CEREBRAS_KEY })
+      const completion = await (client.chat.completions.create as any)({
+        model:                 cerebrasModel,
+        messages:              messages as any,
+        max_completion_tokens: maxTokens,
+        temperature,
+        top_p:                 1,
+        stream:                false,
+        reasoning_effort:      'medium',
+      })
+      const content = (completion as any).choices?.[0]?.message?.content || ''
+      if (content) {
+        return {
+          content,
+          provider:  'cerebras',
+          model:     cerebrasModel,
+          tokensUsed: (completion as any).usage?.total_tokens,
+          latencyMs: Date.now() - start,
+        }
+      }
+    } catch (e: any) {
+      errors.push(`Cerebras: ${e.message}`)
+      console.warn('[AI] Cerebras failed, trying next:', e.message)
+    }
+  }
+
+  // ── 2. Gemini 2.5 Flash (free, CBC-aware) ────────────────────────────────
   if (GEMINI_KEY) {
     try {
-      const { content, tokensUsed } = await callProvider(GEMINI_URL, GEMINI_KEY, geminiModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'gemini', model: geminiModel, tokensUsed, latencyMs: Date.now() - startTime }
+      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, geminiModel, messages, maxTokens, temperature)
+      if (content) return { content, provider: 'gemini', model: geminiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       errors.push(`Gemini: ${e.message}`)
       console.warn('[AI] Gemini failed, trying next:', e.message)
     }
   }
 
-  // ── 2. Groq llama ────────────────────────────────────────────────────────
+  // ── 3. Groq (free, fast open models) ─────────────────────────────────────
   if (GROQ_KEY) {
     try {
-      const { content, tokensUsed } = await callProvider(GROQ_URL, GROQ_KEY, groqModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'groq', model: groqModel, tokensUsed, latencyMs: Date.now() - startTime }
+      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, groqModel, messages, maxTokens, temperature)
+      if (content) return { content, provider: 'groq', model: groqModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       errors.push(`Groq: ${e.message}`)
       console.warn('[AI] Groq failed, trying next:', e.message)
     }
   }
 
-  // ── 3. OpenRouter ────────────────────────────────────────────────────────
+  // ── 4. OpenRouter (multi-model fallback) ─────────────────────────────────
   if (OPENROUTER_KEY) {
     const isOpenRouter = OPENROUTER_KEY.startsWith('sk-or-')
     const url   = isOpenRouter ? OPENROUTER_URL : OPENAI_URL
     const model = isOpenRouter ? openrouterModel : openaiModel
     try {
-      const { content, tokensUsed } = await callProvider(url, OPENROUTER_KEY, model, messages, maxTokens, temperature)
-      if (content) return { content, provider: isOpenRouter ? 'openrouter' : 'openai', model, tokensUsed, latencyMs: Date.now() - startTime }
+      const { content, tokensUsed } = await callHTTP(url, OPENROUTER_KEY, model, messages, maxTokens, temperature)
+      if (content) return { content, provider: isOpenRouter ? 'openrouter' : 'openai', model, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       errors.push(`OpenRouter: ${e.message}`)
       console.warn('[AI] OpenRouter failed, trying next:', e.message)
     }
   }
 
-  // ── 4. OpenAI direct ─────────────────────────────────────────────────────
+  // ── 5. OpenAI direct ─────────────────────────────────────────────────────
   if (OPENAI_KEY && OPENAI_KEY !== OPENROUTER_KEY) {
     try {
-      const { content, tokensUsed } = await callProvider(OPENAI_URL, OPENAI_KEY, openaiModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'openai', model: openaiModel, tokensUsed, latencyMs: Date.now() - startTime }
+      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, openaiModel, messages, maxTokens, temperature)
+      if (content) return { content, provider: 'openai', model: openaiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       errors.push(`OpenAI: ${e.message}`)
     }
@@ -152,12 +181,12 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
 }
 
 /**
- * Convenience wrapper — returns just the content string.
+ * Convenience: returns just the string response.
  */
 export async function getAIResponse(
   systemPrompt: string,
-  userMessage: string,
-  opts?: Partial<AICallOptions>
+  userMessage:  string,
+  opts?:        Partial<AICallOptions>,
 ): Promise<string> {
   const result = await callAI({
     messages: [
