@@ -115,8 +115,8 @@ Format the response clearly with proper headings and bullet points for easy read
 
     console.log('Generating lesson plan for:', { subject, grade, topic, duration })
 
-    // Generate lesson plan using OpenAI
-    const content = await OpenAIService.generateText(messages, {
+    // Generate lesson plan using full AI waterfall
+    const content = await OpenAIService.generateLongContent(messages, {
       maxTokens: 2000,
       temperature: 0.7
     })

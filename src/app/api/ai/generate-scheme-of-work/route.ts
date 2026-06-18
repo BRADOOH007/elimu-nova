@@ -138,8 +138,8 @@ CRITICAL REQUIREMENTS:
 
     console.log('Generating scheme of work for:', { subject, grade, topics: topicsList, duration })
 
-    // Generate scheme of work using OpenAI
-    const content = await OpenAIService.generateText(messages, {
+    // Generate scheme of work using full AI waterfall
+    const content = await OpenAIService.generateLongContent(messages, {
       maxTokens: 2500,
       temperature: 0.7
     })

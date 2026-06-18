@@ -200,89 +200,43 @@ Please generate a detailed presentation with the following EXACT structure for e
 
 # Slide [number]: [Title]
 **Content:**
-[Detailed bullet points or paragraphs explaining the concept - make it engaging and age-appropriate]
+[Detailed bullet points explaining the concept - make it engaging and age-appropriate]
 
 **Speaker Notes:**
 [Detailed notes for the teacher including explanations, examples, and teaching tips]
 
 **Image Prompt:**
-[REQUIRED: Specific, detailed prompt for AI image generation that will create an educational illustration for this slide. Be very specific about what should be shown, the style should be educational and appropriate for ${grade} students]
+[REQUIRED: Specific, detailed prompt for AI image generation - educational illustration for ${grade} students]
 
 **Layout:**
-[Choose: title, content, image, or split - this determines how the image will be positioned]
-
----
-
-EXAMPLE FORMAT:
-# Slide 1: Introduction to Photosynthesis
-**Content:**
-• Photosynthesis is how plants make their own food
-• Plants use sunlight, water, and carbon dioxide
-• This process produces oxygen that we breathe
-• It happens mainly in the leaves of plants
-
-**Speaker Notes:**
-Start by asking students what they know about how plants get energy. Explain that unlike animals, plants don't eat food - they make it themselves through an amazing process called photosynthesis.
-
-**Image Prompt:**
-Educational diagram showing a green plant with labeled arrows pointing to sunlight from above, water being absorbed by roots from soil, and carbon dioxide entering through leaves, with oxygen bubbles coming out of leaves, cartoon style, bright colors, suitable for grade school students
-
-**Layout:**
-split
+[Choose: title, content, image, or split]
 
 ---
 
 Make sure to:
-1. Start with an engaging title slide with a welcoming image
-2. Include clear learning objectives slide with educational icons
-3. Break down complex concepts into digestible parts with supporting visuals
-4. Provide practical examples relevant to ${grade} students with real-world images
-5. Include interactive elements or questions with engaging illustrations
-6. End with a summary slide that reinforces key concepts with a comprehensive visual
+1. Start with an engaging title slide
+2. Include clear learning objectives
+3. Break down complex concepts into digestible parts
+4. Provide practical examples relevant to ${grade} students
+5. End with a summary slide
+6. EVERY slide must have a detailed Image Prompt
 7. Make content age-appropriate for ${grade} level
-8. EVERY slide must have a detailed "Image Prompt" for AI image generation
-9. Choose appropriate "Layout" for each slide (title, content, image, split)
-10. Make image prompts specific, educational, and appropriate for the grade level
 
-Generate exactly ${slideCount} slides with this format. Each slide MUST have an Image Prompt and Layout specified.`
+Generate exactly ${slideCount} slides.`
 
-    // Use OpenAI AI to generate the content
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-4o',
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 4000,
-        temperature: 0.7
-      })
-    })
+    // Use the ElimuNova AI waterfall
+    const { OpenAIService } = await import('@/lib/openai-service')
+    const generatedContent = await OpenAIService.generateLongContent(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 4000, temperature: 0.7 }
+    )
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    const generatedContent = data.choices[0]?.message?.content
-
-    if (!generatedContent) {
-      throw new Error('No content generated from AI')
-    }
-
+    if (!generatedContent) throw new Error('No content generated from AI')
     console.log('AI presentation generated successfully')
     return generatedContent
 
   } catch (error) {
     console.error('AI generation error:', error)
-    // Fallback content if AI fails
     return generateFallbackPresentation(params)
   }
 }
