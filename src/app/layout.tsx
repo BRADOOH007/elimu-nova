@@ -27,14 +27,14 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/logo-64.png', sizes: '32x32',   type: 'image/png' },
-      { url: '/logo-64.png', sizes: '16x16',   type: 'image/png' },
-      { url: '/logo-64.png', sizes: '192x192', type: 'image/png' },
-      { url: '/logo-64.png', sizes: '512x512', type: 'image/png' },
+      { url: '/logo-white-removebg-preview.png', sizes: '32x32',   type: 'image/png' },
+      { url: '/logo-white-removebg-preview.png', sizes: '16x16',   type: 'image/png' },
+      { url: '/logo-white-removebg-preview.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logo-white-removebg-preview.png', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/logo-64.png',
+    shortcut: '/logo-white-removebg-preview.png',
     apple: [
-      { url: '/logo-64.png', sizes: '180x180', type: 'image/png' },
+      { url: '/logo-white-removebg-preview.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   manifest: '/manifest.json',
@@ -54,11 +54,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="light" style={{ colorScheme: 'light' }}>
       <head>
-        <link rel="icon" href="/logo-64.png" type="image/png" sizes="32x32" />
-        <link rel="icon" href="/logo-64.png" type="image/png" sizes="16x16" />
-        <link rel="shortcut icon" href="/logo-64.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logo-64.png" />
-        <meta name="msapplication-TileImage" content="/logo-64.png" />
+        <link rel="icon" href="/logo-white-removebg-preview.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/logo-white-removebg-preview.png" type="image/png" sizes="16x16" />
+        <link rel="shortcut icon" href="/logo-white-removebg-preview.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo-white-removebg-preview.png" />
+        <meta name="msapplication-TileImage" content="/logo-white-removebg-preview.png" />
         <meta name="msapplication-TileColor" content="#667eea" />
       </head>
       <body
