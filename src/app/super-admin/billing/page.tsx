@@ -37,7 +37,11 @@ import {
   AlertCircle,
   Receipt,
   FileText,
-  Settings
+  Settings,
+  Key,
+  ShieldCheck,
+  Zap,
+  ExternalLink
 } from "lucide-react"
 
 interface Billing {
@@ -154,6 +158,231 @@ interface InvoiceResponse {
     hasNext: boolean
     hasPrev: boolean
   }
+}
+
+/* ── Stripe Configuration Panel ── */
+function StripeConfigPanel() {
+  const { toast } = useToast()
+  const [config, setConfig]       = useState({ stripe_secret_key: '', stripe_publishable_key: '', stripe_webhook_secret: '', stripe_mode: 'test' })
+  const [isConfigured, setIsConfigured] = useState(false)
+  const [mode, setMode]           = useState('test')
+  const [loading, setLoading]     = useState(true)
+  const [saving, setSaving]       = useState(false)
+  const [testing, setTesting]     = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null)
+  const [showSecrets, setShowSecrets] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/super-admin/stripe-config')
+      .then(r => r.json())
+      .then(d => {
+        if (d.config) setConfig(prev => ({ ...prev, ...d.config }))
+        setIsConfigured(d.isConfigured)
+        setMode(d.mode || 'test')
+      }).catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const res  = await fetch('/api/super-admin/stripe-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(config),
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast({ title: 'Stripe configuration saved!', description: `Updated: ${data.updated?.join(', ')}` })
+        setIsConfigured(true)
+      } else {
+        toast({ variant: 'destructive', title: 'Save failed', description: data.error })
+      }
+    } finally { setSaving(false) }
+  }
+
+  const testConnection = async () => {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const res  = await fetch('/api/super-admin/stripe-config', { method: 'PUT' })
+      const data = await res.json()
+      setTestResult(data)
+      toast({
+        title:       data.success ? '✅ Stripe Connected!' : '❌ Connection Failed',
+        description: data.message || data.error,
+        variant:     data.success ? 'default' : 'destructive',
+      })
+    } finally { setTesting(false) }
+  }
+
+  if (loading) return <div className="flex items-center justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-500" /></div>
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      {/* Status banner */}
+      <div className={`flex items-center gap-3 p-4 rounded-xl border ${isConfigured ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+        {isConfigured
+          ? <ShieldCheck className="h-5 w-5 text-green-600 shrink-0" />
+          : <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />}
+        <div>
+          <p className={`font-semibold text-sm ${isConfigured ? 'text-green-800' : 'text-amber-800'}`}>
+            {isConfigured ? `Stripe configured — ${mode.toUpperCase()} mode` : 'Stripe not configured yet'}
+          </p>
+          <p className={`text-xs mt-0.5 ${isConfigured ? 'text-green-600' : 'text-amber-600'}`}>
+            {isConfigured
+              ? 'Payments, subscriptions and webhooks are active.'
+              : 'Add your Stripe keys below to enable payments.'}
+          </p>
+        </div>
+        {isConfigured && (
+          <button onClick={testConnection} disabled={testing}
+            className="ml-auto flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-60">
+            {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+            {testing ? 'Testing...' : 'Test Connection'}
+          </button>
+        )}
+      </div>
+
+      {/* Test result */}
+      {testResult && (
+        <div className={`flex items-center gap-3 p-3 rounded-xl border text-sm ${testResult.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+          {testResult.success ? <CheckCircle className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
+          {testResult.message || testResult.error}
+        </div>
+      )}
+
+      {/* Mode selector */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Key className="h-4 w-4 text-purple-600" /> Stripe API Keys
+          </CardTitle>
+          <CardDescription>
+            Get your keys from{' '}
+            <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer"
+              className="text-purple-600 hover:underline inline-flex items-center gap-1">
+              dashboard.stripe.com/apikeys <ExternalLink className="h-3 w-3" />
+            </a>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {/* Mode */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Mode</label>
+            <div className="flex gap-3">
+              {['test', 'live'].map(m => (
+                <button key={m} type="button"
+                  onClick={() => setConfig(p => ({ ...p, stripe_mode: m }))}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-all ${
+                    config.stripe_mode === m
+                      ? m === 'live'
+                        ? 'bg-green-600 text-white border-transparent'
+                        : 'bg-slate-800 text-white border-transparent'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-400'
+                  }`}>
+                  {m === 'live' ? '🟢 Live (Production)' : '🧪 Test (Development)'}
+                </button>
+              ))}
+            </div>
+            {config.stripe_mode === 'live' && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
+                ⚠️ Live mode will charge real cards. Make sure you've tested thoroughly first.
+              </p>
+            )}
+          </div>
+
+          {/* Secret key */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Secret Key <span className="text-slate-400 font-normal">(sk_test_... or sk_live_...)</span>
+            </label>
+            <div className="relative">
+              <input
+                type={showSecrets ? 'text' : 'password'}
+                value={config.stripe_secret_key}
+                onChange={e => setConfig(p => ({ ...p, stripe_secret_key: e.target.value }))}
+                placeholder="sk_test_..."
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+              />
+            </div>
+          </div>
+
+          {/* Publishable key */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Publishable Key <span className="text-slate-400 font-normal">(pk_test_... or pk_live_...)</span>
+            </label>
+            <input
+              type="text"
+              value={config.stripe_publishable_key}
+              onChange={e => setConfig(p => ({ ...p, stripe_publishable_key: e.target.value }))}
+              placeholder="pk_test_..."
+              className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+            />
+          </div>
+
+          {/* Webhook secret */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Webhook Secret <span className="text-slate-400 font-normal">(whsec_...)</span>
+            </label>
+            <input
+              type={showSecrets ? 'text' : 'password'}
+              value={config.stripe_webhook_secret}
+              onChange={e => setConfig(p => ({ ...p, stripe_webhook_secret: e.target.value }))}
+              placeholder="whsec_..."
+              className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono"
+            />
+            <p className="text-xs text-slate-400 mt-1.5">
+              Find this in Stripe Dashboard → Developers → Webhooks. Endpoint URL:{' '}
+              <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
+                {typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.vercel.app'}/api/webhooks/stripe
+              </code>
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
+              <input type="checkbox" checked={showSecrets} onChange={e => setShowSecrets(e.target.checked)} className="rounded" />
+              Show secret keys
+            </label>
+            <button onClick={save} disabled={saving}
+              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm font-semibold rounded-xl disabled:opacity-60 transition-all">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              {saving ? 'Saving...' : 'Save Configuration'}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Webhook events info */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Webhook Events</CardTitle>
+          <CardDescription>ElimuNova listens for these Stripe events automatically</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              { event: 'invoice.payment_succeeded',    desc: 'Activates subscription after payment' },
+              { event: 'invoice.payment_failed',       desc: 'Marks subscription as inactive'       },
+              { event: 'customer.subscription.deleted',desc: 'Cancels school subscription'          },
+              { event: 'customer.subscription.updated',desc: 'Syncs subscription status changes'   },
+            ].map(w => (
+              <div key={w.event} className="flex items-start gap-2 p-3 bg-slate-50 rounded-xl">
+                <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-mono text-slate-700">{w.event}</p>
+                  <p className="text-xs text-slate-400">{w.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }
 
 export default function BillingPage() {
@@ -479,7 +708,7 @@ export default function BillingPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="subscriptions" className="flex items-center space-x-2">
             <CreditCard className="w-4 h-4" />
             <span>Subscriptions</span>
@@ -491,6 +720,10 @@ export default function BillingPage() {
           <TabsTrigger value="invoices" className="flex items-center space-x-2">
             <Receipt className="w-4 h-4" />
             <span>Invoices</span>
+          </TabsTrigger>
+          <TabsTrigger value="stripe-config" className="flex items-center space-x-2">
+            <CreditCard className="w-4 h-4 text-purple-600" />
+            <span>Stripe Setup</span>
           </TabsTrigger>
         </TabsList>
 
@@ -798,6 +1031,11 @@ export default function BillingPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Stripe Configuration Tab */}
+        <TabsContent value="stripe-config">
+          <StripeConfigPanel />
         </TabsContent>
       </Tabs>
 

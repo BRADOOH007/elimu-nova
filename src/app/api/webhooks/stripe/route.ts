@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stripe } from '@/lib/stripe'
-import { handleSuccessfulPayment } from '@/lib/subscription-service'
+import { getStripeAsync, getWebhookSecret } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
-
 export async function POST(request: NextRequest) {
-  const body = await request.text()
+  const body      = await request.text()
   const signature = request.headers.get('stripe-signature')!
 
   let event: Stripe.Event
+  let stripe: Stripe
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
+    stripe            = await getStripeAsync()
+    const webhookSec  = await getWebhookSecret()
+    event             = stripe.webhooks.constructEvent(body, signature, webhookSec)
   } catch (err) {
     console.error('Webhook signature verification failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
@@ -22,8 +22,12 @@ export async function POST(request: NextRequest) {
   try {
     switch (event.type) {
       case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice
-        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
+        if (!invoice.subscription) {
+          console.log('No subscription associated with this invoice')
+          break
+        }
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
         
         const { userId, schoolId } = subscription.metadata
         
@@ -42,8 +46,12 @@ export async function POST(request: NextRequest) {
       }
 
       case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice
-        const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
+        if (!invoice.subscription) {
+          console.log('No subscription associated with this invoice')
+          break
+        }
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
         
         // Update subscription status to inactive
         await prisma.subscription.updateMany({
