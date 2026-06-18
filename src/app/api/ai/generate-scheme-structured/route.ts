@@ -92,12 +92,15 @@ Use Kenya-specific examples and contexts.`
       { maxTokens: 4000, temperature: 0.4 }
     )
 
-    // ── Parse JSON response ────────────────────────────────────────────────
+    // ── Parse JSON response — robust extraction ────────────────────────────
     let rows: KICDRow[] = []
     try {
-      const jsonMatch = raw.match(/\[[\s\S]*\]/)
-      if (!jsonMatch) throw new Error('No JSON array found in response')
-      rows = JSON.parse(jsonMatch[0])
+      // Find the first [ and last ] to extract the JSON array cleanly
+      const start = raw.indexOf('[')
+      const end   = raw.lastIndexOf(']')
+      if (start === -1 || end === -1 || end <= start) throw new Error('No JSON array found in response')
+      rows = JSON.parse(raw.slice(start, end + 1))
+      if (!Array.isArray(rows)) throw new Error('Parsed value is not an array')
     } catch (e) {
       console.error('[SCHEME] JSON parse failed:', e)
       return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })

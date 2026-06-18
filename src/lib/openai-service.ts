@@ -4,7 +4,7 @@
  * Drop-in replacement — all existing callers work unchanged.
  */
 
-import { callAI, getAIReasoning, type AIMessage } from '@/lib/ai-provider'
+import { callAI, type AIMessage } from '@/lib/ai-provider'
 
 export interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant'

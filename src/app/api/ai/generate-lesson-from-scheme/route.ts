@@ -70,23 +70,29 @@ Return ONLY valid JSON. No markdown or explanation.`
 Subject: ${subject}
 Grade: ${grade}
 Week: ${row.week}, Lesson: ${row.lesson}
-Strand: ${row.strand}
-Sub-Strand: ${row.subStrand}
+Strand: ${row.strand || subject}
+Sub-Strand: ${row.subStrand || ''}
 
 Specific Learning Outcomes:
-${row.specificLearningOutcomes}
+${row.specificLearningOutcomes || ''}
 
 Key Inquiry Questions:
-${row.keyInquiryQuestions.join('\n')}
+${Array.isArray(row.keyInquiryQuestions) && row.keyInquiryQuestions.length
+  ? row.keyInquiryQuestions.join('\n')
+  : 'Generate appropriate inquiry questions'}
 
 Learning Experiences from Scheme:
-${row.learningExperiences.join('\n')}
+${Array.isArray(row.learningExperiences) && row.learningExperiences.length
+  ? row.learningExperiences.join('\n')
+  : 'Generate appropriate learning experiences'}
 
 Required Resources:
-${row.learningResources.join('\n')}
+${Array.isArray(row.learningResources) && row.learningResources.length
+  ? row.learningResources.join('\n')
+  : 'Standard classroom resources'}
 
 Assessment Method:
-${row.assessment}
+${row.assessment || 'Oral questions and written exercises'}
 
 Make this lesson plan practical, engaging, and specifically tailored for Kenyan ${grade} students.
 Use local examples. Each activity should have clear timing and instructions.`
@@ -99,12 +105,13 @@ Use local examples. Each activity should have clear timing and instructions.`
       { maxTokens: 2000, temperature: 0.5 }
     )
 
-    // Parse JSON
+    // Robust JSON extraction — find first { and last }
     let lessonData: any = {}
     try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('No JSON found')
-      lessonData = JSON.parse(jsonMatch[0])
+      const start = raw.indexOf('{')
+      const end   = raw.lastIndexOf('}')
+      if (start === -1 || end === -1 || end <= start) throw new Error('No JSON object found')
+      lessonData = JSON.parse(raw.slice(start, end + 1))
     } catch (e) {
       return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })
     }

@@ -144,7 +144,9 @@ For each slide:
 
     // Return file
     const safeTitle = planTitle.replace(/[^a-z0-9]/gi, '_')
-    return new NextResponse(pptxBuffer as any, {
+    // Convert Buffer to Uint8Array for proper BodyInit
+    const uint8 = new Uint8Array(pptxBuffer.buffer, pptxBuffer.byteOffset, pptxBuffer.byteLength)
+    return new NextResponse(uint8, {
       headers: {
         'Content-Type':        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'Content-Disposition': `attachment; filename="${safeTitle}.pptx"`,

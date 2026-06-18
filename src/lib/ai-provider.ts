@@ -79,7 +79,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     maxTokens       = 2000,
     temperature     = 0.7,
     useReasoner     = false,
-    cerebrasModel   = process.env.CEREBRAS_MODEL   || 'gpt-oss-120b',
+    cerebrasModel   = process.env.CEREBRAS_MODEL   || 'llama3.1-8b',
     deepseekModel   = useReasoner ? 'deepseek-reasoner' : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
     geminiModel     = process.env.GEMINI_MODEL     || 'gemini-2.5-flash',
     groqModel       = process.env.GROQ_MODEL       || 'llama-3.3-70b',
@@ -143,10 +143,10 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     } catch (e: any) { errors.push(`Groq: ${e.message}`); console.warn('[AI] Groq:', e.message) }
   }
 
-  // 5. OpenRouter / OpenAI
+  // ── 5. OpenRouter (or direct OpenAI via same key) ────────────────────────
   if (OPENROUTER_KEY) {
-    const isOR = OPENROUTER_KEY.startsWith('sk-or-')
-    const url = isOR ? OPENROUTER_URL : OPENAI_URL
+    const isOR  = OPENROUTER_KEY.startsWith('sk-or-')
+    const url   = isOR ? OPENROUTER_URL : OPENAI_URL
     const model = isOR ? openrouterModel : openaiModel
     try {
       const { content, tokensUsed } = await callHTTP(url, OPENROUTER_KEY, model, messages, maxTokens, temperature)
@@ -154,8 +154,8 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     } catch (e: any) { errors.push(`OpenRouter: ${e.message}`); console.warn('[AI] OpenRouter:', e.message) }
   }
 
-  // 6. OpenAI direct
-  if (OPENAI_KEY && OPENAI_KEY !== OPENROUTER_KEY) {
+  // ── 6. OpenAI direct (only if different key from OPENROUTER_KEY) ──────────
+  if (OPENAI_KEY && OPENAI_KEY !== OPENROUTER_KEY && !OPENAI_KEY.startsWith('sk-or-')) {
     try {
       const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, openaiModel, messages, maxTokens, temperature)
       if (content) return { content, provider: 'openai', model: openaiModel, tokensUsed, latencyMs: Date.now() - start }

@@ -22,7 +22,7 @@ const PROVIDERS = [
     label:    'Cerebras',
     keyField: 'ai_provider_cerebras_key',
     badge:    'Primary — 2,000 tokens/sec',
-    desc:     'gpt-oss-120b — world\'s fastest inference. Free tier. Used as primary for all real-time tasks.',
+    desc:     'llama3.1-8b — world\'s fastest inference. Free tier. Used as primary for all real-time tasks.',
     envVar:   'CEREBRAS_API_KEY',
     docsUrl:  'https://cloud.cerebras.ai',
     color:    'indigo',

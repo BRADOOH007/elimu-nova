@@ -59,18 +59,21 @@ export default function CreateSchemePage() {
   // Load CBC strands when subject+grade changes
   useEffect(() => {
     if (!subject || !grade) return
+    // Parse term number: 'Term 1' → 1, 'Term 2' → 2, 'Term 3' → 3
+    const termNum = parseInt(term.replace('Term ', '')) as 1 | 2 | 3
     const gradeData = grades1to9CurriculumByTerm.find(
-      g => g.grade === grade && g.term === 1
-    )
-    const subjectData = gradeData?.learningAreas.find(
-      la => la.name.toLowerCase().includes(subject.toLowerCase()) ||
-            subject.toLowerCase().includes(la.name.toLowerCase().split(' ')[0])
-    )
-    if (subjectData) {
-      setAvailableStrands(subjectData.strands || [])
-    } else {
-      setAvailableStrands([])
-    }
+      g => g.grade === grade && g.term === termNum
+    ) || grades1to9CurriculumByTerm.find(g => g.grade === grade) // fallback to any term
+    
+    const subjectLower = subject.toLowerCase()
+    const subjectData = gradeData?.learningAreas.find(la => {
+      const laName = la.name.toLowerCase()
+      // Exact match first, then word-boundary match
+      return laName === subjectLower ||
+             laName.includes(subjectLower) ||
+             subjectLower.includes(laName.split(' ')[0]) && laName.split(' ')[0].length > 3
+    })
+    setAvailableStrands(subjectData?.strands || [])
     setTitle(`${subject} - ${grade} - ${term}`)
   }, [subject, grade, term])
 
@@ -155,7 +158,10 @@ export default function CreateSchemePage() {
   }
 
   const downloadScheme = async () => {
-    if (!schemeId) return
+    if (!schemeId) {
+      alert('Please generate the scheme first before downloading.')
+      return
+    }
     window.open(`/api/export/scheme-pdf?id=${schemeId}`, '_blank')
   }
 

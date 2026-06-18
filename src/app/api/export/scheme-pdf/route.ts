@@ -49,8 +49,11 @@ export async function GET(request: NextRequest) {
       }))
     }
 
-    // Build HTML for the PDF
-    const teacherName = `${scheme.teacher.user.firstName} ${scheme.teacher.user.lastName}`
+    // Build teacher name safely
+    const teacherName = [
+      scheme.teacher?.user?.firstName,
+      scheme.teacher?.user?.lastName,
+    ].filter(Boolean).join(' ') || 'Teacher'
     const html = buildSchemeHTML(scheme, rows, teacherName)
 
     // For now return HTML that browser can print to PDF
@@ -74,18 +77,27 @@ export async function GET(request: NextRequest) {
   }
 }
 
+function esc(s: any): string {
+  if (s == null) return ''
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 function buildSchemeHTML(scheme: any, rows: any[], teacherName: string): string {
   const rowsHtml = rows.map(r => `
     <tr>
-      <td>${r.week || ''}</td>
-      <td>${r.lesson || ''}</td>
-      <td>${r.strand || ''}</td>
-      <td>${r.subStrand || ''}</td>
-      <td>${r.specificLearningOutcomes || ''}</td>
-      <td>${Array.isArray(r.keyInquiryQuestions) ? r.keyInquiryQuestions.join('<br>') : r.keyInquiryQuestions || ''}</td>
-      <td>${Array.isArray(r.learningExperiences) ? r.learningExperiences.join('<br>') : r.learningExperiences || ''}</td>
-      <td>${Array.isArray(r.learningResources) ? r.learningResources.join('<br>') : r.learningResources || ''}</td>
-      <td>${r.assessment || ''}</td>
+      <td>${esc(r.week)}</td>
+      <td>${esc(r.lesson)}</td>
+      <td>${esc(r.strand)}</td>
+      <td>${esc(r.subStrand)}</td>
+      <td>${esc(r.specificLearningOutcomes)}</td>
+      <td>${Array.isArray(r.keyInquiryQuestions) ? r.keyInquiryQuestions.map(esc).join('<br>') : esc(r.keyInquiryQuestions)}</td>
+      <td>${Array.isArray(r.learningExperiences) ? r.learningExperiences.map(esc).join('<br>') : esc(r.learningExperiences)}</td>
+      <td>${Array.isArray(r.learningResources) ? r.learningResources.map(esc).join('<br>') : esc(r.learningResources)}</td>
+      <td>${esc(r.assessment)}</td>
       <td></td>
     </tr>`).join('')
 
