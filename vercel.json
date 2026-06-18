@@ -1,5 +1,8 @@
 {
   "installCommand": "npm install --legacy-peer-deps",
   "buildCommand": "prisma generate && next build",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "env": {
+    "PRISMA_GENERATE_SKIP_AUTOINSTALL": "true"
+  }
 }
