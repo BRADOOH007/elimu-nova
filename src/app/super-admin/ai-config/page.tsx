@@ -22,10 +22,20 @@ const PROVIDERS = [
     label:    'Cerebras',
     keyField: 'ai_provider_cerebras_key',
     badge:    'Primary — 2,000 tokens/sec',
-    desc:     'gpt-oss-120b — world\'s fastest inference. Free tier. Used as primary for all ElimuNova AI tasks.',
+    desc:     'gpt-oss-120b — world\'s fastest inference. Free tier. Used as primary for all real-time tasks.',
     envVar:   'CEREBRAS_API_KEY',
     docsUrl:  'https://cloud.cerebras.ai',
     color:    'indigo',
+  },
+  {
+    id:       'deepseek',
+    label:    'DeepSeek',
+    keyField: 'ai_provider_deepseek_key',
+    badge:    'Best Quality Free',
+    desc:     'deepseek-chat V3 for content + deepseek-reasoner R1 for complex reasoning. Beats GPT-4o on most tasks.',
+    envVar:   'DEEPSEEK_API_KEY',
+    docsUrl:  'https://platform.deepseek.com',
+    color:    'cyan',
   },
   {
     id:       'gemini',
@@ -126,6 +136,7 @@ export default function AIConfigPage() {
 
   const colorMap: Record<string, string> = {
     indigo: 'border-indigo-200 bg-indigo-50/50',
+    cyan:   'border-cyan-200 bg-cyan-50/50',
     blue:   'border-blue-200 bg-blue-50/50',
     orange: 'border-orange-200 bg-orange-50/50',
     purple: 'border-purple-200 bg-purple-50/50',
