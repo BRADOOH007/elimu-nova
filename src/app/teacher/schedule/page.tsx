@@ -41,6 +41,7 @@ import EditScheduleModal from "@/components/modals/edit-schedule-modal"
 interface ScheduleEvent {
   id: string
   title: string
+  description?: string
   subject?: string
   grade?: string
   startTime: string

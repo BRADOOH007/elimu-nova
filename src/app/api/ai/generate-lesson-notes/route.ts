@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     // Dynamic import of OpenAI
     const { OpenAI } = await import('openai')
     
-    const apiKey = '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'
+    const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''
     
     const openai = new OpenAI({
       apiKey: apiKey,
@@ -72,7 +72,7 @@ Content: ${lessonPlan.content?.generatedContent || 'No content provided'}
 Create comprehensive, well-organized notes that students can use for studying and reference.`
 
     const completion = await openai.chat.completions.create({
-      model: "openai/gpt-3.5-turbo",
+      model: "openai/gpt-4o-mini",
       messages: [
         {
           role: "system",

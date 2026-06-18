@@ -266,7 +266,7 @@ Generate ONLY valid JSON following the exact schema above.`
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'openai/gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }

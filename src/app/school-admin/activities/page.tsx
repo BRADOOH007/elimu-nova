@@ -12,6 +12,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from "@/components/ui/tabs"
+import {
   Table,
   TableBody,
   TableCell,
@@ -25,20 +31,15 @@ import {
   Filter, 
   Download, 
   RefreshCw,
-  UserPlus,
-  Users,
-  BookOpen,
-  CreditCard,
-  Calendar,
-  LogIn,
-  LogOut,
-  Settings,
-  FileText,
-  Loader2,
   Plus,
   Edit,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Calendar,
+  FileText,
+  Users,
+  GraduationCap,
+  Loader2
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import CreateActivityModal from "@/components/modals/create-activity-modal"
@@ -64,116 +65,78 @@ interface Activity {
   createdAt: string
 }
 
-interface ActivityFilters {
-  search: string
-  type: string
-  sortBy: string
-  sortOrder: string
+interface Meeting {
+  id: string
+  title: string
+  date: string
+  time: string
+  location: string
+  attendees: string
+  status: string
 }
 
-export default function ActivitiesPage() {
+interface Report {
+  id: string
+  title: string
+  type: string
+  date: string
+  status: string
+  fileUrl?: string
+}
+
+export default function AcademicsPage() {
+  const [activeTab, setActiveTab] = useState('activities')
   const [activities, setActivities] = useState<Activity[]>([])
+  const [meetings, setMeetings] = useState<Meeting[]>([])
+  const [reports, setReports] = useState<Report[]>([])
   const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState<ActivityFilters>({
-    search: '',
-    type: 'all',
-    sortBy: 'createdAt',
-    sortOrder: 'desc'
-  })
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    pages: 0
-  })
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null)
   const { toast } = useToast()
 
-  const fetchActivities = async () => {
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  const fetchData = async () => {
     try {
       setLoading(true)
-      
-      // First test if the API is working
-      const testResponse = await fetch('/api/test-activities')
-      if (!testResponse.ok) {
-        throw new Error('API test failed')
-      }
-      
-      const params = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        sortBy: filters.sortBy,
-        sortOrder: filters.sortOrder,
-        ...(filters.search && { search: filters.search }),
-        ...(filters.type && filters.type !== 'all' && { type: filters.type })
-      })
+      const [activitiesRes] = await Promise.all([
+        fetch('/api/school-admin/activities')
+      ])
 
-      const response = await fetch(`/api/school-admin/activities?${params}`)
-      
-      if (response.ok) {
-        const data = await response.json()
+      if (activitiesRes.ok) {
+        const data = await activitiesRes.json()
         setActivities(data.activities || [])
-        setPagination(data.pagination || {
-          page: 1,
-          limit: 10,
-          total: 0,
-          pages: 0
-        })
-      } else {
-        // Check if response is HTML (error page)
-        const contentType = response.headers.get('content-type')
-        if (contentType && contentType.includes('text/html')) {
-          console.error('Received HTML instead of JSON:', await response.text())
-          toast({
-            title: "Server Error",
-            description: "The server returned an error page. Please try again later.",
-            variant: "destructive"
-          })
-        } else {
-          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-          toast({
-            title: "Error",
-            description: errorData.error || "Failed to fetch activities",
-            variant: "destructive"
-          })
-        }
       }
+
+      // Mock meetings and reports for now
+      setMeetings([
+        { id: '1', title: 'Parent-Teacher Meeting', date: '2026-06-20', time: '10:00 AM', location: 'Room 101', attendees: '20', status: 'Scheduled' },
+        { id: '2', title: 'Staff Meeting', date: '2026-06-21', time: '02:00 PM', location: 'Main Hall', attendees: '15', status: 'Scheduled' }
+      ])
+
+      setReports([
+        { id: '1', title: 'Term 1 Performance Report', type: 'Academic', date: '2026-06-15', status: 'Generated' },
+        { id: '2', title: 'Attendance Report', type: 'Attendance', date: '2026-06-10', status: 'Generated' }
+      ])
     } catch (error) {
-      console.error('Error fetching activities:', error)
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. The API might be down.",
-        variant: "destructive"
-      })
+      console.error('Error fetching data:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchActivities()
-  }, [pagination.page, filters])
-
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'TEACHER_ENROLLED':
-        return <UserPlus className="w-4 h-4 text-blue-500" />
       case 'STUDENT_ENROLLED':
-        return <Users className="w-4 h-4 text-green-500" />
+        return <Users className="w-4 h-4 text-blue-500" />
       case 'CLASS_CREATED':
-        return <BookOpen className="w-4 h-4 text-purple-500" />
-      case 'PAYMENT_RECEIVED':
-        return <CreditCard className="w-4 h-4 text-emerald-500" />
+        return <GraduationCap className="w-4 h-4 text-purple-500" />
       case 'MEETING_SCHEDULED':
         return <Calendar className="w-4 h-4 text-orange-500" />
-      case 'USER_LOGIN':
-        return <LogIn className="w-4 h-4 text-indigo-500" />
-      case 'USER_LOGOUT':
-        return <LogOut className="w-4 h-4 text-gray-500" />
-      case 'SETTINGS_UPDATED':
-        return <Settings className="w-4 h-4 text-yellow-500" />
       case 'REPORT_GENERATED':
         return <FileText className="w-4 h-4 text-red-500" />
       default:
@@ -193,15 +156,6 @@ export default function ActivitiesPage() {
     return date.toLocaleDateString()
   }
 
-  const handleFilterChange = (key: keyof ActivityFilters, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-    setPagination(prev => ({ ...prev, page: 1 }))
-  }
-
-  const handlePageChange = (newPage: number) => {
-    setPagination(prev => ({ ...prev, page: newPage }))
-  }
-
   const handleCreateActivity = () => {
     setIsCreateModalOpen(true)
   }
@@ -212,340 +166,265 @@ export default function ActivitiesPage() {
   }
 
   const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Are you sure you want to delete this activity?')) {
-      return
-    }
+    if (!confirm('Are you sure you want to delete this activity?')) return
 
     try {
-      const response = await fetch(`/api/school-admin/activities/${activityId}`, {
-        method: 'DELETE',
-      })
-
+      const response = await fetch(`/api/school-admin/activities/${activityId}`, { method: 'DELETE' })
       if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Activity deleted successfully",
-        })
-        fetchActivities()
-      } else {
-        const error = await response.json()
-        toast({
-          title: "Error",
-          description: error.error || "Failed to delete activity",
-          variant: "destructive"
-        })
+        toast({ title: 'Activity deleted successfully', variant: 'success' })
+        fetchData()
       }
     } catch (error) {
       console.error('Error deleting activity:', error)
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      })
     }
   }
 
-  const handleActivityCreated = () => {
-    fetchActivities()
-  }
+  const handleActivityCreated = () => fetchData()
+  const handleActivityUpdated = () => fetchData()
 
-  const handleActivityUpdated = () => {
-    fetchActivities()
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+      </div>
+    )
   }
-
-  const exportActivities = () => {
-    // TODO: Implement export functionality
-    toast({
-      title: "Export",
-      description: "Export functionality will be implemented soon",
-    })
-  }
-
-  const activityTypes = [
-    { value: 'all', label: 'All Types' },
-    { value: 'TEACHER_ENROLLED', label: 'Teacher Enrolled' },
-    { value: 'STUDENT_ENROLLED', label: 'Student Enrolled' },
-    { value: 'CLASS_CREATED', label: 'Class Created' },
-    { value: 'PAYMENT_RECEIVED', label: 'Payment Received' },
-    { value: 'MEETING_SCHEDULED', label: 'Meeting Scheduled' },
-    { value: 'USER_LOGIN', label: 'User Login' },
-    { value: 'USER_LOGOUT', label: 'User Logout' },
-    { value: 'SETTINGS_UPDATED', label: 'Settings Updated' },
-    { value: 'REPORT_GENERATED', label: 'Report Generated' },
-    { value: 'OTHER', label: 'Other' }
-  ]
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold edugenius-text-gradient-blue">Recent Activities</h1>
-          <p className="text-gray-600 mt-1">Monitor all school activities and events</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Academics</span>
+          </h1>
+          <p className="text-gray-600">Manage schedules, reports, and school activities</p>
         </div>
         <div className="flex items-center space-x-2">
           <Button
             variant="outline"
-            onClick={exportActivities}
-            className="edugenius-glass"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/seed-activities', { method: 'POST' })
-                if (response.ok) {
-                  toast({
-                    title: "Success",
-                    description: "Sample activities created successfully",
-                  })
-                  fetchActivities()
-                } else {
-                  toast({
-                    title: "Error",
-                    description: "Failed to create sample activities",
-                    variant: "destructive"
-                  })
-                }
-              } catch (error) {
-                console.error('Error creating sample activities:', error)
-                toast({
-                  title: "Error",
-                  description: "An unexpected error occurred",
-                  variant: "destructive"
-                })
-              }
-            }}
-            className="edugenius-glass"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Seed Data
-          </Button>
-          <Button
-            onClick={handleCreateActivity}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Activity
-          </Button>
-          <Button
-            onClick={fetchActivities}
+            onClick={fetchData}
             disabled={loading}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          <Button
+            onClick={handleCreateActivity}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create
+          </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-        <CardHeader>
-          <CardTitle className="edugenius-text-gradient-blue">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Search</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search activities..."
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
-                  className="pl-10 edugenius-glass"
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Type</label>
-              <Select
-                value={filters.type}
-                onValueChange={(value) => handleFilterChange('type', value)}
-              >
-                <SelectTrigger className="edugenius-glass">
-                  <SelectValue placeholder="All Types" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activityTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full sm:w-auto grid-cols-3">
+          <TabsTrigger value="activities">
+            <Bell className="w-4 h-4 mr-2" />
+            Activities
+          </TabsTrigger>
+          <TabsTrigger value="meetings">
+            <Calendar className="w-4 h-4 mr-2" />
+            Meetings
+          </TabsTrigger>
+          <TabsTrigger value="reports">
+            <FileText className="w-4 h-4 mr-2" />
+            Reports
+          </TabsTrigger>
+        </TabsList>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Sort By</label>
-              <Select
-                value={filters.sortBy}
-                onValueChange={(value) => handleFilterChange('sortBy', value)}
-              >
-                <SelectTrigger className="edugenius-glass">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="createdAt">Date</SelectItem>
-                  <SelectItem value="type">Type</SelectItem>
-                  <SelectItem value="action">Action</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Order</label>
-              <Select
-                value={filters.sortOrder}
-                onValueChange={(value) => handleFilterChange('sortOrder', value)}
-              >
-                <SelectTrigger className="edugenius-glass">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="desc">Newest First</SelectItem>
-                  <SelectItem value="asc">Oldest First</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Activities Table */}
-      <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-        <CardHeader>
-          <CardTitle className="edugenius-text-gradient-blue">Activities</CardTitle>
-          <CardDescription>
-            Showing {activities.length} of {pagination.total} activities
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-            </div>
-          ) : activities.length > 0 ? (
-            <div className="space-y-4">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-none">
-                    <TableHead className="border-none">Type</TableHead>
-                    <TableHead className="border-none">Description</TableHead>
-                    <TableHead className="border-none">User</TableHead>
-                    <TableHead className="border-none">Date</TableHead>
-                    <TableHead className="border-none">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activities.map((activity) => (
-                    <TableRow key={activity.id} className="border-none">
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-2">
-                          {getActivityIcon(activity.type)}
-                          <span className="text-sm font-medium">{activity.action}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <div>
-                          <p className="text-sm font-medium">{activity.description}</p>
-                          {activity.metadata && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              {JSON.stringify(activity.metadata)}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        {activity.user ? (
-                          <div>
-                            <p className="text-sm font-medium">{activity.user.name}</p>
-                            <p className="text-xs text-gray-500">{activity.user.role}</p>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-500">System</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <div>
-                          <p className="text-sm">{formatTimeAgo(activity.createdAt)}</p>
-                          <p className="text-xs text-gray-500">
-                            {new Date(activity.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditActivity(activity)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDeleteActivity(activity.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+        <TabsContent value="activities" className="space-y-6">
+          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50">
+            <CardHeader>
+              <CardTitle className="text-blue-600">Activities</CardTitle>
+              <CardDescription>All school activities and events</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {activities.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-none">
+                      <TableHead className="border-none">Type</TableHead>
+                      <TableHead className="border-none">Description</TableHead>
+                      <TableHead className="border-none">User</TableHead>
+                      <TableHead className="border-none">Date</TableHead>
+                      <TableHead className="border-none">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              {pagination.pages > 1 && (
-                <div className="flex items-center justify-between pt-4">
-                  <div className="text-sm text-gray-500">
-                    Page {pagination.page} of {pagination.pages}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page <= 1}
-                      className="edugenius-glass"
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page >= pagination.pages}
-                      className="edugenius-glass"
-                    >
-                      Next
-                    </Button>
-                  </div>
+                  </TableHeader>
+                  <TableBody>
+                    {activities.map((activity) => (
+                      <TableRow key={activity.id} className="border-none">
+                        <TableCell className="border-none">
+                          <div className="flex items-center space-x-2">
+                            {getActivityIcon(activity.type)}
+                            <span className="text-sm font-medium">{activity.action}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <p className="text-sm">{activity.description}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          {activity.user ? (
+                            <div>
+                              <p className="text-sm font-medium">{activity.user.name}</p>
+                              <p className="text-xs text-gray-500">{activity.user.role}</p>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-500">System</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <p className="text-sm">{formatTimeAgo(activity.createdAt)}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEditActivity(activity)}>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteActivity(activity.id)}
+                                className="text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No activities found</h3>
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No activities found</h3>
-              <p className="text-gray-500">No activities match your current filters.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Modals */}
+        <TabsContent value="meetings" className="space-y-6">
+          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50">
+            <CardHeader>
+              <CardTitle className="text-blue-600">Meetings</CardTitle>
+              <CardDescription>School meetings and schedules</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {meetings.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-none">
+                      <TableHead className="border-none">Title</TableHead>
+                      <TableHead className="border-none">Date</TableHead>
+                      <TableHead className="border-none">Time</TableHead>
+                      <TableHead className="border-none">Location</TableHead>
+                      <TableHead className="border-none">Attendees</TableHead>
+                      <TableHead className="border-none">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {meetings.map((meeting) => (
+                      <TableRow key={meeting.id} className="border-none">
+                        <TableCell className="border-none">
+                          <p className="text-sm font-medium">{meeting.title}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <p className="text-sm">{meeting.date}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <p className="text-sm">{meeting.time}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <p className="text-sm">{meeting.location}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <p className="text-sm">{meeting.attendees}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                            {meeting.status}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No meetings found</h3>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50">
+            <CardHeader>
+              <CardTitle className="text-blue-600">Reports</CardTitle>
+              <CardDescription>Academic and administrative reports</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {reports.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-none">
+                      <TableHead className="border-none">Title</TableHead>
+                      <TableHead className="border-none">Type</TableHead>
+                      <TableHead className="border-none">Date</TableHead>
+                      <TableHead className="border-none">Status</TableHead>
+                      <TableHead className="border-none">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reports.map((report) => (
+                      <TableRow key={report.id} className="border-none">
+                        <TableCell className="border-none">
+                          <p className="text-sm font-medium">{report.title}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <p className="text-sm">{report.type}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <p className="text-sm">{report.date}</p>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                            {report.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="border-none">
+                          <Button variant="outline" size="sm">
+                            <Download className="w-4 h-4 mr-2" />
+                            Download
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No reports found</h3>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
       <CreateActivityModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}

@@ -62,7 +62,8 @@ export const authOptions: NextAuthOptions = {
                 }
               }
             },
-            superAdmin: true
+            superAdmin: true,
+            parent: true
           }
         })
 
@@ -94,12 +95,13 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: `${user.firstName} ${user.lastName}`,
           role: user.role,
-          avatar: user.avatar,
+          avatar: user.avatar ?? undefined,
           schoolAdmin: user.schoolAdmin,
           teacher: user.teacher,
           student: user.student,
-          superAdmin: user.superAdmin
-        }
+          superAdmin: user.superAdmin,
+          parent: user.parent
+        } as any
       }
     })
   ],
@@ -124,6 +126,9 @@ export const authOptions: NextAuthOptions = {
         if (user.superAdmin) {
           token.superAdminId = user.superAdmin.id
         }
+        if (user.parent) {
+          token.parentId = user.parent.id
+        }
       }
       return token
     },
@@ -136,13 +141,13 @@ export const authOptions: NextAuthOptions = {
         session.user.teacherId = token.teacherId as string
         session.user.studentId = token.studentId as string
         session.user.superAdminId = token.superAdminId as string
+        session.user.parentId = token.parentId as string
       }
       return session
     }
   },
   pages: {
     signIn: '/auth/signin',
-    signUp: '/auth/signup',
-    error: '/auth/error'
+    error:  '/auth/error'
   }
 }

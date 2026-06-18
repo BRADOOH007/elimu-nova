@@ -1,27 +1,37 @@
-import { PublicNav } from "@/components/ui/public-nav"
-import { prisma } from "@/lib/prisma"
-import { PricingPlans } from "@/components/pricing/pricing-plans"
+import { PublicLayout } from '@/components/ui/public-layout'
+import { prisma } from '@/lib/prisma'
+import { PricingPlans } from '@/components/pricing/pricing-plans'
+import { Sparkles } from 'lucide-react'
 
 export default async function PricingPage() {
-  // Fetch active packages from DB (server component)
   const packages = await prisma.package.findMany({
     where: { isActive: true },
-    orderBy: { price: "asc" }
+    orderBy: { price: 'asc' },
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl elimunova-animate-float"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-pink-400/20 to-rose-600/20 rounded-full blur-3xl elimunova-animate-float" style={{animationDelay: '2s'}}></div>
-      </div>
+    <PublicLayout>
+      {/* Hero */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-10 text-center">
+        <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
+          <Sparkles className="w-3 h-3" />
+          Simple, transparent pricing
+        </div>
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
+          Plans for every{' '}
+          <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            school and learner
+          </span>
+        </h1>
+        <p className="text-slate-400 text-lg max-w-xl mx-auto">
+          Start free, scale when you're ready. No hidden fees, no surprises.
+        </p>
+      </section>
 
-      {/* Header */}
-      <PublicNav />
-
-      {/* Pricing Plans Component */}
-      <PricingPlans packages={packages} />
-    </div>
+      {/* Plans */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+        <PricingPlans packages={packages} />
+      </section>
+    </PublicLayout>
   )
 }

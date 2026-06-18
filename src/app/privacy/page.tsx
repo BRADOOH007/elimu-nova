@@ -1,198 +1,87 @@
-import { PublicNav } from "@/components/ui/public-nav"
-import { Logo } from "@/components/ui/logo"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, Eye, Lock, Database } from "lucide-react"
-import Link from "next/link"
+import { PublicLayout } from '@/components/ui/public-layout'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Shield, Eye, Lock, Database } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      <div className="max-w-full overflow-x-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl elimunova-animate-float"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-pink-400/20 to-rose-600/20 rounded-full blur-3xl elimunova-animate-float" style={{animationDelay: '2s'}}></div>
-      </div>
-
-      {/* Header */}
-      <PublicNav />
-
-      {/* Hero Section */}
-      <section className="relative z-10 container mx-auto px-4 pt-32 pb-20 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="elimunova-text-gradient-rainbow">Privacy Policy</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Your privacy is important to us. Learn how we collect, use, and protect your information.
-          </p>
-          <p className="text-sm text-gray-500">Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+    <PublicLayout>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center">
+        <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
+          <Sparkles className="h-3 w-3" />
+          Legal
         </div>
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
+          Privacy{' '}
+          <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Policy
+          </span>
+        </h1>
+        <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+          Your privacy is important to us. Learn how we collect, use, and protect your information.
+        </p>
+        <p className="text-slate-500 text-sm mt-4">
+          Last updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </p>
       </section>
 
-      {/* Privacy Content */}
-      <section className="relative z-10 py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <Card className="elimunova-card-gradient border-0">
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+        <div className="space-y-6">
+          {[
+            {
+              title: "Information We Collect",
+              description: "We collect information you provide directly to us, such as when you create an account, use our services, or contact us for support. This includes account information (name, email, school details), educational content (lesson plans, assignments, student work), usage data (how you interact with our platform), and communication data (support requests, feedback)."
+            },
+            {
+              title: "How We Use Your Information",
+              description: "We use the information we collect to provide, maintain, and improve our services. This includes providing and personalizing our AI-powered educational tools, generating lesson plans, schemes of work, and assignments, tracking student progress and providing analytics, communicating with you about our services, and ensuring platform security and preventing fraud."
+            },
+            {
+              title: "Data Security",
+              description: "We implement appropriate technical and organizational measures to protect your data. These include end-to-end encryption for all data, role-based access permissions, and enterprise-grade data centers.",
+              features: [
+                { icon: Lock, title: "Encryption", description: "End-to-end encryption for all data" },
+                { icon: Shield, title: "Access Control", description: "Role-based access permissions" },
+                { icon: Database, title: "Secure Storage", description: "Enterprise-grade data centers" }
+              ]
+            },
+            {
+              title: "Your Rights",
+              description: "You have the right to access and download your data, correct inaccurate information, delete your account and data, opt out of marketing communications, and request data portability."
+            },
+            {
+              title: "Contact Us",
+              description: "If you have any questions about this Privacy Policy, please contact us at info@infinititechsolutions.org or at our address in Nakuru, Kenya."
+            }
+          ].map((item, i) => (
+            <Card key={i} className="bg-slate-800/50 border border-slate-700/60 rounded-2xl">
               <CardHeader>
-                <CardTitle className="elimunova-text-gradient-blue">Information We Collect</CardTitle>
+                <CardTitle className="text-white text-xl">
+                  {item.title}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-gray-600">
-                  We collect information you provide directly to us, such as when you create an account, 
-                  use our services, or contact us for support.
+                <p className="text-slate-400 leading-relaxed">
+                  {item.description}
                 </p>
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
-                  <li>Account information (name, email, school details)</li>
-                  <li>Educational content (lesson plans, assignments, student work)</li>
-                  <li>Usage data (how you interact with our platform)</li>
-                  <li>Communication data (support requests, feedback)</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="elimunova-card-gradient border-0">
-              <CardHeader>
-                <CardTitle className="elimunova-text-gradient-blue">How We Use Your Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-gray-600">
-                  We use the information we collect to provide, maintain, and improve our services:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
-                  <li>Provide and personalize our AI-powered educational tools</li>
-                  <li>Generate lesson plans, schemes of work, and assignments</li>
-                  <li>Track student progress and provide analytics</li>
-                  <li>Communicate with you about our services</li>
-                  <li>Ensure platform security and prevent fraud</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="elimunova-card-gradient border-0">
-              <CardHeader>
-                <CardTitle className="elimunova-text-gradient-blue">Data Security</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-gray-600">
-                  We implement appropriate technical and organizational measures to protect your data:
-                </p>
-                <div className="grid md:grid-cols-3 gap-4">
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                      <Lock className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Encryption</h3>
-                    <p className="text-sm text-gray-600">End-to-end encryption for all data</p>
+                {item.features && (
+                  <div className="grid sm:grid-cols-3 gap-4 mt-4">
+                    {item.features.map((feature, j) => (
+                      <div key={j} className="text-center p-4 bg-slate-800 border border-slate-700 rounded-xl">
+                        <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                          <feature.icon className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="font-semibold text-white mb-1">{feature.title}</h3>
+                        <p className="text-sm text-slate-400">{feature.description}</p>
+                      </div>
+                    ))}
                   </div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Access Control</h3>
-                    <p className="text-sm text-gray-600">Role-based access permissions</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center mx-auto mb-3">
-                      <Database className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Secure Storage</h3>
-                    <p className="text-sm text-gray-600">Enterprise-grade data centers</p>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
-
-            <Card className="elimunova-card-gradient border-0">
-              <CardHeader>
-                <CardTitle className="elimunova-text-gradient-blue">Your Rights</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-gray-600">
-                  You have the right to:
-                </p>
-                <ul className="list-disc list-inside space-y-2 text-gray-600">
-                  <li>Access and download your data</li>
-                  <li>Correct inaccurate information</li>
-                  <li>Delete your account and data</li>
-                  <li>Opt out of marketing communications</li>
-                  <li>Request data portability</li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="elimunova-card-gradient border-0">
-              <CardHeader>
-                <CardTitle className="elimunova-text-gradient-blue">Contact Us</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 mb-4">
-                  If you have any questions about this Privacy Policy, please contact us:
-                </p>
-                <div className="space-y-2 text-gray-600">
-                  <p>Email: info@infinititechsolutions.org</p>
-                  <p>Address: Nakuru, Kenya</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          ))}
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="relative z-10 bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <Logo className="mb-4" />
-              <p className="text-gray-400">
-                Transforming education with AI-powered tools for teachers and students.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4 elimunova-text-gradient-blue">Product</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/#features" className="hover:elimunova-text-gradient transition-all duration-300">Features</Link></li>
-                <li><Link href="/pricing" className="hover:elimunova-text-gradient transition-all duration-300">Pricing</Link></li>
-                <li><Link href="/api" className="hover:elimunova-text-gradient transition-all duration-300">API</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4 elimunova-text-gradient-blue">Support</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/help" className="hover:elimunova-text-gradient transition-all duration-300">Help Center</Link></li>
-                <li><Link href="/contact" className="hover:elimunova-text-gradient transition-all duration-300">Contact Us</Link></li>
-                <li><Link href="/docs" className="hover:elimunova-text-gradient transition-all duration-300">Documentation</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4 elimunova-text-gradient-blue">Company</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/about" className="hover:elimunova-text-gradient transition-all duration-300">About</Link></li>
-                <li><Link href="/privacy" className="hover:elimunova-text-gradient transition-all duration-300">Privacy</Link></li>
-                <li><Link href="/terms" className="hover:elimunova-text-gradient transition-all duration-300">Terms</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; {new Date().getFullYear()} ElimuNova AI. All rights reserved.</p>
-            <p className="mt-2">
-              Developed by{' '}
-              <a 
-                href="https://infinititechsolutions.org/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="elimunova-text-gradient hover:underline transition-all duration-300"
-              >
-                InfinitiTech Solutions
-              </a>
-            </p>
-          </div>
-        </div>
-      </footer>
-      </div>
-    </div>
+    </PublicLayout>
   )
 }

@@ -15,6 +15,8 @@ export interface SchemeOfWorkRequest {
   term: string
   topics: string[]
   duration: number // in weeks
+  lessonsPerWeek?: number
+  lessonDuration?: number
 }
 
 export interface AssignmentRequest {
@@ -49,7 +51,7 @@ export class AIService {
   }
 
   constructor() {
-    this.apiKey = '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'
+    this.apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''
     this.baseURL = 'https://openrouter.ai/api/v1'
   }
 
@@ -89,7 +91,7 @@ Please create a comprehensive lesson plan that includes:
 Format the response in a clear, structured way that teachers can easily follow.`
 
       const completion = await openai.chat.completions.create({
-        model: "openai/gpt-3.5-turbo",
+        model: "openai/gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -112,7 +114,7 @@ Format the response in a clear, structured way that teachers can easily follow.`
         content: content,
         metadata: {
           generatedAt: new Date().toISOString(),
-          model: 'openai/gpt-3.5-turbo',
+          model: 'openai/gpt-4o-mini',
           tokens: completion.usage?.total_tokens || 0
         }
       }
@@ -233,7 +235,7 @@ CRITICAL REQUIREMENTS:
 13. VERIFICATION: Before finishing, ensure EVERY topic from this list appears: ${request.topics.join(' | ')}`
 
       const completion = await openai.chat.completions.create({
-        model: "openai/gpt-3.5-turbo",
+        model: "openai/gpt-4o-mini",
         messages: [
           {
             role: "system",
@@ -256,7 +258,7 @@ CRITICAL REQUIREMENTS:
         content: content,
         metadata: {
           generatedAt: new Date().toISOString(),
-          model: 'openai/gpt-3.5-turbo',
+          model: 'openai/gpt-4o-mini',
           tokens: completion.usage?.total_tokens || 0
         }
       }
@@ -283,7 +285,7 @@ CRITICAL REQUIREMENTS:
       content: mockContent,
       metadata: {
         generatedAt: new Date().toISOString(),
-        model: 'gpt-4',
+        model: 'openai/gpt-4o',
         tokens: 1000
       }
     }
@@ -297,7 +299,7 @@ CRITICAL REQUIREMENTS:
       content: mockResponse,
       metadata: {
         generatedAt: new Date().toISOString(),
-        model: 'gpt-4',
+        model: 'openai/gpt-4o',
         tokens: 500
       }
     }

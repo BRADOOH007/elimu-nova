@@ -254,7 +254,7 @@ Generate exactly ${slideCount} slides with this format. Each slide MUST have an 
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'openai/gpt-4o',
         messages: [
           {
             role: 'user',

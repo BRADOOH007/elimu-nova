@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { TutorOrchestrator } from '@/lib/tutor-orchestrator'
+import { rateLimitAI } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,6 +18,15 @@ export async function POST(request: NextRequest) {
 
     if (!session?.user?.id || session.user.role !== 'STUDENT') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Rate limit AI tutor: 20 messages per minute per student
+    const rl = await rateLimitAI(session.user.id)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Too many messages. Take a breath and try again in ${rl.resetInSec}s.` },
+        { status: 429, headers: { 'Retry-After': String(rl.resetInSec) } }
+      )
     }
 
     const body = await request.json()

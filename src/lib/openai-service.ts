@@ -391,22 +391,45 @@ Create resources that:
     submissionContent: string
     rubric?: string
     maxPoints?: number
-  }): Promise<{ grade: number; feedback: string }> {
+    answerKey?: string
+  }): Promise<{ 
+    grade: number; 
+    feedback: string; 
+    confidence: number;
+    questionScores?: Array<{ questionId: string; score: number; feedback: string }>;
+    needsRevision: boolean;
+    revisionNotes?: string;
+  }> {
     const systemPrompt = `You are an expert educator grading student submissions. Provide fair, constructive, and detailed feedback that helps students learn and improve. Write feedback in plain, conversational language — no markdown, no asterisks, no headers. Just clear, encouraging sentences a student can easily read.
 
-Return JSON with shape { "grade": 0-100, "feedback": "plain text feedback here" }.`
+Return JSON with this exact structure:
+{
+  "grade": 0-100,
+  "feedback": "plain text feedback here",
+  "confidence": 0-1,
+  "questionScores": [
+    {
+      "questionId": "1",
+      "score": 0-100,
+      "feedback": "specific feedback for this question"
+    }
+  ],
+  "needsRevision": true/false,
+  "revisionNotes": "notes on what to revise (if applicable)"
+}`
 
     const userPrompt = `Grade this student submission:
 
 Assignment: ${input.assignmentTitle}
 Instructions: ${input.assignmentInstructions}
 ${input.rubric ? `Rubric: ${input.rubric}` : ''}
+${input.answerKey ? `Answer Key: ${input.answerKey}` : ''}
 Max Points: ${input.maxPoints || 100}
 
 Student Submission:
 ${input.submissionContent}
 
-Provide a grade (0-${input.maxPoints || 100}) and detailed feedback.`
+Provide a grade (0-${input.maxPoints || 100}), detailed feedback, confidence score, question-by-question scores, and revision notes if needed.`
 
     const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -421,7 +444,11 @@ Provide a grade (0-${input.maxPoints || 100}) and detailed feedback.`
       // Fallback if JSON parsing fails
       return {
         grade: 0,
-        feedback: response
+        feedback: response,
+        confidence: 0,
+        questionScores: [],
+        needsRevision: true,
+        revisionNotes: "AI grading failed. Please review manually."
       }
     }
   }

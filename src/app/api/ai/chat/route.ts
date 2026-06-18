@@ -2,9 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { rateLimitAI, getIP } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 20 AI requests / minute / user
+    const session = await getServerSession(authOptions)
+    const identifier = session?.user?.id || getIP(request)
+    const rl = await rateLimitAI(identifier)
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Rate limit reached. Try again in ${rl.resetInSec}s.` },
+        { status: 429, headers: { 'Retry-After': String(rl.resetInSec) } }
+      )
+    }
+
     const { message, context, lessonContext, schemeContext, assignmentsContext } = await request.json()
 
     if (!message) {
@@ -14,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Dynamic import of OpenAI
     const { OpenAI } = await import('openai')
     
-    const apiKey = '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'
+    const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''
     
     console.log('Using OpenAI API Key:', apiKey.substring(0, 20) + '...')
     
@@ -348,7 +360,7 @@ Always encourage students to think through problems and provide step-by-step gui
     }
 
     const completion = await openai.chat.completions.create({
-      model: "openai/gpt-3.5-turbo",
+      model: "openai/gpt-4o-mini",
       messages: [
         {
           role: "system",

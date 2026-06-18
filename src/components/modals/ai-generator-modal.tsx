@@ -29,10 +29,10 @@ interface AIGeneratorModalProps {
 }
 
 interface GeneratedContent {
-  type: 'rubric' | 'powerpoint' | 'assignment' | 'project'
-  title: string
-  content: string
-  metadata?: any
+  type: 'rubric' | 'powerpoint' | 'assignment' | 'project' | 'exam';
+  title: string;
+  content: string;
+  metadata?: any;
 }
 
 export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGeneratorModalProps) {
@@ -158,6 +158,7 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
       case 'rubric': return <FileText className="w-4 h-4" />
       case 'powerpoint': return <Presentation className="w-4 h-4" />
       case 'assignment': return <ClipboardList className="w-4 h-4" />
+      case 'exam': return <FileText className="w-4 h-4" />
       case 'project': return <Lightbulb className="w-4 h-4" />
       default: return <Brain className="w-4 h-4" />
     }
@@ -168,6 +169,7 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
       case 'rubric': return 'Generate detailed rubrics for assessment'
       case 'powerpoint': return 'Create presentation slides with AI'
       case 'assignment': return 'Generate comprehensive assignments'
+      case 'exam': return 'Generate AI-powered exams and quizzes'
       case 'project': return 'Design project-based learning activities'
       default: return ''
     }
@@ -190,24 +192,28 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-6">
-            <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-purple-50 to-blue-50 p-1 rounded-lg">
-              <TabsTrigger value="rubric" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                {getTabIcon('rubric')}
-                Rubric
-              </TabsTrigger>
-              <TabsTrigger value="powerpoint" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                {getTabIcon('powerpoint')}
-                PowerPoint
-              </TabsTrigger>
-              <TabsTrigger value="assignment" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                {getTabIcon('assignment')}
-                Assignment
-              </TabsTrigger>
-              <TabsTrigger value="project" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                {getTabIcon('project')}
-                Project
-              </TabsTrigger>
-            </TabsList>
+            <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-purple-50 to-blue-50 p-1 rounded-lg">
+            <TabsTrigger value="rubric" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              {getTabIcon('rubric')}
+              Rubric
+            </TabsTrigger>
+            <TabsTrigger value="powerpoint" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              {getTabIcon('powerpoint')}
+              PowerPoint
+            </TabsTrigger>
+            <TabsTrigger value="assignment" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              {getTabIcon('assignment')}
+              Assignment
+            </TabsTrigger>
+            <TabsTrigger value="exam" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              {getTabIcon('exam')}
+              Exam
+            </TabsTrigger>
+            <TabsTrigger value="project" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
+              {getTabIcon('project')}
+              Project
+            </TabsTrigger>
+          </TabsList>
 
             <div className="mt-6">
               <TabsContent value="rubric" className="space-y-6">
@@ -498,6 +504,120 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                     value={formData.requirements}
                     onChange={(e) => setFormData(prev => ({ ...prev, requirements: e.target.value }))}
                     placeholder="Any specific requirements, format, or instructions (optional)"
+                    rows={3}
+                    className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="exam" className="space-y-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Generate Exam</h3>
+                  <p className="text-gray-600">{getTabDescription('exam')}</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="subject" className="text-sm font-medium text-gray-700">
+                      Subject *
+                    </Label>
+                    <Input
+                      id="subject"
+                      value={formData.subject}
+                      onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                      placeholder="e.g., Mathematics, Science"
+                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="grade" className="text-sm font-medium text-gray-700">
+                      Grade Level *
+                    </Label>
+                    <Input
+                      id="grade"
+                      value={formData.grade}
+                      onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
+                      placeholder="e.g., Grade 7, Grade 10"
+                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="topic" className="text-sm font-medium text-gray-700">
+                    Exam Topic *
+                  </Label>
+                  <Input
+                    id="topic"
+                    value={formData.topic}
+                    onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                    placeholder="e.g., Quadratic Equations, Photosynthesis"
+                    className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="difficulty" className="text-sm font-medium text-gray-700">
+                      Difficulty
+                    </Label>
+                    <Select
+                      value={formData.difficulty}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, difficulty: value }))}
+                    >
+                      <SelectTrigger className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="easy">Easy</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="hard">Hard</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="duration" className="text-sm font-medium text-gray-700">
+                      Duration (minutes)
+                    </Label>
+                    <Input
+                      id="duration"
+                      value={formData.duration}
+                      onChange={(e) => setFormData(prev => ({ ...prev, duration: e.target.value }))}
+                      placeholder="e.g., 30, 60, 120"
+                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="country" className="text-sm font-medium text-gray-700">
+                      Curriculum
+                    </Label>
+                    <Select
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, format: value }))}
+                    >
+                      <SelectTrigger className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500">
+                        <SelectValue placeholder="Select curriculum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cbc">Kenya CBC</SelectItem>
+                        <SelectItem value="commoncore">US Common Core</SelectItem>
+                        <SelectItem value="general">General</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="requirements" className="text-sm font-medium text-gray-700">
+                    Specific Requirements
+                  </Label>
+                  <Textarea
+                    id="requirements"
+                    value={formData.requirements}
+                    onChange={(e) => setFormData(prev => ({ ...prev, requirements: e.target.value }))}
+                    placeholder="Question types, number of questions, etc. (optional)"
                     rows={3}
                     className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
                   />

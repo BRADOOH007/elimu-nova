@@ -61,7 +61,6 @@ export class PresentationGenerator {
       this.pptx.subject = `${request.subject} - ${request.grade}`
       this.pptx.company = 'ElimuNova AI'
       this.pptx.revision = '1'
-      this.pptx.created = new Date().toISOString()
 
       this.generationProgress(10, 'Applying theme...')
       
@@ -308,7 +307,7 @@ export class PresentationGenerator {
     const slide = this.pptx.addSlide()
 
     // Gradient background
-    slide.background = {
+    (slide as any).background = {
       fill: {
         type: 'gradient',
         angle: 45,
@@ -375,7 +374,7 @@ export class PresentationGenerator {
     const slide = this.pptx.addSlide()
 
     // Enhanced background with subtle gradient
-    slide.background = {
+    (slide as any).background = {
       fill: {
         type: 'gradient',
         angle: 180,
@@ -653,7 +652,7 @@ export class PresentationGenerator {
     const slide = this.pptx.addSlide()
 
     // Background similar to title slide
-    slide.background = {
+    (slide as any).background = {
       fill: {
         type: 'gradient',
         angle: 225,

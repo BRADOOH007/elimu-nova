@@ -12,11 +12,13 @@ declare module 'next-auth' {
       teacherId?: string
       studentId?: string
       superAdminId?: string
+      parentId?: string
       // Keep these for backward compatibility but they won't be in JWT
       schoolAdmin?: any
       teacher?: any
       student?: any
       superAdmin?: any
+      parent?: any
     }
   }
 
@@ -30,6 +32,7 @@ declare module 'next-auth' {
     teacher?: any
     student?: any
     superAdmin?: any
+    parent?: any
   }
 }
 
@@ -40,5 +43,6 @@ declare module 'next-auth/jwt' {
     teacherId?: string
     studentId?: string
     superAdminId?: string
+    parentId?: string
   }
 }

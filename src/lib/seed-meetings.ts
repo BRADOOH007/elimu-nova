@@ -24,7 +24,7 @@ export async function seedMeetings() {
         time: '09:00',
         duration: 60,
         location: 'Main Conference Room',
-        status: 'SCHEDULED',
+        status: 'SCHEDULED' as const,
         attendees: [
           { name: 'John Doe', role: 'Teacher', email: 'john@example.com' },
           { name: 'Jane Smith', role: 'Teacher', email: 'jane@example.com' }
@@ -39,7 +39,7 @@ export async function seedMeetings() {
         time: '14:00',
         duration: 30,
         location: 'Classroom 101',
-        status: 'SCHEDULED',
+        status: 'SCHEDULED' as const,
         attendees: [
           { name: 'Parent A', role: 'Parent', email: 'parent@example.com' }
         ]
@@ -53,7 +53,7 @@ export async function seedMeetings() {
         time: '10:30',
         duration: 90,
         location: 'Library',
-        status: 'SCHEDULED',
+        status: 'SCHEDULED' as const,
         attendees: [
           { name: 'Math Teacher', role: 'Teacher', email: 'math@example.com' },
           { name: 'Science Teacher', role: 'Teacher', email: 'science@example.com' }
@@ -68,7 +68,7 @@ export async function seedMeetings() {
         time: '15:00',
         duration: 45,
         location: 'Main Hall',
-        status: 'SCHEDULED',
+        status: 'SCHEDULED' as const,
         attendees: [
           { name: 'All Staff', role: 'Staff', email: 'staff@example.com' }
         ]
@@ -82,7 +82,7 @@ export async function seedMeetings() {
         time: '11:00',
         duration: 75,
         location: 'Conference Room B',
-        status: 'COMPLETED',
+        status: 'COMPLETED' as const,
         attendees: [
           { name: 'Assessment Team', role: 'Teachers', email: 'assessment@example.com' }
         ]

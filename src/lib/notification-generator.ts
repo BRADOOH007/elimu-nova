@@ -23,7 +23,7 @@ export class NotificationGenerator {
         }
       })
 
-      if (!student) return
+      if (!student || !student.teacher) return
 
       const notification: NotificationData = {
         title: 'Assignment Submitted',
@@ -53,7 +53,7 @@ export class NotificationGenerator {
         }
       })
 
-      if (!student) return
+      if (!student || !student.teacher) return
 
       const notification: NotificationData = {
         title: 'Study Session Started',
@@ -83,7 +83,7 @@ export class NotificationGenerator {
         }
       })
 
-      if (!student) return
+      if (!student || !student.teacher) return
 
       const subjectText = subject ? ` in ${subject}` : ''
       const notification: NotificationData = {
@@ -114,7 +114,7 @@ export class NotificationGenerator {
         }
       })
 
-      if (!student) return
+      if (!student || !student.teacher) return
 
       const improvement = newGrade - oldGrade
       const notification: NotificationData = {
@@ -145,7 +145,7 @@ export class NotificationGenerator {
         }
       })
 
-      if (!student) return
+      if (!student || !student.teacher) return
 
       const notification: NotificationData = {
         title: 'Student Needs Attention',
@@ -175,7 +175,7 @@ export class NotificationGenerator {
         }
       })
 
-      if (!student) return
+      if (!student || !student.teacher) return
 
       const notification: NotificationData = {
         title: 'Milestone Achieved',
@@ -205,7 +205,7 @@ export class NotificationGenerator {
         }
       })
 
-      if (!student) return
+      if (!student || !student.teacher) return
 
       const notification: NotificationData = {
         title: 'Overdue Assignment',
@@ -235,7 +235,7 @@ export class NotificationGenerator {
         }
       })
 
-      if (!student) return
+      if (!student || !student.teacher) return
 
       const notification: NotificationData = {
         title: 'Low Study Time',

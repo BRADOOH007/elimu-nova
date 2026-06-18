@@ -257,15 +257,6 @@ export default function SuperAdminDashboard() {
     fetchDashboardData()
   }, [])
 
-  // Auto-refresh every 5 minutes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchDashboardData(true)
-    }, 5 * 60 * 1000) // 5 minutes
-
-    return () => clearInterval(interval)
-  }, [])
-
   // Handle package creation
   const handlePackageCreated = (packageData: any) => {
     // Refresh dashboard data to show updated stats
@@ -350,7 +341,7 @@ export default function SuperAdminDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold mb-2">
-              <span className="edugenius-text-gradient">Super Admin Dashboard</span>
+              <span className="edugenius-text-gradient">Super Admin Overview</span>
             </h1>
             <p className="text-gray-600">Manage schools, packages, and system settings</p>
             {lastUpdated && (

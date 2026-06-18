@@ -4,61 +4,48 @@ import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
-import { 
-  BookOpen, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Calendar,
-  Brain,
-  ClipboardList,
-  Users2,
-  Sparkles,
-  Mail,
-  CreditCard,
-  CheckSquare
+import {
+  BookOpen, Users, FileText, BarChart3, Calendar, Brain,
+  ClipboardList, Mail, Activity, CheckCircle, Presentation,
+  PenTool, Wand2, LineChart, CreditCard, Clock, MessageSquare,
+  Radio, Database, CalendarDays
 } from 'lucide-react'
+import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
-export default function TeacherLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
   const { schoolInfo, loading } = useSchoolInfo()
   const { unreadCount } = useUnreadMessages()
 
   const sidebarItems = [
-    { icon: BarChart3, label: "Dashboard", href: "/teacher/dashboard" },
-    { icon: BookOpen, label: "Lesson Plans", href: "/teacher/lesson-plans" },
-    { icon: FileText, label: "Schemes of Work", href: "/teacher/schemes-of-work" },
-    { icon: ClipboardList, label: "Assignments", href: "/teacher/assignments" },
-    { icon: CheckSquare, label: "Rubrics", href: "/teacher/rubrics" },
-    { icon: Sparkles, label: "AI Tools", href: "/teacher/ai-tools" },
-    { icon: Users, label: "Students", href: "/teacher/students" },
-    { 
-      icon: Mail, 
-      label: "Messages", 
+    { icon: BarChart3,     label: "Dashboard",        href: "/teacher/dashboard"        },
+    { icon: Users,         label: "My Students",      href: "/teacher/students"         },
+    { icon: Activity,      label: "Progress Monitor", href: "/teacher/progress-monitor" },
+    { icon: LineChart,     label: "Analytics",        href: "/teacher/analytics"        },
+    { icon: BookOpen,      label: "Lesson Plans",     href: "/teacher/lesson-plans"     },
+    { icon: FileText,      label: "Schemes of Work",  href: "/teacher/schemes-of-work"  },
+    { icon: ClipboardList, label: "Assessments",      href: "/teacher/assignments"      },
+    { icon: Database,      label: "Exam Bank",        href: "/teacher/exam-bank"        },
+    { icon: PenTool,       label: "Marks Entry",      href: "/teacher/marks"            },
+    { icon: CheckCircle,   label: "Attendance",       href: "/teacher/attendance"       },
+    { icon: CalendarDays,  label: "Calendar",         href: "/teacher/calendar"         },
+    { icon: Wand2,         label: "AI Tools",         href: "/teacher/ai-tools"         },
+    { icon: Presentation,  label: "PowerPoint AI",    href: "/teacher/powerpoint"       },
+    { icon: Radio,         label: "Live Class",       href: "/teacher/live-class"       },
+    { icon: Calendar,      label: "Meetings",         href: "/teacher/meetings"         },
+    { icon: MessageSquare, label: "Discussions",      href: "/teacher/discussions"      },
+    { icon: Clock,         label: "Schedule",         href: "/teacher/schedule"         },
+    { icon: Brain,         label: "Hope AI",          href: "/teacher/alexa"            },
+    {
+      icon: Mail,
+      label: "Messages",
       href: "/teacher/messages",
-      badge: unreadCount > 0 ? unreadCount : undefined
+      badge: unreadCount > 0 ? unreadCount : undefined,
     },
-    { icon: Users2, label: "Meetings", href: "/teacher/meetings" },
-    { icon: Calendar, label: "Schedule", href: "/teacher/schedule" },
-    { icon: CreditCard, label: "Billing", href: "/teacher/billing" },
-    { icon: Brain, label: "Hope AI", href: "/teacher/alexa" },
-    { icon: BarChart3, label: "Analytics", href: "/teacher/analytics" }
+    { icon: CreditCard,    label: "Billing",          href: "/teacher/billing"          },
   ]
 
-  if (!session || loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+  if (!session || loading) return <DashboardLoading />
 
   return (
     <ProfessionalDashboardLayout

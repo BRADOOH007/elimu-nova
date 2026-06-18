@@ -15,6 +15,7 @@ enum UserRole {
   SCHOOL_ADMIN
   TEACHER
   STUDENT
+  PARENT
 }
 
 enum SubscriptionStatus {
@@ -72,26 +73,28 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relationships
-  schoolAdmin     SchoolAdmin?
-  teacher         Teacher?
-  student         Student?
-  superAdmin      SuperAdmin?
-  notifications   Notification[]
-  sessions        Session[]
-  generatedReports Report[] @relation("ReportGeneratedBy")
-  updatedSystemSettings SystemSettings[] @relation("SystemSettingsUpdatedBy")
-  updatedSchoolSettings SchoolSettings[] @relation("SchoolSettingsUpdatedBy")
-  securityLogs    SecurityLog[] @relation("SecurityLogUser")
-  resolvedSecurityLogs SecurityLog[] @relation("SecurityLogResolver")
+  schoolAdmin             SchoolAdmin?
+  teacher                 Teacher?
+  student                 Student?
+  parent                  Parent?
+  superAdmin              SuperAdmin?
+  notifications           Notification[]   @relation("NotificationUser")
+  sentNotifications       Notification[]   @relation("NotificationSender")
+  sessions                Session[]
+  generatedReports        Report[]         @relation("ReportGeneratedBy")
+  updatedSystemSettings   SystemSettings[] @relation("SystemSettingsUpdatedBy")
+  updatedSchoolSettings   SchoolSettings[] @relation("SchoolSettingsUpdatedBy")
+  securityLogs            SecurityLog[]    @relation("SecurityLogUser")
+  resolvedSecurityLogs    SecurityLog[]    @relation("SecurityLogResolver")
   createdSecurityPolicies SecurityPolicy[] @relation("SecurityPolicyCreatedBy")
   updatedSecurityPolicies SecurityPolicy[] @relation("SecurityPolicyUpdatedBy")
-  accounts        Account[]
-  preferences     UserPreference?
-  searchHistory   SearchHistory[]
-  activities      Activity[]
-  createdMeetings Meeting[]
-  subscriptions   Subscription[]
-  
+  accounts                Account[]
+  preferences             UserPreference?
+  searchHistory           SearchHistory[]
+  activities              Activity[]
+  createdMeetings         Meeting[]
+  subscriptions           Subscription[]
+
   // AI Generated Content
   generatedImages AIGeneratedImage[]
   imageUsage      AIImageUsage[]
@@ -108,16 +111,16 @@ model SuperAdmin {
 }
 
 model School {
-  id          String   @id @default(cuid())
-  name        String
-  address     String
-  phone       String?
-  email       String?
-  website     String?
-  logo        String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String?
+  email     String?
+  website   String?
+  logo      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relationships
   schoolAdmin   SchoolAdmin?
@@ -127,16 +130,24 @@ model School {
   subscriptions Subscription[]
   packages      Package[]
   reports       Report[]
-  securityLogs  SecurityLog[] @relation("SecurityLogSchool")
+  securityLogs  SecurityLog[]        @relation("SecurityLogSchool")
   activities    Activity[]
   meetings      Meeting[]
   schedules     Schedule[]
   settings      SchoolSettings[]
   schemesOfWork SchemeOfWork[]
   sharedSchemes SharedSchemeOfWork[]
-  
+
+  // Curricula & Courses
+  curriculums   Curriculum[]
+  courses       Course[]
+  learningAreas LearningArea[]
+
   // AI Generated Images
   generatedImages AIGeneratedImage[]
+
+  // Notifications
+  notifications Notification[]
 
   @@map("schools")
 }
@@ -152,29 +163,32 @@ model SchoolAdmin {
 }
 
 model Teacher {
-  id       String @id @default(cuid())
-  userId   String @unique
+  id       String  @id @default(cuid())
+  userId   String  @unique
   schoolId String?
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   school   School? @relation(fields: [schoolId], references: [id])
 
   // Relationships
-  students        Student[]
-  classes         Class[]
-  schemesOfWork   SchemeOfWork[]
-  lessonPlans     LessonPlan[]
-  assignments     Assignment[]
-  studentProgress StudentProgress[]
-  sharedSchemes   SharedSchemeOfWork[]
-  sharedLessonPlans SharedLessonPlan[]
-  schedules       Schedule[]
-  resources       Resource[]
+  students           Student[]
+  classes            Class[]
+  schemesOfWork      SchemeOfWork[]
+  lessonPlans        LessonPlan[]
+  assignments        Assignment[]
+  studentProgress    StudentProgress[]
+  sharedSchemes      SharedSchemeOfWork[]
+  sharedLessonPlans  SharedLessonPlan[]
+  schedules          Schedule[]
+  resources          Resource[]
   aiGeneratedContent AIGeneratedContent[]
-  
+
+  // Courses
+  courseAssignments TeacherCourseAssignment[]
+
   // AI Generated Images
   generatedImages AIGeneratedImage[]
 
-        @@map("teachers")
+  @@map("teachers")
 }
 
 model Class {
@@ -190,15 +204,16 @@ model Class {
   updatedAt   DateTime @updatedAt
 
   // Relationships
-  school    School?     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacher   Teacher    @relation(fields: [teacherId], references: [id])
-  students  Student[]
+  school          School?                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher         Teacher                    @relation(fields: [teacherId], references: [id])
+  students        Student[]
+  assignments     Assignment[]
   sharedAIContent SharedAIContentWithClass[]
-  schedules Schedule[]
-  
+  schedules       Schedule[]
+
   // AI Generated Images
   generatedImages AIGeneratedImage[]
-  
+
   // Shared presentations
   sharedPresentations AIGeneratedContent[]
 
@@ -206,81 +221,113 @@ model Class {
 }
 
 model Student {
-  id        String @id @default(cuid())
-  userId    String @unique
+  id        String   @id @default(cuid())
+  userId    String   @unique
   schoolId  String?
   teacherId String?
   classId   String?
-  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school    School? @relation(fields: [schoolId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school    School?  @relation(fields: [schoolId], references: [id])
   teacher   Teacher? @relation(fields: [teacherId], references: [id])
-  class     Class?  @relation(fields: [classId], references: [id])
+  class     Class?   @relation(fields: [classId], references: [id])
 
   // Relationships
-  assignments     Assignment[]
-  studentProgress StudentProgress[]
-  submissions     Submission[]
-  sharedSchemes   SharedSchemeOfWork[]
+  assignments       Assignment[]
+  studentProgress   StudentProgress[]
+  submissions       Submission[]
+  sharedSchemes     SharedSchemeOfWork[]
   sharedLessonPlans SharedLessonPlan[]
-  studySessions   StudySession[]
-  analytics       StudentAnalytics?
-  aiTutorSessions AITutorSession[]
-  resources       Resource[]
-  sharedAIContent SharedAIContent[]
-  
+  studySessions     StudySession[]
+  analytics         StudentAnalytics?
+  aiTutorSessions   AITutorSession[]
+  resources         Resource[]
+  sharedAIContent   SharedAIContent[]
+  parents           ParentStudent[]
+
+  // Courses
+  courseEnrollments CourseEnrollment[]
+
   // AI Generated Images
   generatedImages AIGeneratedImage[]
 
-        @@map("students")
+  @@map("students")
+}
+
+model Parent {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relationships
+  students ParentStudent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("parents")
+}
+
+model ParentStudent {
+  id        String  @id @default(cuid())
+  parentId  String
+  studentId String
+  parent    Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([parentId, studentId])
+  @@map("parent_students")
 }
 
 model Package {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
   price       Float
-  duration    Int     // in days
+  duration    Int // in days
   maxTeachers Int
   maxStudents Int
   features    String[] // JSON array of features
-  isActive    Boolean @default(true)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relationships
-  schools        School[]
-  subscriptions  Subscription[]
+  schools       School[]
+  subscriptions Subscription[]
 
   @@map("packages")
 }
 
 model Subscription {
-  id              String             @id @default(cuid())
-  schoolId        String?            // Optional for independent users
-  userId          String?            // For independent user subscriptions
-  packageId       String
-  paymentMethodId String?
-  status          SubscriptionStatus @default(ACTIVE)
-  startDate       DateTime
-  endDate         DateTime
-  amount          Float
-  type            String             @default("SUBSCRIPTION")
-  paymentMethod   String             @default("MANUAL")
-  transactionId   String?
-  stripeSubscriptionId String?       // Stripe subscription ID
-  stripeCustomerId String?           // Stripe customer ID
-  isTrial         Boolean            @default(false)
-  trialEndsAt     DateTime?
-  notes           String?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id                   String             @id @default(cuid())
+  schoolId             String? // Optional for independent users
+  userId               String? // For independent user subscriptions
+  packageId            String
+  paymentMethodId      String?
+  status               SubscriptionStatus @default(ACTIVE)
+  startDate            DateTime
+  endDate              DateTime
+  amount               Float
+  type                 String             @default("SUBSCRIPTION")
+  paymentMethod        String             @default("MANUAL")
+  transactionId        String?
+  stripeSubscriptionId String? // Stripe subscription ID
+  stripeCustomerId     String? // Stripe customer ID
+  isTrial              Boolean            @default(false)
+  trialEndsAt          DateTime?
+  notes                String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   // Relationships
-  school        School?        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  user          User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  package       Package        @relation(fields: [packageId], references: [id])
+  school           School?        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  user             User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package          Package        @relation(fields: [packageId], references: [id])
   paymentMethodRef PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
-  invoices      Invoice[]
+  invoices         Invoice[]
 
   @@map("subscriptions")
 }
@@ -288,7 +335,7 @@ model Subscription {
 model PaymentMethod {
   id          String   @id @default(cuid())
   name        String
-  type        String   // CREDIT_CARD, BANK_TRANSFER, MOBILE_MONEY, CASH
+  type        String // CREDIT_CARD, BANK_TRANSFER, MOBILE_MONEY, CASH
   isActive    Boolean  @default(true)
   description String?
   createdAt   DateTime @default(now())
@@ -302,22 +349,22 @@ model PaymentMethod {
 }
 
 model Invoice {
-  id              String   @id @default(cuid())
-  invoiceNumber   String   @unique
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique
   subscriptionId  String
   amount          Float
-  taxAmount       Float    @default(0)
+  taxAmount       Float         @default(0)
   totalAmount     Float
   status          InvoiceStatus @default(PENDING)
   dueDate         DateTime
   paidDate        DateTime?
   paymentMethodId String?
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   // Relationships
-  subscription  Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  subscription  Subscription   @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
 
   @@map("invoices")
@@ -331,23 +378,23 @@ enum InvoiceStatus {
 }
 
 model Report {
-  id          String      @id @default(cuid())
+  id          String       @id @default(cuid())
   title       String
   description String?
-  type        ReportType  @default(ANALYTICS)
+  type        ReportType   @default(ANALYTICS)
   status      ReportStatus @default(DRAFT)
-  content     String      // JSON content for report data
-  filters     String?     // JSON filters applied
-  generatedBy String      // User ID who generated the report
-  schoolId    String?     // Optional: school-specific report
-  isPublic    Boolean     @default(false)
-  scheduledAt DateTime?   // For scheduled reports
-  expiresAt   DateTime?   // Optional expiration date
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  content     String // JSON content for report data
+  filters     String? // JSON filters applied
+  generatedBy String // User ID who generated the report
+  schoolId    String? // Optional: school-specific report
+  isPublic    Boolean      @default(false)
+  scheduledAt DateTime? // For scheduled reports
+  expiresAt   DateTime? // Optional expiration date
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   // Relationships
-  generatedByUser User  @relation("ReportGeneratedBy", fields: [generatedBy], references: [id], onDelete: Cascade)
+  generatedByUser User    @relation("ReportGeneratedBy", fields: [generatedBy], references: [id], onDelete: Cascade)
   school          School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("reports")
@@ -356,13 +403,13 @@ model Report {
 model SystemSettings {
   id          String   @id @default(cuid())
   key         String   @unique // Setting key (e.g., 'site_name', 'maintenance_mode')
-  value       String   // Setting value (JSON string for complex values)
+  value       String // Setting value (JSON string for complex values)
   type        String   @default("string") // Type: string, number, boolean, json, array
   category    String   @default("general") // Category: general, security, email, notifications, etc.
-  description String?  // Human-readable description
+  description String? // Human-readable description
   isPublic    Boolean  @default(false) // Whether this setting is public (accessible to non-admins)
   isEditable  Boolean  @default(true) // Whether this setting can be edited
-  updatedBy   String   // User ID who last updated this setting
+  updatedBy   String // User ID who last updated this setting
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -375,59 +422,59 @@ model SystemSettings {
 model SchoolSettings {
   id          String   @id @default(cuid())
   schoolId    String
-  key         String   // Setting key (e.g., 'school_theme', 'notification_preferences')
-  value       String   // Setting value (JSON string for complex values)
+  key         String // Setting key (e.g., 'school_theme', 'notification_preferences')
+  value       String // Setting value (JSON string for complex values)
   type        String   @default("string") // Type: string, number, boolean, json, array
   category    String   @default("general") // Category: general, notifications, appearance, etc.
-  description String?  // Human-readable description
+  description String? // Human-readable description
   isEditable  Boolean  @default(true) // Whether this setting can be edited
-  updatedBy   String   // User ID who last updated this setting
+  updatedBy   String // User ID who last updated this setting
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relationships
-  school      School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  updatedByUser User @relation("SchoolSettingsUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
+  school        School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  updatedByUser User   @relation("SchoolSettingsUpdatedBy", fields: [updatedBy], references: [id], onDelete: Cascade)
 
   @@unique([schoolId, key])
   @@map("school_settings")
 }
 
 model SecurityLog {
-  id          String      @id @default(cuid())
+  id          String            @id @default(cuid())
   eventType   SecurityEventType
-  severity    SecuritySeverity @default(MEDIUM)
+  severity    SecuritySeverity  @default(MEDIUM)
   description String
   ipAddress   String?
   userAgent   String?
-  userId      String?     // Optional - for user-related events
-  schoolId    String?     // Optional - for school-specific events
-  metadata    String?     // JSON metadata for additional context
-  resolved    Boolean     @default(false)
-  resolvedBy  String?     // User ID who resolved the issue
+  userId      String? // Optional - for user-related events
+  schoolId    String? // Optional - for school-specific events
+  metadata    String? // JSON metadata for additional context
+  resolved    Boolean           @default(false)
+  resolvedBy  String? // User ID who resolved the issue
   resolvedAt  DateTime?
-  createdAt   DateTime    @default(now())
+  createdAt   DateTime          @default(now())
 
   // Relationships
-  user        User?       @relation("SecurityLogUser", fields: [userId], references: [id], onDelete: SetNull)
-  school      School?     @relation("SecurityLogSchool", fields: [schoolId], references: [id], onDelete: SetNull)
-  resolver    User?       @relation("SecurityLogResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+  user     User?   @relation("SecurityLogUser", fields: [userId], references: [id], onDelete: SetNull)
+  school   School? @relation("SecurityLogSchool", fields: [schoolId], references: [id], onDelete: SetNull)
+  resolver User?   @relation("SecurityLogResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
 
   @@map("security_logs")
 }
 
 model SecurityPolicy {
-  id          String   @id @default(cuid())
+  id          String             @id @default(cuid())
   name        String
   description String?
   policyType  SecurityPolicyType
-  rules       String   // JSON rules configuration
-  isActive    Boolean  @default(true)
-  priority    Int      @default(0) // Higher number = higher priority
-  createdBy   String   // User ID who created the policy
-  updatedBy   String   // User ID who last updated the policy
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  rules       String // JSON rules configuration
+  isActive    Boolean            @default(true)
+  priority    Int                @default(0) // Higher number = higher priority
+  createdBy   String // User ID who created the policy
+  updatedBy   String // User ID who last updated the policy
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   // Relationships
   createdByUser User @relation("SecurityPolicyCreatedBy", fields: [createdBy], references: [id], onDelete: Cascade)
@@ -479,23 +526,23 @@ enum SecurityPolicyType {
 }
 
 model SchemeOfWork {
-  id          String   @id @default(cuid())
-  title       String
-  subject     String
-  grade       String
-  term        String?
-  content     String   // JSON content
-  duration    Int?     // Duration in weeks
-  objectives  String?  // Learning objectives
-  schoolId    String?  // School ID for better organization
-  teacherId   String
-  isShared    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  title      String
+  subject    String
+  grade      String
+  term       String?
+  content    String // JSON content
+  duration   Int? // Duration in weeks
+  objectives String? // Learning objectives
+  schoolId   String? // School ID for better organization
+  teacherId  String
+  isShared   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   // Relationships
-  teacher     Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  school      School?     @relation(fields: [schoolId], references: [id])
+  teacher     Teacher              @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  school      School?              @relation(fields: [schoolId], references: [id])
   lessonPlans LessonPlan[]
   topics      SchemeTopic[]
   sharedWith  SharedSchemeOfWork[]
@@ -507,13 +554,13 @@ model SchemeTopic {
   id             String   @id @default(cuid())
   title          String
   description    String?
-  weekNumber     Int      // Which week this topic belongs to
-  lessonNumber   Int      // Which lesson within the week
+  weekNumber     Int // Which week this topic belongs to
+  lessonNumber   Int // Which lesson within the week
   objectives     String[] // Array of learning objectives for this topic
   activities     String[] // Array of activities for this topic
   resources      String[] // Array of required resources
-  assessment     String?  // Assessment methods for this topic
-  duration       Int      // Duration in minutes
+  assessment     String? // Assessment methods for this topic
+  duration       Int // Duration in minutes
   schemeOfWorkId String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -547,7 +594,7 @@ model LessonPlan {
   title          String
   subject        String
   grade          String
-  content        String   // JSON content
+  content        String // JSON content
   teacherId      String
   schemeOfWorkId String?
   isShared       Boolean  @default(false)
@@ -555,8 +602,8 @@ model LessonPlan {
   updatedAt      DateTime @updatedAt
 
   // Relationships
-  teacher      Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  schemeOfWork SchemeOfWork? @relation(fields: [schemeOfWorkId], references: [id])
+  teacher      Teacher            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  schemeOfWork SchemeOfWork?      @relation(fields: [schemeOfWorkId], references: [id])
   assignments  Assignment[]
   sharedWith   SharedLessonPlan[]
   resources    Resource[]
@@ -587,11 +634,23 @@ model Assignment {
   id           String           @id @default(cuid())
   title        String
   description  String
-  content      String           // JSON content
+  content      String // JSON content
   dueDate      DateTime
   status       AssignmentStatus @default(PENDING)
   teacherId    String
   lessonPlanId String?
+  // Timed exam fields
+  isTimed      Boolean          @default(false)
+  timeLimit    Int? // In minutes
+  startTime    DateTime? // When the exam becomes available
+  // AI grading fields
+  rubricId     String? // Link to rubric for AI grading
+  aiGradeable  Boolean          @default(false)
+  answerKey    String? // JSON with correct answers for automatic grading
+  // Metadata
+  classId      String? // Which class this assignment is for
+  subject      String?
+  grade        String?
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
@@ -600,21 +659,37 @@ model Assignment {
   lessonPlan  LessonPlan?  @relation(fields: [lessonPlanId], references: [id])
   students    Student[]
   submissions Submission[]
+  class       Class?       @relation(fields: [classId], references: [id], onDelete: SetNull)
+
+  // Courses
+  courseAssignments CourseAssignment[]
 
   @@map("assignments")
 }
 
 model Submission {
-  id           String          @id @default(cuid())
-  content      String          // JSON content
-  attachments  String[]        // Array of file URLs
-  grade        Float?
-  feedback     String?
-  status       AssignmentStatus @default(PENDING)
-  submittedAt  DateTime        @default(now())
-  gradedAt     DateTime?
-  studentId    String
-  assignmentId String
+  id                String           @id @default(cuid())
+  content           String // JSON content
+  attachments       String[] // Array of file URLs
+  grade             Float?
+  feedback          String?
+  status            AssignmentStatus @default(PENDING)
+  submittedAt       DateTime         @default(now())
+  gradedAt          DateTime?
+  studentId         String
+  assignmentId      String
+  // Timed exam metadata
+  startedAt         DateTime? // When student started the exam
+  timeSpent         Int? // Total time spent in seconds
+  // AI grading metadata
+  isAiGraded        Boolean          @default(false)
+  aiGradingMetadata Json? // Detailed AI grading breakdown
+  aiConfidence      Float? // Confidence score of AI grading (0-1)
+  // Question level data
+  questionScores    Json? // JSON with per-question scores and feedback
+  // Revision
+  needsRevision     Boolean          @default(false)
+  revisionNotes     String?
 
   // Relationships
   student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -624,29 +699,29 @@ model Submission {
 }
 
 model StudentProgress {
-  id           String         @id @default(cuid())
-  status       ProgressStatus @default(NOT_STARTED)
-  score        Float?
-  feedback     String?
-  teacherId    String
-  studentId    String
-  
+  id        String         @id @default(cuid())
+  status    ProgressStatus @default(NOT_STARTED)
+  score     Float?
+  feedback  String?
+  teacherId String
+  studentId String
+
   // NEW: Autonomous Tutor Fields (nullable for migration)
-  classId         String?
-  subject         String         @default("General")
-  topic           String         @default("General Progress")
-  masteryScore    Int            @default(0) // 0-100
-  lastPracticedAt DateTime?
-  commonMistakes  Json?          // Array of common mistakes
-  preferredDifficulty String     @default("medium") // "easy", "medium", "hard"
-  engagementProfile Json?        // Likes quizzes, stories, attention span, etc.
-  streak          Int            @default(0) // Consecutive days of practice
-  xp              Int            @default(0) // Experience points
-  totalQuestions  Int            @default(0)
-  correctAnswers  Int            @default(0)
-  
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  classId             String?
+  subject             String    @default("General")
+  topic               String    @default("General Progress")
+  masteryScore        Int       @default(0) // 0-100
+  lastPracticedAt     DateTime?
+  commonMistakes      Json? // Array of common mistakes
+  preferredDifficulty String    @default("medium") // "easy", "medium", "hard"
+  engagementProfile   Json? // Likes quizzes, stories, attention span, etc.
+  streak              Int       @default(0) // Consecutive days of practice
+  xp                  Int       @default(0) // Experience points
+  totalQuestions      Int       @default(0)
+  correctAnswers      Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relationships
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
@@ -662,7 +737,7 @@ model StudySession {
   studentId   String
   subject     String
   topic       String?
-  duration    Int      // Duration in minutes
+  duration    Int // Duration in minutes
   startTime   DateTime
   endTime     DateTime
   notes       String?
@@ -677,20 +752,20 @@ model StudySession {
 }
 
 model StudentAnalytics {
-  id                String   @id @default(cuid())
-  studentId         String   @unique
-  totalStudyTime    Int      @default(0) // Total study time in minutes
-  averageGrade      Float?   // Average grade across all subjects
-  completedAssignments Int   @default(0)
-  pendingAssignments  Int    @default(0)
-  overdueAssignments Int     @default(0)
-  lastActiveDate    DateTime?
-  streakDays        Int      @default(0) // Current study streak
-  longestStreak     Int      @default(0) // Longest study streak
-  weeklyGoal        Int      @default(300) // Weekly study goal in minutes
-  monthlyGoal       Int      @default(1200) // Monthly study goal in minutes
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                   String    @id @default(cuid())
+  studentId            String    @unique
+  totalStudyTime       Int       @default(0) // Total study time in minutes
+  averageGrade         Float? // Average grade across all subjects
+  completedAssignments Int       @default(0)
+  pendingAssignments   Int       @default(0)
+  overdueAssignments   Int       @default(0)
+  lastActiveDate       DateTime?
+  streakDays           Int       @default(0) // Current study streak
+  longestStreak        Int       @default(0) // Longest study streak
+  weeklyGoal           Int       @default(300) // Weekly study goal in minutes
+  monthlyGoal          Int       @default(1200) // Monthly study goal in minutes
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   // Relationships
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -701,26 +776,26 @@ model StudentAnalytics {
 model AITutorSession {
   id          String   @id @default(cuid())
   studentId   String
-  classId     String?  // CRITICAL: Enforce class isolation (nullable for migration)
-  sessionType String   // "lesson", "assignment_help", "progress_review", "general_help"
+  classId     String? // CRITICAL: Enforce class isolation (nullable for migration)
+  sessionType String // "lesson", "assignment_help", "progress_review", "general_help"
   subject     String?
   topic       String?
   question    String
   response    String
-  context     String?  // JSON context about the student's current work
-  rating      Int?     // Student rating of the response (1-5)
+  context     String? // JSON context about the student's current work
+  rating      Int? // Student rating of the response (1-5)
   isHelpful   Boolean?
-  
+
   // NEW: Autonomous Tutor Fields
-  mode            String?  // "teach", "practice", "quiz", "revise"
+  mode                String? // "teach", "practice", "quiz", "revise"
   conversationHistory Json? // Last 10 messages for context
-  currentQuestion Json?    // Current question being asked
-  isCorrect       Boolean? // Was the last answer correct?
-  hintsGiven      Int      @default(0)
-  timeSpent       Int      @default(0) // Seconds spent in session
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  currentQuestion     Json? // Current question being asked
+  isCorrect           Boolean? // Was the last answer correct?
+  hintsGiven          Int      @default(0)
+  timeSpent           Int      @default(0) // Seconds spent in session
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   // Relationships
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -731,23 +806,23 @@ model AITutorSession {
 }
 
 model Message {
-  id             String      @id @default(cuid())
-  subject        String
-  content        String      @db.Text
-  senderId       String
-  senderType     MessageSenderType
-  recipientId    String
-  recipientType  MessageRecipientType
-  isRead         Boolean     @default(false)
-  readAt         DateTime?
-  parentId       String?     // For threaded conversations
-  attachments    String[]    // Array of file URLs
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
+  id            String               @id @default(cuid())
+  subject       String
+  content       String               @db.Text
+  senderId      String
+  senderType    MessageSenderType
+  recipientId   String
+  recipientType MessageRecipientType
+  isRead        Boolean              @default(false)
+  readAt        DateTime?
+  parentId      String? // For threaded conversations
+  attachments   String[] // Array of file URLs
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   // Self-referential relationship for threads
-  parent         Message?    @relation("MessageThread", fields: [parentId], references: [id], onDelete: SetNull)
-  replies        Message[]   @relation("MessageThread")
+  parent  Message?  @relation("MessageThread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies Message[] @relation("MessageThread")
 
   @@index([senderId, senderType])
   @@index([recipientId, recipientType])
@@ -760,6 +835,7 @@ enum MessageSenderType {
   TEACHER
   SCHOOL_ADMIN
   SUPER_ADMIN
+  PARENT
 }
 
 enum MessageRecipientType {
@@ -767,20 +843,26 @@ enum MessageRecipientType {
   TEACHER
   SCHOOL_ADMIN
   SUPER_ADMIN
+  PARENT
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  title     String
-  message   String
-  type      String   // info, warning, success, error
-  isRead    Boolean  @default(false)
-  userId    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(cuid())
+  title      String
+  message    String
+  type       String // info, warning, success, error
+  isRead     Boolean   @default(false)
+  userId     String
+  senderId   String? // Who sent the notification
+  targetRole UserRole? // Role this notification is targeting
+  schoolId   String? // For school-wide notifications
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   // Relationships
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade, name: "NotificationUser")
+  sender User?   @relation(fields: [senderId], references: [id], onDelete: Cascade, name: "NotificationSender")
+  school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
@@ -825,18 +907,17 @@ model VerificationToken {
   @@map("verification_tokens")
 }
 
-
 model UserPreference {
-  id          String   @id @default(cuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme       String   @default("light") // 'light', 'dark', 'auto'
-  language    String   @default("en")
-  timezone    String   @default("UTC")
-  emailNotifications Boolean @default(true)
-  pushNotifications  Boolean @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme              String   @default("light") // 'light', 'dark', 'auto'
+  language           String   @default("en")
+  timezone           String   @default("UTC")
+  emailNotifications Boolean  @default(true)
+  pushNotifications  Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@map("user_preferences")
 }
@@ -853,23 +934,23 @@ model SearchHistory {
 }
 
 model Meeting {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   schoolId    String
-  createdBy   String    // User ID who created the meeting
+  createdBy   String // User ID who created the meeting
   title       String
   description String?
   date        DateTime
-  time        String    // Store time as string (HH:MM format)
-  duration    Int       @default(60) // Duration in minutes
+  time        String // Store time as string (HH:MM format)
+  duration    Int           @default(60) // Duration in minutes
   location    String?
   status      MeetingStatus @default(SCHEDULED)
-  attendees   Json?     // Store attendee information as JSON
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  attendees   Json? // Store attendee information as JSON
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   // Relationships
-  school   School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  creator  User   @relation(fields: [createdBy], references: [id])
+  school  School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  creator User   @relation(fields: [createdBy], references: [id])
 
   @@map("meetings")
 }
@@ -881,7 +962,7 @@ model Activity {
   type        ActivityType
   action      String
   description String
-  metadata    Json?        // Store additional data as JSON
+  metadata    Json? // Store additional data as JSON
   createdAt   DateTime     @default(now())
 
   // Relationships
@@ -892,24 +973,24 @@ model Activity {
 }
 
 model Schedule {
-  id          String        @id @default(cuid())
-  schoolId    String
-  teacherId   String
-  classId     String?
-  title       String
-  description String?
-  subject     String?
-  grade       String?
-  startTime   DateTime
-  endTime     DateTime
-  location    String?
-  type        ScheduleType  @default(CLASS)
-  status      ScheduleStatus @default(SCHEDULED)
-  recurring   Boolean       @default(false)
-  recurringPattern String?  // "daily", "weekly", "monthly"
-  metadata    Json?         // Store additional data as JSON
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id               String         @id @default(cuid())
+  schoolId         String
+  teacherId        String
+  classId          String?
+  title            String
+  description      String?
+  subject          String?
+  grade            String?
+  startTime        DateTime
+  endTime          DateTime
+  location         String?
+  type             ScheduleType   @default(CLASS)
+  status           ScheduleStatus @default(SCHEDULED)
+  recurring        Boolean        @default(false)
+  recurringPattern String? // "daily", "weekly", "monthly"
+  metadata         Json? // Store additional data as JSON
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   // Relationships
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -920,21 +1001,21 @@ model Schedule {
 }
 
 model Resource {
-  id          String   @id @default(cuid())
-  title       String
-  content     String   // Rich text content or markdown
-  type        ResourceType
-  subject     String
-  grade       String
-  tags        String[] // Array of tags for categorization
-  isPublic    Boolean  @default(false) // Whether student can access it
-  isAIGenerated Boolean @default(true) // Whether generated by AI
-  studentId   String
-  teacherId   String
-  lessonPlanId String? // Optional link to lesson plan
-  metadata    Json?    // Additional metadata (difficulty, duration, etc.)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String       @id @default(cuid())
+  title         String
+  content       String // Rich text content or markdown
+  type          ResourceType
+  subject       String
+  grade         String
+  tags          String[] // Array of tags for categorization
+  isPublic      Boolean      @default(false) // Whether student can access it
+  isAIGenerated Boolean      @default(true) // Whether generated by AI
+  studentId     String
+  teacherId     String
+  lessonPlanId  String? // Optional link to lesson plan
+  metadata      Json? // Additional metadata (difficulty, duration, etc.)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   // Relationships
   student    Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -946,30 +1027,30 @@ model Resource {
 
 // AI Generated Content Models
 model AIGeneratedContent {
-  id          String   @id @default(cuid())
-  title       String
-  content     String   // The generated content
-  type        AIContentType
-  subject     String
-  grade       String
-  topic       String
-  metadata    Json?    // Additional metadata (difficulty, duration, format, etc.)
-  isShared    Boolean  @default(false)
-  teacherId   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String        @id @default(cuid())
+  title     String
+  content   String // The generated content
+  type      AIContentType
+  subject   String
+  grade     String
+  topic     String
+  metadata  Json? // Additional metadata (difficulty, duration, format, etc.)
+  isShared  Boolean       @default(false)
+  teacherId String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   // Sharing fields
-  pptxUrl     String?  // Stored PowerPoint file URL
-  visibility  String   @default("private") // "private" | "link" | "class"
-  shareToken  String?  // Random secure string for link sharing
-  classId     String?  // For class-specific sharing
+  pptxUrl    String? // Stored PowerPoint file URL
+  visibility String  @default("private") // "private" | "link" | "class"
+  shareToken String? // Random secure string for link sharing
+  classId    String? // For class-specific sharing
 
   // Relationships
-  teacher           Teacher                    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  sharedWithStudents SharedAIContent[]        @relation("AIContentStudents")
+  teacher            Teacher                    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  sharedWithStudents SharedAIContent[]          @relation("AIContentStudents")
   sharedWithClasses  SharedAIContentWithClass[] @relation("AIContentClasses")
-  sharedClass       Class?                     @relation(fields: [classId], references: [id], onDelete: SetNull)
+  sharedClass        Class?                     @relation(fields: [classId], references: [id], onDelete: SetNull)
 
   @@map("ai_generated_content")
 }
@@ -1006,6 +1087,7 @@ enum AIContentType {
   RUBRIC
   POWERPOINT
   ASSIGNMENT
+  EXAM
   PROJECT
 }
 
@@ -1029,56 +1111,56 @@ enum AIImageSize {
 model AIGeneratedImage {
   id          String      @id @default(cuid())
   filename    String      @unique // elimu_2025_03_02_student123_plant_cell.png
-  originalUrl String      // Original OpenAI URL (temporary)
-  storedUrl   String      // Permanent storage URL
-  topic       String      // e.g., "Plant Cell", "Solar System"
-  prompt      String      // Original prompt used
+  originalUrl String // Original OpenAI URL (temporary)
+  storedUrl   String // Permanent storage URL
+  topic       String // e.g., "Plant Cell", "Solar System"
+  prompt      String // Original prompt used
   type        AIImageType @default(GENERAL)
   size        AIImageSize @default(MEDIUM_1024)
   quality     String      @default("standard") // standard or hd
-  
+
   // User and context
-  userId      String      // Who generated it
-  studentId   String?     // If generated by/for a student
-  teacherId   String?     // If generated by a teacher
-  schoolId    String?     // School context
-  classId     String?     // Class context if applicable
-  
+  userId    String // Who generated it
+  studentId String? // If generated by/for a student
+  teacherId String? // If generated by a teacher
+  schoolId  String? // School context
+  classId   String? // Class context if applicable
+
   // Metadata
-  fileSize    Int?        // File size in bytes
-  dimensions  String?     // JSON: {"width": 1024, "height": 1024}
-  metadata    String?     // JSON: Additional OpenAI metadata
-  
+  fileSize   Int? // File size in bytes
+  dimensions String? // JSON: {"width": 1024, "height": 1024}
+  metadata   String? // JSON: Additional OpenAI metadata
+
   // Timestamps
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relationships
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  student     Student?    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  teacher     Teacher?    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  school      School?     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  class       Class?      @relation(fields: [classId], references: [id], onDelete: Cascade)
-  
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  student Student? @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  school  School?  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  class   Class?   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
   // Usage tracking
   usageHistory AIImageUsage[]
-  
+
   @@map("ai_generated_images")
 }
 
 // Track how AI images are used (in presentations, assignments, etc.)
 model AIImageUsage {
-  id          String   @id @default(cuid())
-  imageId     String
-  usageType   String   // "presentation", "assignment", "download", "view"
-  context     String?  // Additional context (presentation ID, assignment ID, etc.)
-  userId      String   // Who used it
-  createdAt   DateTime @default(now())
-  
+  id        String   @id @default(cuid())
+  imageId   String
+  usageType String // "presentation", "assignment", "download", "view"
+  context   String? // Additional context (presentation ID, assignment ID, etc.)
+  userId    String // Who used it
+  createdAt DateTime @default(now())
+
   // Relationships
-  image       AIGeneratedImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  image AIGeneratedImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("ai_image_usage")
 }
 
@@ -1142,38 +1224,38 @@ enum ActivityType {
 // ============================================
 
 model TutorSession {
-  id              String   @id @default(cuid())
-  studentId       String
-  classId         String
-  subject         String
-  topic           String
-  mode            String   // "teach", "practice", "quiz", "revise"
-  
+  id        String @id @default(cuid())
+  studentId String
+  classId   String
+  subject   String
+  topic     String
+  mode      String // "teach", "practice", "quiz", "revise"
+
   // Session state
-  currentStep     Int      @default(0)
-  totalSteps      Int      @default(5)
-  progress        Int      @default(0) // 0-100
-  isCompleted     Boolean  @default(false)
-  
+  currentStep Int     @default(0)
+  totalSteps  Int     @default(5)
+  progress    Int     @default(0) // 0-100
+  isCompleted Boolean @default(false)
+
   // Conversation tracking
-  last10Messages  Json     // Array of last 10 messages
-  currentQuestion Json?    // Current question being asked
-  questionsAsked  Int      @default(0)
-  correctAnswers  Int      @default(0)
-  hintsGiven      Int      @default(0)
-  
+  last10Messages  Json // Array of last 10 messages
+  currentQuestion Json? // Current question being asked
+  questionsAsked  Int   @default(0)
+  correctAnswers  Int   @default(0)
+  hintsGiven      Int   @default(0)
+
   // Performance
-  timeSpent       Int      @default(0) // Seconds
-  xpEarned        Int      @default(0)
-  
+  timeSpent Int @default(0) // Seconds
+  xpEarned  Int @default(0)
+
   // Metadata
-  lessonPlanId    String?
-  schemeOfWorkId  String?
-  metadata        Json?    // Additional context
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  completedAt     DateTime?
+  lessonPlanId   String?
+  schemeOfWorkId String?
+  metadata       Json? // Additional context
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
 
   @@index([studentId, classId])
   @@index([studentId, subject])
@@ -1182,29 +1264,29 @@ model TutorSession {
 }
 
 model ClassSchedule {
-  id          String   @id @default(cuid())
-  classId     String
-  schoolId    String
-  teacherId   String
-  
+  id        String @id @default(cuid())
+  classId   String
+  schoolId  String
+  teacherId String
+
   // Schedule details
-  dayOfWeek   Int      // 0 = Sunday, 1 = Monday, etc.
-  startTime   String   // "09:00" format
-  endTime     String   // "10:00" format
-  subject     String
-  
+  dayOfWeek Int // 0 = Sunday, 1 = Monday, etc.
+  startTime String // "09:00" format
+  endTime   String // "10:00" format
+  subject   String
+
   // Optional details
-  room        String?
-  notes       String?
-  isActive    Boolean  @default(true)
-  
+  room     String?
+  notes    String?
+  isActive Boolean @default(true)
+
   // Recurrence
-  recurring   Boolean  @default(true)
-  startDate   DateTime // When this schedule starts
-  endDate     DateTime? // When this schedule ends (optional)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  recurring Boolean   @default(true)
+  startDate DateTime // When this schedule starts
+  endDate   DateTime? // When this schedule ends (optional)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([classId, dayOfWeek])
   @@index([schoolId])
@@ -1212,35 +1294,35 @@ model ClassSchedule {
 }
 
 model TutorQuestion {
-  id              String   @id @default(cuid())
-  subject         String
-  topic           String
-  grade           String
-  difficulty      String   // "easy", "medium", "hard"
-  
+  id         String @id @default(cuid())
+  subject    String
+  topic      String
+  grade      String
+  difficulty String // "easy", "medium", "hard"
+
   // Question content
-  questionType    String   // "mcq", "short_answer", "fill_blank", "true_false"
-  questionText    String   @db.Text
-  options         Json?    // For MCQ
-  correctAnswer   String   @db.Text
-  explanation     String   @db.Text
-  
+  questionType  String // "mcq", "short_answer", "fill_blank", "true_false"
+  questionText  String @db.Text
+  options       Json? // For MCQ
+  correctAnswer String @db.Text
+  explanation   String @db.Text
+
   // Metadata
-  hints           Json?    // Array of hints
-  commonMistakes  Json?    // Array of common mistakes
-  relatedTopics   String[] // Related topics
-  
+  hints          Json? // Array of hints
+  commonMistakes Json? // Array of common mistakes
+  relatedTopics  String[] // Related topics
+
   // AI generation
-  isAIGenerated   Boolean  @default(true)
-  generatedBy     String?  // User ID who generated/approved
-  
+  isAIGenerated Boolean @default(true)
+  generatedBy   String? // User ID who generated/approved
+
   // Usage tracking
-  timesAsked      Int      @default(0)
-  timesCorrect    Int      @default(0)
-  averageTime     Int      @default(0) // Average time to answer in seconds
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  timesAsked   Int @default(0)
+  timesCorrect Int @default(0)
+  averageTime  Int @default(0) // Average time to answer in seconds
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([subject, topic, difficulty])
   @@index([grade, subject])
@@ -1269,4 +1351,306 @@ enum DifficultyLevel {
   MEDIUM
   HARD
   EXPERT
+}
+
+// ============================================
+// CURRICULUM & COURSE MODELS
+// ============================================
+
+enum CurriculumType {
+  CBC // Kenya Competency-Based Curriculum
+  CAMBRIDGE
+  IGCSE
+  IB
+  OTHER
+}
+
+enum CourseType {
+  // CBC-Based Courses
+  CBC_ENGLISH
+  CBC_MATH
+  CBC_SCIENCE
+  CBC_SOCIAL_STUDIES
+  CBC_KISWAHILI
+  CBC_RELIGIOUS_EDUCATION
+  CBC_CREATIVE_ARTS
+  CBC_PHYSICAL_EDUCATION
+
+  // Coding & Tech Courses
+  CODING_SCRATCH
+  CODING_WEB_DEV
+  CODING_AI_FOR_KIDS
+  CODING_PYTHON
+
+  // Robotics & Engineering
+  ROBOTICS_BASIC
+  ROBOTICS_ADVANCED
+
+  // Other
+  OTHER
+}
+
+// Curriculum Model: Represents a full curriculum (e.g., CBC Grade 7)
+model Curriculum {
+  id          String         @id @default(cuid())
+  name        String // e.g., "CBC Grade 7"
+  type        CurriculumType @default(CBC)
+  grade       String
+  description String?
+  isActive    Boolean        @default(true)
+  schoolId    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relationships
+  school  School?            @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  strands CurriculumStrand[]
+  courses Course[]
+
+  @@index([type, grade])
+  @@map("curriculums")
+}
+
+// Curriculum Strand: A major strand in the curriculum (e.g., "Numbers" in CBC Math)
+model CurriculumStrand {
+  id           String  @id @default(cuid())
+  curriculumId String
+  name         String // e.g., "Numbers"
+  description  String?
+  order        Int     @default(0)
+
+  // Relationships
+  curriculum Curriculum            @relation(fields: [curriculumId], references: [id], onDelete: Cascade)
+  substrands CurriculumSubstrand[]
+
+  @@map("curriculum_strands")
+}
+
+// Curriculum Substrand: A sub-topic within a strand (e.g., "Whole Numbers" under "Numbers")
+model CurriculumSubstrand {
+  id          String  @id @default(cuid())
+  strandId    String
+  name        String // e.g., "Whole Numbers"
+  description String?
+  order       Int     @default(0)
+
+  // Relationships
+  strand  CurriculumStrand   @relation(fields: [strandId], references: [id], onDelete: Cascade)
+  lessons CurriculumLesson[]
+
+  @@map("curriculum_substrands")
+}
+
+// Curriculum Lesson: A single lesson within a substrand
+model CurriculumLesson {
+  id          String   @id @default(cuid())
+  substrandId String
+  title       String
+  content     String? // JSON content for the lesson
+  objectives  String[]
+  duration    Int? // in minutes
+  order       Int      @default(0)
+  isCompleted Boolean  @default(false)
+
+  // Relationships
+  substrand CurriculumSubstrand @relation(fields: [substrandId], references: [id], onDelete: Cascade)
+
+  @@map("curriculum_lessons")
+}
+
+// Course Model: Represents a course (e.g., "Web Development for Grade 7", "CBC Math Grade 8")
+model Course {
+  id           String          @id @default(cuid())
+  title        String
+  description  String?
+  type         CourseType      @default(OTHER)
+  gradeLevel   String
+  difficulty   DifficultyLevel @default(EASY)
+  duration     String? // e.g., "12 weeks"
+  objectives   String[]
+  isActive     Boolean         @default(true)
+  schoolId     String?
+  curriculumId String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  // Relationships
+  school             School?                   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  curriculum         Curriculum?               @relation(fields: [curriculumId], references: [id], onDelete: SetNull)
+  assignments        CourseAssignment[]
+  lessons            CourseLesson[]
+  enrollments        CourseEnrollment[]
+  teacherAssignments TeacherCourseAssignment[]
+
+  @@index([type, gradeLevel])
+  @@map("courses")
+}
+
+// Course Lesson: A lesson within a course
+model CourseLesson {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String?
+  content     String? // JSON content for the lesson
+  order       Int      @default(0)
+  duration    Int? // in minutes
+  isCompleted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_lessons")
+}
+
+// Course Assignment: An assignment tied to a course
+model CourseAssignment {
+  id           String @id @default(cuid())
+  courseId     String
+  assignmentId String
+  order        Int    @default(0)
+
+  // Relationships
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, assignmentId])
+  @@map("course_assignments")
+}
+
+// Teacher Course Assignment: Assigns teachers to courses
+model TeacherCourseAssignment {
+  id         String   @id @default(cuid())
+  teacherId  String
+  courseId   String
+  isPrimary  Boolean  @default(false) // Is this the primary teacher for the course?
+  assignedAt DateTime @default(now())
+
+  // Relationships
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, courseId])
+  @@map("teacher_course_assignments")
+}
+
+// Course Enrollment: Enrolls students in courses
+model CourseEnrollment {
+  id         String   @id @default(cuid())
+  studentId  String
+  courseId   String
+  enrolledAt DateTime @default(now())
+  progress   Int      @default(0) // 0-100
+  status     String   @default("ACTIVE") // ACTIVE, COMPLETED, DROPPED
+
+  // Relationships
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course  Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, courseId])
+  @@map("course_enrollments")
+}
+
+// Learning Area: Represents a learning area/subject in the curriculum
+model LearningArea {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  schoolId    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@map("learning_areas")
+}
+
+// ============================================
+// INTEGRATION & INFRASTRUCTURE MODELS
+// ============================================
+
+// Model for external database connections
+model ExternalDatabase {
+  id          String        @id @default(cuid())
+  name        String
+  type        DatabaseType  @default(POSTGRESQL)
+  host        String
+  port        Int
+  database    String
+  username    String
+  password    String
+  ssl         Boolean       @default(true)
+  isActive    Boolean       @default(true)
+  description String?
+  config      Json? // Additional database-specific config
+  lastTested  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([type])
+  @@map("external_databases")
+}
+
+enum DatabaseType {
+  POSTGRESQL
+  MYSQL
+  MONGODB
+  SQLSERVER
+  REDIS
+  OTHER
+}
+
+// Email/SMS service configuration
+model CommunicationService {
+  id           String             @id @default(cuid())
+  name         String
+  type         CommunicationType
+  provider     CommunicationProvider
+  apiKey       String?
+  apiSecret    String?
+  fromEmail    String?
+  fromPhone    String?
+  isActive     Boolean            @default(true)
+  config       Json?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@map("communication_services")
+}
+
+enum CommunicationType {
+  EMAIL
+  SMS
+  BOTH
+}
+
+enum CommunicationProvider {
+  SENDGRID
+  MAILGUN
+  POSTMARK
+  TWILIO
+  AFRICASTALKING
+  NEXMO
+  OTHER
+}
+
+// Model for Redis configuration
+model RedisConfig {
+  id        String        @id @default(cuid())
+  name      String
+  host      String
+  port      Int
+  username  String?
+  password  String?
+  db        Int           @default(0)
+  ssl       Boolean       @default(true)
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@map("redis_configs")
 }

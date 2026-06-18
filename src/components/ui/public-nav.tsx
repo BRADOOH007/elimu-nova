@@ -2,134 +2,102 @@
 
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { Logo } from "@/components/ui/logo"
-import { Button } from "@/components/ui/button"
-import { Menu, X } from "lucide-react"
-import Link from "next/link"
+import { Logo } from '@/components/ui/logo'
+import { Button } from '@/components/ui/button'
+import { Menu, X, ArrowRight } from 'lucide-react'
+import Link from 'next/link'
+
+const NAV_LINKS = [
+  { to: '/about',   label: 'About'   },
+  { to: '/pricing', label: 'Pricing' },
+  { to: '/contact', label: 'Contact' },
+  { to: '/#faq',    label: 'FAQ'     },
+]
 
 export function PublicNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
   const isActive = (path: string) => {
-    if (path === '/#features') return pathname === '/' && typeof window !== 'undefined' && window.location.hash === '#features'
+    if (path.includes('#')) return false
     return pathname === path
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white/70 backdrop-blur-md shadow-lg">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-        <Link href="/">
-          <Logo size="md" />
-        </Link>
-        
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
-          <Link 
-            href="/#features" 
-            className={`font-medium transition-all duration-300 ${
-              isActive('/#features') 
-                ? 'elimunova-text-gradient scale-105' 
-                : 'text-gray-700 hover:elimunova-text-gradient hover:scale-105'
-            }`}
-          >
-            Features
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center">
+            <Logo variant="black" size="lg" />
           </Link>
-          <Link 
-            href="/pricing" 
-            className={`font-medium transition-all duration-300 ${
-              isActive('/pricing') 
-                ? 'elimunova-text-gradient scale-105' 
-                : 'text-gray-700 hover:elimunova-text-gradient hover:scale-105'
-            }`}
-          >
-            Pricing
-          </Link>
-          <Link 
-            href="/about" 
-            className={`font-medium transition-all duration-300 ${
-              isActive('/about') 
-                ? 'elimunova-text-gradient scale-105' 
-                : 'text-gray-700 hover:elimunova-text-gradient hover:scale-105'
-            }`}
-          >
-            About
-          </Link>
-        </nav>
-        
-        {/* Desktop Buttons */}
-        <div className="hidden md:flex items-center space-x-4">
-          <Link href="/auth/signin">
-            <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg">
-              Sign In
-            </Button>
-          </Link>
-          <Link href="/auth/signup">
-            <Button className="elimunova-button">
-              Get Started
-            </Button>
-          </Link>
-        </div>
 
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden p-2 text-gray-700 hover:bg-white/20 rounded-lg transition-colors"
-        >
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+          {/* Desktop nav */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {NAV_LINKS.map((n) => (
+              <Link
+                key={n.to}
+                href={n.to}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  isActive(n.to)
+                    ? 'text-slate-900 bg-slate-100'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                {n.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Desktop CTA */}
+          <div className="hidden lg:flex items-center gap-3">
+            <Link href="/auth/signin">
+              <Button
+                size="sm"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-full px-5 shadow-md shadow-purple-200"
+              >
+                Sign In <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className="lg:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-md">
-          <nav className="container mx-auto px-4 py-4 flex flex-col space-y-4">
-            <Link 
-              href="/#features" 
-              className={`font-medium py-2 transition-all duration-300 ${
-                isActive('/#features') 
-                  ? 'elimunova-text-gradient scale-105' 
-                  : 'text-gray-700 hover:elimunova-text-gradient active:scale-95'
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Features
-            </Link>
-            <Link 
-              href="/pricing" 
-              className={`font-medium py-2 transition-all duration-300 ${
-                isActive('/pricing') 
-                  ? 'elimunova-text-gradient scale-105' 
-                  : 'text-gray-700 hover:elimunova-text-gradient active:scale-95'
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Pricing
-            </Link>
-            <Link 
-              href="/about" 
-              className={`font-medium py-2 transition-all duration-300 ${
-                isActive('/about') 
-                  ? 'elimunova-text-gradient scale-105' 
-                  : 'text-gray-700 hover:elimunova-text-gradient active:scale-95'
-              }`}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              About
-            </Link>
-            <div className="pt-4 space-y-3">
-              <Link href="/auth/signin" className="block" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium transition-all duration-300 transform active:scale-95 shadow-md">
-                  Sign In
-                </Button>
+        <div className="lg:hidden border-t border-slate-200 bg-white shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 py-4 space-y-1">
+            {NAV_LINKS.map((item) => (
+              <Link
+                key={item.to}
+                href={item.to}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center px-4 py-3 text-base font-medium rounded-lg transition-colors ${
+                  isActive(item.to)
+                    ? 'text-slate-900 bg-slate-100'
+                    : 'text-slate-800 bg-slate-50 hover:bg-slate-100'
+                }`}
+              >
+                {item.label}
               </Link>
-              <Link href="/auth/signup" className="block" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full elimunova-button active:scale-95">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </nav>
+            ))}
+          </div>
+          <div className="max-w-7xl mx-auto px-4 pb-5 pt-2 border-t border-slate-100">
+            <Link href="/auth/signin" onClick={() => setMobileMenuOpen(false)}>
+              <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl py-3">
+                Sign In <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
     </header>

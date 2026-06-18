@@ -9,10 +9,13 @@ import { Textarea } from '@/components/ui/textarea'
 interface ComposeMessageModalProps {
   isOpen: boolean
   onClose: () => void
-  onSend: (data: { recipientId?: string; subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' }) => Promise<void>
-  recipientType: 'TEACHER' | 'STUDENT'
+  onSend: (data: { recipientId?: string; subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' }) => Promise<void>
+  recipientType: 'TEACHER' | 'STUDENT' | 'PARENT'
   recipients?: Array<{ id: string; name: string; email?: string }>
   defaultRecipient?: string
+  studentRecipients?: Array<{ id: string; name: string; email?: string }>
+  parentRecipients?: Array<{ id: string; name: string; email?: string }>
+  showRecipientTypeSelector?: boolean
 }
 
 export default function ComposeMessageModal({
@@ -21,16 +24,25 @@ export default function ComposeMessageModal({
   onSend,
   recipientType,
   recipients = [],
-  defaultRecipient
+  defaultRecipient,
+  studentRecipients = [],
+  parentRecipients = [],
+  showRecipientTypeSelector = false
 }: ComposeMessageModalProps) {
+  const [selectedRecipientType, setSelectedRecipientType] = useState<'TEACHER' | 'STUDENT' | 'PARENT'>(recipientType)
   const [recipientId, setRecipientId] = useState(defaultRecipient || '')
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
   const [sending, setSending] = useState(false)
 
+  // Get current recipients based on selected type
+  const currentRecipients = showRecipientTypeSelector
+    ? selectedRecipientType === 'STUDENT' ? studentRecipients : parentRecipients
+    : recipients
+
   if (!isOpen) return null
 
-  console.log('🎯 Compose Modal - Recipients:', recipients, 'Count:', recipients.length)
+  console.log('🎯 Compose Modal - Recipients:', currentRecipients, 'Count:', currentRecipients.length)
 
   const handleSend = async () => {
     if (!subject.trim() || !content.trim()) {
@@ -38,7 +50,7 @@ export default function ComposeMessageModal({
       return
     }
 
-    if (recipients.length > 0 && !recipientId) {
+    if (currentRecipients.length > 0 && !recipientId) {
       alert('Please select a recipient')
       return
     }
@@ -49,7 +61,7 @@ export default function ComposeMessageModal({
         recipientId: recipientId || undefined,
         subject,
         content,
-        recipientType
+        recipientType: showRecipientTypeSelector ? selectedRecipientType : recipientType
       })
       
       // Reset form
@@ -71,6 +83,7 @@ export default function ComposeMessageModal({
       setRecipientId(defaultRecipient || '')
       setSubject('')
       setContent('')
+      setSelectedRecipientType(recipientType)
       onClose()
     }
   }
@@ -88,7 +101,7 @@ export default function ComposeMessageModal({
               <div>
                 <h2 className="text-2xl font-bold">New Message</h2>
                 <p className="text-blue-100 text-sm">
-                  Send a message to {recipientType === 'TEACHER' ? 'your teacher' : 'a student'}
+                  Send a message to a {selectedRecipientType.toLowerCase()}
                 </p>
               </div>
             </div>
@@ -104,8 +117,27 @@ export default function ComposeMessageModal({
 
         {/* Content */}
         <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+          {/* Recipient Type Selector */}
+          {showRecipientTypeSelector && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <User className="w-4 h-4 text-blue-600" />
+                Recipient Type
+              </label>
+              <select
+                value={selectedRecipientType}
+                onChange={(e) => setSelectedRecipientType(e.target.value as any)}
+                disabled={sending}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="STUDENT">Student</option>
+                <option value="PARENT">Parent</option>
+              </select>
+            </div>
+          )}
+
           {/* Recipient Selection */}
-          {recipients.length > 0 && (
+          {currentRecipients.length > 0 && (
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
                 <User className="w-4 h-4 text-blue-600" />
@@ -117,8 +149,8 @@ export default function ComposeMessageModal({
                 disabled={sending}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <option value="">Select a {recipientType.toLowerCase()}...</option>
-                {recipients.map((recipient) => (
+                <option value="">Select a {selectedRecipientType.toLowerCase()}...</option>
+                {currentRecipients.map((recipient) => (
                   <option key={recipient.id} value={recipient.id}>
                     {recipient.name} {recipient.email && `(${recipient.email})`}
                   </option>

@@ -630,7 +630,7 @@ export default function SchoolAdminSettingsPage() {
 
       {/* Create Setting Modal */}
       {createModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">Create New Setting</h2>
             <div className="space-y-4">
@@ -713,7 +713,7 @@ export default function SchoolAdminSettingsPage() {
 
       {/* Edit Setting Modal */}
       {editModalOpen && selectedSetting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
             <h2 className="text-lg font-semibold mb-4">Edit Setting</h2>
             <div className="space-y-4">

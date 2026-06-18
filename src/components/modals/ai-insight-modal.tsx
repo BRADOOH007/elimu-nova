@@ -281,7 +281,7 @@ export default function AIInsightModal({ isOpen, onClose, onInsightUpdated, insi
                 <Label htmlFor="priority">Priority Level</Label>
                 <Select
                   value={priority}
-                  onValueChange={setPriority}
+                  onValueChange={setPriority as (value: string) => void}
                 >
                   <SelectTrigger className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-blue-500">
                     <SelectValue />

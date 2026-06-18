@@ -12,8 +12,11 @@ import {
   FileText,
   Calendar,
   Shield,
-  Bell
+  Bell,
+  LayoutGrid
 } from 'lucide-react'
+
+import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
 export default function SchoolAdminLayout({
   children,
@@ -24,27 +27,19 @@ export default function SchoolAdminLayout({
   const { schoolInfo, loading } = useSchoolInfo()
 
   const sidebarItems = [
-    { icon: BarChart3, label: "Dashboard", href: "/school-admin/dashboard" },
-    { icon: Users, label: "Teachers", href: "/school-admin/teachers" },
-    { icon: School, label: "Students", href: "/school-admin/students" },
-    { icon: Calendar, label: "Meetings", href: "/school-admin/meetings" },
-    { icon: Bell, label: "Activities", href: "/school-admin/activities" },
-    { icon: FileText, label: "Reports", href: "/school-admin/reports" },
-    { icon: CreditCard, label: "Billing", href: "/school-admin/billing" },
-    { icon: Settings, label: "Settings", href: "/school-admin/settings" },
-    { icon: Shield, label: "Security", href: "/school-admin/security" }
+    { icon: BarChart3,   label: "Overview",        href: "/school-admin/dashboard"   },
+    { icon: Users,       label: "Teachers & Staff",  href: "/school-admin/teachers"    },
+    { icon: School,      label: "Students",          href: "/school-admin/students"    },
+    { icon: Calendar,    label: "Academics",         href: "/school-admin/activities"  },
+    { icon: LayoutGrid,  label: "Timetable & Staff", href: "/school-admin/timetable"   },
+    { icon: Bell,        label: "Meetings",          href: "/school-admin/meetings"    },
+    { icon: FileText,    label: "Reports",           href: "/school-admin/reports"     },
+    { icon: Shield,      label: "Security",          href: "/school-admin/security"    },
+    { icon: CreditCard,  label: "Billing",           href: "/school-admin/billing"     },
+    { icon: Settings,    label: "Settings",          href: "/school-admin/settings"    },
   ]
 
-  if (!session || loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
-        </div>
-      </div>
-    )
-  }
+  if (!session || loading) return <DashboardLoading />
 
   return (
     <ProfessionalDashboardLayout

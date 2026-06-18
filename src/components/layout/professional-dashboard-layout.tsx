@@ -3,27 +3,29 @@
 import React, { useState, useEffect } from 'react'
 import { Logo } from "@/components/ui/logo"
 import { Button } from "@/components/ui/button"
-import { 
-  Bell, 
-  Settings, 
-  LogOut, 
-  Menu, 
+import {
+  Bell,
+  Settings,
+  LogOut,
+  Menu,
   X,
   User,
-  Clock,
-  Search
+  PanelLeftClose,
+  PanelLeftOpen
 } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react"
 import { NotificationsModal } from "@/components/modals/notifications-modal"
 import { SettingsModal } from "@/components/modals/settings-modal"
 import { UserProfileModal } from "@/components/modals/user-profile-modal"
-import { SearchResultsModal } from "@/components/modals/search-results-modal"
 import { Toaster } from "@/components/ui/toaster"
+import { DashboardSplash } from "@/components/ui/dashboard-splash"
+import { IdleLogoutWarning } from "@/components/ui/idle-logout-warning"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  userRole: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT'
+  userRole: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
   userName: string
   userEmail: string
   schoolName?: string
@@ -35,329 +37,261 @@ interface DashboardLayoutProps {
   }>
 }
 
-export function ProfessionalDashboardLayout({ 
-  children, 
-  userRole, 
-  userName, 
-  userEmail, 
+export function ProfessionalDashboardLayout({
+  children,
+  userRole,
+  userName,
+  userEmail,
   schoolName,
-  sidebarItems 
+  sidebarItems,
 }: DashboardLayoutProps) {
   const { data: session } = useSession()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [currentTime, setCurrentTime] = useState(new Date())
+  const pathname = usePathname()
+
+  const [sidebarOpen,    setSidebarOpen]    = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [profileOpen, setProfileOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [settingsOpen,   setSettingsOpen]   = useState(false)
+  const [profileOpen,    setProfileOpen]    = useState(false)
   const [unreadNotifications, setUnreadNotifications] = useState(0)
-  const [isClient, setIsClient] = useState(false)
+  const [showSplash, setShowSplash] = useState(true)
   const [userProfile, setUserProfile] = useState<{
     firstName: string
     lastName: string
     avatar?: string
-  }>({
-    firstName: userName,
-    lastName: '',
-    avatar: undefined
-  })
+  }>({ firstName: userName, lastName: '', avatar: undefined })
 
+  /* ── Splash min-timer ── */
   useEffect(() => {
-    setIsClient(true)
-    const timer = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-
-    return () => clearInterval(timer)
+    const t = setTimeout(() => setShowSplash(false), 2500)
+    return () => clearTimeout(t)
   }, [])
 
-  // Fetch user profile function
+  /* ── Profile fetch ── */
   const fetchUserProfile = async () => {
     if (!session?.user?.id) return
-    
     try {
-      const response = await fetch(`/api/user-profile?userId=${session.user.id}`)
-      if (response.ok) {
-        const profile = await response.json()
-        setUserProfile({
-          firstName: profile.firstName,
-          lastName: profile.lastName,
-          avatar: profile.avatar
-        })
+      const res = await fetch(`/api/user-profile?userId=${session.user.id}`)
+      if (res.ok) {
+        const p = await res.json()
+        setUserProfile({ firstName: p.firstName, lastName: p.lastName, avatar: p.avatar })
       }
-    } catch (error) {
-      console.error('Error fetching user profile:', error)
-    }
+    } catch { /* silent */ }
+    // Dismiss splash once profile attempt is done
+    setShowSplash(false)
+  }
+
+  /* ── Notifications fetch ── */
+  const fetchUnreadNotifications = async () => {
+    if (!session?.user?.id) return
+    try {
+      const res = await fetch(`/api/notifications?userId=${session.user.id}&limit=100`)
+      if (res.ok) {
+        const notifs = await res.json()
+        setUnreadNotifications(notifs.filter((n: any) => !n.isRead).length)
+      }
+    } catch { /* silent */ }
   }
 
   useEffect(() => {
     if (session?.user?.id) {
       fetchUserProfile()
-    }
-  }, [session?.user?.id])
-
-  useEffect(() => {
-    const fetchUnreadNotifications = async () => {
-      if (!session?.user?.id) return
-      
-      try {
-        const response = await fetch(`/api/notifications?userId=${session.user.id}&limit=100`)
-        if (response.ok) {
-          const notifications = await response.json()
-          const unread = notifications.filter((n: any) => !n.isRead).length
-          setUnreadNotifications(unread)
-        }
-      } catch (error) {
-        console.error('Error fetching notifications:', error)
-      }
-    }
-
-    if (session?.user?.id) {
       fetchUnreadNotifications()
     }
   }, [session?.user?.id])
 
-  const fetchUnreadNotifications = async () => {
-    try {
-      const response = await fetch(`/api/notifications?userId=${session?.user?.id}&limit=100`)
-      if (response.ok) {
-        const notifications = await response.json()
-        const unread = notifications.filter((n: any) => !n.isRead).length
-        setUnreadNotifications(unread)
-      }
-    } catch (error) {
-      console.error('Error fetching notifications:', error)
-    }
-  }
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      setSearchOpen(true)
-    }
-  }
-
-  const handleSearchInputClick = () => {
-    if (searchQuery.trim()) {
-      setSearchOpen(true)
-    }
-  }
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true
-    })
-  }
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
+  /* ── Helpers ── */
   const getRoleDisplayName = (role: string) => {
     switch (role) {
-      case 'SUPER_ADMIN': return 'Super Administrator'
+      case 'SUPER_ADMIN':  return 'Super Administrator'
       case 'SCHOOL_ADMIN': return 'School Administrator'
-      case 'TEACHER': return 'Teacher'
-      case 'STUDENT': return 'Student'
-      default: return role
+      case 'TEACHER':      return 'Teacher'
+      case 'STUDENT':      return 'Student'
+      case 'PARENT':       return 'Parent'
+      default:             return role
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
-      {/* Fixed Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-md">
+    <div className="min-h-screen bg-slate-50">
+
+      {/* ── SPLASH SCREEN ── */}
+      <DashboardSplash
+        role={userRole as any}
+        userName={userProfile.firstName || userName}
+        visible={showSplash}
+      />
+
+      {/* ── IDLE LOGOUT WARNING ── */}
+      <IdleLogoutWarning />
+
+      {/* ── HEADER ── */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
         <div className="flex items-center justify-between h-16 px-4">
-          {/* Left Section */}
-          <div className="flex items-center space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden"
+
+          {/* Left */}
+          <div className="flex items-center gap-3">
+            <button
+              className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              onClick={() => setSidebarOpen(v => !v)}
             >
-              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </Button>
-            
-            <Link href="/" className="hidden sm:block">
-              <Logo size="sm" />
-            </Link>
+              {sidebarOpen ? <X className="w-5 h-5 text-slate-600" /> : <Menu className="w-5 h-5 text-slate-600" />}
+            </button>
+            <button
+              className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              onClick={() => setSidebarCollapsed(v => !v)}
+            >
+              {sidebarCollapsed
+                ? <PanelLeftOpen className="w-5 h-5 text-slate-600" />
+                : <PanelLeftClose className="w-5 h-5 text-slate-600" />}
+            </button>
+            <Link href="/"><Logo size="md" /></Link>
           </div>
 
-          {/* Center Section - Search */}
-          <div className="flex-1 max-w-md mx-4 hidden md:block">
-            <form onSubmit={handleSearch} className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search schools, users, and more..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onClick={handleSearchInputClick}
-                className="w-full pl-10 pr-4 py-2 bg-white/70 backdrop-blur-sm rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white/90 transition-all duration-300 shadow-sm cursor-pointer"
-              />
-            </form>
-          </div>
+          {/* Spacer */}
+          <div className="flex-1" />
 
-          {/* Right Section */}
-          <div className="flex items-center space-x-4">
-            {/* Notifications */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="relative"
+          {/* Right */}
+          <div className="flex items-center gap-2">
+            <button
               onClick={() => setNotificationsOpen(true)}
+              className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="w-5 h-5 text-slate-600" />
               {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                   {unreadNotifications}
                 </span>
               )}
-            </Button>
+            </button>
 
-            {/* Settings */}
-            <Button 
-              variant="ghost" 
-              size="sm"
+            <button
               onClick={() => setSettingsOpen(true)}
+              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
             >
-              <Settings className="w-5 h-5" />
-            </Button>
+              <Settings className="w-5 h-5 text-slate-600" />
+            </button>
 
-            {/* User Menu */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2 ml-1">
               <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-slate-900 leading-tight">
                   {userProfile.firstName} {userProfile.lastName}
                 </p>
-                <p className="text-xs text-gray-500">{getRoleDisplayName(userRole)}</p>
+                <p className="text-xs text-slate-500">{getRoleDisplayName(userRole)}</p>
               </div>
               <button
                 onClick={() => setProfileOpen(true)}
-                className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center hover:from-blue-600 hover:to-purple-700 transition-all duration-300 overflow-hidden"
+                className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center overflow-hidden hover:opacity-90 transition-opacity"
               >
-                {userProfile.avatar ? (
-                  <img 
-                    src={userProfile.avatar} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="w-4 h-4 text-white" />
-                )}
+                {userProfile.avatar
+                  ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                  : <User className="w-4 h-4 text-white" />
+                }
               </button>
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => signOut()}
-                className="text-gray-500 hover:text-gray-700"
+                className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                title="Sign out"
               >
-                <LogOut className="w-4 h-4" />
-              </Button>
+                <LogOut className="w-4 h-4 text-slate-500" />
+              </button>
             </div>
           </div>
+
         </div>
       </header>
 
-      {/* Sidebar */}
-      <aside className={`fixed top-16 left-0 bottom-0 w-64 bg-gradient-to-b from-white via-blue-50 to-purple-50 shadow-xl backdrop-blur-md transform transition-transform duration-300 ease-in-out z-40 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0`}>
-        <div className="h-full flex flex-col">
-          {/* Welcome Bar */}
-          <div className="p-4 bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 shadow-sm border-0">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center overflow-hidden">
-                {userProfile.avatar ? (
-                  <img 
-                    src={userProfile.avatar} 
-                    alt="Profile" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User className="w-5 h-5 text-white" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  Welcome, {userProfile.firstName} {userProfile.lastName}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {schoolName || getRoleDisplayName(userRole)}
-                </p>
-              </div>
-            </div>
-            
-            {/* Real-time Clock */}
-            <div className="mt-3 p-3 bg-gradient-to-r from-white/80 to-blue-50/80 backdrop-blur-sm rounded-lg shadow-sm border-0">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-mono text-gray-700">
-                    {isClient ? formatTime(currentTime) : '--:--:-- --'}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-500">
-                  {isClient ? formatDate(currentTime) : 'Loading...'}
-                </div>
-              </div>
-            </div>
+      {/* ── SIDEBAR ── */}
+      <aside
+        className={`fixed top-16 left-0 bottom-0 z-40 flex flex-col bg-[#0f172a] border-r border-white/5 transition-all duration-200 ${
+          sidebarCollapsed ? 'w-16' : 'w-64'
+        } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+      >
+        {/* User strip */}
+        <div className={`flex items-center gap-3 px-3 py-4 border-b border-white/5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shrink-0 overflow-hidden">
+            {userProfile.avatar
+              ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+              : <span className="text-white font-bold text-sm">{(userProfile.firstName || userName).slice(0, 2).toUpperCase()}</span>
+            }
           </div>
-
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-            {sidebarItems.map((item, index) => (
-              <Link
-                key={index}
-                href={item.href}
-                className="flex items-center space-x-3 px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gradient-to-r hover:from-blue-100 hover:to-purple-100 hover:text-gray-900 transition-all duration-300 shadow-sm hover:shadow-md border-0"
-              >
-                <item.icon className="w-5 h-5" />
-                <span className="flex-1">{item.label}</span>
-                {item.badge && (
-                  <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Footer */}
-          <div className="p-4 bg-gradient-to-r from-gray-50 to-blue-50 shadow-sm">
-            <div className="text-xs text-gray-500 text-center">
-              ElimuNova AI v1.0
+          {!sidebarCollapsed && (
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white truncate">{userProfile.firstName} {userProfile.lastName}</p>
+              <p className="text-xs text-slate-400 truncate">{getRoleDisplayName(userRole)}</p>
             </div>
+          )}
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-4 px-2">
+          {!sidebarCollapsed && (
+            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">Navigation</p>
+          )}
+          <div className="space-y-0.5">
+            {sidebarItems.map((item, index) => {
+              const isActive = pathname === item.href || pathname?.startsWith(item.href + '/')
+              return (
+                <Link
+                  key={index}
+                  href={item.href}
+                  title={sidebarCollapsed ? item.label : undefined}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                    isActive
+                      ? 'bg-gradient-to-r from-blue-600/25 to-purple-600/25 text-white border border-blue-500/30'
+                      : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
+                  } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                >
+                  {isActive && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-gradient-to-b from-blue-400 to-purple-400" />
+                  )}
+                  <item.icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-500'}`} />
+                  {!sidebarCollapsed && (
+                    <>
+                      <span className="truncate flex-1">{item.label}</span>
+                      {item.badge != null && item.badge > 0 && (
+                        <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shrink-0">
+                          {item.badge}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {sidebarCollapsed && item.badge != null && item.badge > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+                  )}
+                </Link>
+              )
+            })}
           </div>
+        </nav>
+
+        {/* Footer sign out */}
+        <div className="border-t border-white/5 p-3">
+          <button
+            onClick={() => signOut()}
+            title={sidebarCollapsed ? 'Sign Out' : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-white/5 hover:text-slate-200 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!sidebarCollapsed && <span>Sign Out</span>}
+          </button>
         </div>
       </aside>
 
-      {/* Overlay for mobile */}
+      {/* Mobile overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Main Content */}
-      <main className="lg:ml-64 pt-16">
+      {/* ── MAIN CONTENT ── */}
+      <main className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'} pt-16`}>
         <div className="p-6">
           {children}
         </div>
       </main>
 
-      {/* Modals */}
+      {/* ── MODALS ── */}
       {session?.user?.id && (
         <>
           <NotificationsModal
@@ -377,28 +311,14 @@ export function ProfessionalDashboardLayout({
             onClose={() => setProfileOpen(false)}
             userId={session.user.id}
             onProfileUpdate={(profile) => {
-              // Update the user profile state to reflect changes in the header
-              setUserProfile({
-                firstName: profile.firstName,
-                lastName: profile.lastName,
-                avatar: profile.avatar
-              })
-              console.log('Profile updated in header:', profile)
-              
-              // Force a re-fetch to ensure data consistency
-              setTimeout(() => {
-                fetchUserProfile()
-              }, 500)
+              setUserProfile({ firstName: profile.firstName, lastName: profile.lastName, avatar: profile.avatar })
+              setTimeout(fetchUserProfile, 500)
             }}
-          />
-          <SearchResultsModal
-            isOpen={searchOpen}
-            onClose={() => setSearchOpen(false)}
-            initialQuery={searchQuery}
           />
           <Toaster />
         </>
       )}
+
     </div>
   )
 }

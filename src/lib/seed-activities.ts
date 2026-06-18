@@ -7,7 +7,7 @@ export async function seedActivities() {
       include: { user: true }
     })
 
-    if (!teacher) {
+    if (!teacher || !teacher.schoolId) {
       console.log('No teacher found to seed activities')
       return
     }

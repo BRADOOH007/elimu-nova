@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const { id } = await params;
     const body = await req.json();
-    const { content, attachments = [] } = body;
+    const { content, attachments = [], startedAt, timeSpent } = body;
 
     // Get student profile
     const student = await prisma.student.findUnique({
@@ -124,7 +124,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         content,
         attachments,
         assignmentId: id,
-        studentId: student.id
+        studentId: student.id,
+        startedAt: startedAt ? new Date(startedAt) : undefined,
+        timeSpent: timeSpent ? parseInt(timeSpent) : undefined
       },
       include: {
         student: {
@@ -137,47 +139,48 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             }
           }
         },
-        assignment: {
-          select: {
-            title: true,
-            dueDate: true,
-            description: true,
-            content: true
-          }
-        }
+        assignment: true
       }
     });
 
-    // Auto-grade using AI
+    // Auto-grade using AI if assignment is AI-gradable
     let updatedSubmission = submission
-    try {
-      const rubricData = await findBestRubricForAssignment(submission.assignment)
-      const grading = await OpenAIService.gradeSubmission({
-        assignmentTitle: submission.assignment.title,
-        assignmentInstructions: (submission as any).assignment.description || '',
-        submissionContent: content,
-        rubric: rubricData ? JSON.stringify(rubricData) : undefined,
-        maxPoints: 100
-      })
+    if (assignment.aiGradeable) {
+      try {
+        const rubricData = await findBestRubricForAssignment(submission.assignment)
+        const grading = await OpenAIService.gradeSubmission({
+          assignmentTitle: submission.assignment.title,
+          assignmentInstructions: submission.assignment.description || '',
+          submissionContent: content,
+          rubric: rubricData ? JSON.stringify(rubricData) : undefined,
+          answerKey: assignment.answerKey || undefined,
+          maxPoints: 100
+        })
 
-      updatedSubmission = await prisma.submission.update({
-        where: { id: submission.id },
-        data: {
-          grade: grading.grade,
-          feedback: grading.feedback,
-          gradedAt: new Date()
-        },
-        include: {
-          student: {
-            include: {
-              user: { select: { firstName: true, lastName: true } }
-            }
+        updatedSubmission = await prisma.submission.update({
+          where: { id: submission.id },
+          data: {
+            grade: grading.grade,
+            feedback: grading.feedback,
+            status: 'GRADED',
+            gradedAt: new Date(),
+            isAiGraded: true,
+            aiGradingMetadata: grading,
+            aiConfidence: grading.confidence,
+            questionScores: grading.questionScores,
+            needsRevision: grading.needsRevision,
+            revisionNotes: grading.revisionNotes
           },
-          assignment: { select: { title: true, dueDate: true } }
-        }
-      })
-    } catch (e) {
-      console.error('AI grading failed:', e)
+          include: {
+            student: {
+              include: { user: { select: { firstName: true, lastName: true } } }
+            },
+            assignment: true
+          }
+        })
+      } catch (e) {
+        console.error('AI grading failed:', e)
+      }
     }
 
     // Format response
@@ -189,6 +192,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       feedback: updatedSubmission.feedback,
       submittedAt: updatedSubmission.submittedAt,
       gradedAt: updatedSubmission.gradedAt,
+      startedAt: updatedSubmission.startedAt,
+      timeSpent: updatedSubmission.timeSpent,
+      isAiGraded: updatedSubmission.isAiGraded,
+      aiGradingMetadata: updatedSubmission.aiGradingMetadata,
+      aiConfidence: updatedSubmission.aiConfidence,
+      questionScores: updatedSubmission.questionScores,
+      needsRevision: updatedSubmission.needsRevision,
+      revisionNotes: updatedSubmission.revisionNotes,
       student: {
         id: updatedSubmission.student.id,
         name: `${updatedSubmission.student.user.firstName} ${updatedSubmission.student.user.lastName}`

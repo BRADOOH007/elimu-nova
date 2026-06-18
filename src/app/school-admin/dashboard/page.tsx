@@ -335,7 +335,7 @@ export default function SchoolAdminDashboard() {
       <div className="mb-8">
         <h1 className="text-2xl md:text-3xl font-bold mb-2">
           <span className="edugenius-text-gradient">
-            {schoolData?.school?.name ? `${schoolData.school.name} Dashboard` : 'School Admin Dashboard'}
+            {schoolData?.school?.name ? `${schoolData.school.name} Overview` : 'School Admin Overview'}
           </span>
         </h1>
         <p className="text-gray-600 text-sm md:text-base">
@@ -408,6 +408,14 @@ export default function SchoolAdminDashboard() {
               >
                 <Calendar className="w-4 h-4 mr-2" />
                 Schedule Meeting
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full edugenius-glass justify-start"
+                onClick={() => window.location.href = '/school-admin/credentials'}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Credential Generator
               </Button>
             </CardContent>
           </Card>

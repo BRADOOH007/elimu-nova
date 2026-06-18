@@ -161,6 +161,38 @@ Make it feel like a caring teacher is talking directly to the student. Use "you"
 
         break;
 
+      case 'exam':
+        generatedTitle = `Exam: ${topic}`;
+        const curriculumText = format === 'cbc' 
+          ? 'Kenya Competency-Based Curriculum (CBC)' 
+          : format === 'commoncore' 
+            ? 'US Common Core State Standards' 
+            : 'general educational standards';
+        
+        prompt = `Create a comprehensive ${subject} exam for ${grade} students on the topic: ${topic}.
+
+Curriculum Standard: ${curriculumText}
+Duration: ${duration || 60} minutes
+Difficulty: ${difficulty || 'medium'}
+${requirements ? `Additional Requirements: ${requirements}` : ''}
+
+Please include:
+1. Clear instructions for students
+2. Multiple question types:
+   - 5-10 Multiple Choice Questions (MCQ)
+   - 3-5 True/False Questions
+   - 3-5 Short Answer Questions
+   - 1-2 Essay Questions (for higher grades)
+3. Marking scheme or point values for each question
+4. Answer key
+5. Clear learning objectives being assessed
+6. Space for student name and date
+7. Time management suggestions
+
+Make it age-appropriate, challenging but achievable, and aligned with the curriculum. Include clear sections with headings.`;
+
+        break;
+
       case 'project':
         generatedTitle = `Project: ${topic}`;
         prompt = `Create a comprehensive project-based learning activity for ${subject} (${grade}) on the theme: ${topic}.
@@ -277,7 +309,7 @@ Make it practical, clear, and focused on what students need to DO.`;
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer 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',
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'http://localhost:3000',
           'X-Title': 'EduGenius AI'
@@ -335,7 +367,7 @@ Make it comprehensive, engaging, and appropriate for ${context.grade} level stud
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer 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',
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': 'http://localhost:3000',
         'X-Title': 'EduGenius AI'

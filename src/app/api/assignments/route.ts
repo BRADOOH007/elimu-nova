@@ -81,6 +81,7 @@ export async function GET(req: NextRequest) {
             grade: true
           }
         },
+        class: true,
         students: {
           include: {
             user: {
@@ -128,6 +129,18 @@ export async function GET(req: NextRequest) {
       status: assignment.status,
       createdAt: assignment.createdAt,
       updatedAt: assignment.updatedAt,
+      // Timed exam fields
+      isTimed: assignment.isTimed,
+      timeLimit: assignment.timeLimit,
+      startTime: assignment.startTime,
+      // AI grading fields
+      rubricId: assignment.rubricId,
+      aiGradeable: assignment.aiGradeable,
+      answerKey: assignment.answerKey,
+      // Metadata
+      classId: assignment.classId,
+      subject: assignment.subject,
+      grade: assignment.grade,
       teacher: {
         id: assignment.teacher.id,
         name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
@@ -138,6 +151,10 @@ export async function GET(req: NextRequest) {
         title: assignment.lessonPlan.title,
         subject: assignment.lessonPlan.subject,
         grade: assignment.lessonPlan.grade
+      } : null,
+      class: assignment.class ? {
+        id: assignment.class.id,
+        name: assignment.class.name
       } : null,
       students: assignment.students.map(student => ({
         id: student.id,
@@ -151,6 +168,16 @@ export async function GET(req: NextRequest) {
         feedback: submission.feedback,
         submittedAt: submission.submittedAt,
         gradedAt: submission.gradedAt,
+        // Timed exam
+        startedAt: submission.startedAt,
+        timeSpent: submission.timeSpent,
+        // AI grading
+        isAiGraded: submission.isAiGraded,
+        aiGradingMetadata: submission.aiGradingMetadata,
+        aiConfidence: submission.aiConfidence,
+        questionScores: submission.questionScores,
+        needsRevision: submission.needsRevision,
+        revisionNotes: submission.revisionNotes,
         student: {
           id: submission.student.id,
           name: `${submission.student.user.firstName} ${submission.student.user.lastName}`
@@ -183,7 +210,23 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { title, description, content, dueDate, lessonPlanId, studentIds } = body;
+    const { 
+      title, 
+      description, 
+      content, 
+      dueDate, 
+      lessonPlanId, 
+      studentIds,
+      isTimed,
+      timeLimit,
+      startTime,
+      rubricId,
+      aiGradeable,
+      answerKey,
+      classId,
+      subject,
+      grade
+    } = body;
 
     // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
@@ -203,6 +246,15 @@ export async function POST(req: NextRequest) {
         dueDate: new Date(dueDate),
         teacherId: teacher.id,
         lessonPlanId: lessonPlanId || null,
+        isTimed: isTimed || false,
+        timeLimit: timeLimit || null,
+        startTime: startTime ? new Date(startTime) : null,
+        rubricId: rubricId || null,
+        aiGradeable: aiGradeable || false,
+        answerKey: answerKey || null,
+        classId: classId || null,
+        subject: subject || null,
+        grade: grade || null,
         students: studentIds ? {
           connect: studentIds.map((id: string) => ({ id }))
         } : undefined
@@ -236,6 +288,7 @@ export async function POST(req: NextRequest) {
             }
           }
         },
+        class: true,
         _count: {
           select: {
             submissions: true,
@@ -255,6 +308,18 @@ export async function POST(req: NextRequest) {
       status: assignment.status,
       createdAt: assignment.createdAt,
       updatedAt: assignment.updatedAt,
+      // Timed exam fields
+      isTimed: assignment.isTimed,
+      timeLimit: assignment.timeLimit,
+      startTime: assignment.startTime,
+      // AI grading fields
+      rubricId: assignment.rubricId,
+      aiGradeable: assignment.aiGradeable,
+      answerKey: assignment.answerKey,
+      // Metadata
+      classId: assignment.classId,
+      subject: assignment.subject,
+      grade: assignment.grade,
       teacher: {
         id: assignment.teacher.id,
         name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
@@ -265,6 +330,10 @@ export async function POST(req: NextRequest) {
         title: assignment.lessonPlan.title,
         subject: assignment.lessonPlan.subject,
         grade: assignment.lessonPlan.grade
+      } : null,
+      class: assignment.class ? {
+        id: assignment.class.id,
+        name: assignment.class.name
       } : null,
       students: assignment.students.map(student => ({
         id: student.id,

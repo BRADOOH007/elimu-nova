@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { FormattedMessage } from "@/components/ai/formatted-message"
+import { PreviousLearningRecap } from "@/components/ui/previous-learning-recap"
+import { LessonCompletionCelebration } from "@/components/ui/lesson-completion-celebration"
 import { 
   Brain, 
   Send, 
@@ -67,6 +69,7 @@ export default function AutonomousAITutorPage() {
     totalQuestions: 0,
     correctAnswers: 0
   })
+  const [showCelebration, setShowCelebration] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   // Scroll to bottom when messages change
@@ -159,6 +162,13 @@ export default function AutonomousAITutorPage() {
           ...prev,
           xp: prev.xp + data.xpEarned
         }))
+        // Show celebration every 100 XP milestone
+        setStats(prev => {
+          if ((prev.xp + data.xpEarned) % 100 < data.xpEarned) {
+            setShowCelebration(true)
+          }
+          return prev
+        })
       }
 
     } catch (err) {
@@ -225,6 +235,18 @@ export default function AutonomousAITutorPage() {
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
+
+      {/* Celebration overlay */}
+      <LessonCompletionCelebration
+        show={showCelebration}
+        lessonTitle={currentTask ? `${currentTask.subject}: ${currentTask.topic}` : undefined}
+        xpEarned={stats.xp}
+        onClose={() => setShowCelebration(false)}
+        onNext={() => { setShowCelebration(false); loadCurrentTask() }}
+      />
+
+      {/* Previous learning recap */}
+      <PreviousLearningRecap onStart={loadCurrentTask} />
       {/* Header with Stats */}
       <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-cyan-50 rounded-3xl p-6 shadow-lg">
         <div className="flex items-center justify-between">

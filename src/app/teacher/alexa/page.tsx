@@ -20,7 +20,9 @@ import {
   Trash2,
   Copy,
   Download,
-  Upload
+  Upload,
+  Volume2,
+  VolumeX
 } from 'lucide-react'
 
 interface Message {
@@ -42,12 +44,102 @@ export default function HopePage() {
   ])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isListening, setIsListening] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false)
   const [chatHistory, setChatHistory] = useState<Message[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [isUserScrolling, setIsUserScrolling] = useState(false)
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true)
+  const recognitionRef = useRef<any>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+
+  // Auto-play TTS for new AI messages when voice is enabled
+  useEffect(() => {
+    if (isVoiceEnabled && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.type === 'assistant' && !lastMessage.isTyping) {
+        playTextToSpeech(lastMessage.content);
+      }
+    }
+  }, [messages, isVoiceEnabled]);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition()
+      recognition.continuous = false
+      recognition.interimResults = true
+      recognition.lang = 'en-US'
+
+      recognition.onstart = () => {
+        setIsRecording(true)
+      }
+
+      recognition.onresult = (event: any) => {
+        let transcript = ''
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript
+        }
+        setInputMessage(transcript)
+      }
+
+      recognition.onend = () => {
+        setIsRecording(false)
+      }
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error)
+        setIsRecording(false)
+      }
+
+      recognitionRef.current = recognition
+    }
+  }, []);
+
+  const playTextToSpeech = (text: string) => {
+    if (isPlaying || !('speechSynthesis' in window)) return;
+
+    try {
+      setIsPlaying(true);
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v =>
+        v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Microsoft'))
+      ) || voices.find(v => v.lang.startsWith('en'));
+      if (preferredVoice) utterance.voice = preferredVoice;
+
+      utterance.onend = () => setIsPlaying(false);
+      utterance.onerror = () => setIsPlaying(false);
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.error('Error playing TTS:', error);
+      setIsPlaying(false);
+    }
+  };
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      alert('Speech recognition is not supported in your browser.');
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
+
+
 
   const scrollToBottom = (force = false) => {
     if (force || shouldAutoScroll) {
@@ -296,14 +388,24 @@ export default function HopePage() {
                                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                               {message.type === 'assistant' && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => copyMessage(message.content)}
-                                  className="h-6 w-6 p-0 hover:bg-gray-100"
-                                >
-                                  <Copy className="w-3 h-3" />
-                                </Button>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => playTextToSpeech(message.content)}
+                                    className="h-6 w-6 p-0 hover:bg-gray-100"
+                                  >
+                                    <Volume2 className="w-3 h-3" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => copyMessage(message.content)}
+                                    className="h-6 w-6 p-0 hover:bg-gray-100"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               )}
                             </div>
                           </>
@@ -338,21 +440,37 @@ export default function HopePage() {
                       onChange={(e) => setInputMessage(e.target.value)}
                       onKeyPress={handleKeyPress}
                       placeholder="Ask Hope anything about teaching..."
-                      className="pr-12 bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-blue-500"
+                      className="pr-24 bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-blue-500"
                       disabled={isLoading}
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
-                      onClick={() => setIsListening(!isListening)}
-                    >
-                      {isListening ? (
-                        <MicOff className="w-4 h-4 text-red-500" />
-                      ) : (
-                        <Mic className="w-4 h-4 text-gray-500" />
-                      )}
-                    </Button>
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                      {/* Voice Enable/Disable */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => setIsVoiceEnabled(!isVoiceEnabled)}
+                      >
+                        {isVoiceEnabled ? (
+                          <Volume2 className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <VolumeX className="w-4 h-4 text-gray-500" />
+                        )}
+                      </Button>
+                      {/* Microphone */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={`h-6 w-6 p-0 ${isRecording ? 'animate-pulse' : ''}`}
+                        onClick={toggleRecording}
+                      >
+                        {isRecording ? (
+                          <MicOff className="w-4 h-4 text-red-500" />
+                        ) : (
+                          <Mic className="w-4 h-4 text-gray-500" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   <Button
                     onClick={handleSendMessage}

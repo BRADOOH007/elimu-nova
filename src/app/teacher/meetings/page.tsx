@@ -1,9 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { 
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { 
   Select,
   SelectContent,
@@ -24,7 +28,10 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  Plus,
+  Video,
+  Link2
 } from 'lucide-react'
 
 interface Meeting {
@@ -63,6 +70,16 @@ export default function TeacherMeetingsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [timeFilter, setTimeFilter] = useState('all')
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [newMeeting, setNewMeeting] = useState({
+    title: '',
+    description: '',
+    date: '',
+    time: '',
+    duration: 60,
+    location: '',
+    zoomLink: ''
+  })
 
   useEffect(() => {
     fetchMeetings()
@@ -182,22 +199,146 @@ export default function TeacherMeetingsPage() {
     }
   }
 
+  const handleCreateMeeting = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/teacher/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: newMeeting.title,
+          description: newMeeting.description,
+          date: newMeeting.date,
+          time: newMeeting.time,
+          duration: newMeeting.duration,
+          location: newMeeting.location,
+          zoomLink: newMeeting.zoomLink
+        }),
+      })
+
+      if (response.ok) {
+        await fetchMeetings()
+        setCreateDialogOpen(false)
+        setNewMeeting({
+          title: '',
+          description: '',
+          date: '',
+          time: '',
+          duration: 60,
+          location: '',
+          zoomLink: ''
+        })
+      }
+    } catch (error) {
+      console.error('Error creating meeting:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Meetings</h1>
-          <p className="text-gray-600">View and manage your upcoming meetings</p>
+          <h1 className="text-3xl font-bold text-gray-900">Live Classes</h1>
+          <p className="text-gray-600">Schedule and manage your live classes</p>
         </div>
-        <Button onClick={fetchMeetings} disabled={loading} variant="outline">
-          {loading ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4 mr-2" />
-          )}
-          Refresh
-        </Button>
+        <div className="flex gap-3">
+          <Button onClick={fetchMeetings} disabled={loading} variant="outline">
+            {loading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Refresh
+          </Button>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Live Class
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Create Live Class</DialogTitle>
+                <DialogDescription>
+                  Schedule a new live class with your students
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="title">Class Title</Label>
+                  <Input
+                    id="title"
+                    placeholder="e.g., Math Lesson: Algebra"
+                    value={newMeeting.title}
+                    onChange={(e) => setNewMeeting({ ...newMeeting, title: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Input
+                    id="description"
+                    placeholder="What will be covered in this class?"
+                    value={newMeeting.description}
+                    onChange={(e) => setNewMeeting({ ...newMeeting, description: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="date">Date</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={newMeeting.date}
+                      onChange={(e) => setNewMeeting({ ...newMeeting, date: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="time">Time</Label>
+                    <Input
+                      id="time"
+                      type="time"
+                      value={newMeeting.time}
+                      onChange={(e) => setNewMeeting({ ...newMeeting, time: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="duration">Duration (minutes)</Label>
+                  <Input
+                    id="duration"
+                    type="number"
+                    value={newMeeting.duration}
+                    onChange={(e) => setNewMeeting({ ...newMeeting, duration: parseInt(e.target.value) })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="zoomLink">Zoom Link</Label>
+                  <Input
+                    id="zoomLink"
+                    placeholder="https://zoom.us/j/..."
+                    value={newMeeting.zoomLink}
+                    onChange={(e) => setNewMeeting({ ...newMeeting, zoomLink: e.target.value })}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  onClick={handleCreateMeeting}
+                >
+                  Create Class
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filters */}
@@ -338,6 +479,20 @@ export default function TeacherMeetingsPage() {
                         <p className="text-gray-700 mb-4">{meeting.description}</p>
                       )}
 
+                      {meeting.location && (
+                        <div className="mb-4 flex items-center gap-2">
+                          <Link2 className="w-4 h-4 text-blue-600" />
+                          <a 
+                            href={meeting.location} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline text-sm"
+                          >
+                            {meeting.location}
+                          </a>
+                        </div>
+                      )}
+
                       {/* Progress Bar for Scheduled Meetings */}
                       {meeting.status === 'SCHEDULED' && (
                         <div className="mb-4">
@@ -375,9 +530,31 @@ export default function TeacherMeetingsPage() {
                     </div>
                   </div>
                   
-                  <Button size="sm" variant="ghost">
-                    <Eye className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      onClick={() => router.push(`/teacher/meetings/${meeting.id}`)}
+                    >
+                      <Video className="w-4 h-4 mr-1" />
+                      {meeting.status === 'IN_PROGRESS' ? 'Join' : 'Start'}
+                    </Button>
+                    {meeting.location && (
+                      <a 
+                        href={meeting.location} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        <Button size="sm" variant="outline">
+                          <Video className="w-4 h-4 mr-1" />
+                          Zoom
+                        </Button>
+                      </a>
+                    )}
+                    <Button size="sm" variant="ghost">
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

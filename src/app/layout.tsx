@@ -27,14 +27,14 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/elimunova.png?t=20241120', sizes: '32x32', type: 'image/png' },
-      { url: '/elimunova.png?t=20241120', sizes: '16x16', type: 'image/png' },
-      { url: '/elimunova.png?t=20241120', sizes: '192x192', type: 'image/png' },
-      { url: '/elimunova.png?t=20241120', sizes: '512x512', type: 'image/png' },
+      { url: '/logo-64.png', sizes: '32x32',   type: 'image/png' },
+      { url: '/logo-64.png', sizes: '16x16',   type: 'image/png' },
+      { url: '/logo-64.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logo-64.png', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/elimunova.png?t=20241120',
+    shortcut: '/logo-64.png',
     apple: [
-      { url: '/elimunova.png?t=20241120', sizes: '180x180', type: 'image/png' },
+      { url: '/logo-64.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   manifest: '/manifest.json',
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     title: "ElimuNova AI - Intelligent Education Platform",
     description: "Transform education with AI-powered lesson plans, schemes of work, and personalized learning experiences.",
     type: "website",
-    images: ['/elimunova.png'],
+    images: ['/logo-64.png'],
   },
 };
 
@@ -54,11 +54,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="light" style={{ colorScheme: 'light' }}>
       <head>
-        <link rel="icon" href="/elimunova.png?t=20241120" type="image/png" sizes="32x32" />
-        <link rel="icon" href="/elimunova.png?t=20241120" type="image/png" sizes="16x16" />
-        <link rel="shortcut icon" href="/elimunova.png?t=20241120" type="image/png" />
-        <link rel="apple-touch-icon" href="/elimunova.png?t=20241120" />
-        <meta name="msapplication-TileImage" content="/elimunova.png?t=20241120" />
+        <link rel="icon" href="/logo-64.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/logo-64.png" type="image/png" sizes="16x16" />
+        <link rel="shortcut icon" href="/logo-64.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/logo-64.png" />
+        <meta name="msapplication-TileImage" content="/logo-64.png" />
         <meta name="msapplication-TileColor" content="#667eea" />
       </head>
       <body

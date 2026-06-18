@@ -85,7 +85,7 @@ export class PowerPointGenerator {
     }
 
     // Generate the PowerPoint file
-    const buffer = await this.pptx.write('nodebuffer');
+    const buffer = await (this.pptx as any).write('nodebuffer');
     return buffer as Buffer;
   }
 

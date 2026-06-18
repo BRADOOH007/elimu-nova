@@ -308,7 +308,7 @@ export class TutorOrchestrator {
           ? session.correctAnswers + 1
           : session.correctAnswers,
         xpEarned: session.xpEarned + xpEarned,
-        currentQuestion: null
+        currentQuestion: undefined
       }
     })
 
@@ -595,43 +595,53 @@ Respond in JSON format:
     topic: string,
     isCorrect: boolean
   ) {
-    const progress = await prisma.studentProgress.upsert({
+    // First try to find existing progress
+    let progress = await prisma.studentProgress.findFirst({
       where: {
-        studentId_classId_subject_topic: {
-          studentId: this.studentId,
-          classId: this.classId,
-          subject,
-          topic
-        }
-      },
-      create: {
         studentId: this.studentId,
         classId: this.classId,
-        teacherId: '', // Will be set by caller
         subject,
-        topic,
-        masteryScore: isCorrect ? 5 : 0,
-        totalQuestions: 1,
-        correctAnswers: isCorrect ? 1 : 0,
-        xp: isCorrect ? 10 : 2,
-        lastPracticedAt: new Date()
-      },
-      update: {
-        masteryScore: {
-          increment: isCorrect ? 5 : -3
-        },
-        totalQuestions: {
-          increment: 1
-        },
-        correctAnswers: {
-          increment: isCorrect ? 1 : 0
-        },
-        xp: {
-          increment: isCorrect ? 10 : 2
-        },
-        lastPracticedAt: new Date()
+        topic
       }
-    })
+    });
+
+    if (progress) {
+      // Update existing
+      progress = await prisma.studentProgress.update({
+        where: { id: progress.id },
+        data: {
+          masteryScore: {
+            increment: isCorrect ? 5 : -3
+          },
+          totalQuestions: {
+            increment: 1
+          },
+          correctAnswers: {
+            increment: isCorrect ? 1 : 0
+          },
+          xp: {
+            increment: isCorrect ? 10 : 2
+          },
+          lastPracticedAt: new Date()
+        }
+      });
+    } else {
+      // Create new
+      progress = await prisma.studentProgress.create({
+        data: {
+          studentId: this.studentId,
+          classId: this.classId,
+          teacherId: '', // Will be set by caller
+          subject,
+          topic,
+          masteryScore: isCorrect ? 5 : 0,
+          totalQuestions: 1,
+          correctAnswers: isCorrect ? 1 : 0,
+          xp: isCorrect ? 10 : 2,
+          lastPracticedAt: new Date()
+        }
+      });
+    }
 
     // Ensure mastery score stays in 0-100 range
     if (progress.masteryScore > 100) {

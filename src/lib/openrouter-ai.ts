@@ -1,6 +1,6 @@
 import { OpenAIService } from './openai-service'
 
-const OPENROUTER_API_KEY = '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'
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 
 interface OpenAIMessage {

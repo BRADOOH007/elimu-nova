@@ -113,10 +113,10 @@ export function CreateSchoolModal({ isOpen, onClose, onSchoolCreated }: CreateSc
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <School className="w-6 h-6 text-blue-600" />
             <h2 className="text-xl font-semibold text-gray-900">Add New School</h2>
@@ -126,8 +126,8 @@ export function CreateSchoolModal({ isOpen, onClose, onSchoolCreated }: CreateSc
           </Button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="overflow-y-auto max-h-96 p-6">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto p-6">
             <div className="space-y-6">
               {/* School Information */}
               <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
@@ -203,7 +203,7 @@ export function CreateSchoolModal({ isOpen, onClose, onSchoolCreated }: CreateSc
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
             <Button variant="outline" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>

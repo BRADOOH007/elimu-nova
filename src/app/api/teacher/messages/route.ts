@@ -23,12 +23,14 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Teacher found:', teacher.id)
 
-    // Get messages for this teacher (both sent and received)
+    // Get messages for this teacher (both sent and received, including parent messages)
     const messages = await prisma.message.findMany({
       where: {
         OR: [
           { recipientId: teacher.id, recipientType: 'TEACHER' },
-          { senderId: teacher.id, senderType: 'TEACHER' }
+          { senderId: teacher.id, senderType: 'TEACHER' },
+          // Parents can also message teachers directly using the teacher's userId
+          { recipientId: session.user.id, recipientType: 'TEACHER' },
         ]
       },
       orderBy: {
@@ -69,6 +71,28 @@ export async function GET(request: NextRequest) {
             }
           }
         } 
+        // If message is from parent
+        else if (message.senderType === 'PARENT') {
+          const parent = await prisma.parent.findUnique({
+            where: { id: message.senderId },
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  avatar: true
+                }
+              }
+            }
+          })
+          if (parent) {
+            senderInfo = {
+              name: `${parent.user.firstName} ${parent.user.lastName}`,
+              role: 'Parent',
+              avatar: parent.user.avatar
+            }
+          }
+        }
         // If message is from teacher (sent by current user)
         else if (message.senderType === 'TEACHER' && message.senderId === teacher.id) {
           senderInfo = {

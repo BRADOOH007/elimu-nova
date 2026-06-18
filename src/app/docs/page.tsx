@@ -1,150 +1,88 @@
-import { PublicNav } from "@/components/ui/public-nav"
-import { Logo } from "@/components/ui/logo"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { BookOpen, Code, Zap, Users, ArrowRight } from "lucide-react"
-import Link from "next/link"
+import { PublicLayout } from '@/components/ui/public-layout'
+import { BookOpen, Code, Zap, Users, ArrowRight, Sparkles } from 'lucide-react'
+
+const SECTIONS = [
+  {
+    title: 'Getting Started',
+    description: 'Learn the basics and set up your account',
+    icon: BookOpen,
+    grad: 'from-blue-600 to-purple-600',
+    articles: ['Quick Start Guide', 'Account Setup', 'First Lesson Plan', 'Understanding the Dashboard'],
+  },
+  {
+    title: 'AI Features',
+    description: 'Master our AI-powered tools',
+    icon: Zap,
+    grad: 'from-purple-600 to-pink-600',
+    articles: ['Lesson Plan Generator', 'Scheme of Work Creator', 'Hope AI Assistant', 'Assignment Generator'],
+  },
+  {
+    title: 'API Reference',
+    description: 'Integrate with our API',
+    icon: Code,
+    grad: 'from-pink-600 to-rose-600',
+    articles: ['Authentication', 'Endpoints', 'SDKs', 'Rate Limits'],
+  },
+  {
+    title: 'User Management',
+    description: 'Manage users and permissions',
+    icon: Users,
+    grad: 'from-rose-600 to-orange-600',
+    articles: ['Adding Students', 'Teacher Management', 'School Administration', 'Role Permissions'],
+  },
+]
 
 export default function DocsPage() {
-  const sections = [
-    {
-      title: "Getting Started",
-      description: "Learn the basics and set up your account",
-      icon: BookOpen,
-      articles: ["Quick Start Guide", "Account Setup", "First Lesson Plan", "Understanding the Dashboard"]
-    },
-    {
-      title: "AI Features",
-      description: "Master our AI-powered tools",
-      icon: Zap,
-      articles: ["Lesson Plan Generator", "Scheme of Work Creator", "Hope AI Assistant", "Assignment Generator"]
-    },
-    {
-      title: "API Reference",
-      description: "Integrate with our API",
-      icon: Code,
-      articles: ["Authentication", "Endpoints", "SDKs", "Rate Limits"]
-    },
-    {
-      title: "User Management",
-      description: "Manage users and permissions",
-      icon: Users,
-      articles: ["Adding Students", "Teacher Management", "School Administration", "Role Permissions"]
-    }
-  ]
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      <div className="max-w-full overflow-x-hidden">
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl elimunova-animate-float"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-pink-400/20 to-rose-600/20 rounded-full blur-3xl elimunova-animate-float" style={{animationDelay: '2s'}}></div>
-      </div>
-
-      {/* Header */}
-      <PublicNav />
-
-      {/* Hero Section */}
-      <section className="relative z-10 container mx-auto px-4 pt-32 pb-20 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            <span className="elimunova-text-gradient-rainbow">Documentation</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Everything you need to know to get the most out of ElimuNova AI
-          </p>
+    <PublicLayout>
+      {/* Hero */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center">
+        <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
+          <Sparkles className="w-3 h-3" />
+          Documentation
         </div>
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
+          Everything you need to{' '}
+          <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            know.
+          </span>
+        </h1>
+        <p className="text-slate-400 text-lg max-w-xl mx-auto">
+          Comprehensive documentation to help you get the most out of ElimuNova AI.
+        </p>
       </section>
 
-      {/* Documentation Sections */}
-      <section className="relative z-10 py-20">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
-            {sections.map((section, index) => (
-              <Card key={section.title} className="elimunova-card-gradient group hover:scale-105 transition-all duration-300 border-0">
-                <CardHeader>
-                  <div className="flex items-center space-x-4 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                      <section.icon className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <CardTitle className="elimunova-text-gradient-blue">{section.title}</CardTitle>
-                      <CardDescription>{section.description}</CardDescription>
-                    </div>
+      {/* Sections */}
+      <section className="border-t border-slate-800 py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 gap-5">
+            {SECTIONS.map((s) => (
+              <div key={s.title} className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-6 hover:border-slate-500 hover:-translate-y-0.5 transition-all">
+                <div className="flex items-center gap-4 mb-5">
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${s.grad} flex items-center justify-center`}>
+                    <s.icon className="h-5 w-5 text-white" />
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-2 mb-6">
-                    {section.articles.map((article, articleIndex) => (
-                      <li key={articleIndex} className="flex items-center text-gray-600 hover:text-blue-600 transition-colors cursor-pointer">
-                        <ArrowRight className="w-4 h-4 mr-2" />
-                        {article}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button variant="outline" className="w-full elimunova-glass border-0">
-                    View Section
-                  </Button>
-                </CardContent>
-              </Card>
+                  <div>
+                    <h3 className="font-bold text-white">{s.title}</h3>
+                    <p className="text-slate-400 text-sm">{s.description}</p>
+                  </div>
+                </div>
+                <ul className="space-y-2 mb-5">
+                  {s.articles.map((a) => (
+                    <li key={a} className="flex items-center gap-2 text-slate-400 text-sm hover:text-slate-200 transition-colors cursor-pointer">
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-600 shrink-0" />
+                      {a}
+                    </li>
+                  ))}
+                </ul>
+                <button className="text-xs font-semibold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1">
+                  View all in {s.title} <ArrowRight className="h-3 w-3" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="relative z-10 bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <Logo className="mb-4" />
-              <p className="text-gray-400">
-                Transforming education with AI-powered tools for teachers and students.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4 elimunova-text-gradient-blue">Product</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/#features" className="hover:elimunova-text-gradient transition-all duration-300">Features</Link></li>
-                <li><Link href="/pricing" className="hover:elimunova-text-gradient transition-all duration-300">Pricing</Link></li>
-                <li><Link href="/api" className="hover:elimunova-text-gradient transition-all duration-300">API</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4 elimunova-text-gradient-blue">Support</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/help" className="hover:elimunova-text-gradient transition-all duration-300">Help Center</Link></li>
-                <li><Link href="/contact" className="hover:elimunova-text-gradient transition-all duration-300">Contact Us</Link></li>
-                <li><Link href="/docs" className="hover:elimunova-text-gradient transition-all duration-300">Documentation</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-4 elimunova-text-gradient-blue">Company</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/about" className="hover:elimunova-text-gradient transition-all duration-300">About</Link></li>
-                <li><Link href="/privacy" className="hover:elimunova-text-gradient transition-all duration-300">Privacy</Link></li>
-                <li><Link href="/terms" className="hover:elimunova-text-gradient transition-all duration-300">Terms</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; {new Date().getFullYear()} ElimuNova AI. All rights reserved.</p>
-            <p className="mt-2">
-              Developed by{' '}
-              <a 
-                href="https://infinititechsolutions.org/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="elimunova-text-gradient hover:underline transition-all duration-300"
-              >
-                InfinitiTech Solutions
-              </a>
-            </p>
-          </div>
-        </div>
-      </footer>
-      </div>
-    </div>
+    </PublicLayout>
   )
 }

@@ -31,10 +31,12 @@ export default function TeacherMessagesPage() {
   const [showComposeModal, setShowComposeModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [students, setStudents] = useState<Array<{ id: string; name: string; email?: string }>>([])
+  const [parents, setParents] = useState<Array<{ id: string; name: string; email?: string }>>([])
 
   useEffect(() => {
     fetchMessages()
     fetchStudents()
+    fetchParents()
   }, [])
 
   const fetchStudents = async () => {
@@ -55,6 +57,27 @@ export default function TeacherMessagesPage() {
       }
     } catch (error) {
       console.error('Error fetching students:', error)
+    }
+  }
+
+  const fetchParents = async () => {
+    try {
+      const response = await fetch('/api/teacher/parents')
+      const data = await response.json()
+      
+      console.log('👨‍👩‍👧‍👦 Fetched parents:', data)
+      
+      if (data.parents) {
+        const parentList = data.parents.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          email: p.email
+        }))
+        console.log('📋 Parent list for dropdown:', parentList)
+        setParents(parentList)
+      }
+    } catch (error) {
+      console.error('Error fetching parents:', error)
     }
   }
 
@@ -89,7 +112,7 @@ export default function TeacherMessagesPage() {
     }
   }
 
-  const handleSendMessage = async (data: { recipientId?: string; subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' }) => {
+  const handleSendMessage = async (data: { recipientId?: string; subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' }) => {
     console.log('📤 Sending message with data:', data)
     
     if (!data.recipientId) {
@@ -119,8 +142,8 @@ export default function TeacherMessagesPage() {
     const message = messages.find(m => m.id === messageId)
     if (!message) return
 
-    if (message.senderType !== 'STUDENT') {
-      throw new Error('Can only reply to messages from students')
+    if (!['STUDENT', 'PARENT'].includes(message.senderType)) {
+      throw new Error('Can only reply to messages from students or parents')
     }
 
     const response = await fetch('/api/teacher/messages', {
@@ -130,7 +153,7 @@ export default function TeacherMessagesPage() {
         recipientId: message.senderId,
         subject: `Re: ${message.subject}`,
         content,
-        recipientType: 'STUDENT',
+        recipientType: message.senderType,
         parentId: messageId
       })
     })
@@ -165,7 +188,7 @@ export default function TeacherMessagesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
           <p className="text-gray-600 mt-1">
-            Communicate with your students
+            Communicate with your students and parents
           </p>
         </div>
         <button 
@@ -337,7 +360,9 @@ export default function TeacherMessagesPage() {
         onClose={() => setShowComposeModal(false)}
         onSend={handleSendMessage}
         recipientType="STUDENT"
-        recipients={students}
+        showRecipientTypeSelector={true}
+        studentRecipients={students}
+        parentRecipients={parents}
       />
 
       <ViewMessageModal
@@ -345,7 +370,7 @@ export default function TeacherMessagesPage() {
         onClose={() => setShowViewModal(false)}
         message={selectedMessage}
         onReply={handleReply}
-        canReply={selectedMessage?.senderType === 'STUDENT'}
+        canReply={['STUDENT', 'PARENT'].includes(selectedMessage?.senderType || '')}
       />
     </div>
   )

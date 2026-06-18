@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -35,13 +36,16 @@ import {
   BarChart3,
   TrendingUp,
   BookMarked,
-  AlertCircle
+  AlertCircle,
+  Video,
+  Link2
 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 
 interface ScheduleEvent {
   id: string
   title: string
+  description?: string
   subject?: string
   grade?: string
   startTime: string
@@ -75,6 +79,7 @@ interface ScheduleFilters {
 }
 
 export default function StudentSchedulePage() {
+  const router = useRouter()
   const [events, setEvents] = useState<ScheduleEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<ScheduleFilters>({
@@ -205,8 +210,8 @@ export default function StudentSchedulePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold edugenius-text-gradient-blue">My Schedule</h1>
-          <p className="text-gray-600 mt-1">View your class schedule and upcoming events</p>
+          <h1 className="text-3xl font-bold edugenius-text-gradient-blue">Live Classes & Schedule</h1>
+          <p className="text-gray-600 mt-1">View your schedule and join live classes</p>
         </div>
         <Button
           onClick={fetchSchedules}
@@ -389,6 +394,28 @@ export default function StudentSchedulePage() {
                           </span>
                         )}
                       </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                        onClick={() => router.push(`/student/meetings/${event.id}`)}
+                      >
+                        <Video className="w-4 h-4 mr-1" />
+                        {event.status === 'IN_PROGRESS' ? 'Join Live' : 'Join Class'}
+                      </Button>
+                      {event.location && (
+                        <a 
+                          href={event.location} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                        >
+                          <Button size="sm" variant="outline">
+                            <Link2 className="w-4 h-4 mr-1" />
+                            Zoom
+                          </Button>
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>

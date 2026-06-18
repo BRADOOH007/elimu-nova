@@ -2,16 +2,23 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { cache } from '@/lib/redis'
+import { CacheKeys, TTL } from '@/lib/cache-helpers'
 
 export async function GET() {
   try {
-    console.log('📊 Fetching teacher dashboard stats...')
     const session = await getServerSession(authOptions)
     
     if (!session?.user || session.user.role !== 'TEACHER') {
-      console.log('❌ Unauthorized - not a teacher')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    // Check cache first
+    const cacheKey = CacheKeys.dashboardStats(session.user.id)
+    try {
+      const cached = await cache.get(cacheKey)
+      if (cached) return NextResponse.json(JSON.parse(cached))
+    } catch { /* cache miss — continue */ }
 
     console.log('🔍 Looking for teacher with userId:', session.user.id)
     
@@ -120,10 +127,12 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({
-      stats,
-      recentActivities
-    })
+    const responseData = { stats, recentActivities }
+
+    // Write to cache (2 min TTL — stats update on teacher activity)
+    try { await cache.set(cacheKey, JSON.stringify(responseData), TTL.MEDIUM) } catch { /* non-fatal */ }
+
+    return NextResponse.json(responseData)
 
   } catch (error) {
     console.error('Error fetching teacher dashboard stats:', error)

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import { 
   BookOpen, 
@@ -18,13 +19,13 @@ import {
   Download,
   Share2,
   Calendar,
-  Clock,
   GraduationCap,
   FileText,
   MoreHorizontal,
   Loader2,
   Users,
-  Send
+  Send,
+  CheckCircle
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -38,7 +39,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -48,6 +48,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useToast } from '@/hooks/use-toast'
 
 interface LessonPlan {
   id: string
@@ -57,576 +58,607 @@ interface LessonPlan {
   content: any
   createdAt: string
   updatedAt: string
-  schemeOfWork?: {
-    id: string
-    title: string
-  }
+  isShared?: boolean
+  schemeOfWork?: { id: string; title: string }
 }
 
-export default function LessonPlansPage() {
+interface Topic {
+  id: string
+  title: string
+  description: string
+  weekNumber: number
+  lessonNumber: number
+  objectives: string[]
+  activities: string[]
+  resources: string[]
+  assessment: string
+  duration: number
+}
+
+interface SchemeOfWorkContent {
+  generatedContent: string
+  objectives?: string[]
+  topics?: string[]
+  duration?: number
+}
+
+interface SchemeOfWork {
+  id: string
+  title: string
+  subject: string
+  grade: string
+  term: string
+  content: SchemeOfWorkContent
+  duration?: number
+  objectives?: string
+  createdAt: string
+  updatedAt: string
+  isShared: boolean
+  topics?: Topic[]
+  _count?: { lessonPlans: number; topics: number; sharedWith?: number }
+}
+
+export default function PlanningPage() {
+  const { toast } = useToast()
+  const router = useRouter()
+  const [activeTab, setActiveTab] = useState('lesson-plans')
+
+  // Lesson Plans State
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [subjectFilter, setSubjectFilter] = useState('')
-  const [gradeFilter, setGradeFilter] = useState('')
+  const [lessonPlansLoading, setLessonPlansLoading] = useState(true)
+  const [lessonPlanSearch, setLessonPlanSearch] = useState('')
+  const [lessonPlanSubjectFilter, setLessonPlanSubjectFilter] = useState('')
+  const [lessonPlanGradeFilter, setLessonPlanGradeFilter] = useState('')
+
+  // Schemes of Work State
+  const [schemesOfWork, setSchemesOfWork] = useState<SchemeOfWork[]>([])
+  const [schemesLoading, setSchemesLoading] = useState(true)
+  const [schemeSearch, setSchemeSearch] = useState('')
+  const [schemeSubjectFilter, setSchemeSubjectFilter] = useState('')
+  const [schemeGradeFilter, setSchemeGradeFilter] = useState('')
+
+  // Common Modal State
   const [selectedLessonPlan, setSelectedLessonPlan] = useState<LessonPlan | null>(null)
+  const [selectedScheme, setSelectedScheme] = useState<SchemeOfWork | null>(null)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [lessonPlanToDelete, setLessonPlanToDelete] = useState<LessonPlan | null>(null)
-  const [deleting, setDeleting] = useState(false)
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [lessonPlanToShare, setLessonPlanToShare] = useState<LessonPlan | null>(null)
+  const [itemToShare, setItemToShare] = useState<LessonPlan | SchemeOfWork | null>(null)
   const [students, setStudents] = useState<any[]>([])
   const [classes, setClasses] = useState<any[]>([])
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
   const [selectedClass, setSelectedClass] = useState<string>('')
   const [sharing, setSharing] = useState(false)
-  const router = useRouter()
+  const [deleting, setDeleting] = useState(false)
+  const [itemToDelete, setItemToDelete] = useState<LessonPlan | SchemeOfWork | null>(null)
 
-  // Fetch lesson plans
+  // Fetch Data
   useEffect(() => {
-    const fetchLessonPlans = async () => {
+    const fetchData = async () => {
       try {
-        const params = new URLSearchParams()
-        if (searchTerm) params.append('search', searchTerm)
-        if (subjectFilter) params.append('subject', subjectFilter)
-        if (gradeFilter) params.append('grade', gradeFilter)
-        
-        const response = await fetch(`/api/lesson-plans?${params.toString()}`)
-        if (response.ok) {
-          const data = await response.json()
-          setLessonPlans(data.lessonPlans || [])
-        }
-      } catch (error) {
-        console.error('Error fetching lesson plans:', error)
+        const [lessonsRes, schemesRes, studentsRes, classesRes] = await Promise.all([
+          fetch('/api/lesson-plans'),
+          fetch('/api/schemes-of-work'),
+          fetch('/api/teacher/students'),
+          fetch('/api/teacher/classes')
+        ])
+
+        if (lessonsRes.ok) setLessonPlans((await lessonsRes.json()).lessonPlans || [])
+        if (schemesRes.ok) setSchemesOfWork((await schemesRes.json()).schemesOfWork || [])
+        if (studentsRes.ok) setStudents((await studentsRes.json()).students || [])
+        if (classesRes.ok) setClasses((await classesRes.json()).classes || [])
+      } catch (err) {
+        console.error('Error fetching data:', err)
       } finally {
-        setLoading(false)
+        setLessonPlansLoading(false)
+        setSchemesLoading(false)
       }
     }
+    fetchData()
+  }, [])
 
-    fetchLessonPlans()
-  }, [searchTerm, subjectFilter, gradeFilter])
+  // Filtering
+  const filteredLessonPlans = lessonPlans.filter(lp => {
+    const matchesSearch = lp.title.toLowerCase().includes(lessonPlanSearch.toLowerCase()) ||
+                         lp.subject.toLowerCase().includes(lessonPlanSearch.toLowerCase()) ||
+                         lp.grade.toLowerCase().includes(lessonPlanSearch.toLowerCase())
+    const matchesSubject = !lessonPlanSubjectFilter || lp.subject === lessonPlanSubjectFilter
+    const matchesGrade = !lessonPlanGradeFilter || lp.grade === lessonPlanGradeFilter
+    return matchesSearch && matchesSubject && matchesGrade
+  })
 
-  // Refresh lesson plans when returning from create page
-  useEffect(() => {
-    const handleFocus = () => {
-      const fetchLessonPlans = async () => {
-        try {
-          const params = new URLSearchParams()
-          if (searchTerm) params.append('search', searchTerm)
-          if (subjectFilter) params.append('subject', subjectFilter)
-          if (gradeFilter) params.append('grade', gradeFilter)
-          
-          const response = await fetch(`/api/lesson-plans?${params.toString()}`)
-          if (response.ok) {
-            const data = await response.json()
-            setLessonPlans(data.lessonPlans || [])
-          }
-        } catch (error) {
-          console.error('Error refreshing lesson plans:', error)
-        }
-      }
-      fetchLessonPlans()
-    }
+  const filteredSchemes = schemesOfWork.filter(sw => {
+    const matchesSearch = sw.title.toLowerCase().includes(schemeSearch.toLowerCase()) ||
+                         sw.subject.toLowerCase().includes(schemeSearch.toLowerCase()) ||
+                         sw.grade.toLowerCase().includes(schemeSearch.toLowerCase())
+    const matchesSubject = !schemeSubjectFilter || sw.subject === schemeSubjectFilter
+    const matchesGrade = !schemeGradeFilter || sw.grade === schemeGradeFilter
+    return matchesSearch && matchesSubject && matchesGrade
+  })
 
-    window.addEventListener('focus', handleFocus)
-    return () => window.removeEventListener('focus', handleFocus)
-  }, [searchTerm, subjectFilter, gradeFilter])
+  const lessonSubjects = [...new Set(lessonPlans.map(lp => lp.subject))].sort()
+  const lessonGrades = [...new Set(lessonPlans.map(lp => lp.grade))].sort()
+  const schemeSubjects = [...new Set(schemesOfWork.map(sw => sw.subject))].sort()
+  const schemeGrades = [...new Set(schemesOfWork.map(sw => sw.grade))].sort()
 
-  const handleDelete = async (lessonPlan: LessonPlan) => {
-    setLessonPlanToDelete(lessonPlan)
-    setIsDeleteModalOpen(true)
-  }
-
-  const confirmDelete = async () => {
-    if (!lessonPlanToDelete) return
-
+  // Actions
+  const handleDelete = async () => {
+    if (!itemToDelete) return
     setDeleting(true)
     try {
-      const response = await fetch(`/api/lesson-plans/${lessonPlanToDelete.id}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setLessonPlans(prev => prev.filter(lp => lp.id !== lessonPlanToDelete.id))
-        setIsDeleteModalOpen(false)
-        setLessonPlanToDelete(null)
-      } else {
-        alert('Error deleting lesson plan')
+      const isLesson = 'schemeOfWork' in itemToDelete
+      const url = isLesson 
+        ? `/api/lesson-plans/${itemToDelete.id}` 
+        : `/api/schemes-of-work/${itemToDelete.id}`
+      
+      const res = await fetch(url, { method: 'DELETE' })
+      if (res.ok) {
+        if (isLesson) {
+          setLessonPlans(prev => prev.filter(lp => lp.id !== itemToDelete.id))
+          toast({ title: 'Lesson Plan Deleted', variant: 'success' })
+        } else {
+          setSchemesOfWork(prev => prev.filter(sw => sw.id !== itemToDelete.id))
+          toast({ title: 'Scheme of Work Deleted', variant: 'success' })
+        }
+        setItemToDelete(null)
       }
-    } catch (error) {
-      console.error('Error deleting lesson plan:', error)
-      alert('Error deleting lesson plan')
+    } catch (err) {
+      console.error('Delete error:', err)
     } finally {
       setDeleting(false)
     }
   }
 
-  const handleView = async (lessonPlan: LessonPlan) => {
-    try {
-      // Fetch full lesson plan data with content
-      const response = await fetch(`/api/lesson-plans/${lessonPlan.id}`)
-      if (response.ok) {
-        const fullLessonPlan = await response.json()
-        setSelectedLessonPlan(fullLessonPlan)
-        setIsViewModalOpen(true)
-      } else {
-        console.error('Failed to fetch lesson plan details')
-        // Fallback to basic data
-        setSelectedLessonPlan(lessonPlan)
-        setIsViewModalOpen(true)
-      }
-    } catch (error) {
-      console.error('Error fetching lesson plan details:', error)
-      // Fallback to basic data
-      setSelectedLessonPlan(lessonPlan)
-      setIsViewModalOpen(true)
-    }
-  }
-
-  const handleEdit = (lessonPlan: LessonPlan) => {
-    router.push(`/teacher/lesson-plans/edit/${lessonPlan.id}`)
-  }
-
-  const handleToggleShare = async (lessonPlan: LessonPlan) => {
-    try {
-      const response = await fetch(`/api/teacher/lesson-plans/${lessonPlan.id}/share`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        // Update the lesson plan in the list
-        setLessonPlans(prev => 
-          prev.map(lp => 
-            lp.id === lessonPlan.id 
-              ? { ...lp, isShared: data.lessonPlan.isShared }
-              : lp
-          )
-        )
-        alert(data.message)
-      } else {
-        const error = await response.json()
-        alert('Error: ' + (error.error || 'Failed to update share status'))
-      }
-    } catch (error) {
-      console.error('Error toggling share status:', error)
-      alert('Error updating share status')
-    }
-  }
-
-  const handleShare = async (lessonPlan: LessonPlan) => {
-    setLessonPlanToShare(lessonPlan)
-    setIsShareModalOpen(true)
-    
-    // Fetch students and classes
-    try {
-      const [studentsRes, classesRes] = await Promise.all([
-        fetch('/api/teacher/students'),
-        fetch('/api/teacher/classes')
-      ])
-      
-      if (studentsRes.ok) {
-        const studentsData = await studentsRes.json()
-        setStudents(studentsData.students || [])
-      }
-      
-      if (classesRes.ok) {
-        const classesData = await classesRes.json()
-        setClasses(classesData.classes || [])
-      }
-    } catch (error) {
-      console.error('Error fetching students and classes:', error)
-    }
-  }
-
-  const confirmShare = async () => {
-    if (!lessonPlanToShare) return
-
+  const handleShare = async () => {
+    if (!itemToShare) return
     setSharing(true)
     try {
-      const response = await fetch('/api/lesson-plans/share', {
+      const isLesson = 'schemeOfWork' in itemToShare
+      const url = isLesson 
+        ? '/api/lesson-plans/share' 
+        : '/api/schemes-of-work/share'
+      
+      const res = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lessonPlanId: lessonPlanToShare.id,
+          [isLesson ? 'lessonPlanId' : 'schemeOfWorkId']: itemToShare.id,
           studentIds: selectedStudents,
           classId: selectedClass || undefined
-        }),
+        })
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        alert(`Lesson plan shared successfully with ${data.sharedCount} students!`)
+      if (res.ok) {
+        const data = await res.json()
+        toast({ 
+          title: `${isLesson ? 'Lesson Plan' : 'Scheme'} Shared`, 
+          description: `Shared with ${data.sharedCount} students`,
+          variant: 'success' 
+        })
         setIsShareModalOpen(false)
         setSelectedStudents([])
         setSelectedClass('')
-        setLessonPlanToShare(null)
-      } else {
-        alert('Error sharing lesson plan')
+        setItemToShare(null)
       }
-    } catch (error) {
-      console.error('Error sharing lesson plan:', error)
-      alert('Error sharing lesson plan')
+    } catch (err) {
+      console.error('Share error:', err)
     } finally {
       setSharing(false)
     }
   }
 
-  const handleDownload = async (lessonPlan: LessonPlan) => {
+  const handleDownload = async (item: LessonPlan | SchemeOfWork, format?: 'pdf' | 'word') => {
     try {
-      const response = await fetch('/api/export/lesson-plan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: lessonPlan.content.generatedContent || '',
-          title: lessonPlan.title,
-          subject: lessonPlan.subject,
-          grade: lessonPlan.grade,
-          topic: lessonPlan.content.topic || '',
-          duration: lessonPlan.content.duration || 45,
-          format: 'pdf'
-        }),
-      })
+      const isLesson = 'schemeOfWork' in item
+      const url = isLesson 
+        ? '/api/export/lesson-plan' 
+        : '/api/export/scheme-of-work'
+      
+      const body = isLesson 
+        ? { content: item.content?.generatedContent || '', title: item.title, subject: item.subject, grade: item.grade, topic: item.content?.topic || '', duration: item.content?.duration || 45, format: 'pdf' }
+        : { 
+            content: item.content?.generatedContent || '', 
+            title: item.title, 
+            subject: item.subject, 
+            grade: item.grade, 
+            duration: (item as SchemeOfWork).duration || (item as SchemeOfWork).content?.duration || 12, 
+            lessonsPerWeek: 5, 
+            lessonDuration: 45, 
+            topics: (item as SchemeOfWork).content?.topics || [], 
+            format: format || 'pdf' 
+          }
 
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const element = document.createElement('a')
-        element.href = url
-        element.download = `${lessonPlan.title}-lesson-plan.html`
-        document.body.appendChild(element)
-        element.click()
-        document.body.removeChild(element)
-        window.URL.revokeObjectURL(url)
-      } else {
-        alert('Error generating document')
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (res.ok) {
+        const blob = await res.blob()
+        const urlObj = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = urlObj
+        a.download = `${item.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${isLesson ? 'html' : format === 'word' ? 'doc' : 'html'}`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+        window.URL.revokeObjectURL(urlObj)
       }
-    } catch (error) {
-      console.error('Error downloading lesson plan:', error)
-      alert('Error downloading lesson plan')
+    } catch (err) {
+      console.error('Download error:', err)
     }
   }
 
-  const filteredLessonPlans = lessonPlans.filter(lp => {
-    const matchesSearch = lp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lp.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         lp.grade.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSubject = !subjectFilter || lp.subject === subjectFilter
-    const matchesGrade = !gradeFilter || lp.grade === gradeFilter
-    
-    return matchesSearch && matchesSubject && matchesGrade
-  })
-
-  const subjects = [...new Set(lessonPlans.map(lp => lp.subject))].sort()
-  const grades = [...new Set(lessonPlans.map(lp => lp.grade))].sort()
-
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Lesson Plans</span>
+            <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Planning</span>
           </h1>
-          <p className="text-gray-600">Manage your AI-generated lesson plans</p>
+          <p className="text-gray-600">Manage lesson plans and schemes of work</p>
         </div>
         <div className="flex items-center gap-3">
-          <DocumentUploadButton docType="lesson-plan" />
+          {activeTab === 'lesson-plans' && <DocumentUploadButton docType="lesson-plan" />}
+          {activeTab === 'schemes-of-work' && (
+            <>
+              <DocumentUploadButton docType="scheme-of-work" />
+              <DocumentUploadButton docType="curriculum" label="Upload Curriculum" />
+            </>
+          )}
           <Button 
-            onClick={() => router.push('/teacher/lesson-plans/create')}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+            onClick={() => router.push(`/teacher/${activeTab}/create`)} 
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >
             <Plus className="mr-2 h-4 w-4" />
-            Create New
+            Create {activeTab === 'lesson-plans' ? 'Lesson Plan' : 'Scheme of Work'}
           </Button>
         </div>
       </div>
 
-      {/* Filters */}
-      <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search lesson plans..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300"
-              />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full sm:w-auto grid-cols-2">
+          <TabsTrigger value="lesson-plans">
+            <BookOpen className="w-4 h-4 mr-2" />
+            Lesson Plans
+          </TabsTrigger>
+          <TabsTrigger value="schemes-of-work">
+            <FileText className="w-4 h-4 mr-2" />
+            Schemes of Work
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Lesson Plans Tab */}
+        <TabsContent value="lesson-plans" className="space-y-6">
+          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search lesson plans..."
+                    value={lessonPlanSearch}
+                    onChange={(e) => setLessonPlanSearch(e.target.value)}
+                    className="pl-10 bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm"
+                  />
+                </div>
+                <select
+                  value={lessonPlanSubjectFilter}
+                  onChange={(e) => setLessonPlanSubjectFilter(e.target.value)}
+                  className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-blue-50 to-purple-50 px-3 py-2 text-sm"
+                >
+                  <option value="">All Subjects</option>
+                  {lessonSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select
+                  value={lessonPlanGradeFilter}
+                  onChange={(e) => setLessonPlanGradeFilter(e.target.value)}
+                  className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-blue-50 to-purple-50 px-3 py-2 text-sm"
+                >
+                  <option value="">All Grades</option>
+                  {lessonGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <Button
+                  variant="outline"
+                  onClick={() => { setLessonPlanSearch(''); setLessonPlanSubjectFilter(''); setLessonPlanGradeFilter('') }}
+                  className="bg-white"
+                >
+                  <Filter className="mr-2 h-4 w-4" />
+                  Clear
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {lessonPlansLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
-            
-            <select
-              value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-              className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-blue-50 to-purple-50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:shadow-md transition-all duration-300"
-            >
-              <option value="">All Subjects</option>
-              {subjects.map(subject => (
-                <option key={subject} value={subject}>{subject}</option>
-              ))}
-            </select>
-
-            <select
-              value={gradeFilter}
-              onChange={(e) => setGradeFilter(e.target.value)}
-              className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-blue-50 to-purple-50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:shadow-md transition-all duration-300"
-            >
-              <option value="">All Grades</option>
-              {grades.map(grade => (
-                <option key={grade} value={grade}>{grade}</option>
-              ))}
-            </select>
-
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSearchTerm('')
-                setSubjectFilter('')
-                setGradeFilter('')
-              }}
-              className="bg-gradient-to-r from-white via-gray-50 to-gray-100 border-0 shadow-sm hover:shadow-md transition-all duration-300"
-            >
-              <Filter className="mr-2 h-4 w-4" />
-              Clear Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Lesson Plans Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-        </div>
-      ) : filteredLessonPlans.length === 0 ? (
-        <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-          <CardContent className="text-center py-12">
-            <BookOpen className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No lesson plans found</h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm || subjectFilter || gradeFilter 
-                ? 'Try adjusting your filters or search terms.'
-                : 'Create your first AI-powered lesson plan to get started.'
-              }
-            </p>
-            <Button 
-              onClick={() => router.push('/teacher/lesson-plans/create')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Lesson Plan
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredLessonPlans.map((lessonPlan) => (
-            <Card key={lessonPlan.id} className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0 hover:shadow-xl transition-all duration-300">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
-                      {lessonPlan.title}
-                    </CardTitle>
-                    <CardDescription className="mt-2">
-                      <span className="flex items-center space-x-2 text-sm text-gray-600">
-                        <GraduationCap className="h-4 w-4" />
-                        <span>{lessonPlan.grade}</span>
-                        <span>•</span>
-                        <span>{lessonPlan.subject}</span>
-                      </span>
-                    </CardDescription>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => handleView(lessonPlan)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(lessonPlan)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleToggleShare(lessonPlan)}>
-                        <Share2 className="mr-2 h-4 w-4" />
-                        {lessonPlan.isShared ? 'Unshare' : 'Share with Students'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDownload(lessonPlan)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(lessonPlan)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <span>Created {new Date(lessonPlan.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  
-                  {lessonPlan.content?.duration && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Clock className="h-4 w-4 mr-2" />
-                      <span>{lessonPlan.content.duration} minutes</span>
-                    </div>
-                  )}
-
-                  {lessonPlan.content?.objectives && lessonPlan.content.objectives.length > 0 && (
-                    <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">Objectives:</p>
-                      <div className="space-y-1">
-                        {lessonPlan.content.objectives.slice(0, 2).map((objective: string, index: number) => (
-                          <p key={index} className="text-xs text-gray-600 line-clamp-1">
-                            • {objective}
-                          </p>
-                        ))}
-                        {lessonPlan.content.objectives.length > 2 && (
-                          <p className="text-xs text-gray-500">
-                            +{lessonPlan.content.objectives.length - 2} more...
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-2">
-                    <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800">
-                      {lessonPlan.subject}
-                    </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleView(lessonPlan)}
-                      className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300"
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      View
-                    </Button>
-                  </div>
-                </div>
+          ) : filteredLessonPlans.length === 0 ? (
+            <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50">
+              <CardContent className="text-center py-12">
+                <BookOpen className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No lesson plans found</h3>
+                <Button 
+                  onClick={() => router.push('/teacher/lesson-plans/create')}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Lesson Plan
+                </Button>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredLessonPlans.map(lp => (
+                <Card key={lp.id} className="bg-gradient-to-br from-white via-blue-50 to-purple-50 hover:shadow-xl transition-all">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-semibold line-clamp-2">{lp.title}</CardTitle>
+                        <CardDescription className="mt-2 flex items-center gap-2">
+                          <GraduationCap className="h-4 w-4" />
+                          <span>{lp.grade} • {lp.subject}</span>
+                        </CardDescription>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setSelectedLessonPlan(lp); setIsViewModalOpen(true) }}>
+                            <Eye className="mr-2 h-4 w-4" /> View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/teacher/lesson-plans/edit/${lp.id}`)}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setItemToShare(lp); setIsShareModalOpen(true) }}>
+                            <Share2 className="mr-2 h-4 w-4" /> Share
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownload(lp)}>
+                            <Download className="mr-2 h-4 w-4" /> Download
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => { setItemToDelete(lp); }} 
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Created {new Date(lp.createdAt).toLocaleDateString()}
+                      </div>
+                      <div className="flex items-center justify-between pt-2">
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">{lp.subject}</Badge>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => { setSelectedLessonPlan(lp); setIsViewModalOpen(true) }}
+                        >
+                          <Eye className="w-4 h-4 mr-1" /> View
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Schemes of Work Tab */}
+        <TabsContent value="schemes-of-work" className="space-y-6">
+          <Card className="bg-gradient-to-br from-white via-green-50 to-blue-50 shadow-lg backdrop-blur-sm border-0">
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search schemes..."
+                    value={schemeSearch}
+                    onChange={(e) => setSchemeSearch(e.target.value)}
+                    className="pl-10 bg-gradient-to-r from-white via-green-50 to-blue-50 border-0 shadow-sm"
+                  />
+                </div>
+                <select
+                  value={schemeSubjectFilter}
+                  onChange={(e) => setSchemeSubjectFilter(e.target.value)}
+                  className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-green-50 to-blue-50 px-3 py-2 text-sm"
+                >
+                  <option value="">All Subjects</option>
+                  {schemeSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select
+                  value={schemeGradeFilter}
+                  onChange={(e) => setSchemeGradeFilter(e.target.value)}
+                  className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-green-50 to-blue-50 px-3 py-2 text-sm"
+                >
+                  <option value="">All Grades</option>
+                  {schemeGrades.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <Button
+                  variant="outline"
+                  onClick={() => { setSchemeSearch(''); setSchemeSubjectFilter(''); setSchemeGradeFilter('') }}
+                  className="bg-white"
+                >
+                  <Filter className="mr-2 h-4 w-4" />
+                  Clear
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {schemesLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+            </div>
+          ) : filteredSchemes.length === 0 ? (
+            <Card className="bg-gradient-to-br from-white via-green-50 to-blue-50">
+              <CardContent className="text-center py-12">
+                <FileText className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No schemes of work found</h3>
+                <Button 
+                  onClick={() => router.push('/teacher/schemes-of-work/create')}
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Scheme
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredSchemes.map(sw => (
+                <Card key={sw.id} className="bg-gradient-to-br from-white via-green-50 to-blue-50 hover:shadow-xl transition-all">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg font-semibold line-clamp-2">{sw.title}</CardTitle>
+                        <CardDescription className="mt-2 flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          <span>{sw.grade} • {sw.subject}</span>
+                        </CardDescription>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setSelectedScheme(sw); setIsViewModalOpen(true) }}>
+                            <Eye className="mr-2 h-4 w-4" /> View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/teacher/schemes-of-work/edit/${sw.id}`)}>
+                            <Edit className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownload(sw, 'pdf')}>
+                            <Download className="mr-2 h-4 w-4" /> Download PDF
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDownload(sw, 'word')}>
+                            <FileText className="mr-2 h-4 w-4" /> Download Word
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setItemToShare(sw); setIsShareModalOpen(true) }}>
+                            <Share2 className="mr-2 h-4 w-4" /> Share
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => { setItemToDelete(sw); }} 
+                            className="text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Created {new Date(sw.createdAt).toLocaleDateString()}
+                      </div>
+                      {sw._count && (
+                        <div className="flex items-center text-sm text-gray-600">
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          {sw._count.lessonPlans} lesson plans
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 pt-2">
+                        <Button
+                          onClick={() => { setSelectedScheme(sw); setIsViewModalOpen(true) }}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                        >
+                          <Eye className="w-4 h-4 mr-2" /> View
+                        </Button>
+                        <Button
+                          onClick={() => { setItemToShare(sw); setIsShareModalOpen(true) }}
+                          variant="outline"
+                        >
+                          <Share2 className="w-4 h-4 mr-2" /> Share
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {/* View Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <BookOpen className="mr-2 h-5 w-5" />
-              {selectedLessonPlan?.title}
+            <DialogTitle className="flex items-center gap-2">
+              {selectedLessonPlan && <BookOpen className="h-5 w-5" />}
+              {selectedScheme && <FileText className="h-5 w-5" />}
+              {selectedLessonPlan?.title || selectedScheme?.title}
             </DialogTitle>
             <DialogDescription>
-              {selectedLessonPlan?.subject} • {selectedLessonPlan?.grade}
+              {(selectedLessonPlan?.subject || selectedScheme?.subject)} • {(selectedLessonPlan?.grade || selectedScheme?.grade)}
             </DialogDescription>
           </DialogHeader>
-          
-          {selectedLessonPlan && (
-            <div className="space-y-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">Lesson Plan Content</h4>
-                <div className="prose prose-sm max-w-none">
-                  <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                    {selectedLessonPlan.content?.generatedContent || 
-                     selectedLessonPlan.content?.content || 
-                     selectedLessonPlan.content || 
-                     'No content available'}
-                  </div>
+          <div className="space-y-4">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-2">Content</h4>
+              <div className="prose prose-sm max-w-none">
+                <div className="whitespace-pre-wrap text-gray-700">
+                  {selectedLessonPlan?.content?.generatedContent || selectedLessonPlan?.content?.content || selectedLessonPlan?.content ||
+                   selectedScheme?.content?.generatedContent || 'No content available'}
                 </div>
-              </div>
-              
-              {selectedLessonPlan.content?.objectives && selectedLessonPlan.content.objectives.length > 0 && (
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-2">Learning Objectives</h4>
-                  <ul className="space-y-1">
-                    {selectedLessonPlan.content.objectives.map((objective: string, index: number) => (
-                      <li key={index} className="text-sm text-gray-700">
-                        • {objective}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-2">
-                <Button
-                  variant="outline"
-                  onClick={() => handleDownload(selectedLessonPlan)}
-                  className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300"
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download
-                </Button>
-                <Button
-                  onClick={() => handleEdit(selectedLessonPlan)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <Edit className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
               </div>
             </div>
-          )}
+            <div className="flex justify-end space-x-2">
+              {selectedLessonPlan && (
+                <>
+                  <Button variant="outline" onClick={() => handleDownload(selectedLessonPlan)}>
+                    <Download className="mr-2 h-4 w-4" /> Download
+                  </Button>
+                  <Button
+                    onClick={() => router.push(`/teacher/lesson-plans/edit/${selectedLessonPlan.id}`)}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </Button>
+                </>
+              )}
+              {selectedScheme && (
+                <>
+                  <Button
+                    onClick={() => router.push(`/teacher/schemes-of-work/edit/${selectedScheme.id}`)}
+                    className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                  >
+                    <Edit className="mr-2 h-4 w-4" /> Edit
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      {/* Delete Confirmation */}
+      <Dialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Lesson Plan</DialogTitle>
+            <DialogTitle>Delete {itemToDelete && ('schemeOfWork' in itemToDelete ? 'Lesson Plan' : 'Scheme of Work')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{lessonPlanToDelete?.title}"? This action cannot be undone.
+              Are you sure you want to delete "{itemToDelete?.title}"? This cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsDeleteModalOpen(false)}
-              disabled={deleting}
-            >
+          <div className="flex justify-end space-x-2 mt-4">
+            <Button variant="outline" onClick={() => setItemToDelete(null)} disabled={deleting}>
               Cancel
             </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={deleting}
-            >
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
               ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </>
+                <><Trash2 className="mr-2 h-4 w-4" /> Delete</>
               )}
             </Button>
           </div>
@@ -639,86 +671,70 @@ export default function LessonPlansPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <Share2 className="mr-2 h-5 w-5" />
-              Share Lesson Plan
+              Share {itemToShare && ('schemeOfWork' in itemToShare ? 'Lesson Plan' : 'Scheme of Work')}
             </DialogTitle>
             <DialogDescription>
-              Share "{lessonPlanToShare?.title}" with your students
+              Share "{itemToShare?.title}" with your students
             </DialogDescription>
           </DialogHeader>
-          
           <div className="space-y-6">
-            {/* Share with Class */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Share with Entire Class
-              </label>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Share with Entire Class</label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a class" />
+                  <SelectValue placeholder={classes.length > 0 ? "Select a class" : "No classes available"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name} - {cls.grade}
-                    </SelectItem>
-                  ))}
+                  {classes.length > 0 ? (
+                    classes.map(cls => (
+                      <SelectItem key={cls.id} value={cls.id}>{cls.name} - {cls.grade}</SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-classes" disabled>No classes found</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Or Share with Individual Students */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Or Share with Individual Students
-              </label>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Or Share with Individual Students</label>
               <div className="max-h-60 overflow-y-auto border rounded-md p-3 space-y-2">
-                {students.map((student) => (
-                  <div key={student.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={student.id}
-                      checked={selectedStudents.includes(student.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedStudents(prev => [...prev, student.id])
-                        } else {
-                          setSelectedStudents(prev => prev.filter(id => id !== student.id))
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor={student.id}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {student.name} - {student.grade}
-                    </label>
+                {students.length > 0 ? (
+                  students.map(student => (
+                    <div key={student.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={student.id}
+                        checked={selectedStudents.includes(student.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) setSelectedStudents(prev => [...prev, student.id])
+                          else setSelectedStudents(prev => prev.filter(id => id !== student.id))
+                        }}
+                      />
+                      <label htmlFor={student.id} className="text-sm font-medium">
+                        {student.user?.firstName} {student.user?.lastName} - {student.class?.name || student.grade}
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No students found</p>
                   </div>
-                ))}
+                )}
               </div>
             </div>
-
             <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsShareModalOpen(false)}
-                disabled={sharing}
-              >
+              <Button variant="outline" onClick={() => setIsShareModalOpen(false)} disabled={sharing}>
                 Cancel
               </Button>
               <Button
-                onClick={confirmShare}
+                onClick={handleShare}
                 disabled={sharing || (!selectedClass && selectedStudents.length === 0)}
-                className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
                 {sharing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sharing...
-                  </>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sharing...</>
                 ) : (
-                  <>
-                    <Send className="mr-2 h-4 w-4" />
-                    Share
-                  </>
+                  <><Send className="mr-2 h-4 w-4" /> Share</>
                 )}
               </Button>
             </div>
