@@ -10,12 +10,12 @@ const WARNING_SECONDS = 60  // give 60s to respond before logout
 export function IdleLogoutWarning() {
   const [showWarning, setShowWarning] = useState(false)
   const [countdown, setCountdown]    = useState(WARNING_SECONDS)
-  const idleTimer   = useRef<NodeJS.Timeout>()
-  const countTimer  = useRef<NodeJS.Timeout>()
+  const idleTimer   = useRef<NodeJS.Timeout | null>(null)
+  const countTimer  = useRef<NodeJS.Timeout | null>(null)
 
   const resetIdle = useCallback(() => {
     if (showWarning) return  // don't reset if warning is already showing
-    clearTimeout(idleTimer.current)
+    if (idleTimer.current) clearTimeout(idleTimer.current)
     idleTimer.current = setTimeout(() => {
       setShowWarning(true)
       setCountdown(WARNING_SECONDS)
@@ -28,8 +28,8 @@ export function IdleLogoutWarning() {
     resetIdle()
     return () => {
       events.forEach(e => window.removeEventListener(e, resetIdle))
-      clearTimeout(idleTimer.current)
-      clearTimeout(countTimer.current)
+      if (idleTimer.current) clearTimeout(idleTimer.current)
+      if (countTimer.current) clearTimeout(countTimer.current)
     }
   }, [resetIdle])
 
@@ -38,12 +38,14 @@ export function IdleLogoutWarning() {
     if (!showWarning) return
     if (countdown <= 0) { signOut({ callbackUrl: '/auth/signin' }); return }
     countTimer.current = setTimeout(() => setCountdown(c => c - 1), 1000)
-    return () => clearTimeout(countTimer.current)
+    return () => {
+      if (countTimer.current) clearTimeout(countTimer.current)
+    }
   }, [showWarning, countdown])
 
   const stayLoggedIn = () => {
     setShowWarning(false)
-    clearTimeout(countTimer.current)
+    if (countTimer.current) clearTimeout(countTimer.current)
     resetIdle()
   }
 

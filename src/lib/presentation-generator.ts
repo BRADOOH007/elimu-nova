@@ -88,10 +88,10 @@ export class PresentationGenerator {
       
       // Add content slides with enhanced layouts
       for (let i = 0; i < request.slides.length; i++) {
-        const slide = request.slides[i]
-        const imageUrl = generatedImages.get(slide.id)
+        const slideData = request.slides[i]
+        const imageUrl = generatedImages.get(slideData.id)
 
-        await this.addEnhancedContentSlide(slide, imageUrl, i + 1, request.slides.length)
+        await this.addEnhancedContentSlide(slideData, imageUrl, i + 1, request.slides.length)
         
         // Update progress
         const slideProgress = 70 + (i / request.slides.length) * 20

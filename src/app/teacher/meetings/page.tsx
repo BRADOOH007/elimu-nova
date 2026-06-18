@@ -64,6 +64,7 @@ interface Meeting {
 }
 
 export default function TeacherMeetingsPage() {
+  const router = useRouter()
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [filteredMeetings, setFilteredMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
