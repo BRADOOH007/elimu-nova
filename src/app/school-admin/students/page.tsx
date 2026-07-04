@@ -61,6 +61,7 @@ interface Student {
 export default function StudentsPage() {
   const router = useRouter()
   const [students, setStudents] = useState<Student[]>([])
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -70,24 +71,35 @@ export default function StudentsPage() {
 
   useEffect(() => {
     fetchStudents()
+    fetchTeachers()
   }, [])
 
   const fetchStudents = async () => {
     try {
       setLoading(true)
       const response = await fetch('/api/school-admin/students')
-      
       if (response.ok) {
         const data = await response.json()
         setStudents(data.students || [])
-      } else {
-        console.error('Failed to fetch students')
       }
     } catch (error) {
       console.error('Error fetching students:', error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchTeachers = async () => {
+    try {
+      const res = await fetch('/api/school-admin/teachers')
+      if (res.ok) {
+        const data = await res.json()
+        setTeachers((data.teachers || []).map((t: any) => ({
+          id:   t.id,
+          name: t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim(),
+        })))
+      }
+    } catch {}
   }
 
   const handleEnrollSuccess = () => {
@@ -375,6 +387,8 @@ export default function StudentsPage() {
         onClose={() => setIsEnrollModalOpen(false)}
         onSuccess={handleEnrollSuccess}
         classes={[]}
+        role="school-admin"
+        teachers={teachers}
       />
 
       <EditStudentModal
