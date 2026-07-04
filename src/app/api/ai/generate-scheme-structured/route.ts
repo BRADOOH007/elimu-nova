@@ -2,22 +2,22 @@
  * POST /api/ai/generate-scheme-structured
  *
  * Generates a CBC-compliant scheme of work in KICD table format.
- * Returns structured JSON rows (one per lesson) — not prose/markdown.
+ * Matches the schemesofwork.com format exactly — including mid-term breaks,
+ * holidays, and revision weeks inserted at the correct positions.
  *
- * Each row matches the official KICD columns:
+ * Each teaching row matches the official KICD columns:
  *   Week | Lesson | Strand | Sub-Strand | Specific Learning Outcomes |
  *   Key Inquiry Questions | Learning Experiences | Learning Resources |
  *   Assessment | Reflection
  *
- * The structured output is saved to DB (SchemeOfWork + SchemeTopic records)
- * and can be used to generate lesson plans and PowerPoints for any row.
+ * Break rows use type: 'break' with a reason field.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { OpenAIService } from '@/lib/openai-service'
+import { callAI } from '@/lib/ai-provider'
 
 export interface KICDRow {
   week:                      number
@@ -31,6 +31,100 @@ export interface KICDRow {
   assessment:                string
   reflection:                string
   durationMinutes:           number
+  type?:                     'lesson' | 'break' | 'revision' | 'exam'
+  breakReason?:              string  // e.g. "Mid-Term Break", "Public Holiday"
+}
+
+// ── Kenyan CBC term structure with standard breaks ─────────────────────────
+const TERM_BREAKS: Record<string, Array<{ afterWeek: number; reason: string }>> = {
+  'Term 1': [
+    { afterWeek: 4,  reason: 'Mid-Term Break (1 week)' },
+    { afterWeek: 10, reason: 'End of Term Examinations' },
+  ],
+  'Term 2': [
+    { afterWeek: 4,  reason: 'Mid-Term Break (1 week)' },
+    { afterWeek: 10, reason: 'End of Term Examinations' },
+  ],
+  'Term 3': [
+    { afterWeek: 4,  reason: 'Mid-Term Break (1 week)' },
+    { afterWeek: 8,  reason: 'Revision Week' },
+    { afterWeek: 9,  reason: 'End of Year Examinations' },
+  ],
+}
+
+/**
+ * Build the full week timeline including break weeks.
+ * Teaching weeks are numbered 1..weeksCount.
+ * Break slots are inserted according to TERM_BREAKS.
+ */
+function buildTimeline(weeksCount: number, term: string): Array<{ week: number; isBreak: boolean; breakReason?: string }> {
+  const breaks = TERM_BREAKS[term] || TERM_BREAKS['Term 1']
+  const timeline: Array<{ week: number; isBreak: boolean; breakReason?: string }> = []
+  let teachingWeek = 0
+
+  for (let cal = 1; cal <= weeksCount + breaks.length; cal++) {
+    const breakEntry = breaks.find(b => b.afterWeek === teachingWeek)
+    if (breakEntry) {
+      timeline.push({ week: cal, isBreak: true, breakReason: breakEntry.reason })
+    } else {
+      teachingWeek++
+      if (teachingWeek > weeksCount) break
+      timeline.push({ week: cal, isBreak: false })
+    }
+  }
+  return timeline
+}
+
+/** 
+ * Strip markdown fences and extract first JSON array from AI response.
+ * Handles: ```json\n[...]\n```, plain [...], objects wrapping array.
+ */
+function extractJsonArray(raw: string): KICDRow[] {
+  // Remove markdown code fences
+  let cleaned = raw
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/g, '')
+    .trim()
+
+  // Find first [ and matching last ]
+  const start = cleaned.indexOf('[')
+  const end   = cleaned.lastIndexOf(']')
+
+  if (start !== -1 && end > start) {
+    const candidate = cleaned.slice(start, end + 1)
+    const parsed = JSON.parse(candidate)
+    if (Array.isArray(parsed)) return parsed
+  }
+
+  // Some models wrap in {"rows": [...]} or {"scheme": [...]}
+  const objStart = cleaned.indexOf('{')
+  const objEnd   = cleaned.lastIndexOf('}')
+  if (objStart !== -1 && objEnd > objStart) {
+    const obj = JSON.parse(cleaned.slice(objStart, objEnd + 1))
+    for (const key of Object.keys(obj)) {
+      if (Array.isArray(obj[key])) return obj[key]
+    }
+  }
+
+  throw new Error('No JSON array found in AI response')
+}
+
+/** Normalise a row so every required field is present */
+function normaliseRow(r: any, week: number, lesson: number): KICDRow {
+  return {
+    week:                     r.week        ?? week,
+    lesson:                   r.lesson      ?? lesson,
+    strand:                   r.strand      || r.Strand      || '',
+    subStrand:                r.subStrand   || r.SubStrand   || r['sub-strand'] || r['Sub-Strand'] || '',
+    specificLearningOutcomes: r.specificLearningOutcomes || r.objectives || r.outcomes || '',
+    keyInquiryQuestions:      Array.isArray(r.keyInquiryQuestions)  ? r.keyInquiryQuestions  : (r.keyInquiryQuestions  ? [r.keyInquiryQuestions]  : []),
+    learningExperiences:      Array.isArray(r.learningExperiences)  ? r.learningExperiences  : (r.learningExperiences  ? [r.learningExperiences]  : []),
+    learningResources:        Array.isArray(r.learningResources)    ? r.learningResources    : (r.learningResources    ? [r.learningResources]    : []),
+    assessment:               r.assessment  || '',
+    reflection:               r.reflection  || '',
+    durationMinutes:          r.durationMinutes || r.duration || 40,
+    type:                     'lesson',
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -44,80 +138,162 @@ export async function POST(request: NextRequest) {
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
     const {
-      title, subject, grade, term,
-      weeksCount      = 13,
-      lessonsPerWeek  = 5,
-      selectedTopics  = [],   // array of { strand, subStrand } from CBC data
-      termStartDate,
-      saveToDb        = true,
+      title,
+      subject,
+      grade,
+      term          = 'Term 1',
+      weeksCount    = 13,
+      lessonsPerWeek = 5,
+      selectedTopics = [],
+      saveToDb       = true,
     } = await request.json()
 
     if (!subject || !grade) {
       return NextResponse.json({ error: 'subject and grade are required' }, { status: 400 })
     }
 
-    const totalLessons = weeksCount * lessonsPerWeek
+    // Only ask AI to generate the TEACHING weeks (not break weeks)
+    const teachingWeeks  = weeksCount
+    const totalLessons   = teachingWeeks * lessonsPerWeek
+
     const topicsStr = selectedTopics.length > 0
       ? selectedTopics.map((t: any) => `${t.strand} → ${t.subStrand}`).join('\n')
-      : `Generate appropriate ${subject} topics for ${grade}`
+      : `Generate appropriate CBC ${subject} topics for ${grade} ${term}`
 
-    // ── Ask AI to return structured JSON rows ──────────────────────────────
-    const systemPrompt = `You are a Kenyan CBC curriculum expert. You create schemes of work in the official KICD format.
-Return ONLY a valid JSON array. No markdown, no explanation, just the JSON array.
-Each object must have exactly these fields:
-week, lesson, strand, subStrand, specificLearningOutcomes, keyInquiryQuestions (array), learningExperiences (array), learningResources (array), assessment, reflection, durationMinutes.
-Make content practical, CBC-aligned, and appropriate for ${grade} ${subject}.`
+    // ── System prompt — extremely strict about output format ───────────────
+    const systemPrompt = `You are a Kenyan CBC curriculum expert creating official KICD schemes of work.
+You MUST return ONLY a raw JSON array — no markdown, no code fences, no explanation text, nothing else.
+The first character of your response must be [ and the last must be ].
+Each element is an object with EXACTLY these keys (no extras, no missing):
+{
+  "week": <number 1-${teachingWeeks}>,
+  "lesson": <number 1-${lessonsPerWeek}>,
+  "strand": "<string>",
+  "subStrand": "<string>",
+  "specificLearningOutcomes": "<string — starts with 'By the end of the lesson, the learner should be able to'>",
+  "keyInquiryQuestions": ["<question>", "<question>"],
+  "learningExperiences": ["<activity>", "<activity>", "<activity>"],
+  "learningResources": ["<resource>", "<resource>"],
+  "assessment": "<string>",
+  "reflection": "",
+  "durationMinutes": 40
+}
+CBC-aligned content. Kenya-specific examples. Appropriate for ${grade} ${subject}.
+Week numbers go 1 to ${teachingWeeks}. Lessons 1 to ${lessonsPerWeek} per week.`
 
-    const userPrompt = `Create a CBC scheme of work with these details:
+    const userPrompt = `Generate a ${teachingWeeks}-week CBC scheme of work:
 Subject: ${subject}
 Grade: ${grade}
-Term: ${term || 'Term 1'}
-Total weeks: ${weeksCount}
+Term: ${term}
 Lessons per week: ${lessonsPerWeek}
-Total lessons: ${totalLessons}
+Total teaching lessons: ${totalLessons}
 
-Topics to cover (Strand → Sub-Strand):
+Topics (Strand → Sub-Strand):
 ${topicsStr}
 
-Return a JSON array of exactly ${totalLessons} lesson objects.
-Distribute topics evenly across weeks.
-Each lesson should build on the previous one.
-Use Kenya-specific examples and contexts.`
+Rules:
+- Distribute topics evenly across all ${teachingWeeks} weeks
+- Each week has exactly ${lessonsPerWeek} lessons
+- Lessons within each week build progressively
+- Use Kenyan contexts and examples
+- Return exactly ${totalLessons} objects in the JSON array`
 
-    const raw = await OpenAIService.generateLongContent(
-      [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: userPrompt   },
-      ],
-      { maxTokens: 4000, temperature: 0.4 }
-    )
-
-    // ── Parse JSON response — robust extraction ────────────────────────────
+    // ── Try up to 3 providers in order — stop at first valid parse ────────
     let rows: KICDRow[] = []
-    try {
-      // Find the first [ and last ] to extract the JSON array cleanly
-      const start = raw.indexOf('[')
-      const end   = raw.lastIndexOf(']')
-      if (start === -1 || end === -1 || end <= start) throw new Error('No JSON array found in response')
-      rows = JSON.parse(raw.slice(start, end + 1))
-      if (!Array.isArray(rows)) throw new Error('Parsed value is not an array')
-    } catch (e) {
-      console.error('[SCHEME] JSON parse failed:', e)
-      return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })
+    let lastError = ''
+
+    const providers: Array<{ name: string; fn: () => Promise<string> }> = [
+      {
+        name: 'Cerebras',
+        fn: async () => {
+          const r = await callAI({ messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], maxTokens: 4000, temperature: 0.2, cerebrasModel: 'llama3.1-8b' })
+          return r.content
+        }
+      },
+      {
+        name: 'DeepSeek',
+        fn: async () => {
+          const r = await callAI({ messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], maxTokens: 4000, temperature: 0.2 })
+          return r.content
+        }
+      },
+      {
+        name: 'Groq',
+        fn: async () => {
+          const r = await callAI({ messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }], maxTokens: 4000, temperature: 0.2, groqModel: 'llama-3.3-70b' })
+          return r.content
+        }
+      },
+    ]
+
+    for (const provider of providers) {
+      try {
+        console.log(`[SCHEME] Trying ${provider.name}...`)
+        const raw = await provider.fn()
+        console.log(`[SCHEME] ${provider.name} raw (first 200):`, raw.slice(0, 200))
+        rows = extractJsonArray(raw).map((r, i) =>
+          normaliseRow(r, Math.floor(i / lessonsPerWeek) + 1, (i % lessonsPerWeek) + 1)
+        )
+        if (rows.length > 0) {
+          console.log(`[SCHEME] ✅ ${provider.name} returned ${rows.length} rows`)
+          break
+        }
+      } catch (e: any) {
+        lastError = `${provider.name}: ${e.message}`
+        console.warn(`[SCHEME] ${provider.name} failed:`, e.message)
+      }
     }
 
-    if (!saveToDb) return NextResponse.json({ rows, totalLessons: rows.length })
+    if (rows.length === 0) {
+      console.error('[SCHEME] All providers failed. Last error:', lastError)
+      return NextResponse.json({
+        error: 'Could not generate scheme. AI providers returned invalid format. Please try again.',
+      }, { status: 500 })
+    }
+
+    // ── Insert break rows into the timeline ────────────────────────────────
+    const timeline = buildTimeline(teachingWeeks, term)
+    const allRows: KICDRow[] = []
+    let rowIndex = 0
+
+    for (const slot of timeline) {
+      if (slot.isBreak) {
+        allRows.push({
+          week: slot.week, lesson: 0,
+          strand: '', subStrand: '',
+          specificLearningOutcomes: slot.breakReason || 'Break',
+          keyInquiryQuestions: [], learningExperiences: [], learningResources: [],
+          assessment: '', reflection: '', durationMinutes: 0,
+          type: 'break', breakReason: slot.breakReason,
+        })
+      } else {
+        // Add all lessons for this teaching week
+        const weekRows = rows.filter(r => r.week === (rowIndex + 1))
+        if (weekRows.length > 0) {
+          weekRows.forEach(wr => allRows.push({ ...wr, week: slot.week }))
+        } else {
+          // fallback — use sequential rows
+          for (let l = 1; l <= lessonsPerWeek; l++) {
+            const idx = rowIndex * lessonsPerWeek + (l - 1)
+            if (rows[idx]) allRows.push({ ...rows[idx], week: slot.week })
+          }
+        }
+        rowIndex++
+      }
+    }
+
+    if (!saveToDb) return NextResponse.json({ rows: allRows, totalLessons: rows.length })
 
     // ── Save to database ───────────────────────────────────────────────────
-    const schemeTitle = title || `${subject} - ${grade} - ${term || 'Term 1'}`
+    const schemeTitle = title || `${subject} — ${grade} — ${term}`
 
     const scheme = await prisma.schemeOfWork.create({
       data: {
         title:     schemeTitle,
         subject,
         grade,
-        term:      term || 'Term 1',
-        content:   JSON.stringify(rows),
+        term,
+        content:   JSON.stringify(allRows),
         duration:  weeksCount,
         teacherId: teacher.id,
         schoolId:  teacher.schoolId || undefined,
@@ -125,33 +301,27 @@ Use Kenya-specific examples and contexts.`
       },
     })
 
-    // Save each lesson row as a SchemeTopic
-    const topicRecords = rows.map(row => ({
-      title:         `W${row.week} L${row.lesson}: ${row.subStrand}`,
-      description:   row.specificLearningOutcomes,
-      weekNumber:    row.week,
-      lessonNumber:  row.lesson,
-      objectives:    [row.specificLearningOutcomes],
-      activities:    row.learningExperiences,
-      resources:     row.learningResources,
-      assessment:    row.assessment,
-      duration:      row.durationMinutes || 40,
-      schemeOfWorkId: scheme.id,
-    }))
+    // Save only teaching rows as SchemeTopic records
+    const teachingRows = allRows.filter(r => r.type !== 'break')
+    await prisma.schemeTopic.createMany({
+      data: teachingRows.map(row => ({
+        title:          `W${row.week} L${row.lesson}: ${row.subStrand}`,
+        description:    row.specificLearningOutcomes,
+        weekNumber:     row.week,
+        lessonNumber:   row.lesson,
+        objectives:     [row.specificLearningOutcomes],
+        activities:     row.learningExperiences,
+        resources:      row.learningResources,
+        assessment:     row.assessment,
+        duration:       row.durationMinutes || 40,
+        schemeOfWorkId: scheme.id,
+      })),
+    })
 
-    await prisma.schemeTopic.createMany({ data: topicRecords })
-
-    // Return scheme with all rows
     return NextResponse.json({
-      scheme: {
-        id:      scheme.id,
-        title:   scheme.title,
-        subject: scheme.subject,
-        grade:   scheme.grade,
-        term:    scheme.term,
-      },
-      rows,
-      totalLessons: rows.length,
+      scheme: { id: scheme.id, title: scheme.title, subject: scheme.subject, grade: scheme.grade, term: scheme.term },
+      rows: allRows,
+      totalLessons: teachingRows.length,
     })
   } catch (error: any) {
     console.error('[GENERATE_SCHEME_STRUCTURED]', error)

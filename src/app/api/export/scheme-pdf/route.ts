@@ -87,7 +87,18 @@ function esc(s: any): string {
 }
 
 function buildSchemeHTML(scheme: any, rows: any[], teacherName: string): string {
-  const rowsHtml = rows.map(r => `
+  const rowsHtml = rows.map(r => {
+    // Break / holiday / revision / exam row
+    if (r.type === 'break' || r.type === 'revision' || r.type === 'exam') {
+      return `
+    <tr class="break-row">
+      <td style="text-align:center;font-weight:bold;color:#92400e;background:#fef3c7;padding:6px 4px;">${esc(r.week)}</td>
+      <td colspan="9" style="text-align:center;font-weight:bold;color:#92400e;background:#fef3c7;padding:6px 4px;letter-spacing:0.05em;">
+        ⏸ ${esc(r.breakReason || r.specificLearningOutcomes)}
+      </td>
+    </tr>`
+    }
+    return `
     <tr>
       <td>${esc(r.week)}</td>
       <td>${esc(r.lesson)}</td>
@@ -99,7 +110,7 @@ function buildSchemeHTML(scheme: any, rows: any[], teacherName: string): string 
       <td>${Array.isArray(r.learningResources) ? r.learningResources.map(esc).join('<br>') : esc(r.learningResources)}</td>
       <td>${esc(r.assessment)}</td>
       <td></td>
-    </tr>`).join('')
+    </tr>`}).join('')
 
   return `<!DOCTYPE html>
 <html>
