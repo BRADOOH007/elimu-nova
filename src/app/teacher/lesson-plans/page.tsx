@@ -25,7 +25,9 @@ import {
   Loader2,
   Users,
   Send,
-  CheckCircle
+  CheckCircle,
+  Presentation,
+  NotebookPen
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -130,6 +132,10 @@ export default function PlanningPage() {
   const [sharing, setSharing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [itemToDelete, setItemToDelete] = useState<LessonPlan | SchemeOfWork | null>(null)
+
+  // Per-lesson-plan action loading states
+  const [generatingPptx, setGeneratingPptx] = useState<string | null>(null)
+  const [generatingNotes, setGeneratingNotes] = useState<string | null>(null)
 
   // Fetch Data
   useEffect(() => {
@@ -246,8 +252,76 @@ export default function PlanningPage() {
     }
   }
 
-  const handleDownload = async (item: LessonPlan | SchemeOfWork, format?: 'pdf' | 'word') => {
+  const generatePptxFromLesson = async (lp: LessonPlan) => {
+    setGeneratingPptx(lp.id)
     try {
+      const res = await fetch('/api/ai/generate-pptx-from-lesson', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonPlanId: lp.id, subject: lp.subject, grade: lp.grade }),
+      })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `${lp.title.replace(/[^a-z0-9]/gi, '_')}.pptx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'PPTX Failed', description: e.message })
+    } finally {
+      setGeneratingPptx(null)
+    }
+  }
+
+  const generateNotesFromLesson = async (lp: LessonPlan) => {
+    setGeneratingNotes(lp.id)
+    try {
+      // Fetch full lesson plan with content
+      const planRes = await fetch(`/api/lesson-plans/${lp.id}`)
+      if (!planRes.ok) throw new Error('Could not load lesson plan')
+      const fullPlan = await planRes.json()
+
+      const res = await fetch('/api/ai/generate-lesson-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonPlan: fullPlan, noteType: 'detailed' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed')
+
+      const notes = data.notes
+      const lines: string[] = []
+      if (notes.title)   lines.push(notes.title, '')
+      if (notes.summary) lines.push('SUMMARY\n' + notes.summary, '')
+      ;(notes.sections || []).forEach((s: any) => {
+        lines.push(`\n${s.heading.toUpperCase()}`)
+        if (s.content) lines.push(s.content)
+        ;(s.keyPoints || []).forEach((p: string) => lines.push(`• ${p}`))
+      })
+      if (notes.studyTips?.length) {
+        lines.push('\nSTUDY TIPS')
+        notes.studyTips.forEach((t: string) => lines.push(`• ${t}`))
+      }
+      if (notes.rawResponse) lines.push(notes.rawResponse)
+
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `${lp.title.replace(/[^a-z0-9]/gi, '_')}_notes.txt`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast({ title: 'Notes Downloaded', variant: 'success' })
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Notes Failed', description: e.message })
+    } finally {
+      setGeneratingNotes(null)
+    }
+  }
+
+  const handleDownload = async (item: LessonPlan | SchemeOfWork, format?: 'pdf' | 'word') => {    try {
       const isLesson = 'schemeOfWork' in item
       const url = isLesson 
         ? '/api/export/lesson-plan' 
@@ -439,6 +513,33 @@ export default function PlanningPage() {
                           onClick={() => { setSelectedLessonPlan(lp); setIsViewModalOpen(true) }}
                         >
                           <Eye className="w-4 h-4 mr-1" /> View
+                        </Button>
+                      </div>
+                      {/* Quick actions: PPTX + Notes */}
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={generatingPptx === lp.id}
+                          onClick={() => generatePptxFromLesson(lp)}
+                          className="bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100 text-xs"
+                        >
+                          {generatingPptx === lp.id
+                            ? <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            : <Presentation className="h-3 w-3 mr-1" />}
+                          PPTX
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={generatingNotes === lp.id}
+                          onClick={() => generateNotesFromLesson(lp)}
+                          className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100 text-xs"
+                        >
+                          {generatingNotes === lp.id
+                            ? <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            : <NotebookPen className="h-3 w-3 mr-1" />}
+                          Notes
                         </Button>
                       </div>
                     </div>

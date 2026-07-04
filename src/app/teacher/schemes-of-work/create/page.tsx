@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   BookOpen, ChevronRight, ChevronLeft, CheckCircle, Loader2,
   FileText, Presentation, Download, Sparkles, Plus, Trash2,
-  Calendar, Settings, Zap
+  Calendar, Settings, Zap, NotebookPen
 } from 'lucide-react'
 
 // Import CBC curriculum data
@@ -54,8 +54,9 @@ export default function CreateSchemePage() {
   // Per-row actions
   const [generatingLesson, setGeneratingLesson] = useState<number | null>(null)
   const [generatingPptx, setGeneratingPptx]     = useState<number | null>(null)
+  const [generatingNotes, setGeneratingNotes]   = useState<number | null>(null)
   const [lessonPlanIds, setLessonPlanIds]        = useState<Record<number, string>>({})
-
+  const [notesReady, setNotesReady]             = useState<Record<number, boolean>>({})
   // Load CBC strands when subject+grade changes
   useEffect(() => {
     if (!subject || !grade) return
@@ -154,6 +155,61 @@ export default function CreateSchemePage() {
       alert(`❌ ${e.message}`)
     } finally {
       setGeneratingPptx(null)
+    }
+  }
+
+  const generateNotes = async (row: KICDRow, rowIndex: number) => {
+    const lessonId = lessonPlanIds[rowIndex]
+    if (!lessonId) { alert('Generate lesson plan first'); return }
+    setGeneratingNotes(rowIndex)
+    try {
+      // Fetch the lesson plan content first
+      const planRes = await fetch(`/api/lesson-plans/${lessonId}`)
+      if (!planRes.ok) throw new Error('Could not load lesson plan')
+      const lessonPlan = await planRes.json()
+
+      const res = await fetch('/api/ai/generate-lesson-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonPlan, noteType: 'detailed' }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+
+      // Build text from structured notes
+      const notes = data.notes
+      const lines: string[] = []
+      if (notes.title)   lines.push(notes.title, '')
+      if (notes.summary) lines.push('SUMMARY', notes.summary, '')
+      ;(notes.sections || []).forEach((s: any) => {
+        lines.push(`\n${s.heading.toUpperCase()}`)
+        if (s.content) lines.push(s.content)
+        ;(s.keyPoints || []).forEach((p: string) => lines.push(`• ${p}`))
+      })
+      if (notes.importantPoints?.length) {
+        lines.push('\nIMPORTANT POINTS')
+        notes.importantPoints.forEach((p: string) => lines.push(`• ${p}`))
+      }
+      if (notes.studyTips?.length) {
+        lines.push('\nSTUDY TIPS')
+        notes.studyTips.forEach((t: string) => lines.push(`• ${t}`))
+      }
+      if (notes.nextSteps) lines.push(`\nNEXT STEPS\n${notes.nextSteps}`)
+      if (notes.rawResponse) lines.push(notes.rawResponse)
+
+      const text = lines.join('\n')
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `${subject}_${row.subStrand.replace(/[^a-z0-9]/gi, '_')}_notes.txt`
+      a.click()
+      URL.revokeObjectURL(url)
+      setNotesReady(prev => ({ ...prev, [rowIndex]: true }))
+    } catch (e: any) {
+      alert(`❌ ${e.message}`)
+    } finally {
+      setGeneratingNotes(null)
     }
   }
 
@@ -367,7 +423,7 @@ export default function CreateSchemePage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-slate-800 text-white">
-                    {['Wk','Lsn','Strand','Sub-Strand','Specific Learning Outcomes','Resources','Assessment','Generate'].map(h => (
+                    {['Wk','Lsn','Strand','Sub-Strand','Specific Learning Outcomes','Resources','Assessment','Actions'].map(h => (
                       <th key={h} className="px-3 py-2.5 text-left font-semibold text-[11px] uppercase tracking-wide whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -385,8 +441,8 @@ export default function CreateSchemePage() {
                       </td>
                       <td className="px-3 py-2 text-slate-500 max-w-[100px]">{row.assessment}</td>
                       <td className="px-3 py-2">
-                        <div className="flex gap-1">
-                          {/* Generate Lesson Plan */}
+                        <div className="flex flex-col gap-1">
+                          {/* 1. Generate Lesson Plan */}
                           <button
                             onClick={() => generateLesson(row, i)}
                             disabled={generatingLesson === i}
@@ -397,9 +453,9 @@ export default function CreateSchemePage() {
                                 : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
                             } disabled:opacity-50`}>
                             {generatingLesson === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
-                            {lessonPlanIds[i] ? 'Done' : 'Plan'}
+                            {lessonPlanIds[i] ? '✓ Plan' : 'Plan'}
                           </button>
-                          {/* Generate PowerPoint */}
+                          {/* 2. Generate PowerPoint */}
                           <button
                             onClick={() => generatePptx(row, i)}
                             disabled={generatingPptx === i || !lessonPlanIds[i]}
@@ -407,6 +463,19 @@ export default function CreateSchemePage() {
                             className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 disabled:opacity-40 transition-colors">
                             {generatingPptx === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <Presentation className="h-3 w-3" />}
                             PPTX
+                          </button>
+                          {/* 3. Generate Student Notes */}
+                          <button
+                            onClick={() => generateNotes(row, i)}
+                            disabled={generatingNotes === i || !lessonPlanIds[i]}
+                            title={lessonPlanIds[i] ? 'Generate Student Notes' : 'Generate lesson plan first'}
+                            className={`flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg transition-colors ${
+                              notesReady[i]
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                            } disabled:opacity-40`}>
+                            {generatingNotes === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <NotebookPen className="h-3 w-3" />}
+                            {notesReady[i] ? '✓ Notes' : 'Notes'}
                           </button>
                         </div>
                       </td>
@@ -418,7 +487,7 @@ export default function CreateSchemePage() {
           </div>
 
           <p className="text-xs text-slate-400 text-center">
-            Click <strong>Plan</strong> to generate a detailed lesson plan for any row, then <strong>PPTX</strong> to create a PowerPoint with AI images.
+            Click <strong>Plan</strong> to generate a detailed lesson plan → <strong>PPTX</strong> to create a PowerPoint with AI images → <strong>Notes</strong> to generate downloadable student notes.
           </p>
         </div>
       )}
