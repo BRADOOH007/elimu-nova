@@ -429,7 +429,19 @@ export default function CreateSchemePage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {rows.map((row, i) => (
+                  {rows.map((row, i) => {
+                    // Break / holiday / exam row — spans full width
+                    if ((row as any).type === 'break' || (row as any).type === 'revision' || (row as any).type === 'exam') {
+                      return (
+                        <tr key={i} className="bg-amber-50 border-l-4 border-amber-400">
+                          <td className="px-3 py-2 font-bold text-amber-700">{row.week}</td>
+                          <td colSpan={7} className="px-3 py-2 text-center font-semibold text-amber-700 tracking-wide uppercase text-xs">
+                            {(row as any).breakReason || row.specificLearningOutcomes}
+                          </td>
+                        </tr>
+                      )
+                    }
+                    return (
                     <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                       <td className="px-3 py-2 font-bold text-slate-700">{row.week}</td>
                       <td className="px-3 py-2 text-slate-600">{row.lesson}</td>
@@ -480,7 +492,8 @@ export default function CreateSchemePage() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
