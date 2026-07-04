@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { OpenAIService } from '@/lib/openai-service'
+import { ImageGenerationService } from '@/lib/image-generation'
 import CloudinaryStorage from '@/lib/cloudinary-storage'
 
 export async function POST(request: NextRequest) {
@@ -18,14 +18,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
     }
 
-    console.log('Generating image with OpenAI DALL-E 3, prompt:', prompt)
+    console.log('Generating image, prompt:', prompt)
 
-    // Generate image using OpenAI DALL-E 3
-    const result = await OpenAIService.generateImage({
+    // Generate image using the ImageGenerationService
+    const imageService = new ImageGenerationService()
+    const result = await imageService.generateImage({
       prompt,
-      style: style === 'educational' ? 'natural' : style, // Map educational to natural
+      style: style === 'educational' ? 'natural' : style,
       size,
-      quality
+      quality,
     })
 
     // Save the image to Cloudinary storage

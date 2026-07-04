@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 
+const PUBLIC_SIGNUP_ROLES = ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] as const
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -15,6 +17,20 @@ export async function POST(request: NextRequest) {
       schoolAddress,
       schoolPhone,
     } = body
+
+    if (!PUBLIC_SIGNUP_ROLES.includes(role)) {
+      return NextResponse.json(
+        { error: 'Invalid account type' },
+        { status: 400 }
+      )
+    }
+
+    if (role === 'SCHOOL_ADMIN' && (!schoolName || !schoolAddress)) {
+      return NextResponse.json(
+        { error: 'School name and address are required' },
+        { status: 400 }
+      )
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({

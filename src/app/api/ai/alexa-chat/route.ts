@@ -1,49 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { aiService } from '@/lib/ai-service'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
     const { message } = body
 
-    if (!message || message.trim() === '') {
-      return NextResponse.json(
-        { error: 'Message is required' },
-        { status: 400 }
-      )
+    if (!message?.trim()) {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
-    // Get chat response from AI service
-    const result = await aiService.chatWithHope(message, {
-      userRole: session.user.role,
-      teacherId: session.user.teacher?.id
-    })
+    const systemPrompt = `You are Hope, an AI teaching assistant for ElimuNova AI. You help Kenyan teachers with:
+- Lesson planning and curriculum development
+- Assessment strategies and marking rubrics
+- Student engagement techniques
+- CBC curriculum alignment
+- Teaching notes and resources
+- Classroom management strategies
 
-    // Parse the AI response
-    const aiResponse = JSON.parse(result.content)
+Always be practical, encouraging and specific to Kenyan education context.
+Respond in JSON format: { "response": "your helpful response", "suggestions": ["suggestion1", "suggestion2"], "resources": ["resource1"] }`
+
+    const raw = await OpenAIService.generateText([
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: message },
+    ], { maxTokens: 1000, temperature: 0.7 })
+
+    // Parse JSON response, fallback to plain text
+    let parsed: any = { response: raw, suggestions: [], resources: [] }
+    try {
+      const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+      if (start !== -1 && end > start) parsed = JSON.parse(raw.slice(start, end + 1))
+    } catch { /* use plain text fallback */ }
 
     return NextResponse.json({
-      response: aiResponse.response,
-      suggestions: aiResponse.suggestions || [],
-      resources: aiResponse.resources || [],
-      metadata: result.metadata
+      response:    parsed.response    || raw,
+      suggestions: parsed.suggestions || [],
+      resources:   parsed.resources   || [],
     })
   } catch (error) {
     console.error('Error in Hope chat:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

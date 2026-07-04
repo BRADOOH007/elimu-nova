@@ -37,11 +37,9 @@ export interface AIResponse {
   }
 }
 
-// AI service using OpenAI API
+// AI service using the ElimuNova AI waterfall
 export class AIService {
   private static instance: AIService
-  private apiKey: string
-  private baseURL: string
 
   public static getInstance(): AIService {
     if (!AIService.instance) {
@@ -50,35 +48,23 @@ export class AIService {
     return AIService.instance
   }
 
-  constructor() {
-    this.apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''
-    this.baseURL = 'https://openrouter.ai/api/v1'
-  }
-
   async generateLessonPlan(request: LessonPlanRequest): Promise<AIResponse> {
     try {
-      const { OpenAI } = await import('openai')
-      
-      const openai = new OpenAI({
-        apiKey: this.apiKey,
-        baseURL: this.baseURL,
-      })
+      const { OpenAIService } = await import('./openai-service')
 
-      // Language Logic: Only use Swahili for Kiswahili subject, everything else in English
       const isKiswahili = request.subject.toLowerCase() === 'kiswahili'
-      const languageInstruction = isKiswahili 
-        ? 'IMPORTANT: Generate this lesson plan entirely in Swahili language. All content, instructions, and explanations should be in Swahili.'
-        : 'IMPORTANT: Generate this lesson plan entirely in English language. All content, instructions, and explanations should be in English.'
 
-      const prompt = `Create a detailed lesson plan for:
+      const systemPrompt = isKiswahili
+        ? 'You are an expert educational consultant specializing in creating detailed, practical lesson plans in Swahili language. CRITICAL: Always respond entirely in Swahili for Kiswahili subjects.'
+        : 'You are an expert educational consultant specializing in creating detailed, practical lesson plans. CRITICAL: Always respond entirely in English.'
+
+      const userPrompt = `Create a detailed lesson plan for:
 Subject: ${request.subject}
 Grade: ${request.grade}
 Topic: ${request.topic}
 Duration: ${request.duration} minutes
 Learning Objectives: ${request.objectives.join(', ')}
 Prerequisites: ${request.prerequisites?.join(', ') || 'None specified'}
-
-${languageInstruction}
 
 Please create a comprehensive lesson plan that includes:
 1. Lesson objectives
@@ -90,45 +76,28 @@ Please create a comprehensive lesson plan that includes:
 
 Format the response in a clear, structured way that teachers can easily follow.`
 
-      const completion = await openai.chat.completions.create({
-        model: "openai/gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: isKiswahili 
-              ? "You are an expert educational consultant specializing in creating detailed, practical lesson plans in Swahili language. You have deep knowledge of Kiswahili curriculum, Swahili teaching methods, and Tanzanian/Kenyan education systems. Focus on student engagement, clear learning objectives, and effective teaching strategies. CRITICAL: Always respond entirely in Swahili language for Kiswahili subjects."
-              : "You are an expert educational consultant specializing in creating detailed, practical lesson plans. Focus on student engagement, clear learning objectives, and effective teaching strategies. CRITICAL: Always respond entirely in English language for all subjects except Kiswahili."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
+      const content = await OpenAIService.generateLongContent(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
         ],
-        max_tokens: 2000,
-        temperature: 0.7,
-      })
+        { maxTokens: 2000, temperature: 0.7 }
+      )
 
-      const content = completion.choices[0]?.message?.content || 'Unable to generate lesson plan'
-      
       return {
-        content: content,
+        content,
         metadata: {
           generatedAt: new Date().toISOString(),
-          model: 'openai/gpt-4o-mini',
-          tokens: completion.usage?.total_tokens || 0
-        }
+          model: 'waterfall',
+          tokens: 0,
+        },
       }
     } catch (error) {
       console.error('Error generating lesson plan:', error)
-      // Fallback to mock content if API fails
       const mockContent = this.generateMockLessonPlan(request)
       return {
         content: mockContent,
-        metadata: {
-          generatedAt: new Date().toISOString(),
-          model: 'fallback-mock',
-          tokens: 0
-        }
+        metadata: { generatedAt: new Date().toISOString(), model: 'fallback-mock', tokens: 0 },
       }
     }
   }
@@ -143,136 +112,42 @@ Format the response in a clear, structured way that teachers can easily follow.`
         duration: request.duration,
         topics: request.topics
       })
-      
-      const { OpenAI } = await import('openai')
-      
-      const openai = new OpenAI({
-        apiKey: this.apiKey,
-        baseURL: this.baseURL,
-      })
 
-      // Language Logic: Only use Swahili for Kiswahili subject, everything else in English
       const isKiswahili = request.subject.toLowerCase() === 'kiswahili'
-      const languageInstruction = isKiswahili 
-        ? 'IMPORTANT: Generate this scheme of work entirely in Swahili language. All content, instructions, and explanations should be in Swahili.'
-        : 'IMPORTANT: Generate this scheme of work entirely in English language. All content, instructions, and explanations should be in English.'
 
-      const prompt = `Create a comprehensive scheme of work for:
+      const systemPrompt = isKiswahili
+        ? 'You are an expert curriculum developer creating comprehensive schemes of work in Swahili. CRITICAL: Respond entirely in Swahili. Cover ALL topics provided.'
+        : 'You are an expert curriculum developer creating comprehensive schemes of work. CRITICAL: Cover ALL topics provided, no topic should be skipped.'
+
+      const userPrompt = `Create a comprehensive ${request.duration}-week scheme of work for:
 Subject: ${request.subject}
 Grade: ${request.grade}
 Term: ${request.term}
-Duration: ${request.duration} weeks
+Topics: ${request.topics.join(', ')}
 Lessons per week: ${request.lessonsPerWeek || 5}
-Lesson duration: ${request.lessonDuration || 45} minutes
-Topics to cover: ${request.topics.join(', ')}
+Lesson duration: ${request.lessonDuration || 40} minutes
 
-${languageInstruction}
+Include for each week: objectives, activities, resources, and assessment methods.`
 
-Please create a detailed scheme of work with the following EXACT structure:
-
-IMPORTANT: You must cover ALL the topics provided: ${request.topics.join(', ')}. Distribute these topics across the weeks and lessons.
-
-For each week (Week 1, Week 2, etc.), include:
-
-**Week X: [Week Topic - should be one of the main topics]**
-
-Then for each lesson in that week, include:
-
-**Lesson 1: [Specific Lesson Topic - should be related to one of the provided topics]**
-
-**Objectives:**
-• [Objective 1]
-• [Objective 2]
-• [Objective 3]
-
-**Teaching Activities:**
-• [Activity 1]
-• [Activity 2]
-• [Activity 3]
-
-**Resources and Materials:**
-• [Resource 1]
-• [Resource 2]
-• [Resource 3]
-
-**Assessment:**
-• [Assessment method 1]
-• [Assessment method 2]
-
-**Cross-curricular Links:**
-[Any relevant cross-curricular connections]
-
-**Differentiation Strategies:**
-[Strategies for different learning needs]
-
-**Homework and Extension Activities:**
-[Homework and extension tasks]
-
-**Lesson 2: [Next Lesson Topic - should be related to one of the provided topics]**
-
-[Repeat the same structure for Lesson 2]
-
-Continue this pattern for ALL lessons in the week.
-
-Make sure each week covers different aspects of the topics provided.
-
-CRITICAL REQUIREMENTS:
-1. Use exactly this format: **Week X:** followed by **Lesson Y:**
-2. Include exactly ${request.lessonsPerWeek || 5} lessons per week
-3. Generate content for exactly ${request.duration} weeks
-4. Each lesson must have all sections: Objectives, Teaching Activities, Resources and Materials, Assessment
-5. Use bullet points (•) for all lists
-6. Do not skip any lessons or weeks
-7. ⚠️ MANDATORY - MUST COVER ALL ${request.topics.length} TOPICS: ${request.topics.map((t, i) => `${i + 1}. ${t}`).join(', ')}
-   - Each topic MUST appear in at least one full lesson with complete details
-   - Do NOT skip any topic from the list
-   - Dedicate sufficient lessons to each topic based on its complexity
-8. Distribute the topics across different weeks and lessons logically
-9. Each lesson should be ${request.lessonDuration || 45} minutes long
-10. For ${request.topics.length} topics over ${request.duration} weeks, plan approximately ${Math.ceil((request.duration * (request.lessonsPerWeek || 5)) / request.topics.length)} lessons per topic
-11. If you have multiple topics, dedicate different weeks or consecutive lessons to each topic
-12. Start each new major topic with "**Week X: [Topic Name]**" to clearly show topic coverage
-13. VERIFICATION: Before finishing, ensure EVERY topic from this list appears: ${request.topics.join(' | ')}`
-
-      const completion = await openai.chat.completions.create({
-        model: "openai/gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: isKiswahili 
-              ? "You are an expert curriculum developer specializing in creating comprehensive schemes of work in Swahili language. You have deep knowledge of Kiswahili curriculum, Swahili teaching methods, and Tanzanian/Kenyan education systems. Focus on progressive learning, clear objectives, and practical implementation strategies. CRITICAL: Always respond entirely in Swahili language for Kiswahili subjects. IMPORTANT: You MUST cover ALL topics provided in the request - never skip any topic."
-              : "You are an expert curriculum developer specializing in creating comprehensive schemes of work. Focus on progressive learning, clear objectives, and practical implementation strategies. CRITICAL: Always respond entirely in English language for all subjects except Kiswahili. IMPORTANT: You MUST cover ALL topics provided in the request - never skip any topic, ensure each topic gets dedicated lesson content."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
+      const { OpenAIService } = await import('./openai-service')
+      const content = await OpenAIService.generateLongContent(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
         ],
-        max_tokens: 2500,
-        temperature: 0.7,
-      })
+        { maxTokens: 2500, temperature: 0.7 }
+      )
 
-      const content = completion.choices[0]?.message?.content || 'Unable to generate scheme of work'
-      
       return {
-        content: content,
-        metadata: {
-          generatedAt: new Date().toISOString(),
-          model: 'openai/gpt-4o-mini',
-          tokens: completion.usage?.total_tokens || 0
-        }
+        content,
+        metadata: { generatedAt: new Date().toISOString(), model: 'waterfall', tokens: 0 },
       }
     } catch (error) {
       console.error('Error generating scheme of work:', error)
-      // Fallback to mock content if API fails
       const mockContent = this.generateMockSchemeOfWork(request)
       return {
         content: mockContent,
-        metadata: {
-          generatedAt: new Date().toISOString(),
-          model: 'fallback-mock',
-          tokens: 0
-        }
+        metadata: { generatedAt: new Date().toISOString(), model: 'fallback-mock', tokens: 0 },
       }
     }
   }

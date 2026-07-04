@@ -5,6 +5,68 @@ import { prisma } from '@/lib/prisma';
 
 const prismaAny = prisma as any;
 
+async function canAccessCourse(session: any, courseId: string, write = false): Promise<boolean> {
+  if (session.user.role === 'SUPER_ADMIN') return true;
+
+  if (session.user.role === 'SCHOOL_ADMIN') {
+    const schoolAdmin = await prisma.schoolAdmin.findUnique({
+      where: { userId: session.user.id },
+      select: { schoolId: true }
+    });
+
+    if (!schoolAdmin?.schoolId) return false;
+
+    const course = await prismaAny.course.findUnique({
+      where: { id: courseId },
+      select: { schoolId: true }
+    });
+
+    return course?.schoolId === schoolAdmin.schoolId;
+  }
+
+  if (session.user.role === 'TEACHER') {
+    const teacher = await prisma.teacher.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true }
+    });
+
+    if (!teacher?.id) return false;
+
+    const assignment = await prismaAny.teacherCourseAssignment.findUnique({
+      where: {
+        teacherId_courseId: {
+          teacherId: teacher.id,
+          courseId
+        }
+      }
+    });
+
+    return !!assignment;
+  }
+
+  if (!write && session.user.role === 'STUDENT') {
+    const student = await prisma.student.findUnique({
+      where: { userId: session.user.id },
+      select: { id: true }
+    });
+
+    if (!student?.id) return false;
+
+    const enrollment = await prismaAny.courseEnrollment.findUnique({
+      where: {
+        studentId_courseId: {
+          studentId: student.id,
+          courseId
+        }
+      }
+    });
+
+    return !!enrollment;
+  }
+
+  return false;
+}
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
@@ -65,6 +127,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Course not found' }, { status: 404 });
     }
 
+    if (!await canAccessCourse(session, id)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     return NextResponse.json({ course });
 
   } catch (error) {
@@ -82,6 +148,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     const { id } = await params;
     const body = await req.json();
+
+    if (!await canAccessCourse(session, id, true)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const updatedCourse = await prismaAny.course.update({
       where: { id },
@@ -115,6 +185,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     const { id } = await params;
+
+    if (!await canAccessCourse(session, id, true)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     await prismaAny.course.delete({
       where: { id }

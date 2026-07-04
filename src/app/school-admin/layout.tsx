@@ -13,7 +13,8 @@ import {
   Calendar,
   Shield,
   Bell,
-  LayoutGrid
+  LayoutGrid,
+  BookOpen
 } from 'lucide-react'
 
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
@@ -30,6 +31,7 @@ export default function SchoolAdminLayout({
     { icon: BarChart3,   label: "Overview",        href: "/school-admin/dashboard"   },
     { icon: Users,       label: "Teachers & Staff",  href: "/school-admin/teachers"    },
     { icon: School,      label: "Students",          href: "/school-admin/students"    },
+    { icon: BookOpen,    label: "Learning Areas",    href: "/school-admin/learning-areas" },
     { icon: Calendar,    label: "Academics",         href: "/school-admin/activities"  },
     { icon: LayoutGrid,  label: "Timetable & Staff", href: "/school-admin/timetable"   },
     { icon: Bell,        label: "Meetings",          href: "/school-admin/meetings"    },

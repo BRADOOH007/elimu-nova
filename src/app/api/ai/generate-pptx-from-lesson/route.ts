@@ -95,9 +95,11 @@ For each slide:
 
     let slides: any[] = []
     try {
-      const jsonMatch = raw.match(/\[[\s\S]*\]/)
-      if (!jsonMatch) throw new Error('No slides JSON')
-      slides = JSON.parse(jsonMatch[0])
+      const start = raw.indexOf('[')
+      const end   = raw.lastIndexOf(']')
+      if (start === -1 || end === -1 || end <= start) throw new Error('No slides JSON array found')
+      slides = JSON.parse(raw.slice(start, end + 1))
+      if (!Array.isArray(slides)) throw new Error('Parsed value is not an array')
     } catch {
       return NextResponse.json({ error: 'AI returned invalid slide format. Please try again.' }, { status: 500 })
     }

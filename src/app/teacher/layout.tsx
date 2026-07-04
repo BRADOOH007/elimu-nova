@@ -8,7 +8,7 @@ import {
   BookOpen, Users, FileText, BarChart3, Calendar, Brain,
   ClipboardList, Mail, Activity, CheckCircle, Presentation,
   PenTool, Wand2, LineChart, CreditCard, Clock, MessageSquare,
-  Radio, Database, CalendarDays
+  Radio, Database, CalendarDays, Bell, NotebookText
 } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
@@ -24,6 +24,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { icon: LineChart,     label: "Analytics",        href: "/teacher/analytics"        },
     { icon: BookOpen,      label: "Lesson Plans",     href: "/teacher/lesson-plans"     },
     { icon: FileText,      label: "Schemes of Work",  href: "/teacher/schemes-of-work"  },
+    { icon: NotebookText,  label: "Lesson Notes",     href: "/teacher/lesson-notes"     },
     { icon: ClipboardList, label: "Assessments",      href: "/teacher/assignments"      },
     { icon: Database,      label: "Exam Bank",        href: "/teacher/exam-bank"        },
     { icon: PenTool,       label: "Marks Entry",      href: "/teacher/marks"            },
@@ -31,10 +32,12 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { icon: CalendarDays,  label: "Calendar",         href: "/teacher/calendar"         },
     { icon: Wand2,         label: "AI Tools",         href: "/teacher/ai-tools"         },
     { icon: Presentation,  label: "PowerPoint AI",    href: "/teacher/powerpoint"       },
-    { icon: Radio,         label: "Live Class",       href: "/teacher/live-class"       },
+    { icon: Radio,         label: "Live Teaching",    href: "/teacher/live-class"       },
     { icon: Calendar,      label: "Meetings",         href: "/teacher/meetings"         },
     { icon: MessageSquare, label: "Discussions",      href: "/teacher/discussions"      },
     { icon: Clock,         label: "Schedule",         href: "/teacher/schedule"         },
+    { icon: CalendarDays,  label: "Timetable",        href: "/teacher/timetable"        },
+    { icon: Bell,          label: "Notifications",    href: "/teacher/notifications"    },
     { icon: Brain,         label: "Hope AI",          href: "/teacher/alexa"            },
     {
       icon: Mail,
