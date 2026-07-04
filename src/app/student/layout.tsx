@@ -6,7 +6,7 @@ import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import {
   BarChart3, BookOpen, ClipboardList, Calendar, Brain,
-  Trophy, MessageSquare, Code2, Compass, Users, Radio
+  Trophy, MessageSquare, Code2, Compass, Users, Radio, Library
 } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
@@ -17,7 +17,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
 
   const sidebarItems = [
     { icon: BarChart3,     label: "Dashboard",       href: "/student/dashboard"    },
-    { icon: BookOpen,      label: "My Lessons",      href: "/student/lesson-plans" },
+    { icon: BookOpen,      label: "Learning Hub",    href: "/student/lesson-plans" },
+    { icon: Library,       label: "Courses",         href: "/student/courses"      },
     { icon: ClipboardList, label: "Assignments",     href: "/student/assignments"  },
     { icon: Calendar,      label: "Schedule",        href: "/student/schedule"     },
     { icon: Radio,         label: "Live Class",      href: "/student/live-class"   },

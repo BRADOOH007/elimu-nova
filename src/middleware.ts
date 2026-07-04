@@ -42,6 +42,13 @@ export default withAuth(
       }
     }
 
+    // Parent routes
+    if (pathname.startsWith("/parent")) {
+      if (userRole !== "PARENT") {
+        return NextResponse.redirect(new URL("/unauthorized", req.url))
+      }
+    }
+
     return NextResponse.next()
   },
   {
@@ -57,6 +64,7 @@ export const config = {
     "/school-admin/:path*",
     "/teacher/:path*",
     "/student/:path*",
+    "/parent/:path*",
     "/dashboard/:path*"
   ]
 }

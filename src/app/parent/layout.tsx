@@ -11,7 +11,8 @@ import {
   Calendar,
   BookOpen,
   MessageSquare,
-  Settings
+  Settings,
+  CreditCard
 } from 'lucide-react'
 
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
@@ -30,6 +31,7 @@ export default function ParentLayout({
     { icon: Users, label: "My Children", href: "/parent/children" },
     { icon: ClipboardList, label: "Assignments", href: "/parent/assignments" },
     { icon: BookOpen, label: "Progress & Grades", href: "/parent/progress" },
+    { icon: CreditCard, label: "Credit Allocation", href: "/parent/credits" },
     { icon: Calendar, label: "Schedule", href: "/parent/schedule" },
     {
       icon: MessageSquare,

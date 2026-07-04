@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { rateLimitAI, getIP } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id || !['STUDENT', 'TEACHER', 'SUPER_ADMIN'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const rl = await rateLimitAI(session.user.id || getIP(request))
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: `Rate limit reached. Try again in ${rl.resetInSec}s.` },
+        { status: 429, headers: { 'Retry-After': String(rl.resetInSec) } }
+      )
+    }
+
     const { lessonPlan, assessmentType, questionCount } = await request.json()
 
     if (!lessonPlan) {

@@ -1,12 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { email, newPassword } = await req.json();
 
-    console.log('Resetting password for student:', email);
+    if (!email || !newPassword || newPassword.length < 8) {
+      return NextResponse.json({ error: 'Email and a password of at least 8 characters are required' }, { status: 400 });
+    }
 
     // Find user by email
     const user = await prisma.user.findUnique({
@@ -28,6 +37,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
     }
 
+    if (session.user.role === 'TEACHER') {
+      const teacher = await prisma.teacher.findUnique({
+        where: { userId: session.user.id }
+      });
+
+      if (!teacher || user.student.teacherId !== teacher.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    } else if (session.user.role === 'SCHOOL_ADMIN') {
+      const schoolAdmin = await prisma.schoolAdmin.findUnique({
+        where: { userId: session.user.id }
+      });
+
+      if (!schoolAdmin || user.student.schoolId !== schoolAdmin.schoolId) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    } else if (session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
@@ -38,8 +67,6 @@ export async function POST(req: NextRequest) {
         password: hashedPassword
       }
     });
-
-    console.log('Password reset successfully for:', email);
 
     return NextResponse.json({
       success: true,

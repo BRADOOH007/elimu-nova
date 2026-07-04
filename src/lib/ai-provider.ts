@@ -2,7 +2,7 @@
  * ElimuNova AI Provider — shared across EduGenius and TutorBot.
  *
  * Waterfall:
- *   1. Cerebras      — gpt-oss-120b   (2,000 tok/sec — FASTEST)
+ *   1. Cerebras      — llama3.1-8b    (2,000 tok/sec — FASTEST)
  *   2. DeepSeek      — deepseek-chat  (best quality free — SMARTEST)
  *   2b. DeepSeek-R1  — deepseek-reasoner (for reasoning tasks)
  *   3. Gemini Flash  — gemini-2.5-flash  (free, CBC-aware)
