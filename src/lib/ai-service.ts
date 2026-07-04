@@ -153,29 +153,82 @@ Include for each week: objectives, activities, resources, and assessment methods
   }
 
   async generateAssignment(request: AssignmentRequest): Promise<AIResponse> {
-    // Mock implementation - replace with actual AI call
-    const mockContent = this.generateMockAssignment(request)
-    
-    return {
-      content: mockContent,
-      metadata: {
-        generatedAt: new Date().toISOString(),
-        model: 'openai/gpt-4o',
-        tokens: 1000
+    try {
+      const { OpenAIService } = await import('./openai-service')
+
+      const systemPrompt = `You are an expert Kenyan educator creating assignments for CBC curriculum.
+Return a JSON object with: title, instructions, requirements (array), rubric (object with criteria and percentages), dueDate (ISO string), submissionFormat.`
+
+      const userPrompt = `Create a ${request.difficulty} ${request.type} assignment for:
+Subject: ${request.subject}
+Grade: ${request.grade}
+Topic: ${request.topic}
+Duration: ${request.duration} minutes
+
+The assignment should test understanding, application, and higher-order thinking skills aligned to CBC competencies.
+Return ONLY valid JSON.`
+
+      const raw = await OpenAIService.generateText(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
+        ],
+        { maxTokens: 1000, temperature: 0.7 }
+      )
+
+      // Try to parse JSON, fallback to mock on failure
+      let content = raw
+      try {
+        const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+        if (start !== -1 && end > start) JSON.parse(raw.slice(start, end + 1)) // validate
+        content = raw.slice(start, end + 1)
+      } catch { content = this.generateMockAssignment(request) }
+
+      return {
+        content,
+        metadata: { generatedAt: new Date().toISOString(), model: 'waterfall', tokens: 0 },
+      }
+    } catch (error) {
+      console.error('Error generating assignment:', error)
+      return {
+        content: this.generateMockAssignment(request),
+        metadata: { generatedAt: new Date().toISOString(), model: 'fallback-mock', tokens: 0 },
       }
     }
   }
 
   async chatWithHope(message: string, context?: any): Promise<AIResponse> {
-    // Mock implementation - replace with actual AI call
-    const mockResponse = this.generateMockHopeResponse(message, context)
-    
-    return {
-      content: mockResponse,
-      metadata: {
-        generatedAt: new Date().toISOString(),
-        model: 'openai/gpt-4o',
-        tokens: 500
+    try {
+      const { OpenAIService } = await import('./openai-service')
+
+      const systemPrompt = `You are Hope, an AI teaching assistant for ElimuNova. You help Kenyan teachers with lesson planning, CBC curriculum, assessment strategies, and classroom management.
+Always be practical and specific to the Kenyan education context.
+Respond in JSON format: { "response": "your helpful response", "suggestions": ["tip1", "tip2"], "resources": ["resource1"] }`
+
+      const raw = await OpenAIService.generateText(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: message       },
+        ],
+        { maxTokens: 800, temperature: 0.7 }
+      )
+
+      // Parse JSON or return as plain text
+      let parsed: any = { response: raw, suggestions: [], resources: [] }
+      try {
+        const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+        if (start !== -1 && end > start) parsed = JSON.parse(raw.slice(start, end + 1))
+      } catch { /* use raw text */ }
+
+      return {
+        content: JSON.stringify(parsed),
+        metadata: { generatedAt: new Date().toISOString(), model: 'waterfall', tokens: 0 },
+      }
+    } catch (error) {
+      console.error('Error in chatWithHope:', error)
+      return {
+        content: this.generateMockHopeResponse(message, context),
+        metadata: { generatedAt: new Date().toISOString(), model: 'fallback-mock', tokens: 0 },
       }
     }
   }

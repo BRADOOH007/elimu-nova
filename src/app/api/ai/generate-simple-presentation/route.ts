@@ -208,10 +208,10 @@ Generate exactly ${slideCount} slides following this format. Make sure to:
 9. Make image descriptions very specific with colors, objects, style, and educational context
 10. Ensure images are appropriate and helpful for ${grade} students learning ${subject}`
 
-    const response = await OpenAIService.generateAIContent(prompt, {
-      maxTokens: 3000,
-      temperature: 0.7
-    })
+    const response = await OpenAIService.generateLongContent(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 3000, temperature: 0.7 }
+    )
 
     if (!response) {
       throw new Error('No content generated from AI')
