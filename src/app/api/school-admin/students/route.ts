@@ -4,6 +4,21 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
+function generateStudentPassword(): string {
+  const adjs  = ['Blue','Green','Happy','Brave','Swift','Bright','Calm','Bold']
+  const nouns = ['Lion','Star','River','Eagle','Mountain','Sunrise','Ocean','Forest']
+  const adj  = adjs [Math.floor(Math.random() * adjs.length)]
+  const noun = nouns[Math.floor(Math.random() * nouns.length)]
+  const num  = Math.floor(100 + Math.random() * 900)
+  return `${adj}${noun}${num}`
+}
+
+function generateStudentEmail(firstName: string, lastName: string, suffix?: string): string {
+  const base = `${firstName.toLowerCase().replace(/\s+/g,'')}` +
+               `.${lastName.toLowerCase().replace(/\s+/g,'')}`
+  return suffix ? `${base}.${suffix}@student.local` : `${base}@student.local`
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -198,83 +213,85 @@ export async function POST(request: NextRequest) {
 
     const schoolId = schoolAdmin.schoolId
     const body = await request.json()
-    const { firstName, lastName, email, password, teacherId, classId } = body
+    const { firstName, lastName, email, phone, address, teacherId, classId, grade } = body
 
-    if (!firstName || !lastName || !email || !password || !teacherId) {
+    if (!firstName || !lastName || !teacherId) {
       return NextResponse.json(
-        { error: 'All required fields must be provided' },
+        { error: 'firstName, lastName and teacherId are required' },
         { status: 400 }
       )
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
+    // Verify teacher belongs to this school
+    const teacher = await prisma.teacher.findFirst({
+      where: { id: teacherId, schoolId }
     })
-
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'User with this email already exists' },
-        { status: 400 }
-      )
+    if (!teacher) {
+      return NextResponse.json({ error: 'Teacher not found in this school' }, { status: 404 })
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
+    // Generate or validate email
+    const baseEmail = email?.trim()
+      ? email.trim().toLowerCase()
+      : generateStudentEmail(firstName, lastName)
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        password: hashedPassword,
-        role: 'STUDENT',
-        isActive: true
+    // Ensure unique email
+    let loginEmail = baseEmail
+    const existing = await prisma.user.findUnique({ where: { email: loginEmail } })
+    if (existing) {
+      if (email?.trim()) {
+        return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 })
       }
-    })
+      loginEmail = generateStudentEmail(firstName, lastName, Date.now().toString().slice(-4))
+    }
 
-    // Create student record
-    const student = await prisma.student.create({
-      data: {
-        userId: user.id,
-        schoolId: schoolId,
-        teacherId: teacherId,
-        classId: classId || null
-      },
-      include: {
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-            createdAt: true,
-            isActive: true
-          }
+    const plainPassword  = generateStudentPassword()
+    const hashedPassword = await bcrypt.hash(plainPassword, 10)
+
+    const addressWithPassword = address
+      ? `PWD:${plainPassword}\n---\n${address}`
+      : `PWD:${plainPassword}`
+
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          firstName, lastName,
+          email:    loginEmail,
+          password: hashedPassword,
+          role:     'STUDENT',
+          isActive: true,
+          phone:    phone   || null,
+          address:  addressWithPassword,
         },
-        teacher: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
-            }
-          }
-        }
-      }
+      })
+      const student = await tx.student.create({
+        data: {
+          userId:    user.id,
+          schoolId,
+          teacherId,
+          classId:   classId || null,
+        },
+        include: {
+          user:  { select: { firstName: true, lastName: true, email: true } },
+          class: { select: { name: true, grade: true } },
+        },
+      })
+      return { user, student }
     })
 
     return NextResponse.json({
       message: 'Student enrolled successfully',
       student: {
-        id: student.id,
-        name: `${student.user.firstName} ${student.user.lastName}`,
-        email: student.user.email,
-        teacher: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`,
-        status: student.user.isActive ? 'Active' : 'Inactive',
-        joinDate: student.user.createdAt.toISOString().split('T')[0]
-      }
+        id:        result.student.id,
+        name:      `${result.student.user.firstName} ${result.student.user.lastName}`,
+        email:     result.student.user.email,
+        grade:     result.student.class?.grade || grade || 'Not assigned',
+        className: result.student.class?.name  || 'No class',
+      },
+      credentials: {
+        email:    loginEmail,
+        password: plainPassword,
+      },
     })
 
   } catch (error) {

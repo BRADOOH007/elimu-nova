@@ -1,427 +1,452 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { 
-  Plus, 
-  X, 
-  UserPlus,
-  Mail,
-  Phone,
-  MapPin,
-  School,
-  AlertCircle
+import {
+  X, UserPlus, Mail, Phone, MapPin, School, AlertCircle,
+  Copy, CheckCircle, Eye, EyeOff, Sparkles, GraduationCap
 } from 'lucide-react'
 
+// All CBC grades
+const ALL_GRADES = [
+  'PP1', 'PP2',
+  'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6',
+  'Grade 7', 'Grade 8', 'Grade 9',
+  'Form 1', 'Form 2', 'Form 3', 'Form 4',
+]
+
 interface EnrollStudentModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
-  classes?: Array<{
-    id: string
-    name: string
-    subject: string
-    grade: string
-  }>
+  isOpen:     boolean
+  onClose:    () => void
+  onSuccess:  () => void
+  classes?:   Array<{ id: string; name: string; subject: string; grade: string }>
+  /** 'teacher' (default) | 'school-admin' — controls which API to call */
+  role?:      'teacher' | 'school-admin'
+  /** Required when role='school-admin' */
+  teachers?:  Array<{ id: string; name: string }>
 }
 
-export default function EnrollStudentModal({ isOpen, onClose, onSuccess, classes = [] }: EnrollStudentModalProps) {
-  const [loading, setLoading] = useState(false)
+/** Generate preview username from name */
+function previewUsername(first: string, last: string): string {
+  if (!first && !last) return ''
+  const f = first.trim().toLowerCase().replace(/\s+/g, '')
+  const l = last.trim().toLowerCase().replace(/\s+/g, '')
+  if (f && l) return `${f}.${l}`
+  return f || l
+}
+
+/** Generate a preview password (same logic as server, but just for display) */
+function generatePreviewPassword(): string {
+  const adjs  = ['Blue','Green','Happy','Brave','Swift','Bright','Calm','Bold']
+  const nouns = ['Lion','Star','River','Eagle','Mountain','Sunrise','Ocean','Forest']
+  const adj  = adjs [Math.floor(Math.random() * adjs.length)]
+  const noun = nouns[Math.floor(Math.random() * nouns.length)]
+  const num  = Math.floor(100 + Math.random() * 900)
+  return `${adj}${noun}${num}`
+}
+
+export default function EnrollStudentModal({
+  isOpen, onClose, onSuccess,
+  classes  = [],
+  role     = 'teacher',
+  teachers = [],
+}: EnrollStudentModalProps) {
+  const [loading, setLoading]       = useState(false)
+  const [copied,  setCopied]        = useState(false)
+  const [showPwd, setShowPwd]       = useState(false)
+  const [previewPwd] = useState(() => generatePreviewPassword())
+
   const [formData, setFormData] = useState({
     firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    classId: ''
+    lastName:  '',
+    email:     '',
+    phone:     '',
+    address:   '',
+    classId:   '',
+    grade:     '',
+    teacherId: '',
   })
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [successData, setSuccessData] = useState<{
-    email: string
-    password: string
-  } | null>(null)
+  const [errors,      setErrors]      = useState<Record<string, string>>({})
+  const [successData, setSuccessData] = useState<{ email: string; password: string } | null>(null)
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {}
+  // Auto-fill grade when class is selected
+  useEffect(() => {
+    if (!formData.classId || formData.classId === '__none__') return
+    const cls = classes.find(c => c.id === formData.classId)
+    if (cls?.grade) setFormData(prev => ({ ...prev, grade: cls.grade }))
+  }, [formData.classId, classes])
 
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required'
-    }
+  // Live preview: username derived from name
+  const previewUser = useMemo(
+    () => previewUsername(formData.firstName, formData.lastName),
+    [formData.firstName, formData.lastName]
+  )
 
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required'
-    }
+  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setFormData(prev => ({ ...prev, [field]: e.target.value }))
 
-    // Email is optional — if provided it must be valid
-    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email format is invalid'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+  const validate = () => {
+    const errs: Record<string, string> = {}
+    if (!formData.firstName.trim()) errs.firstName = 'First name is required'
+    if (!formData.lastName.trim())  errs.lastName  = 'Last name is required'
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email))
+      errs.email = 'Email format is invalid'
+    if (role === 'school-admin' && !formData.teacherId)
+      errs.teacherId = 'Please assign a teacher'
+    setErrors(errs)
+    return Object.keys(errs).length === 0
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!validateForm()) return
+    if (!validate()) return
 
     setLoading(true)
     try {
-      const response = await fetch('/api/teacher/students', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          phone: formData.phone || null,
-          address: formData.address || null,
-          classId: formData.classId === 'no-classes' ? null : formData.classId
-        })
-      })
+      const endpoint = role === 'school-admin'
+        ? '/api/school-admin/students'
+        : '/api/teacher/students'
 
-      if (response.ok) {
-        const data = await response.json()
-        setSuccessData(data.credentials)
-        // Don't close immediately - show credentials first
-      } else {
-        const error = await response.json()
-        setErrors({ submit: error.error || 'Failed to enroll student' })
+      const body: Record<string, any> = {
+        firstName: formData.firstName.trim(),
+        lastName:  formData.lastName.trim(),
+        email:     formData.email.trim() || undefined,
+        phone:     formData.phone.trim()   || null,
+        address:   formData.address.trim() || null,
+        classId:   (formData.classId && formData.classId !== '__none__') ? formData.classId : null,
+        grade:     formData.grade || null,
       }
-    } catch (error) {
-      console.error('Error enrolling student:', error)
+
+      if (role === 'school-admin') {
+        body.teacherId = formData.teacherId
+        body.password  = previewPwd   // school-admin API requires it
+      }
+
+      const res  = await fetch(endpoint, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+      })
+      const data = await res.json()
+
+      if (res.ok) {
+        setSuccessData(data.credentials || {
+          email:    body.email || `${previewUser}@student.local`,
+          password: previewPwd,
+        })
+      } else {
+        setErrors({ submit: data.error || 'Failed to enroll student' })
+      }
+    } catch {
+      setErrors({ submit: 'Network error — please try again' })
     } finally {
       setLoading(false)
     }
   }
 
-  const resetForm = () => {
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: '',
-      classId: ''
-    })
+  const reset = () => {
+    setFormData({ firstName:'', lastName:'', email:'', phone:'', address:'', classId:'', grade:'', teacherId:'' })
     setErrors({})
     setSuccessData(null)
+    setCopied(false)
   }
 
   const handleClose = () => {
-    if (successData) {
-      onSuccess()
-    }
-    resetForm()
+    if (successData) onSuccess()
+    reset()
     onClose()
   }
 
-  const handleCopyCredentials = () => {
-    if (successData) {
-      const displayLogin = successData.email.endsWith('@student.local')
-        ? successData.email.replace('@student.local', '')
-        : successData.email
-      const text = `Username: ${displayLogin}\nPassword: ${successData.password}`
-      navigator.clipboard.writeText(text)
-    }
+  const copyCredentials = async () => {
+    if (!successData) return
+    const login = successData.email.endsWith('@student.local')
+      ? successData.email.replace('@student.local', '')
+      : successData.email
+    await navigator.clipboard.writeText(`Username: ${login}\nPassword: ${successData.password}`)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2500)
   }
+
+  const displayLogin = (email: string) =>
+    email.endsWith('@student.local') ? email.replace('@student.local', '') : email
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] bg-white border-0 shadow-2xl overflow-hidden">
-        <div className="max-h-[85vh] overflow-y-auto px-1">
-        <DialogHeader className="pb-4 border-b border-gray-100">
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-              <UserPlus className="w-5 h-5 text-white" />
-            </div>
-            Enroll New Student
-          </DialogTitle>
-          <DialogDescription className="text-gray-600 text-base mt-2">
-            Add a new student to your class and generate their login credentials.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-hidden bg-white border-0 shadow-2xl p-0">
+        <div className="overflow-y-auto max-h-[92vh]">
 
-        {successData ? (
-          <div className="space-y-6">
-            <div className="p-6 bg-green-50 border-2 border-green-200 rounded-lg">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                  <UserPlus className="w-6 h-6 text-white" />
+          {/* Header */}
+          <div className="sticky top-0 z-10 bg-white px-6 pt-6 pb-4 border-b border-gray-100">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
+                  <UserPlus className="w-5 h-5 text-white" />
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-green-900">Student Enrolled Successfully!</h3>
-                  <p className="text-sm text-green-700">Login credentials have been generated</p>
-                </div>
-              </div>
-
-              <div className="space-y-3 bg-white p-4 rounded-lg border border-green-200">
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Username / Login</Label>
-                  <p className="text-gray-900 font-mono bg-gray-50 p-2 rounded">
-                    {successData.email.endsWith('@student.local')
-                      ? successData.email.replace('@student.local', '')
-                      : successData.email}
-                  </p>
-                  {successData.email.endsWith('@student.local') && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      (or full email: {successData.email})
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-700">Password</Label>
-                  <p className="text-gray-900 font-mono bg-gray-50 p-2 rounded">{successData.password}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  <strong>Important:</strong> Please share these credentials with the student.
-                  The password is permanent — they can use it every time they log in.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCopyCredentials}
-                className="bg-white border-gray-200 hover:bg-gray-50"
-              >
-                Copy Credentials
-              </Button>
-              <Button
-                type="button"
-                onClick={handleClose}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
-              >
-                Done
-              </Button>
-            </div>
+                Enroll New Student
+              </DialogTitle>
+              <DialogDescription className="text-gray-500 mt-1">
+                Fill in the details below — username &amp; password are generated automatically.
+              </DialogDescription>
+            </DialogHeader>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-          {/* Error Message */}
-          {errors.submit && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-800">
-              <AlertCircle className="w-5 h-5" />
-              <p className="text-sm">{errors.submit}</p>
+
+          <div className="px-6 pb-6">
+
+          {/* ── SUCCESS SCREEN ─────────────────────────────────────────── */}
+          {successData ? (
+            <div className="mt-6 space-y-5">
+              {/* Big success banner */}
+              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
+                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center shrink-0">
+                  <CheckCircle className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <p className="font-semibold text-green-900 text-lg">Student Enrolled!</p>
+                  <p className="text-sm text-green-700">Share the credentials below with the student.</p>
+                </div>
+              </div>
+
+              {/* Credentials card */}
+              <div className="border-2 border-blue-200 rounded-xl overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-2">
+                  <p className="text-white font-semibold text-sm flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" /> Login Credentials
+                  </p>
+                </div>
+                <div className="p-4 space-y-3 bg-gray-50">
+                  {/* Username */}
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Username / Login</Label>
+                    <div className="mt-1 flex items-center gap-2">
+                      <code className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-900">
+                        {displayLogin(successData.email)}
+                      </code>
+                    </div>
+                    {successData.email.endsWith('@student.local') && (
+                      <p className="text-xs text-gray-400 mt-1">Full email: {successData.email}</p>
+                    )}
+                  </div>
+                  {/* Password */}
+                  <div>
+                    <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Password</Label>
+                    <div className="mt-1 flex items-center gap-2">
+                      <code className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-900">
+                        {showPwd ? successData.password : '•'.repeat(successData.password.length)}
+                      </code>
+                      <button
+                        onClick={() => setShowPwd(v => !v)}
+                        className="p-2 text-gray-400 hover:text-gray-700 transition-colors"
+                        title={showPwd ? 'Hide' : 'Show'}
+                      >
+                        {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning */}
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>Save or share these credentials now — the password won't be shown again in plain text.</span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={copyCredentials}>
+                  {copied ? <CheckCircle className="w-4 h-4 mr-2 text-green-600" /> : <Copy className="w-4 h-4 mr-2" />}
+                  {copied ? 'Copied!' : 'Copy Credentials'}
+                </Button>
+                <Button onClick={handleClose}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                  Done
+                </Button>
+              </div>
             </div>
+
+          ) : (
+          /* ── ENROLLMENT FORM ───────────────────────────────────────── */
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+
+            {errors.submit && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {errors.submit}
+              </div>
+            )}
+
+            {/* ── Student Name ─────────────────────────────────────── */}
+            <div className="bg-blue-50/60 rounded-xl p-4 space-y-4">
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm">
+                <UserPlus className="w-4 h-4 text-blue-600" /> Student Information
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">First Name <span className="text-red-500">*</span></Label>
+                  <Input value={formData.firstName} onChange={set('firstName')}
+                    placeholder="e.g. Jane" className="mt-1 bg-white"
+                    autoComplete="off" />
+                  {errors.firstName && <p className="text-xs text-red-600 mt-1">{errors.firstName}</p>}
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Last Name <span className="text-red-500">*</span></Label>
+                  <Input value={formData.lastName} onChange={set('lastName')}
+                    placeholder="e.g. Wanjiku" className="mt-1 bg-white"
+                    autoComplete="off" />
+                  {errors.lastName && <p className="text-xs text-red-600 mt-1">{errors.lastName}</p>}
+                </div>
+              </div>
+
+              {/* Live credential preview */}
+              {(formData.firstName || formData.lastName) && (
+                <div className="bg-white border border-blue-200 rounded-lg p-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-blue-700 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Auto-generated Credentials Preview
+                  </p>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-gray-500 w-20 shrink-0">Username:</span>
+                    <code className="font-mono bg-gray-50 px-2 py-0.5 rounded text-gray-800">
+                      {previewUser || '…'}
+                    </code>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="text-gray-500 w-20 shrink-0">Password:</span>
+                    <code className="font-mono bg-gray-50 px-2 py-0.5 rounded text-gray-800">
+                      {previewPwd}
+                    </code>
+                    <span className="text-gray-400">(final may differ slightly)</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ── Grade & Class ────────────────────────────────────── */}
+            <div className="bg-purple-50/60 rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm">
+                <GraduationCap className="w-4 h-4 text-purple-600" /> Grade &amp; Class
+              </h3>
+
+              {/* Grade dropdown — always visible */}
+              <div>
+                <Label className="text-xs font-semibold text-gray-600">Grade</Label>
+                <Select
+                  value={formData.grade}
+                  onValueChange={v => setFormData(prev => ({ ...prev, grade: v }))}
+                >
+                  <SelectTrigger className="mt-1 bg-white">
+                    <SelectValue placeholder="Select grade…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_GRADES.map(g => (
+                      <SelectItem key={g} value={g}>{g}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Class dropdown — only shown if teacher has classes */}
+              {classes.length > 0 && (
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Assign to Class (optional)</Label>
+                  <Select
+                    value={formData.classId}
+                    onValueChange={v => setFormData(prev => ({ ...prev, classId: v }))}
+                  >
+                    <SelectTrigger className="mt-1 bg-white">
+                      <SelectValue placeholder="No class (independent student)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No class (independent student)</SelectItem>
+                      {classes.map(cls => (
+                        <SelectItem key={cls.id} value={cls.id}>
+                          {cls.name} — {cls.grade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400 mt-1">Selecting a class will auto-fill the grade above.</p>
+                </div>
+              )}
+
+              {/* Teacher selector — school-admin only */}
+              {role === 'school-admin' && teachers.length > 0 && (
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Assign Teacher <span className="text-red-500">*</span></Label>
+                  <Select
+                    value={formData.teacherId}
+                    onValueChange={v => setFormData(prev => ({ ...prev, teacherId: v }))}
+                  >
+                    <SelectTrigger className="mt-1 bg-white">
+                      <SelectValue placeholder="Select teacher…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teachers.map(t => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.teacherId && <p className="text-xs text-red-600 mt-1">{errors.teacherId}</p>}
+                </div>
+              )}
+            </div>
+
+            {/* ── Contact ──────────────────────────────────────────── */}
+            <div className="bg-green-50/60 rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm">
+                <Mail className="w-4 h-4 text-green-600" /> Contact (optional)
+              </h3>
+              <div>
+                <Label className="text-xs font-semibold text-gray-600">Email address</Label>
+                <div className="relative mt-1">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input value={formData.email} onChange={set('email')}
+                    type="email" placeholder="Leave blank to auto-generate"
+                    className="pl-9 bg-white" />
+                </div>
+                {errors.email && <p className="text-xs text-red-600 mt-1">{errors.email}</p>}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Phone</Label>
+                  <div className="relative mt-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input value={formData.phone} onChange={set('phone')}
+                      placeholder="+254 700 000 000" className="pl-9 bg-white" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Address</Label>
+                  <div className="relative mt-1">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input value={formData.address} onChange={set('address')}
+                      placeholder="Student's address" className="pl-9 bg-white" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Actions ──────────────────────────────────────────── */}
+            <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                <X className="w-4 h-4 mr-2" /> Cancel
+              </Button>
+              <Button type="submit" disabled={loading}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-md">
+                {loading
+                  ? <><span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" /> Enrolling…</>
+                  : <><UserPlus className="w-4 h-4 mr-2" /> Enroll Student</>}
+              </Button>
+            </div>
+
+          </form>
           )}
 
-          {/* Basic Information */}
-          <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 space-y-6">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-blue-600" />
-              Student Information
-            </h3>
-            
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="firstName" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-                First Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="firstName"
-                value={formData.firstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                placeholder="Enter first name"
-                className="bg-white border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              {errors.firstName && (
-                <p className="text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.firstName}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="lastName" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-                Last Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="lastName"
-                value={formData.lastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                placeholder="Enter last name"
-                className="bg-white border-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              {errors.lastName && (
-                <p className="text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.lastName}
-                </p>
-              )}
-            </div>
-          </div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 space-y-6">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <Mail className="w-5 h-5 text-green-600" />
-              Contact Details
-            </h3>
-            
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-              Email Address <span className="text-gray-400 font-normal text-xs">(Optional)</span>
-            </Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                placeholder="student@example.com (leave blank to auto-generate)"
-                className="pl-10 bg-white border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              />
-            </div>
-            {errors.email && (
-              <p className="text-sm text-red-600 flex items-center gap-1">
-                <AlertCircle className="w-4 h-4" />
-                {errors.email}
-              </p>
-            )}
-            <p className="text-xs text-gray-500">
-              If left blank, a login username will be auto-generated from the student&apos;s name.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">
-                Phone Number (Optional)
-              </Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="+254 700 000 000"
-                  className="pl-10 bg-white border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address" className="text-sm font-semibold text-gray-700">
-                Address (Optional)
-              </Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
-                  placeholder="Student's address"
-                  className="pl-10 bg-white border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
-          </div>
-
-          {/* Class Selection */}
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
-              <School className="w-5 h-5 text-purple-600" />
-              Class Assignment
-            </h3>
-            
-          <div className="space-y-2">
-            <Label className="text-sm font-semibold text-gray-700 flex items-center gap-1">
-              Assign to Class <span className="text-red-500">*</span>
-            </Label>
-            <Select
-              value={formData.classId}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, classId: value }))}
-            >
-              <SelectTrigger className="bg-white border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                <SelectValue placeholder="Select a class for this student" />
-              </SelectTrigger>
-              <SelectContent>
-                {classes && classes.length > 0 ? (
-                  classes.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.name} - {cls.subject} ({cls.grade})
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value="no-classes">
-                    No class (Independent student)
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-            {errors.classId && (
-              <p className="text-sm text-red-600 flex items-center gap-1">
-                <AlertCircle className="w-4 h-4" />
-                {errors.classId}
-              </p>
-            )}
-          </div>
-          </div>
-
-          {/* Student Preview */}
-          <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-200">
-            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-indigo-600" />
-              Student Preview
-            </h4>
-            <div className="space-y-2 text-sm text-gray-700">
-              <p><strong>Name:</strong> {formData.firstName || '—'} {formData.lastName || '—'}</p>
-              <p><strong>Email/Login:</strong> {formData.email || 'Auto-generated from name'}</p>
-              {formData.phone && <p><strong>Phone:</strong> {formData.phone}</p>}
-              {formData.address && <p><strong>Address:</strong> {formData.address}</p>}
-              <p><strong>Class:</strong> {
-                formData.classId 
-                  ? classes.find(c => c.id === formData.classId)?.name || 'Selected class'
-                  : 'No class selected'
-              }</p>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              className="bg-white border-gray-200 hover:bg-gray-50"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              ) : (
-                <UserPlus className="w-4 h-4 mr-2" />
-              )}
-              {loading ? 'Enrolling...' : 'Enroll Student'}
-            </Button>
-          </div>
-        </form>
-        )}
-        </div>
+          </div>{/* /px-6 */}
+        </div>{/* /overflow-y-auto */}
       </DialogContent>
     </Dialog>
   )
