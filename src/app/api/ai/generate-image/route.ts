@@ -5,6 +5,14 @@ import { ImageGenerationService } from '@/lib/image-generation'
 import CloudinaryStorage from '@/lib/cloudinary-storage'
 
 export async function POST(request: NextRequest) {
+  // Parse body once at the top so catch block can use it
+  let parsedBody: any = {}
+  try {
+    parsedBody = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
   try {
     const session = await getServerSession(authOptions)
 
@@ -12,7 +20,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { prompt, style = 'natural', size = '1024x1024', quality = 'standard' } = await request.json()
+    const { prompt, style = 'natural', size = '1024x1024', quality = 'standard' } = parsedBody
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
@@ -41,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     const savedImage = await CloudinaryStorage.saveAIImage({
       imageUrl: result.url,
-      topic: prompt.substring(0, 100), // Use first 100 chars of prompt as topic
+      topic: prompt.substring(0, 100),
       prompt,
       type: imageType,
       size: sizeMapping[size as keyof typeof sizeMapping] || 'MEDIUM_1024',
@@ -60,7 +68,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({
-      imageUrl: savedImage.storedUrl, // Use Cloudinary URL
+      imageUrl: savedImage.storedUrl,
       success: true,
       source: 'openai-dalle-3',
       revisedPrompt: result.revisedPrompt,
@@ -75,18 +83,18 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('OpenAI image generation error:', error)
-    
-    // Return a placeholder image on error
+
+    // Return a placeholder image on error — use already-parsed body
     const placeholderImageUrl = generatePlaceholderImage(
-      (await request.json()).prompt || 'Educational Content', 
+      parsedBody.prompt || 'Educational Content',
       'educational'
     )
-    
+
     return NextResponse.json({
       imageUrl: placeholderImageUrl,
       success: true,
       source: 'placeholder',
-      message: 'OpenAI image generation temporarily unavailable. Using placeholder image.',
+      message: 'Image generation temporarily unavailable. Using placeholder image.',
       error: error instanceof Error ? error.message : 'Unknown error'
     })
   }
