@@ -1,59 +1,21 @@
 import { OpenAIService } from './openai-service'
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''
-const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
-
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
 }
 
 interface OpenAIResponse {
-  choices: Array<{
-    message: {
-      content: string
-    }
-  }>
+  choices: Array<{ message: { content: string } }>
 }
 
 export class OpenAIAI {
-  private static async makeRequest(messages: OpenAIMessage[], model: string = 'meta-llama/llama-3.1-8b-instruct') {
-    try {
-      console.log('Making OpenAI API request to:', `${OPENROUTER_BASE_URL}/chat/completions`)
-      console.log('Using model:', 'meta-llama/llama-3.1-8b-instruct')
-      
-      const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'EduGenius AI'
-        },
-        body: JSON.stringify({
-          model: 'meta-llama/llama-3.1-8b-instruct',
-          messages,
-          temperature: 0.7,
-          max_tokens: 2000
-        })
-      })
-
-      console.log('OpenAI API response status:', response.status)
-      console.log('OpenAI API response headers:', Object.fromEntries(response.headers.entries()))
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('OpenAI API error response:', errorText)
-        throw new Error(`OpenAI API error: ${response.status} ${response.statusText} - ${errorText}`)
-      }
-
-      const data: OpenAIResponse = await response.json()
-      console.log('OpenAI API success, response length:', data.choices?.[0]?.message?.content?.length || 0)
-      return data.choices[0]?.message?.content || 'No response generated'
-    } catch (error) {
-      console.error('OpenAI API error:', error)
-      throw error
-    }
+  /**
+   * All methods now route through the ElimuNova AI waterfall via OpenAIService.
+   * No direct fetch to OpenRouter — Cerebras → Groq → DeepSeek → Gemini → OpenRouter.
+   */
+  private static async makeRequest(messages: OpenAIMessage[], _model?: string): Promise<string> {
+    return OpenAIService.generateText(messages, { maxTokens: 2000, temperature: 0.7 })
   }
 
   static async generateLessonContent(lessonPlan: any, studentLevel: string, learningStyle: string): Promise<string> {

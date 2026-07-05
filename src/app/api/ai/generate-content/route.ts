@@ -260,143 +260,31 @@ Make it engaging, hands-on, and relevant to real-world applications.`;
 }
 
 async function generateAIContentWithOpenAI(
-  type: string, 
-  prompt: string, 
+  type: string,
+  prompt: string,
   context: {
-    subject: string;
-    grade: string;
-    topic: string;
-    title: string;
-    description?: string;
-    lessonPlanId?: string;
-    duration?: number;
-    difficulty?: string;
-    requirements?: string;
+    subject: string; grade: string; topic: string; title: string;
+    description?: string; lessonPlanId?: string; duration?: number;
+    difficulty?: string; requirements?: string;
   }
 ): Promise<string> {
   try {
-    console.log('Generating AI content with OpenAI for type:', type);
-    
-    if (type === 'assignment') {
-      // Use direct OpenAI API for assignment generation
-      const systemPrompt = `You are an expert teacher creating student assignments. Generate clear, engaging assignment content based on the teacher's requirements.
+    const systemPrompt = `You are an expert educational content creator for Kenyan schools. 
+Generate high-quality, CBC-aligned ${type} content for ${context.grade} ${context.subject} students.
+Topic: ${context.topic}. Be practical, engaging, and age-appropriate.
+Format with clear markdown headings and sections.`
 
-Teacher Requirements:
-- Title: ${context.title}
-- Description: ${context.description || 'No specific description provided'}
-- Subject: ${context.subject}
-- Grade: ${context.grade}
-- Topic: ${context.topic}
-- Difficulty: ${context.difficulty || 'intermediate'}
-- Duration: ${context.duration || 60} minutes
-
-Create a student-friendly assignment that:
-- Uses clear, direct language appropriate for ${context.grade} level
-- Includes 8-12 specific questions or tasks
-- Incorporates the teacher's requirements: "${context.description || 'general assignment requirements'}"
-- Focuses on the topic: ${context.topic}
-- Is engaging and achievable for students
-- Uses markdown formatting with clear headings
-
-Format your response as markdown with clear sections and questions.`;
-
-      const userPrompt = `Generate a comprehensive assignment for ${context.grade} students studying ${context.subject} on the topic "${context.topic}".
-
-Teacher's specific requirements: "${context.description || 'Create an engaging assignment that helps students learn and practice the topic.'}"
-
-Make it practical, clear, and focused on what students need to DO.`;
-
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': 'http://localhost:3000',
-          'X-Title': 'EduGenius AI'
-        },
-        body: JSON.stringify({
-          model: 'meta-llama/llama-3.1-8b-instruct',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          temperature: 0.7,
-          max_tokens: 2000
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const aiResponse = data.choices?.[0]?.message?.content || 'No response generated';
-      
-      return aiResponse;
-    }
-    
-    // For other content types, use a more general approach
-    const systemPrompt = `You are an AI content generator for an educational platform. Generate high-quality, educational content based on the teacher's requirements.
-
-Content Type: ${type}
-Subject: ${context.subject}
-Grade: ${context.grade}
-Topic: ${context.topic}
-Title: ${context.title}
-${context.description ? `Description: ${context.description}` : ''}
-${context.difficulty ? `Difficulty: ${context.difficulty}` : ''}
-${context.duration ? `Duration: ${context.duration} minutes` : ''}
-
-Generate content that is:
-- Age-appropriate for the grade level
-- Engaging and educational
-- Well-structured with clear headings
-- Practical and actionable
-- Student-friendly language
-
-Format your response in markdown with clear sections and headings.`;
-
-    const userPrompt = `Generate ${type} content based on these requirements:
-
-${prompt}
-
-Make it comprehensive, engaging, and appropriate for ${context.grade} level students studying ${context.subject}.`;
-
-    // Use OpenAI's general chat completion
-    // Since makeRequest is private, we'll use a different approach
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY || ''}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost:3000',
-        'X-Title': 'EduGenius AI'
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-3.1-8b-instruct',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || 'No response generated';
-
-    return aiResponse;
-    
+    const content = await OpenAIService.generateLongContent(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user',   content: prompt },
+      ],
+      { maxTokens: 2000, temperature: 0.7 }
+    )
+    return content
   } catch (error) {
-    console.error('Error generating AI content with OpenAI:', error);
-    
-    // Fallback to basic content generation
-    return generateFallbackContent(type, context);
+    console.error('Error generating AI content:', error)
+    return generateFallbackContent(type, context)
   }
 }
 

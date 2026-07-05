@@ -30,49 +30,33 @@ export function AICareerConsultant() {
     setIsGenerating(true)
 
     try {
-      const { OpenAI } = await import('openai')
-      const apiKey = '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'
-      
-      const openai = new OpenAI({
-        apiKey: apiKey,
-        baseURL: 'https://openrouter.ai/api/v1',
+      // Call server-side API — no API keys in the browser
+      const response = await fetch('/api/student/career', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grade:     formData.grade,
+          strengths: formData.subjectStrengths,
+          interests: formData.interests,
+          skills:    formData.skills,
+          goals:     formData.futureGoals,
+        }),
       })
 
-      const systemPrompt = `You are an expert career guidance counselor for Kenyan students. Provide personalized, culturally relevant career advice based on CBC curriculum and Kenyan job market. Focus on:
-- Career pathways in Kenya
-- Required subjects and grades
-- Local universities and colleges
-- Scholarship opportunities
-- Skills development
-- Practical, actionable advice`
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to generate career advice')
 
-      const userPrompt = `Provide career guidance for a student with the following profile:
-- Grade Level: ${formData.grade}
-- Strong Subjects: ${formData.subjectStrengths || 'Not specified'}
-- Weak Subjects: ${formData.subjectWeaknesses || 'Not specified'}
-- Interests: ${formData.interests}
-- Current Skills: ${formData.skills || 'Not specified'}
-- Future Goals: ${formData.futureGoals || 'Not specified'}
+      // Format the structured response into readable text
+      const advice = data.summary
+        ? `${data.summary}\n\n**Top Career Pathways:**\n${
+            (data.topCareers || []).map((c: any) =>
+              `• ${c.title} (${c.field}) — ${c.why}`
+            ).join('\n')
+          }\n\n**Next Steps:**\n${
+            (data.actionSteps || []).map((s: string) => `• ${s}`).join('\n')
+          }`
+        : JSON.stringify(data, null, 2)
 
-Structure your response with:
-1. Recommended Career Pathways (3-5 options)
-2. Subject Selection Advice
-3. Key Skills to Develop
-4. Recommended Institutions in Kenya
-5. Scholarship Opportunities
-6. Actionable Next Steps`
-
-      const completion = await openai.chat.completions.create({
-        model: "openai/gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        max_tokens: 2000,
-        temperature: 0.7,
-      })
-
-      const advice = completion.choices[0]?.message?.content || ''
       setResults(advice)
     } catch (error) {
       console.error('Error generating career advice:', error)

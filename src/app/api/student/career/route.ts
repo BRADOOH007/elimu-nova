@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { strengths, interests, grade } = await request.json()
+    const { strengths, interests, grade, skills, goals } = await request.json()
 
     // Gather student's real academic data
     const student = await prisma.student.findUnique({
@@ -37,68 +38,56 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    const subjectAverages = Object.entries(subjectScores).map(([subject, scores]) => ({
-      subject,
-      avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-    })).sort((a, b) => b.avg - a.avg)
+    const subjectAverages = Object.entries(subjectScores)
+      .map(([subject, scores]) => ({
+        subject,
+        avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+      }))
+      .sort((a, b) => b.avg - a.avg)
 
-    // Top mastery areas from AI tutor sessions
     const topMastery = student?.studentProgress
       ?.filter((p: any) => p.subject !== 'General' && p.masteryScore > 0)
       ?.slice(0, 5)
       ?.map((p: any) => `${p.subject} (${p.masteryScore}% mastery)`)
       ?.join(', ') || 'Not enough data yet'
 
-    const { OpenAI } = await import('openai')
-    const openai = new OpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENROUTER_API_KEY ? 'https://openrouter.ai/api/v1' : undefined,
-    })
-
     const prompt = `You are a career guidance counsellor for a student in ${grade || 'secondary school'}.
-
 Based on their profile, provide personalised career pathway recommendations.
 
 Student Profile:
 - Grade: ${grade || 'Not specified'}
 - Self-identified strengths: ${strengths || 'Not specified'}
 - Interests: ${interests || 'Not specified'}
+- Skills: ${skills || 'Not specified'}
+- Goals: ${goals || 'Not specified'}
 - Top academic subjects: ${subjectAverages.slice(0, 5).map(s => `${s.subject} (${s.avg}%)`).join(', ') || 'No data yet'}
-- AI Tutor mastery areas: ${topMastery}
+- AI Tutor mastery: ${topMastery}
 - Average grade: ${student?.analytics?.averageGrade ? Math.round(student.analytics.averageGrade) + '%' : 'No data yet'}
 
-Respond with a JSON object in exactly this format:
+Return ONLY valid JSON (no markdown):
 {
-  "summary": "2-3 sentence personalised summary of their profile and potential",
+  "summary": "2-3 sentence personalised summary",
   "topCareers": [
-    {
-      "title": "Career Title",
-      "field": "Field/Industry",
-      "match": 95,
-      "why": "One sentence explaining why this suits them",
-      "subjects": ["Subject1", "Subject2"],
-      "universities": ["Example University 1", "Example University 2"],
-      "path": "Brief 1-2 sentence description of the educational path"
-    }
+    { "title": "Career Title", "field": "Field", "match": 95, "why": "One sentence", "subjects": ["Subject1"], "universities": ["University 1"], "path": "1-2 sentence path" }
   ],
   "subjectRecommendations": [
-    { "subject": "Subject Name", "reason": "Why they should focus on this", "priority": "high/medium/low" }
+    { "subject": "Subject", "reason": "Why focus here", "priority": "high" }
   ],
-  "actionSteps": ["Specific action step 1", "Specific action step 2", "Specific action step 3"]
+  "actionSteps": ["Step 1", "Step 2", "Step 3"]
 }
+Provide exactly 4 top careers and 3 subject recommendations.`
 
-Provide exactly 4 top careers and 3 subject recommendations. Be specific, encouraging and realistic.`
+    const raw = await OpenAIService.generateText(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 1200, temperature: 0.7 }
+    )
 
-    const completion = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1200,
-      temperature: 0.7,
-      response_format: { type: 'json_object' },
-    })
-
-    const raw = completion.choices[0]?.message?.content || '{}'
-    const result = JSON.parse(raw)
+    // Extract JSON
+    const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+    let result: any = {}
+    if (start !== -1 && end > start) {
+      try { result = JSON.parse(raw.slice(start, end + 1)) } catch {}
+    }
 
     return NextResponse.json({
       ...result,
@@ -106,7 +95,7 @@ Provide exactly 4 top careers and 3 subject recommendations. Be specific, encour
         grade,
         strengths,
         interests,
-        topSubjects: subjectAverages.slice(0, 5),
+        topSubjects:  subjectAverages.slice(0, 5),
         averageGrade: student?.analytics?.averageGrade,
       },
     })

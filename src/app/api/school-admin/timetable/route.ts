@@ -75,17 +75,13 @@ export async function POST(request: NextRequest) {
       teacherName: c.teacher ? `${c.teacher.user.firstName} ${c.teacher.user.lastName}` : 'Unassigned',
     }))
 
-    const { OpenAI } = await import('openai')
-    const openai = new OpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENROUTER_API_KEY ? 'https://openrouter.ai/api/v1' : undefined,
-    })
+    const { OpenAIService } = await import('@/lib/openai-service')
 
     const prompt = `You are a school timetabling system. Generate a conflict-free weekly timetable.
 
 School: ${admin.school.name}
 Week start: ${weekStartDate || 'Next Monday'}
-School day: ${periodsPerDay} periods starting at ${startHour}:00, each period 45 minutes
+School day: ${periodsPerDay} periods starting at ${startHour}:00, each 45 minutes
 Working days: Monday to Friday
 
 Teachers:
@@ -96,43 +92,22 @@ ${JSON.stringify(classInfo, null, 2)}
 
 Rules:
 1. Each teacher can only teach ONE class at a time
-2. Each class should have 1-2 lessons per day maximum
-3. Spread classes evenly across the week
-4. Core subjects (Math, English, Science) should be in morning slots (periods 1-4)
-5. Art, PE, Music in afternoon slots (periods 5-8)
-6. Allow at least 1 free period per teacher per day
+2. Each class max 1-2 lessons per day
+3. Core subjects (Math, English, Science) in morning slots (periods 1-4)
+4. Art, PE, Music in afternoon slots (periods 5-8)
 
-Return a JSON array of schedule entries:
-[
-  {
-    "classId": "class_id_here",
-    "teacherId": "teacher_id_here",
-    "title": "Subject - Class Name",
-    "subject": "subject name",
-    "grade": "grade level",
-    "dayOfWeek": 1,
-    "period": 1,
-    "startTimeHour": 8,
-    "startTimeMinute": 0,
-    "durationMinutes": 45,
-    "location": "Classroom"
-  }
-]
+Return ONLY a JSON array — no markdown, no explanation:
+[{ "classId": "id", "teacherId": "id", "title": "Subject - Class", "subject": "subject", "grade": "grade", "dayOfWeek": 1, "period": 1, "startTimeHour": 8, "startTimeMinute": 0, "durationMinutes": 45, "location": "Classroom" }]
+dayOfWeek: 1=Monday…5=Friday. period: 1-${periodsPerDay}.`
 
-dayOfWeek: 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday
-period: 1-${periodsPerDay}
-Only return the JSON array, nothing else.`
-
-    const completion = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 3000,
-      temperature: 0.3,
-    })
-
-    const raw = completion.choices[0]?.message?.content?.trim() || '[]'
-    const cleanRaw = raw.startsWith('[') ? raw : raw.substring(raw.indexOf('['))
-    const entries: any[] = JSON.parse(cleanRaw)
+    const aiRaw = await OpenAIService.generateLongContent(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 3000, temperature: 0.3 }
+    )
+    const arrStart = aiRaw.indexOf('['); const arrEnd = aiRaw.lastIndexOf(']')
+    const entries: any[] = (arrStart !== -1 && arrEnd > arrStart)
+      ? JSON.parse(aiRaw.slice(arrStart, arrEnd + 1))
+      : []
 
     // Clear existing if requested
     if (clearExisting) {

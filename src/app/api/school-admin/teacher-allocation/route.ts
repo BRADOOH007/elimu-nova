@@ -66,11 +66,7 @@ export async function POST(request: NextRequest) {
     })
 
     // AI-powered recommendations
-    const { OpenAI } = await import('openai')
-    const openai = new OpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENROUTER_API_KEY ? 'https://openrouter.ai/api/v1' : undefined,
-    })
+    const { OpenAIService } = await import('@/lib/openai-service')
 
     const prompt = `You are a school administration AI. Analyse these teacher workloads and provide smart allocation recommendations.
 
@@ -81,57 +77,27 @@ ${JSON.stringify(teacherProfiles, null, 2)}
 
 All Classes:
 ${JSON.stringify(unassignedClasses.map((c: any) => ({
-  id: c.id,
-  name: c.name,
-  subject: c.subject,
-  grade: c.grade,
+  id: c.id, name: c.name, subject: c.subject, grade: c.grade,
   currentTeacherId: c.teacherId,
   currentTeacherName: c.teacher ? `${c.teacher.user?.firstName} ${c.teacher.user?.lastName}` : 'None',
 })), null, 2)}
 
-Analyse and return a JSON object with:
+Return ONLY a valid JSON object — no markdown:
 {
-  "summary": "Brief summary of the current allocation status",
+  "summary": "Brief summary",
   "overallHealth": "good/warning/critical",
-  "insights": [
-    {
-      "type": "overload/underutilised/subject_mismatch/balanced",
-      "teacherId": "id",
-      "teacherName": "name",
-      "message": "specific insight message",
-      "severity": "high/medium/low"
-    }
-  ],
-  "recommendations": [
-    {
-      "type": "rebalance/assign/reassign",
-      "fromTeacherId": "id or null",
-      "toTeacherId": "id",
-      "classId": "class_id",
-      "reason": "specific reason",
-      "priority": "high/medium/low"
-    }
-  ],
-  "stats": {
-    "avgClassesPerTeacher": 0,
-    "avgStudentsPerTeacher": 0,
-    "overloadedTeachers": 0,
-    "underutilisedTeachers": 0
-  }
+  "insights": [{ "type": "overload/underutilised/subject_mismatch/balanced", "teacherId": "id", "teacherName": "name", "message": "insight", "severity": "high/medium/low" }],
+  "recommendations": [{ "type": "rebalance/assign/reassign", "fromTeacherId": "id or null", "toTeacherId": "id", "classId": "class_id", "reason": "reason", "priority": "high/medium/low" }],
+  "stats": { "avgClassesPerTeacher": 0, "avgStudentsPerTeacher": 0, "overloadedTeachers": 0, "underutilisedTeachers": 0 }
 }
+Focus on: workload balance, subject expertise matching, student-teacher ratios.`
 
-Focus on: workload balance, subject expertise matching, student-teacher ratios.
-Only return the JSON object.`
-
-    const completion = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 1500,
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-    })
-
-    const result = JSON.parse(completion.choices[0]?.message?.content || '{}')
+    const raw = await OpenAIService.generateText(
+      [{ role: 'user', content: prompt }],
+      { maxTokens: 1500, temperature: 0.3 }
+    )
+    const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+    const result = (start !== -1 && end > start) ? JSON.parse(raw.slice(start, end + 1)) : {}
 
     // If apply is requested, execute safe rebalance recommendations
     let applied = 0
