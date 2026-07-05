@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { OpenAIService } from '@/lib/openai-service'
 
 const CBC_LEVELS_LOWER = [
   { level: 'BE', label: 'Below Expectations',      min: 0,  max: 39,  points: 1 },
@@ -17,7 +18,6 @@ function getCBCGrade(score: number, isUpper = false): string {
     if (score >= 40) return 'AE'
     return 'BE'
   }
-  // Grade 7-9 rubric
   if (score >= 90) return 'EE1'
   if (score >= 75) return 'EE2'
   if (score >= 58) return 'ME1'
@@ -85,14 +85,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST — submit/update marks for an assignment + run AI analysis
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { assignmentId, marks, gradeSystem = 'percentage', analyseWithAI = false } = await request.json()
-    // marks: [{ studentId, score, feedback? }]
 
     const updates = await Promise.all(
       marks.map(async (m: any) => {
@@ -128,39 +126,24 @@ export async function POST(request: NextRequest) {
         const below  = scores.filter((s: number) => s < 50).length
         const above  = scores.filter((s: number) => s >= 75).length
 
-        const { OpenAI } = await import('openai')
-        const openai = new OpenAI({
-          apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-          baseURL: process.env.OPENROUTER_API_KEY ? 'https://openrouter.ai/api/v1' : undefined,
-        })
-
-        const prompt = `You are a school academic analyst. Analyse these exam results and provide concise insights.
+        const prompt = `You are a school academic analyst. Analyse these exam results and provide concise insights. Return ONLY valid JSON.
 
 Assignment: ${assignment?.title} (${assignment?.subject})
-Students: ${marks.length}
-Average: ${avg.toFixed(1)}%
-Highest: ${max}% | Lowest: ${min}%
-Below 50%: ${below} students | Above 75%: ${above} students
+Students: ${marks.length} | Average: ${avg.toFixed(1)}% | Highest: ${max}% | Lowest: ${min}%
+Below 50%: ${below} | Above 75%: ${above}
+Scores: ${scores.sort((a: number, b: number) => a - b).join(', ')}
 
-Scores distribution: ${scores.sort((a: number, b: number) => a - b).join(', ')}
+Return: { "summary": "2-sentence summary", "strengths": ["s1","s2"], "concerns": ["c1","c2"], "recommendations": ["r1","r2","r3"], "performanceLabel": "Excellent|Good|Average|Needs Improvement" }`
 
-Return JSON: {
-  "summary": "2-sentence summary",
-  "strengths": ["strength1", "strength2"],
-  "concerns": ["concern1", "concern2"],
-  "recommendations": ["action1", "action2", "action3"],
-  "performanceLabel": "Excellent|Good|Average|Needs Improvement"
-}`
-
-        const completion = await openai.chat.completions.create({
-          model: 'openai/gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 500,
-          temperature: 0.3,
-          response_format: { type: 'json_object' },
-        })
-        analysis = JSON.parse(completion.choices[0]?.message?.content || '{}')
-        analysis.stats = { avg: avg.toFixed(1), max, min, below, above, total: marks.length }
+        const raw = await OpenAIService.generateText(
+          [{ role: 'user', content: prompt }],
+          { maxTokens: 500, temperature: 0.3 }
+        )
+        const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+        if (start !== -1 && end > start) {
+          analysis = JSON.parse(raw.slice(start, end + 1))
+          analysis.stats = { avg: avg.toFixed(1), max, min, below, above, total: marks.length }
+        }
       } catch (e) { console.error('AI analysis failed:', e) }
     }
 

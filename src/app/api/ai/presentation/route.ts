@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import OpenAI from 'openai'
+import { OpenAIService } from '@/lib/openai-service'
 import PptxGenJS from 'pptxgenjs'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
@@ -17,24 +17,6 @@ const PresentationRequestSchema = z.object({
   subject: z.string().optional(),
   includeImages: z.boolean().default(true),
   imageSize: z.enum(['512x512', '1024x1024']).default('1024x1024')
-})
-
-// Slide schema for validation
-const SlideSchema = z.object({
-  title: z.string(),
-  bullets: z.array(z.string()).max(5),
-  speaker_notes: z.string(),
-  image_prompt: z.string()
-})
-
-const PresentationPlanSchema = z.object({
-  title: z.string(),
-  slides: z.array(SlideSchema)
-})
-
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
 })
 
 export async function POST(request: NextRequest) {
@@ -220,7 +202,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Generate slide plan using OpenAI
+// Generate slide plan using waterfall AI
 async function generateSlidePlan(params: {
   topic: string
   numSlides: number
@@ -230,112 +212,57 @@ async function generateSlidePlan(params: {
 }): Promise<{ title: string; slides: Array<{ title: string; bullets: string[]; speaker_notes: string; image_prompt: string }> }> {
   const { topic, numSlides, gradeLevel, subject, includeImages } = params
 
-  const systemPrompt = `You are an expert educational content creator. Generate a presentation plan as STRICT JSON only.
-
-CRITICAL RULES:
-1. Use ${gradeLevel}-appropriate language
-2. Maximum 5 bullets per slide
-3. ${includeImages ? 'Each slide MUST have image_prompt' : 'No image prompts needed'}
-4. Image prompts must specify "NO TEXT in image, clean educational illustration, white background, thick lines"
-5. Output MUST be valid JSON only - no markdown, no explanations
-6. speaker_notes should be detailed teaching guidance
-
-JSON Schema:
-{
-  "title": "Presentation title",
-  "slides": [
-    {
-      "title": "Slide title",
-      "bullets": ["Point 1", "Point 2", "Point 3"],
-      "speaker_notes": "Detailed teaching notes and explanations",
-      "image_prompt": "Educational illustration prompt with NO TEXT, clean vector style, white background, thick lines"
-    }
-  ]
-}`
+  const systemPrompt = `You are an expert educational content creator. Generate a presentation plan as STRICT JSON only. No markdown, no explanation — raw JSON only.
+JSON Schema: { "title": "string", "slides": [{ "title": "string", "bullets": ["string"], "speaker_notes": "string", "image_prompt": "string" }] }
+Rules: max 5 bullets per slide, grade-appropriate for ${gradeLevel}, image_prompt must say NO TEXT in image.`
 
   const userPrompt = `Create a ${numSlides}-slide educational presentation about "${topic}" for ${gradeLevel} ${subject} students.
+${includeImages ? 'Each slide needs a detailed image_prompt.' : 'Set image_prompt to empty string.'}
+Return ONLY valid JSON.`
 
-Requirements:
-- Grade-appropriate language for ${gradeLevel}
-- Educational and engaging content
-- Clear learning progression
-- ${includeImages ? 'Detailed image prompts for visual learning' : 'Focus on text content'}
-- Practical examples and applications
+  const raw = await OpenAIService.generateLongContent([
+    { role: 'system', content: systemPrompt },
+    { role: 'user',   content: userPrompt   },
+  ], { maxTokens: 3000, temperature: 0.7 })
 
-Generate ONLY valid JSON following the exact schema above.`
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'openai/gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      max_tokens: 3000,
-      temperature: 0.7
-    })
-
-    const content = response.choices[0]?.message?.content
-    if (!content) {
-      throw new Error('No content generated from OpenAI')
-    }
-
-    // Parse and validate JSON
-    const parsed = JSON.parse(content)
-    const validated = PresentationPlanSchema.parse(parsed)
-    
-    console.log('✅ Generated and validated slide plan')
-    return validated
-
-  } catch (error) {
-    console.error('❌ Error generating slide plan:', error)
-    throw new Error(`Failed to generate slide plan: ${error instanceof Error ? error.message : 'Unknown error'}`)
-  }
+  // Robust JSON extraction
+  const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+  if (start === -1 || end <= start) throw new Error('No JSON in slide plan response')
+  const parsed = JSON.parse(raw.slice(start, end + 1))
+  if (!parsed.title || !Array.isArray(parsed.slides)) throw new Error('Invalid slide plan structure')
+  console.log('✅ Generated slide plan:', parsed.slides.length, 'slides')
+  return parsed
 }
 
-// Generate image for a slide
+// Generate image for a slide using OpenAIService (with SVG fallback)
 async function generateSlideImage(prompt: string, size: string, slideNumber: number): Promise<string> {
   try {
-    const enhancedPrompt = `${prompt}, no text, clean educational illustration, white background, thick lines, vector style, suitable for educational presentation`
-
-    const response = await openai.images.generate({
-      model: 'dall-e-3',
-      prompt: enhancedPrompt,
-      size: size as '512x512' | '1024x1024',
+    const enhanced = `${prompt}, no text, clean educational illustration, white background, thick lines, vector style`
+    const result = await OpenAIService.generateImage({
+      prompt:  enhanced,
+      size:    (size === '512x512' ? '1024x1024' : size) as '1024x1024',
       quality: 'standard',
-      n: 1
+      style:   'natural',
     })
 
-    const imageUrl = response.data[0]?.url
-    if (!imageUrl) {
-      throw new Error('No image URL returned from OpenAI')
+    if (result.provider === 'placeholder') {
+      console.log(`⚠️  Using placeholder image for slide ${slideNumber}`)
+      return result.url // data URI — PptxGenJS can use this
     }
 
-    // Download and save the image
-    const imageResponse = await fetch(imageUrl)
-    if (!imageResponse.ok) {
-      throw new Error(`Failed to download image: ${imageResponse.status}`)
-    }
-
-    const imageBuffer = await imageResponse.arrayBuffer()
-    const fileName = `slide-${slideNumber.toString().padStart(2, '0')}.png`
-    const imagePath = path.join(process.cwd(), 'public', 'ai-images', 'temp', fileName)
-    
-    // Create temp directory if it doesn't exist
-    const tempDir = path.join(process.cwd(), 'public', 'ai-images', 'temp')
-    if (!existsSync(tempDir)) {
-      await mkdir(tempDir, { recursive: true })
-    }
-
-    await writeFile(imagePath, Buffer.from(imageBuffer))
-    
-    const savedImageUrl = `/ai-images/temp/${fileName}`
-    console.log(`🖼️ Generated and saved image for slide ${slideNumber}:`, savedImageUrl)
-    
-    return savedImageUrl
-
+    // Download and save to /public for serving
+    const imageResponse = await fetch(result.url)
+    if (!imageResponse.ok) throw new Error(`Download failed: ${imageResponse.status}`)
+    const buf = Buffer.from(await imageResponse.arrayBuffer())
+    const fileName = `slide-${slideNumber.toString().padStart(2, '0')}-${Date.now()}.png`
+    const tempDir  = path.join(process.cwd(), 'public', 'ai-images', 'temp')
+    if (!existsSync(tempDir)) await mkdir(tempDir, { recursive: true })
+    await writeFile(path.join(tempDir, fileName), buf)
+    const saved = `/ai-images/temp/${fileName}`
+    console.log(`🖼️ Saved slide ${slideNumber} image:`, saved)
+    return saved
   } catch (error) {
-    console.error(`❌ Error generating image for slide ${slideNumber}:`, error)
+    console.error(`❌ Image error for slide ${slideNumber}:`, error)
     throw error
   }
 }

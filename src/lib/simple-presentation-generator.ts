@@ -22,49 +22,41 @@ export interface SimplePresentationRequest {
 }
 
 export class SimplePresentationGenerator {
-  private pptx: PptxGenJS
-
-  constructor() {
-    this.pptx = new PptxGenJS()
-    
-    // Set basic presentation properties
-    this.pptx.author = 'ElimuNova AI'
-    this.pptx.company = 'ElimuNova AI'
-    this.pptx.title = 'AI Generated Presentation'
-  }
 
   /**
-   * Generate a simple presentation with embedded images
+   * Generate a simple presentation with embedded images.
+   * Creates a fresh PptxGenJS instance per call to avoid state pollution.
    */
   async generatePresentation(request: SimplePresentationRequest): Promise<Buffer> {
+    // Fresh instance per call — avoids slides from previous calls bleeding in
+    const pptx = new PptxGenJS()
+    pptx.author  = 'ElimuNova AI'
+    pptx.company = 'ElimuNova AI'
+    pptx.title   = request.title
+
     try {
-      console.log('🎯 Starting presentation generation with images...')
-      
-      // Generate and save images if requested
+      console.log('🎯 Starting presentation generation...')
+
+      // Generate images if requested
       let imageMap = new Map<string, string>()
-      
       if (request.generateImages) {
-        console.log('🖼️ Generating and saving images for slides...')
         imageMap = await this.generateAndSaveImages(request.slides, request.imageStyle, request.userId, request.teacherId)
-        console.log(`✅ Generated and saved ${imageMap.size} images`)
+        console.log(`✅ Images ready: ${imageMap.size}/${request.slides.length}`)
       }
 
-      // Add title slide
-      this.addTitleSlide(request.title, request.author)
+      // Title slide
+      this.addTitleSlide(pptx, request.title, request.author)
 
-      // Add content slides with embedded images
+      // Content slides
       for (const slide of request.slides) {
         const imageData = imageMap.get(slide.id)
-        console.log(`📄 Adding slide "${slide.title}" with image: ${!!imageData}`)
-        await this.addContentSlideWithImage(slide, imageData)
+        await this.addContentSlideWithImage(pptx, slide, imageData)
       }
 
-      console.log('📄 Generating PowerPoint buffer...')
-      const buffer = await this.pptx.write({ outputType: 'nodebuffer' }) as Buffer
-      console.log('✅ Presentation with embedded images generated successfully!')
-      
+      const buffer = await pptx.write({ outputType: 'nodebuffer' }) as Buffer
+      console.log('✅ PPTX buffer generated successfully')
       return buffer
-      
+
     } catch (error) {
       console.error('❌ Presentation generation error:', error)
       throw new Error(`Failed to generate presentation: ${error instanceof Error ? error.message : 'Unknown error'}`)
