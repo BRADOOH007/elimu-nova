@@ -343,8 +343,22 @@ async function generateAIResponse({
       question
     }
 
-    // Use OpenAI AI to generate response
-    const aiResponse = await OpenAIService.generateAITutorResponse(aiContext)
+    // Use waterfall AI to generate response
+    const aiResponse = await OpenAIService.generateText(
+      [
+        {
+          role: 'system',
+          content: `You are an AI tutor for ElimuNova helping a Kenyan student named ${aiContext.student.name} in ${aiContext.student.grade}.
+Their teacher is ${aiContext.student.teacher}. Available subjects: ${aiContext.student.subjects?.join(', ') || 'General'}.
+Be encouraging, clear, and use Kenyan examples. Give step-by-step guidance. Session type: ${sessionType}.`,
+        },
+        {
+          role: 'user',
+          content: `Subject: ${subject || 'General'}\nTopic: ${topic || 'General'}\nQuestion: ${question}`,
+        },
+      ],
+      { maxTokens: 800, temperature: 0.7 }
+    )
     return aiResponse
 
   } catch (error) {
