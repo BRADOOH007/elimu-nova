@@ -82,6 +82,11 @@ export class ImageGenerationService {
       metadata: { source: 'svg-placeholder' },
     }
   }
+
+  /**
+   * Generate image with automatic prompt enhancement
+   */
+  async generate(
     prompt: string,
     options?: {
       style?: 'natural' | 'vivid'
@@ -89,12 +94,7 @@ export class ImageGenerationService {
       quality?: 'standard' | 'hd'
     }
   ): Promise<ImageGenerationResponse> {
-    const request: ImageGenerationRequest = {
-      prompt,
-      ...options
-    }
-
-    return await this.generateImage(request)
+    return this.generateImage({ prompt, ...options })
   }
 
   /**
