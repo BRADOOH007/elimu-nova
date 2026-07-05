@@ -18,64 +18,70 @@ export interface ImageGenerationResponse {
 
 export class ImageGenerationService {
   /**
-   * Generate an image using OpenAI DALL-E 3
+   * Generate an image using OpenAI DALL-E 3.
+   * Falls back to an SVG placeholder on any failure — never throws.
    */
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
+    const apiKey = process.env.OPENAI_DALLE_API_KEY || process.env.OPENAI_API_KEY || ''
+
+    if (!apiKey || apiKey.startsWith('sk-or-')) {
+      console.warn('[ImageGen] No DALL-E key configured — using placeholder')
+      return this.placeholder(request.prompt)
+    }
+
     try {
       const { OpenAI } = await import('openai')
-      
-      const apiKey = process.env.OPENAI_API_KEY
-      
-      if (!apiKey) {
-        throw new Error('OpenAI API key not configured')
-      }
-
       const openai = new OpenAI({ apiKey })
-
-      // Enhance prompt for educational content
       const enhancedPrompt = this.enhancePromptForEducation(request.prompt, request.style)
 
       const response = await openai.images.generate({
-        model: 'dall-e-3',
-        prompt: enhancedPrompt,
-        n: 1,
-        size: request.size || '1024x1024',
+        model:   'dall-e-3',
+        prompt:  enhancedPrompt,
+        n:       1,
+        size:    request.size || '1024x1024',
         quality: request.quality || 'standard',
-        style: request.style || 'natural',
+        style:   request.style || 'natural',
       })
 
-      if (!response.data) {
-        throw new Error('No image data returned from OpenAI')
-      }
-
       const imageUrl = response.data[0]?.url
-      if (!imageUrl) {
-        throw new Error('No image URL returned from OpenAI')
-      }
+      if (!imageUrl) throw new Error('No image URL returned from DALL-E')
 
       return {
-        url: imageUrl,
-        provider: 'openai-dalle-3',
+        url:           imageUrl,
+        provider:      'openai-dalle-3',
         revisedPrompt: response.data[0]?.revised_prompt,
         metadata: {
-          model: 'dall-e-3',
-          size: request.size || '1024x1024',
-          quality: request.quality || 'standard',
-          style: request.style || 'natural',
+          model:          'dall-e-3',
+          size:           request.size || '1024x1024',
+          quality:        request.quality || 'standard',
+          style:          request.style || 'natural',
           originalPrompt: request.prompt,
-          enhancedPrompt
-        }
+          enhancedPrompt,
+        },
       }
     } catch (error) {
-      console.error('OpenAI DALL-E image generation error:', error)
-      throw error
+      console.error('[ImageGen] DALL-E failed, using placeholder:', error instanceof Error ? error.message : error)
+      return this.placeholder(request.prompt)
     }
   }
 
-  /**
-   * Generate image with automatic prompt enhancement
-   */
-  async generate(
+  /** Return an SVG data-URI placeholder — always succeeds */
+  private placeholder(prompt: string): ImageGenerationResponse {
+    const text = (prompt || 'Educational Image').slice(0, 55)
+    const svg = `<svg width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100%" height="100%" fill="#e8f4fd"/>
+      <rect x="30" y="30" width="964" height="964" rx="16" fill="none" stroke="#90c4e8" stroke-width="4"/>
+      <circle cx="512" cy="420" r="80" fill="#b3d9f5" opacity="0.6"/>
+      <text x="512" y="580" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" fill="#2c6e9e" font-weight="bold">🎨 ElimuNova AI</text>
+      <text x="512" y="640" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#4a8cbb">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</text>
+    </svg>`
+    return {
+      url:      `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
+      provider: 'placeholder',
+      revisedPrompt: prompt,
+      metadata: { source: 'svg-placeholder' },
+    }
+  }
     prompt: string,
     options?: {
       style?: 'natural' | 'vivid'

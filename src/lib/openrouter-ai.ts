@@ -995,4 +995,4 @@ Return JSON with shape { "grade": 0-100, "feedback": "specific, constructive fee
 }
 
 // Export the generateAIContent function for backward compatibility
-export const generateAIContent = OpenAIService.generateAIContent
+export const generateAIContent = (prompt: string, options?: any) => OpenAIService.generateAIContent(prompt, options)

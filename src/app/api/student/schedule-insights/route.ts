@@ -161,12 +161,16 @@ async function generateAIScheduleInsights(data: any): Promise<any> {
       recentAssignments: data.recentAssignments
     }
 
-    const aiResponse = await OpenAIService.generateAITutorResponse({
-      sessionType: 'progress_review',
-      question: 'Please analyze my upcoming schedule and provide insights, recommendations, and study planning advice based on my classes, assignments, and study patterns.',
-      context,
-      student: data.student
-    })
+    const aiResponse = await OpenAIService.generateText([
+      {
+        role: 'system',
+        content: `You are an AI study planner for ElimuNova. Analyse this student's upcoming schedule and provide concise, practical study planning advice. Student: ${JSON.stringify({ name: `${data.student.user?.firstName} ${data.student.user?.lastName}`, class: data.student.class?.name })}. Upcoming classes: ${data.upcomingSchedules?.length || 0}. Assignments: ${data.recentAssignments?.length || 0}.`,
+      },
+      {
+        role: 'user',
+        content: 'Please analyse my upcoming schedule and provide insights, recommendations, and study planning advice.',
+      },
+    ], { maxTokens: 400, temperature: 0.7 })
 
     return {
       analysis: aiResponse,

@@ -274,12 +274,16 @@ async function generateAIProgressInsights(data: any): Promise<any> {
       recentAISessions: data.recentAISessions
     }
 
-    const aiResponse = await OpenAIService.generateAITutorResponse({
-      sessionType: 'progress_review',
-      question: 'Please provide comprehensive progress analysis and recommendations for this student',
-      context,
-      student: data.student
-    })
+    const aiResponse = await OpenAIService.generateText([
+      {
+        role: 'system',
+        content: `You are an AI educational analyst for ElimuNova. Analyse this student's progress data and provide concise insights and recommendations. Student: ${JSON.stringify(context.student)}. Metrics: ${JSON.stringify(context.metrics)}. Return a helpful paragraph with specific, actionable advice.`,
+      },
+      {
+        role: 'user',
+        content: 'Please provide comprehensive progress analysis and personalised recommendations for this student based on their metrics.',
+      },
+    ], { maxTokens: 500, temperature: 0.7 })
 
     return {
       analysis: aiResponse,
