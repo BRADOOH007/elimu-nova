@@ -1,14 +1,14 @@
 /**
  * ElimuNova AI Provider — shared across EduGenius and TutorBot.
  *
- * Waterfall:
- *   1. Cerebras      — llama3.1-8b    (2,000 tok/sec — FASTEST)
- *   2. DeepSeek      — deepseek-chat  (best quality free — SMARTEST)
- *   2b. DeepSeek-R1  — deepseek-reasoner (for reasoning tasks)
- *   3. Gemini Flash  — gemini-2.5-flash  (free, CBC-aware)
- *   4. Groq          — llama-3.1-8b      (free, ultra-fast)
+ * Waterfall (tested live — working providers first):
+ *   1. Cerebras      — gpt-oss-120b      (2,000 tok/sec — FASTEST) ✅
+ *   2. Groq          — llama-3.3-70b-versatile (free, ultra-fast)  ✅
+ *   3. DeepSeek      — deepseek-chat     (best quality — balance dependent)
+ *   3b. DeepSeek-R1  — deepseek-reasoner (for reasoning tasks)
+ *   4. Gemini Flash  — gemini-2.0-flash  (free quota)
  *   5. OpenRouter    — gpt-4o-mini       (paid fallback)
- *   6. OpenAI        — gpt-4o-mini       (last resort)
+ *   6. OpenAI direct — gpt-4o-mini       (last resort)
  */
 
 import Cerebras from '@cerebras/cerebras_cloud_sdk'
@@ -79,10 +79,10 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     maxTokens       = 2000,
     temperature     = 0.7,
     useReasoner     = false,
-    cerebrasModel   = process.env.CEREBRAS_MODEL   || 'llama3.1-8b',
+    cerebrasModel   = process.env.CEREBRAS_MODEL   || 'gpt-oss-120b',
     deepseekModel   = useReasoner ? 'deepseek-reasoner' : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
-    geminiModel     = process.env.GEMINI_MODEL     || 'gemini-2.5-flash',
-    groqModel       = process.env.GROQ_MODEL       || 'llama-3.3-70b',
+    geminiModel     = process.env.GEMINI_MODEL     || 'gemini-2.0-flash',
+    groqModel       = process.env.GROQ_MODEL       || 'llama-3.3-70b-versatile',
     openrouterModel = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
     openaiModel     = process.env.OPENAI_MODEL     || 'gpt-4o-mini',
   } = opts
@@ -101,7 +101,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   const errors: string[] = []
   const start = Date.now()
 
-  // 1. Cerebras — fastest (skip for reasoning tasks, DeepSeek-R1 is better)
+  // 1. Cerebras — fastest (skip for reasoning tasks)
   if (CEREBRAS_KEY && !useReasoner) {
     try {
       const client = new Cerebras({ apiKey: CEREBRAS_KEY })
@@ -112,14 +112,21 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
         temperature,
         top_p: 1,
         stream: false,
-        reasoning_effort: 'medium',
       })
       const content = (res as any).choices?.[0]?.message?.content || ''
       if (content) return { content, provider: 'cerebras', model: cerebrasModel, tokensUsed: (res as any).usage?.total_tokens, latencyMs: Date.now() - start }
     } catch (e: any) { errors.push(`Cerebras: ${e.message}`); console.warn('[AI] Cerebras:', e.message) }
   }
 
-  // 2. DeepSeek — best quality free (V3 for chat, R1 for reasoning)
+  // 2. Groq — free, ultra-fast (moved up — confirmed working)
+  if (GROQ_KEY && !useReasoner) {
+    try {
+      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, groqModel, messages, maxTokens, temperature)
+      if (content) return { content, provider: 'groq', model: groqModel, tokensUsed, latencyMs: Date.now() - start }
+    } catch (e: any) { errors.push(`Groq: ${e.message}`); console.warn('[AI] Groq:', e.message) }
+  }
+
+  // 3. DeepSeek — best quality (V3 for chat, R1 for reasoning)
   if (DEEPSEEK_KEY) {
     try {
       const { content, tokensUsed } = await callHTTP(DEEPSEEK_URL, DEEPSEEK_KEY, deepseekModel, messages, maxTokens, temperature)
@@ -127,20 +134,12 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     } catch (e: any) { errors.push(`DeepSeek: ${e.message}`); console.warn('[AI] DeepSeek:', e.message) }
   }
 
-  // 3. Gemini 2.5 Flash — free, CBC-aware
+  // 4. Gemini Flash — free quota
   if (GEMINI_KEY) {
     try {
       const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, geminiModel, messages, maxTokens, temperature)
       if (content) return { content, provider: 'gemini', model: geminiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) { errors.push(`Gemini: ${e.message}`); console.warn('[AI] Gemini:', e.message) }
-  }
-
-  // 4. Groq — free, ultra-fast
-  if (GROQ_KEY) {
-    try {
-      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, groqModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'groq', model: groqModel, tokensUsed, latencyMs: Date.now() - start }
-    } catch (e: any) { errors.push(`Groq: ${e.message}`); console.warn('[AI] Groq:', e.message) }
   }
 
   // ── 5. OpenRouter (or direct OpenAI via same key) ────────────────────────
