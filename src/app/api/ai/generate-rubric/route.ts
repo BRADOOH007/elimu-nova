@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { generateAIContent } from '@/lib/openrouter-ai'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,7 +48,7 @@ Please generate:
 
 Format the response as a structured rubric that teachers can use for assessment.`
 
-    const aiResponse = await generateAIContent(prompt, {
+    const aiResponse = await OpenAIService.generateAIContent(prompt, {
       maxTokens: 2000,
       temperature: 0.7
     })

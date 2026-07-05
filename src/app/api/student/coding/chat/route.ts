@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { OpenAIService } from '@/lib/openai-service'
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,17 +10,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { message, language, lessonTitle, context } = await request.json()
+    const { message, language, lessonTitle } = await request.json()
     if (!message) return NextResponse.json({ error: 'Message required' }, { status: 400 })
 
-    const { OpenAI } = await import('openai')
-    const openai = new OpenAI({
-      apiKey: process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENROUTER_API_KEY ? 'https://openrouter.ai/api/v1' : undefined,
-    })
-
-    const systemPrompt = `You are an expert coding tutor for the ElimuNova AI Coding Studio. 
-You help students (Grade 1-12) learn programming step by step.
+    const systemPrompt = `You are an expert coding tutor for the ElimuNova AI Coding Studio.
+You help Kenyan students (Grade 1-12) learn programming step by step.
 
 Current context:
 - Language/Environment: ${language || 'Scratch/Block-based programming'}
@@ -38,17 +32,10 @@ Your teaching style:
 
 Always respond in a friendly, encouraging tone.`
 
-    const completion = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message },
-      ],
-      max_tokens: 600,
-      temperature: 0.7,
-    })
-
-    const response = completion.choices[0]?.message?.content || 'I could not generate a response. Please try again.'
+    const response = await OpenAIService.generateText([
+      { role: 'system', content: systemPrompt },
+      { role: 'user',   content: message         },
+    ], { maxTokens: 600, temperature: 0.7 })
 
     return NextResponse.json({ response })
   } catch (error) {

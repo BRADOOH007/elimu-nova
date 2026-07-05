@@ -1,337 +1,390 @@
-// Simple Presentation Generator - Focused on Working Functionality
+/**
+ * ElimuNova Presentation Generator
+ * Matches TutorBot AI slide style exactly:
+ * - Coloured section header bar (introduction=blue, body=green, conclusion=purple)
+ * - Section badge + slide counter in header
+ * - Numbered bullet points on content column
+ * - AI image panel on right (split layout) or full-width (image layout)
+ * - Accent underline below title
+ * - Branded footer: "ElimuNova AI | Subject • Grade"
+ * - Speaker notes embedded
+ */
 import PptxGenJS from 'pptxgenjs'
 import { OpenAIService } from './openai-service'
 import { prisma } from './prisma'
 
 export interface SimplePresentationSlide {
-  id: string
-  title: string
-  content: string[]
+  id:           string
+  title:        string
+  content:      string[]
   imagePrompt?: string
-  layout: 'title' | 'content' | 'image' | 'split'
+  layout:       'title' | 'content' | 'image' | 'split'
+  section?:     'introduction' | 'body' | 'conclusion'
+  speakerNotes?: string
 }
 
 export interface SimplePresentationRequest {
-  title: string
-  author?: string
-  slides: SimplePresentationSlide[]
+  title:          string
+  author?:        string
+  subject?:       string
+  grade?:         string
+  slides:         SimplePresentationSlide[]
   generateImages: boolean
-  imageStyle: 'natural' | 'vivid'
-  userId?: string
-  teacherId?: string
+  imageStyle:     'natural' | 'vivid'
+  userId?:        string
+  teacherId?:     string
+}
+
+// ── Section colour palette (matches TutorBot exactly) ──────────────────────
+const SECTION_STYLES = {
+  introduction: { bg: '1a3699', accent: '2563eb', contentBg: 'eef2ff', label: 'INTRODUCTION' },
+  body:         { bg: '036d4d', accent: '059669', contentBg: 'ecfdf5', label: 'BODY'         },
+  conclusion:   { bg: '6d28d9', accent: '8b5cf6', contentBg: 'f5f3ff', label: 'CONCLUSION'  },
+}
+
+function getSection(slide: SimplePresentationSlide, index: number, total: number): 'introduction' | 'body' | 'conclusion' {
+  if (slide.section) return slide.section
+  if (index === 0 || index === 1) return 'introduction'
+  if (index >= total - 2)        return 'conclusion'
+  return 'body'
 }
 
 export class SimplePresentationGenerator {
 
-  /**
-   * Generate a simple presentation with embedded images.
-   * Creates a fresh PptxGenJS instance per call to avoid state pollution.
-   */
   async generatePresentation(request: SimplePresentationRequest): Promise<Buffer> {
-    // Fresh instance per call — avoids slides from previous calls bleeding in
     const pptx = new PptxGenJS()
-    pptx.author  = 'ElimuNova AI'
+    pptx.layout  = 'LAYOUT_16x9'
+    pptx.author  = request.author  || 'ElimuNova AI'
     pptx.company = 'ElimuNova AI'
     pptx.title   = request.title
 
     try {
-      console.log('🎯 Starting presentation generation...')
+      console.log('🎯 ElimuNova PPTX — starting generation...')
 
-      // Generate images if requested
-      let imageMap = new Map<string, string>()
+      // Generate images in parallel (only for slides that need them)
+      const imageMap = new Map<string, string>()
       if (request.generateImages) {
-        imageMap = await this.generateAndSaveImages(request.slides, request.imageStyle, request.userId, request.teacherId)
+        await this.generateImages(request.slides, request.imageStyle, imageMap, request.userId, request.teacherId)
         console.log(`✅ Images ready: ${imageMap.size}/${request.slides.length}`)
       }
 
-      // Title slide
-      this.addTitleSlide(pptx, request.title, request.author)
+      const total = request.slides.length
+
+      // Title slide (first slide always uses title layout)
+      this.addTitleSlide(pptx, request.title, request.author, request.subject, request.grade)
 
       // Content slides
-      for (const slide of request.slides) {
+      for (let i = 0; i < total; i++) {
+        const slide     = request.slides[i]
+        const section   = getSection(slide, i, total)
+        const style     = SECTION_STYLES[section]
         const imageData = imageMap.get(slide.id)
-        await this.addContentSlideWithImage(pptx, slide, imageData)
+        const slideNum  = i + 1
+        this.addContentSlide(pptx, slide, section, style, imageData, slideNum, total, request.subject, request.grade)
       }
 
       const buffer = await pptx.write({ outputType: 'nodebuffer' }) as Buffer
-      console.log('✅ PPTX buffer generated successfully')
+      console.log('✅ PPTX generated successfully')
       return buffer
 
     } catch (error) {
-      console.error('❌ Presentation generation error:', error)
+      console.error('❌ PPTX generation error:', error)
       throw new Error(`Failed to generate presentation: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
-  /**
-   * Generate images using OpenAI and save to database
-   */
-  private async generateAndSaveImages(slides: SimplePresentationSlide[], style: 'natural' | 'vivid', userId?: string, teacherId?: string): Promise<Map<string, string>> {
-    const imageMap = new Map<string, string>()
-    
-    console.log(`🎨 Starting image generation for ${slides.length} slides`)
-    console.log('OpenAI API Key available:', !!process.env.OPENAI_API_KEY)
+  // ── Title Slide ──────────────────────────────────────────────────────────
+  private addTitleSlide(pptx: PptxGenJS, title: string, author?: string, subject?: string, grade?: string) {
+    const slide = pptx.addSlide()
+    // Navy gradient background
+    slide.background = { color: '0f172a' }
 
-    for (const slide of slides) {
-      console.log(`🔍 Checking slide "${slide.title}": layout=${slide.layout}, hasPrompt=${!!slide.imagePrompt}`)
-      
-      if (slide.imagePrompt && (slide.layout === 'image' || slide.layout === 'split')) {
-        try {
-          console.log(`🎨 Generating image for "${slide.title}"...`)
-          console.log(`📝 Prompt: ${slide.imagePrompt}`)
-          
-          // Generate image using OpenAI
-          const result = await OpenAIService.generateImage({
-            prompt: slide.imagePrompt,
-            style: style,
-            size: '1024x1024'
-          })
+    // Top accent bar
+    slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.12, fill: { color: '2563eb' } })
 
-          if (result && result.url) {
-            console.log(`✅ Image generated for "${slide.title}": ${result.url}`)
-            
-            // Convert URL to base64 data URI for PptxGenJS
-            console.log(`🔄 Converting image to data URI...`)
-            const imageData = await this.convertImageToDataUri(result.url)
-            console.log(`✅ Converted to data URI (length: ${imageData.length})`)
-            
-            imageMap.set(slide.id, imageData)
-            
-            // Save to database for gallery
-            if (userId || teacherId) {
-              await this.saveImageToDatabase(result.url, slide.title, slide.imagePrompt, userId, teacherId)
-            }
-          } else {
-            console.log(`❌ No image URL returned for "${slide.title}"`)
-            console.log('Result:', result)
-          }
-          
-          // Rate limiting
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          
-        } catch (error) {
-          console.error(`❌ Failed to generate image for "${slide.title}":`, error)
-          // Continue without image
-        }
-      } else {
-        console.log(`⏭️ Skipping image for "${slide.title}" (layout: ${slide.layout}, prompt: ${!!slide.imagePrompt})`)
-      }
-    }
-
-    console.log(`🎨 Image generation complete. Generated ${imageMap.size} out of ${slides.length} images`)
-    return imageMap
-  }
-
-  /**
-   * Convert image URL to base64 data URI for PptxGenJS
-   */
-  private async convertImageToDataUri(imageUrl: string): Promise<string> {
-    try {
-      const response = await fetch(imageUrl)
-      const arrayBuffer = await response.arrayBuffer()
-      const base64 = Buffer.from(arrayBuffer).toString('base64')
-      return `data:image/png;base64,${base64}`
-    } catch (error) {
-      console.error('❌ Failed to convert image to data URI:', error)
-      throw error
-    }
-  }
-
-  /**
-   * Save image to database for gallery
-   */
-  private async saveImageToDatabase(imageUrl: string, title: string, prompt: string, userId?: string, teacherId?: string) {
-    try {
-      await prisma.aIGeneratedImage.create({
-        data: {
-          filename: `presentation_${Date.now()}_${title.replace(/[^a-z0-9]/gi, '_')}.png`,
-          originalUrl: imageUrl,
-          storedUrl: imageUrl, // For now, same as original
-          topic: title,
-          prompt: prompt,
-          type: 'ILLUSTRATION',
-          size: 'MEDIUM_1024',
-          quality: 'standard',
-          userId: userId || '',
-          teacherId: teacherId || null,
-          metadata: JSON.stringify({
-            source: 'presentation_generator',
-            slideTitle: title
-          })
-        }
-      })
-      console.log(`💾 Saved image to database: ${title}`)
-    } catch (error) {
-      console.error('❌ Failed to save image to database:', error)
-      // Don't throw - continue with presentation generation
-    }
-  }
-
-  /**
-   * Add title slide
-   */
-  private addTitleSlide(title: string, author?: string) {
-    const slide = this.pptx.addSlide()
-    
-    // Background
-    slide.background = { color: 'F8F9FA' }
-
-    // Title
-    slide.addText(title, {
-      x: 0.5, y: 2, w: 9, h: 1.5,
-      fontSize: 36, bold: true, color: '2E5090',
+    // ElimuNova badge
+    slide.addText('ElimuNova AI', {
+      x: 0.4, y: 0.25, w: 2.5, h: 0.4,
+      fontSize: 13, bold: true, color: '93c5fd',
       fontFace: 'Calibri',
-      align: 'center', valign: 'middle'
     })
+
+    // Main title
+    slide.addText(title, {
+      x: 0.8, y: 1.6, w: 8.4, h: 1.8,
+      fontSize: 40, bold: true, color: 'FFFFFF',
+      fontFace: 'Calibri', align: 'center', valign: 'middle',
+      shadow: { type: 'outer', blur: 8, offset: 3, angle: 45, opacity: 0.4 },
+    })
+
+    // Accent underline
+    slide.addShape('rect', { x: 3.5, y: 3.55, w: 3, h: 0.08, fill: { color: '2563eb' } })
+
+    // Subject + Grade pill
+    const meta = [subject, grade].filter(Boolean).join(' • ')
+    if (meta) {
+      slide.addText(meta, {
+        x: 2.5, y: 3.8, w: 5, h: 0.45,
+        fontSize: 15, color: '94a3b8', fontFace: 'Calibri', align: 'center',
+        fill: { color: '1e293b' },
+      })
+    }
 
     // Author
     if (author) {
-      slide.addText(`By: ${author}`, {
-        x: 0.5, y: 3.8, w: 9, h: 0.5,
-        fontSize: 18, color: '666666',
-        fontFace: 'Calibri',
-        align: 'center'
+      slide.addText(`Prepared by: ${author}`, {
+        x: 0.5, y: 4.6, w: 9, h: 0.35,
+        fontSize: 13, color: '64748b', fontFace: 'Calibri', align: 'center',
       })
     }
 
-    // Footer
-    slide.addText('Generated by ElimuNova AI', {
-      x: 8, y: 5, w: 1.5, h: 0.3,
-      fontSize: 10, color: '999999',
+    // Footer bar
+    slide.addShape('rect', { x: 0, y: 5.2, w: '100%', h: 0.12, fill: { color: '1e3a5f' } })
+    slide.addText('Powered by ElimuNova AI — Kenya CBC Curriculum', {
+      x: 0.4, y: 5.25, w: 9.2, h: 0.25,
+      fontSize: 9, color: '94a3b8', fontFace: 'Arial', align: 'center',
+    })
+  }
+
+  // ── Content Slide ────────────────────────────────────────────────────────
+  private addContentSlide(
+    pptx: PptxGenJS,
+    slide: SimplePresentationSlide,
+    section: 'introduction' | 'body' | 'conclusion',
+    style: typeof SECTION_STYLES['body'],
+    imageData: string | undefined,
+    slideNum: number,
+    total: number,
+    subject?: string,
+    grade?: string,
+  ) {
+    const pptSlide = pptx.addSlide()
+    pptSlide.background = { color: 'FFFFFF' }
+
+    const hasImage = !!imageData && (slide.layout === 'split' || slide.layout === 'image')
+
+    // ── Header bar ──────────────────────────────────────────────────────
+    pptSlide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.7, fill: { color: style.bg } })
+    // Thin accent line below header
+    pptSlide.addShape('rect', { x: 0, y: 0.7, w: '100%', h: 0.06, fill: { color: style.accent } })
+
+    // Section badge
+    pptSlide.addText(style.label, {
+      x: 0.3, y: 0.13, w: 1.8, h: 0.42,
+      fontSize: 10, bold: true, color: 'FFFFFF',
+      fontFace: 'Calibri', align: 'center', valign: 'middle',
+      fill: { color: style.accent },
+    })
+
+    // Slide counter
+    pptSlide.addText(`${slideNum} / ${total}`, {
+      x: 8.4, y: 0.18, w: 1.2, h: 0.35,
+      fontSize: 12, bold: true, color: 'FFFFFF',
+      fontFace: 'Calibri', align: 'right',
+    })
+
+    // ── Title ────────────────────────────────────────────────────────────
+    const titleW = hasImage ? 5.8 : 9.2
+    pptSlide.addText(slide.title, {
+      x: 0.4, y: 0.9, w: titleW, h: 0.7,
+      fontSize: 26, bold: true, color: style.bg,
       fontFace: 'Calibri',
-      align: 'right'
     })
-  }
+    // Accent underline
+    pptSlide.addShape('rect', { x: 0.4, y: 1.65, w: 2.2, h: 0.055, fill: { color: style.accent } })
 
-  /**
-   * Add content slide with embedded image
-   */
-  private async addContentSlideWithImage(slideData: SimplePresentationSlide, imageData?: string) {
-    const slide = this.pptx.addSlide()
-    
-    // Background
-    slide.background = { color: 'FFFFFF' }
+    // ── Bullet content ────────────────────────────────────────────────────
+    const contentW = hasImage ? 5.6 : 9.2
+    const bulletItems = (slide.content || []).map((item, idx) => ({
+      text: item,
+      options: {
+        bullet:        { type: 'number' as const },
+        color:         '1f2937',
+        fontSize:      16,
+        fontFace:      'Calibri',
+        paraSpaceAfter: 8,
+        breakLine:     true,
+      },
+    }))
 
-    // Title
-    slide.addText(slideData.title, {
-      x: 0.5, y: 0.3, w: 9, h: 0.8,
-      fontSize: 28, bold: true, color: '2E5090',
-      fontFace: 'Calibri Bold'
+    if (bulletItems.length > 0) {
+      pptSlide.addText(bulletItems, {
+        x: 0.4, y: 1.85, w: contentW, h: 3.0,
+        fontSize: 16, color: '2d3748',
+        fontFace: 'Calibri', valign: 'top',
+        lineSpacing: 24,
+      })
+    }
+
+    // ── Image panel ───────────────────────────────────────────────────────
+    if (hasImage && imageData) {
+      // Image background card
+      pptSlide.addShape('rect', {
+        x: 6.1, y: 0.85, w: 3.5, h: 3.6,
+        fill: { color: style.contentBg },
+        line: { color: style.accent, width: 2 },
+        shadow: { type: 'outer', blur: 6, offset: 2, angle: 45, opacity: 0.2 },
+      })
+
+      try {
+        // Handle both data URIs and URLs
+        const imgOptions: any = {
+          x: 6.2, y: 0.95, w: 3.3, h: 3.4,
+          rounding: true,
+        }
+        if (imageData.startsWith('data:')) {
+          imgOptions.data = imageData
+        } else {
+          imgOptions.path = imageData
+        }
+        pptSlide.addImage(imgOptions)
+      } catch (e) {
+        console.warn(`⚠️ Could not embed image for slide "${slide.title}":`, e)
+        // Show prompt text if image embed fails
+        pptSlide.addText(slide.imagePrompt?.slice(0, 80) || 'Educational illustration', {
+          x: 6.2, y: 0.95, w: 3.3, h: 3.4,
+          fontSize: 12, color: style.accent, align: 'center', valign: 'middle',
+          fontFace: 'Calibri',
+        })
+      }
+    }
+
+    // ── Footer ────────────────────────────────────────────────────────────
+    pptSlide.addShape('rect', { x: 0, y: 5.08, w: '100%', h: 0.28, fill: { color: 'f8fafc' } })
+
+    pptSlide.addText('ElimuNova AI', {
+      x: 0.4, y: 5.12, w: 3, h: 0.2,
+      fontSize: 9, color: '94a3b8', fontFace: 'Arial',
     })
 
-    // Content and image based on layout
-    if (slideData.layout === 'image' && imageData) {
-      // Image-focused layout
-      await this.addImageLayout(slide, slideData, imageData)
-    } else if (slideData.layout === 'split' && imageData) {
-      // Split layout (content + image)
-      await this.addSplitLayout(slide, slideData, imageData)
-    } else {
-      // Content-only layout
-      this.addContentLayout(slide, slideData)
+    const footerRight = [subject, grade].filter(Boolean).join(' • ')
+    if (footerRight) {
+      pptSlide.addText(footerRight, {
+        x: 5.5, y: 5.12, w: 4.2, h: 0.2,
+        fontSize: 9, color: style.bg, bold: true,
+        fontFace: 'Arial', align: 'right',
+      })
+    }
+
+    // Speaker notes
+    if (slide.speakerNotes) {
+      pptSlide.addNotes(slide.speakerNotes)
     }
   }
 
-  /**
-   * Add image-focused layout with embedded image
-   */
-  private async addImageLayout(slide: any, slideData: SimplePresentationSlide, imageData: string) {
+  // ── Image generation ─────────────────────────────────────────────────────
+  private async generateImages(
+    slides: SimplePresentationSlide[],
+    style: 'natural' | 'vivid',
+    imageMap: Map<string, string>,
+    userId?: string,
+    teacherId?: string,
+  ): Promise<void> {
+    // Only generate for slides that have an imagePrompt and need an image
+    const imageSlides = slides.filter(s =>
+      s.imagePrompt && (s.layout === 'split' || s.layout === 'image')
+    )
+
+    // TutorBot only generates 2 images (title + 1 body) to reduce latency
+    // We generate up to 3: first, one mid-body, last
+    const targetIndices = new Set<number>()
+    targetIndices.add(0)
+    const mid = Math.floor(imageSlides.length / 2)
+    if (mid > 0) targetIndices.add(mid)
+    if (imageSlides.length > 1) targetIndices.add(imageSlides.length - 1)
+
+    const targets = imageSlides.filter((_, i) => targetIndices.has(i))
+
+    await Promise.allSettled(
+      targets.map(async (slide) => {
+        try {
+          const enhanced = `Educational diagram or illustration for ${slide.imagePrompt}. Clean, textbook-quality, high-contrast, suitable for Kenyan classroom projection. No watermarks, no text overlays.`
+          const result = await OpenAIService.generateImage({
+            prompt:  enhanced,
+            style,
+            size:    '1024x1024',
+            quality: 'standard',
+          })
+
+          if (result.url) {
+            // Convert remote URL to base64 for embedding (data URIs work everywhere)
+            if (result.url.startsWith('data:')) {
+              imageMap.set(slide.id, result.url)
+            } else {
+              try {
+                const resp = await fetch(result.url)
+                const buf  = Buffer.from(await resp.arrayBuffer())
+                imageMap.set(slide.id, `data:image/png;base64,${buf.toString('base64')}`)
+              } catch {
+                imageMap.set(slide.id, result.url) // use URL directly as fallback
+              }
+            }
+            console.log(`✅ Image ready for "${slide.title}" (${result.provider})`)
+
+            // Save to DB (non-blocking)
+            if ((userId || teacherId) && !result.provider.includes('placeholder')) {
+              this.saveImageToDatabase(result.url, slide.title, slide.imagePrompt || '', userId, teacherId)
+                .catch(() => {})
+            }
+          }
+        } catch (e) {
+          console.warn(`⚠️ Image skipped for "${slide.title}":`, e instanceof Error ? e.message : e)
+        }
+      })
+    )
+  }
+
+  private async saveImageToDatabase(url: string, title: string, prompt: string, userId?: string, teacherId?: string) {
     try {
-      // Large embedded image
-      slide.addImage({
-        data: imageData, // Use data URI format
-        x: 1, y: 1.5, w: 8, h: 3.5
+      await prisma.aIGeneratedImage.create({
+        data: {
+          filename:    `pptx_${Date.now()}_${title.replace(/[^a-z0-9]/gi, '_').slice(0, 40)}.png`,
+          originalUrl: url,
+          storedUrl:   url,
+          topic:       title,
+          prompt,
+          type:        'ILLUSTRATION',
+          size:        'MEDIUM_1024',
+          quality:     'standard',
+          userId:      userId || '',
+          teacherId:   teacherId || null,
+          metadata:    JSON.stringify({ source: 'presentation_generator' }),
+        },
       })
-      console.log(`🖼️ Embedded image in slide: ${slideData.title}`)
-    } catch (error) {
-      console.error(`❌ Failed to embed image in slide "${slideData.title}":`, error)
-    }
-
-    // Brief content below
-    if (slideData.content.length > 0) {
-      const bulletPoints = slideData.content.map(item => ({ text: item, options: { bullet: true } }))
-      
-      slide.addText(bulletPoints, {
-        x: 1, y: 5.2, w: 8, h: 0.8,
-        fontSize: 14, color: '333333',
-        fontFace: 'Calibri'
-      })
-    }
-  }
-
-  /**
-   * Add split layout (content + embedded image)
-   */
-  private async addSplitLayout(slide: any, slideData: SimplePresentationSlide, imageData: string) {
-    // Content on left
-    const bulletPoints = slideData.content.map(item => ({ text: item, options: { bullet: true } }))
-    
-    slide.addText(bulletPoints, {
-      x: 0.5, y: 1.3, w: 4.5, h: 3.5,
-      fontSize: 16, color: '333333',
-      fontFace: 'Calibri'
-    })
-
-    try {
-      // Embedded image on right
-      slide.addImage({
-        data: imageData, // Use data URI format
-        x: 5.2, y: 1.3, w: 4.3, h: 3.5
-      })
-      console.log(`🖼️ Embedded image in split layout: ${slideData.title}`)
-    } catch (error) {
-      console.error(`❌ Failed to embed image in split layout "${slideData.title}":`, error)
-    }
-  }
-
-  /**
-   * Add content-only layout
-   */
-  private addContentLayout(slide: any, slideData: SimplePresentationSlide) {
-    const bulletPoints = slideData.content.map(item => ({ text: item, options: { bullet: true } }))
-    
-    slide.addText(bulletPoints, {
-      x: 0.5, y: 1.3, w: 9, h: 3.5,
-      fontSize: 18, color: '333333',
-      fontFace: 'Calibri'
-    })
+    } catch { /* non-fatal */ }
   }
 }
 
-// Export for use
 export const simplePresentationGenerator = new SimplePresentationGenerator()
 
-/**
- * Generate a simple presentation with the provided data
- */
 export async function generateSimplePresentation(options: {
-  title: string
-  slides: any[]
+  title:         string
+  slides:        any[]
   includeImages?: boolean
-  theme?: string
-  userId?: string
-  teacherId?: string
+  subject?:      string
+  grade?:        string
+  userId?:       string
+  teacherId?:    string
 }): Promise<Buffer> {
-  const generator = new SimplePresentationGenerator()
-  
-  // Convert slides to the expected format
-  const formattedSlides: SimplePresentationSlide[] = options.slides.map((slide, index) => ({
-    id: slide.id || `slide-${index}`,
-    title: slide.title || `Slide ${index + 1}`,
-    content: Array.isArray(slide.content) ? slide.content : [slide.content || ''],
-    imagePrompt: slide.imagePrompt || slide.imageDescription,
-    layout: slide.layout || 'content'
+  const formattedSlides: SimplePresentationSlide[] = options.slides.map((s, i) => ({
+    id:          s.id    || `slide-${i}`,
+    title:       s.title || `Slide ${i + 1}`,
+    content:     Array.isArray(s.content) ? s.content : [s.content || ''],
+    imagePrompt: s.imagePrompt || s.imageDescription,
+    layout:      s.layout || 'split',
+    section:     s.section,
+    speakerNotes: s.speakerNotes || s.speaker_notes,
   }))
 
-  const request: SimplePresentationRequest = {
-    title: options.title,
-    author: 'ElimuNova AI Teacher',
-    slides: formattedSlides,
-    generateImages: options.includeImages || false,
-    imageStyle: 'natural',
-    userId: options.userId,
-    teacherId: options.teacherId
-  }
-
-  return await generator.generatePresentation(request)
+  return simplePresentationGenerator.generatePresentation({
+    title:          options.title,
+    author:         'ElimuNova AI Teacher',
+    subject:        options.subject,
+    grade:          options.grade,
+    slides:         formattedSlides,
+    generateImages: options.includeImages ?? true,
+    imageStyle:     'natural',
+    userId:         options.userId,
+    teacherId:      options.teacherId,
+  })
 }
