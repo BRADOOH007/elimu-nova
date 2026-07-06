@@ -3,12 +3,11 @@
 import dynamic from 'next/dynamic'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ImageGenerator from '@/components/ai/image-generator'
-import PresentationGenerator from '@/components/ai/presentation-generator'
 import DiagramGenerator from '@/components/ai/diagram-generator'
 import ImageGallery from '@/components/ai/image-gallery'
 import { AIExamGenerator } from '@/components/ai/exam-generator'
 import { AICareerConsultant } from '@/components/ai/career-consultant'
-import { Image, Presentation, Microscope, Images, BookOpen, Sparkles, Brain, Loader2, MonitorPlay } from 'lucide-react'
+import { Image, Microscope, Images, BookOpen, Sparkles, Brain, Loader2, MonitorPlay } from 'lucide-react'
 
 const HopeAITab  = dynamic(() => import('@/app/teacher/alexa/page'),      { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
 const PowerPtTab = dynamic(() => import('@/app/teacher/powerpoint/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
@@ -23,22 +22,37 @@ export default function AIToolsPage() {
 
       <Tabs defaultValue="hope" className="w-full">
         <TabsList className="flex flex-wrap gap-1 h-auto mb-6 bg-gray-100 p-1 rounded-xl">
-          <TabsTrigger value="hope"><Brain className="w-4 h-4 mr-2" />Hope AI</TabsTrigger>
-          <TabsTrigger value="powerpoint"><MonitorPlay className="w-4 h-4 mr-2" />PowerPoint</TabsTrigger>
-          <TabsTrigger value="exams"><BookOpen className="w-4 h-4 mr-2" />Exams</TabsTrigger>
-          <TabsTrigger value="diagrams"><Microscope className="w-4 h-4 mr-2" />Diagrams</TabsTrigger>
-          <TabsTrigger value="images"><Image className="w-4 h-4 mr-2" />Images</TabsTrigger>
-          <TabsTrigger value="presentations"><Presentation className="w-4 h-4 mr-2" />Presentations</TabsTrigger>
-          <TabsTrigger value="careers"><Sparkles className="w-4 h-4 mr-2" />Career</TabsTrigger>
-          <TabsTrigger value="gallery"><Images className="w-4 h-4 mr-2" />Gallery</TabsTrigger>
+          <TabsTrigger value="hope">
+            <Brain className="w-4 h-4 mr-2" />Hope AI
+          </TabsTrigger>
+          <TabsTrigger value="powerpoint">
+            <MonitorPlay className="w-4 h-4 mr-2" />PowerPoint
+          </TabsTrigger>
+          <TabsTrigger value="exams">
+            <BookOpen className="w-4 h-4 mr-2" />Exams
+          </TabsTrigger>
+          <TabsTrigger value="diagrams">
+            <Microscope className="w-4 h-4 mr-2" />Diagrams
+          </TabsTrigger>
+          <TabsTrigger value="images">
+            <Image className="w-4 h-4 mr-2" />Images
+          </TabsTrigger>
+          <TabsTrigger value="careers">
+            <Sparkles className="w-4 h-4 mr-2" />Career
+          </TabsTrigger>
+          <TabsTrigger value="gallery">
+            <Images className="w-4 h-4 mr-2" />Gallery
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="hope"><HopeAITab /></TabsContent>
+
+        {/* PowerPoint — the main presentation tool (TutorBot-style with AI images) */}
         <TabsContent value="powerpoint"><PowerPtTab /></TabsContent>
+
         <TabsContent value="exams" className="mt-2"><AIExamGenerator /></TabsContent>
         <TabsContent value="diagrams" className="mt-2"><DiagramGenerator /></TabsContent>
         <TabsContent value="images" className="mt-2"><ImageGenerator /></TabsContent>
-        <TabsContent value="presentations" className="mt-2"><PresentationGenerator /></TabsContent>
         <TabsContent value="careers" className="mt-2"><AICareerConsultant /></TabsContent>
         <TabsContent value="gallery" className="mt-2"><ImageGallery /></TabsContent>
       </Tabs>
