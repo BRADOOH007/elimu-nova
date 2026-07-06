@@ -96,9 +96,9 @@ export function AIExamGenerator() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Configuration Panel */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-1">
           <Tabs defaultValue="standard" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="standard">Standard Generator</TabsTrigger>
@@ -343,20 +343,49 @@ export function AIExamGenerator() {
         {/* Preview Panel */}
         <div className="lg:col-span-1">
           <Card className="border-2 border-green-100 bg-gradient-to-br from-white via-green-50 to-emerald-50 shadow-lg sticky top-6">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-xl flex items-center gap-3 text-green-800">
-                <FileText className="w-6 h-6" />
-                Preview
-              </CardTitle>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl flex items-center gap-3 text-green-800">
+                  <FileText className="w-6 h-6" />
+                  Preview
+                </CardTitle>
+                {generatedExam && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => navigator.clipboard.writeText(generatedExam)}
+                      className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+                    >
+                      Copy
+                    </button>
+                    <button
+                      onClick={() => {
+                        const blob = new Blob([generatedExam], { type: 'text/plain' })
+                        const url = URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url; a.download = 'exam.txt'; a.click()
+                        URL.revokeObjectURL(url)
+                      }}
+                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                    >
+                      Download
+                    </button>
+                  </div>
+                )}
+              </div>
               <CardDescription>Your exam will appear here</CardDescription>
             </CardHeader>
             <CardContent>
               {generatedExam ? (
-                <div className="bg-white rounded-xl border border-green-200 p-4 shadow-inner">
-                  <p className="text-sm font-mono text-gray-700 whitespace-pre-wrap">{generatedExam}</p>
+                <div
+                  className="bg-white rounded-xl border border-green-200 shadow-inner overflow-y-auto"
+                  style={{ maxHeight: 'calc(100vh - 220px)', minHeight: '400px' }}
+                >
+                  <div className="p-4">
+                    <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed break-words">{generatedExam}</pre>
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-12">
+                <div className="text-center py-16">
                   <div className="w-24 h-24 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full mx-auto flex items-center justify-center mb-4">
                     <FileText className="w-12 h-12 text-green-600 opacity-50" />
                   </div>

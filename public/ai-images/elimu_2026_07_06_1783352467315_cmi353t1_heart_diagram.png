@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="white"/>
+  <!-- Heart outline -->
+  <path d="M512 300 
+           C400 200, 250 250, 250 400 
+           C250 550, 400 650, 512 750 
+           C624 650, 774 550, 774 400 
+           C774 250, 624 200, 512 300 Z"
+        fill="none" stroke="black" stroke-width="8"/>
+  <!-- Left Atrium -->
+  <path d="M350 350 
+           C300 300, 300 400, 350 420 
+           L380 380 
+           Z"
+        fill="#ffcccc" stroke="black" stroke-width="4"/>
+  <!-- Right Atrium -->
+  <path d="M674 350 
+           C724 300, 724 400, 674 420 
+           L644 380 
+           Z"
+        fill="#ffcccc" stroke="black" stroke-width="4"/>
+  <!-- Left Ventricle -->
+  <path d="M350 420 
+           C300 500, 300 600, 400 660 
+           L512 750 
+           L512 620 
+           Z"
+        fill="#ff6666" stroke="black" stroke-width="4"/>
+  <!-- Right Ventricle -->
+  <path d="M674 420 
+           C724 500, 724 600, 624 660 
+           L512 750 
+           L512 620 
+           Z"
+        fill="#ff6666" stroke="black" stroke-width="4"/>
+  <!-- Aorta -->
+  <path d="M512 200 
+           L512 100 
+           C520 80, 540 80, 548 100 
+           L548 200"
+        fill="#ff9999" stroke="black" stroke-width="4"/>
+  <!-- Pulmonary Artery -->
+  <path d="M512 200 
+           L460 150 
+           C440 140, 440 120, 460 110 
+           L512 150"
+        fill="#ff9966" stroke="black" stroke-width="4"/>
+  <!-- Superior Vena Cava -->
+  <path d="M512 200 
+           L560 150 
+           C580 140, 580 120, 560 110 
+           L512 150"
+        fill="#99ccff" stroke="black" stroke-width="4"/>
+  <!-- Empty label boxes -->
+  <rect x="300" y="250" width="120" height="40" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="604" y="250" width="120" height="40" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="250" y="500" width="140" height="40" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="634" y="500" width="140" height="40" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="470" y="80" width="80" height="40" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="560" y="120" width="80" height="40" fill="none" stroke="black" stroke-width="2"/>
+  <rect x="380" y="120" width="80" height="40" fill="none" stroke="black" stroke-width="2"/>
+</svg>
