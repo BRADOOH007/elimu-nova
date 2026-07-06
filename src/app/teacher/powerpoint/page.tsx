@@ -19,9 +19,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Slider } from '@/components/ui/slider'
 import { useToast } from '@/hooks/use-toast'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Checkbox } from '@/components/ui/checkbox'
 
 // ── Section styles matching TutorBot exactly ─────────────────────────────────
 const SECTION = {
@@ -109,12 +108,29 @@ export default function PowerPointPage() {
   const [savedPPTs, setSavedPPTs]   = useState<SavedPPT[]>([])
   const [loadingList, setLoadingList] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [isSharing, setIsSharing] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [shareStudents, setShareStudents] = useState<any[]>([])
+  const [shareClasses, setShareClasses]   = useState<any[]>([])
+  const [selStudents, setSelStudents]     = useState<string[]>([])
+  const [selClass, setSelClass]           = useState('')
 
   const previewRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin')
   }, [status, router])
+
+  // Load students + classes for sharing
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/teacher/students').then(r => r.ok ? r.json() : { students: [] }),
+      fetch('/api/teacher/classes').then(r => r.ok ? r.json() : { classes: [] }),
+    ]).then(([sd, cd]) => {
+      setShareStudents(sd.students || [])
+      setShareClasses(cd.classes || [])
+    }).catch(() => {})
+  }, [])
 
   // Fetch saved presentations
   useEffect(() => {
@@ -221,6 +237,58 @@ export default function PowerPointPage() {
     if (res.ok) setSavedPPTs(p => p.filter(x => x.id !== id))
   }
 
+  const saveCurrent = async () => {
+    if (!presentation || !subject || !grade || !topic) return
+    try {
+      const res = await fetch('/api/powerpoint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: `${subject}: ${topic}`,
+          subject, grade, topic,
+          slideCount: presentation.slides.length,
+          slides: presentation.slides.map((s, i) => ({
+            id: String(i), title: s.title, content: s.content,
+            slideType: 'content', speakerNotes: s.speakerNotes,
+            visualSuggestions: s.imagePrompt ? [s.imagePrompt] : [], order: i + 1,
+          })),
+          metadata: { difficulty, slideCount: presentation.slides.length, generatedAt: new Date().toISOString() },
+        }),
+      })
+      if (res.ok) {
+        const d = await res.json()
+        setSavedPPTs(prev => [{ id: d.id || Date.now().toString(), title: `${subject}: ${topic}`, subject, grade, topic, createdAt: new Date().toISOString(), metadata: {} }, ...prev])
+        toast({ title: '✅ Saved to My Presentations!' })
+        setActiveTab('browse')
+      }
+    } catch { toast({ variant: 'destructive', title: 'Save failed' }) }
+  }
+
+  const shareWithStudents = async () => {
+    if (!presentationId && savedPPTs.length === 0) {
+      toast({ variant: 'destructive', title: 'Save the presentation first' }); return
+    }
+    setIsSharing(true)
+    try {
+      const id = presentationId || savedPPTs[0]?.id
+      const res = await fetch(`/api/ai-content/${id}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          studentIds: selStudents,
+          classIds:   selClass && selClass !== '__none__' ? [selClass] : [],
+        }),
+      })
+      if (res.ok) {
+        toast({ title: '✅ Shared with students! They can see it in Resources.' })
+        setShowShareModal(false); setSelStudents([]); setSelClass('')
+      } else { toast({ variant: 'destructive', title: 'Share failed' }) }
+    } catch { toast({ variant: 'destructive', title: 'Share failed' }) }
+    finally { setIsSharing(false) }
+  }
+
   if (status === 'loading') return (
     <div className="flex items-center justify-center min-h-screen">
       <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
@@ -242,12 +310,22 @@ export default function PowerPointPage() {
           <p className="text-gray-500 text-sm">Generate CBC-aligned presentations with AI images</p>
         </div>
         {presentation && (
-          <Button onClick={exportPPTX} disabled={isExporting}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
-            {isExporting
-              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting…</>
-              : <><Download className="mr-2 h-4 w-4" /> Export Real PPTX</>}
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button onClick={saveCurrent} variant="outline"
+              className="border-green-300 text-green-700 hover:bg-green-50">
+              <Plus className="mr-2 h-4 w-4" /> Save
+            </Button>
+            <Button onClick={() => setShowShareModal(true)} variant="outline"
+              className="border-blue-300 text-blue-700 hover:bg-blue-50">
+              <GraduationCap className="mr-2 h-4 w-4" /> Share with Students
+            </Button>
+            <Button onClick={exportPPTX} disabled={isExporting}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg">
+              {isExporting
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Exporting…</>
+                : <><Download className="mr-2 h-4 w-4" /> Export PPTX</>}
+            </Button>
+          </div>
         )}
       </div>
 
@@ -548,6 +626,56 @@ export default function PowerPointPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* ── Share Modal ─────────────────────────────────────────────── */}
+      {showShareModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowShareModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Share with Students</h2>
+            <p className="text-sm text-slate-500 mb-4">Students will see this presentation in their Resources tab.</p>
+
+            {/* Class selector */}
+            <div className="mb-3">
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Share with entire class</label>
+              <select value={selClass} onChange={e => setSelClass(e.target.value)}
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="__none__">No class (individual students)</option>
+                {shareClasses.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name} — {c.grade}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Individual students */}
+            {selClass === '__none__' && shareStudents.length > 0 && (
+              <div className="mb-3">
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Or select individual students</label>
+                <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl divide-y">
+                  {shareStudents.map((s: any) => (
+                    <label key={s.id} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 cursor-pointer">
+                      <input type="checkbox" checked={selStudents.includes(s.id)}
+                        onChange={e => setSelStudents(prev => e.target.checked ? [...prev, s.id] : prev.filter(x => x !== s.id))}
+                        className="rounded" />
+                      <span className="text-sm">{s.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowShareModal(false)}
+                className="flex-1 h-10 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
+                Cancel
+              </button>
+              <button onClick={shareWithStudents} disabled={isSharing || (selClass === '__none__' && selStudents.length === 0)}
+                className="flex-1 h-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
+                {isSharing ? <><Loader2 className="h-4 w-4 animate-spin" /> Sharing…</> : <><GraduationCap className="h-4 w-4" /> Share</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
