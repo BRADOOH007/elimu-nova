@@ -1,53 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Users, 
-  Search, 
-  Plus, 
-  Edit,
-  Trash2,
-  MoreHorizontal,
-  User,
-  Mail,
-  Calendar,
-  UserCheck,
-  UserX,
-  Loader2,
-  GraduationCap,
-  BookOpen,
-  School,
-  UserPlus,
-  Settings,
-  Eye,
-  Key,
-  Copy,
-  Lock
+import {
+  Users, Search, Plus, Edit, Trash2, MoreHorizontal, User, Mail, Calendar,
+  UserCheck, UserX, Loader2, GraduationCap, BookOpen, School, UserPlus,
+  Settings, Eye, Key, Copy, Lock, CheckCircle, Activity
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -58,6 +23,10 @@ import ViewStudentModal from "@/components/modals/view-student-modal"
 import ViewStudentPasswordModal from "@/components/modals/view-student-password-modal"
 import ShareLessonPlanModal from "@/components/modals/share-lesson-plan-modal"
 import GeneratePasswordModal from "@/components/modals/generate-password-modal"
+
+// Lazy-load merged tab pages — no re-implementation needed
+const AttendanceTab   = dynamic(() => import('@/app/teacher/attendance/page'),      { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
+const ProgressTab     = dynamic(() => import('@/app/teacher/progress-monitor/page'),{ ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
 
 interface Student {
   id: string
@@ -261,7 +230,7 @@ export default function TeacherStudentsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-blue-50 to-purple-50">
+        <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-blue-50 to-purple-50">
           <TabsTrigger value="students" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="mr-2 h-4 w-4" />
             Students
@@ -269,6 +238,14 @@ export default function TeacherStudentsPage() {
           <TabsTrigger value="classes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <School className="mr-2 h-4 w-4" />
             Classes
+          </TabsTrigger>
+          <TabsTrigger value="attendance" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <CheckCircle className="mr-2 h-4 w-4" />
+            Attendance
+          </TabsTrigger>
+          <TabsTrigger value="progress" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <Activity className="mr-2 h-4 w-4" />
+            Progress
           </TabsTrigger>
         </TabsList>
 
@@ -550,9 +527,18 @@ export default function TeacherStudentsPage() {
             </div>
           )}
         </TabsContent>
-      </Tabs>
 
-      {/* Modals */}
+        {/* ── Attendance Tab ─────────────────────── */}
+        <TabsContent value="attendance">
+          <AttendanceTab />
+        </TabsContent>
+
+        {/* ── Progress Monitor Tab ───────────────── */}
+        <TabsContent value="progress">
+          <ProgressTab />
+        </TabsContent>
+
+      </Tabs>
       {showCreateClassModal && (
         <CreateClassModal
           isOpen={showCreateClassModal}

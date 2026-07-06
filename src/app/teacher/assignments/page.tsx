@@ -1,6 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
+import { Loader2 as _L2 } from 'lucide-react'
+
+const MarksTab   = dynamic(() => import('@/app/teacher/marks/page'),    { ssr: false, loading: () => <div className="flex justify-center py-12"><_L2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
+const ExamBkTab  = dynamic(() => import('@/app/teacher/exam-bank/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><_L2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,24 +16,9 @@ import {
   TabsTrigger
 } from '@/components/ui/tabs'
 import {
-  ClipboardList,
-  Plus,
-  Search,
-  Filter,
-  Calendar,
-  Clock,
-  User,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  Download,
-  Users,
-  CheckCircle,
-  AlertCircle,
-  FileText,
-  Brain,
-  GraduationCap
+  ClipboardList, Plus, Search, Filter, Calendar, Clock, User, MoreHorizontal,
+  Eye, Edit, Trash2, Download, Users, CheckCircle, AlertCircle, FileText,
+  Brain, GraduationCap, Database, Loader2
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -330,15 +320,11 @@ export default function AssessmentsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full sm:w-auto grid-cols-2">
-          <TabsTrigger value="assignments">
-            <ClipboardList className="w-4 h-4 mr-2" />
-            Assignments
-          </TabsTrigger>
-          <TabsTrigger value="exams">
-            <GraduationCap className="w-4 h-4 mr-2" />
-            Exams
-          </TabsTrigger>
+        <TabsList className="grid w-full sm:w-auto grid-cols-4">
+          <TabsTrigger value="assignments"><ClipboardList className="w-4 h-4 mr-2" />Assignments</TabsTrigger>
+          <TabsTrigger value="exams"><GraduationCap className="w-4 h-4 mr-2" />Exams</TabsTrigger>
+          <TabsTrigger value="marks"><Brain className="w-4 h-4 mr-2" />Marks</TabsTrigger>
+          <TabsTrigger value="exambank"><Database className="w-4 h-4 mr-2" />Exam Bank</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assignments" className="space-y-6">
@@ -619,6 +605,10 @@ export default function AssessmentsPage() {
             </Card>
           )}
         </TabsContent>
+
+        <TabsContent value="marks"><MarksTab /></TabsContent>
+        <TabsContent value="exambank"><ExamBkTab /></TabsContent>
+
       </Tabs>
 
       <CreateAssignmentModal

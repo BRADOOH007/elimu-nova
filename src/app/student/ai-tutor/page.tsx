@@ -1,11 +1,17 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import dynamic from "next/dynamic"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Brain, Code2, Compass, Loader2 } from "lucide-react"
+
+const CodingTab  = dynamic(() => import('@/app/student/coding/page'),  { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
+const CareerTab  = dynamic(() => import('@/app/student/career/page'),  { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { FormattedMessage } from "@/components/ai/formatted-message"
@@ -53,7 +59,7 @@ interface StudentStats {
   correctAnswers: number
 }
 
-export default function AutonomousAITutorPage() {
+export function AutonomousAITutorPage() {
   const { data: session } = useSession()
   const [currentTask, setCurrentTask] = useState<TutorTask | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -468,5 +474,21 @@ export default function AutonomousAITutorPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Tab wrapper — "AI & Growth" hub ────────────────────────────────────────
+export default function AIGrowthPage() {
+  return (
+    <Tabs defaultValue="tutor" className="space-y-4 p-4">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="tutor"><Brain className="w-4 h-4 mr-2"/>AI Tutor</TabsTrigger>
+        <TabsTrigger value="coding"><Code2 className="w-4 h-4 mr-2"/>Coding Studio</TabsTrigger>
+        <TabsTrigger value="career"><Compass className="w-4 h-4 mr-2"/>Career Pathways</TabsTrigger>
+      </TabsList>
+      <TabsContent value="tutor"><AutonomousAITutorPage /></TabsContent>
+      <TabsContent value="coding"><CodingTab /></TabsContent>
+      <TabsContent value="career"><CareerTab /></TabsContent>
+    </Tabs>
   )
 }

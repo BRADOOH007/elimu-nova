@@ -5,10 +5,8 @@ import { ProfessionalDashboardLayout } from '@/components/layout/professional-da
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import {
-  BookOpen, Users, FileText, BarChart3, Calendar, Brain,
-  ClipboardList, Mail, Activity, CheckCircle, Presentation,
-  PenTool, Wand2, LineChart, CreditCard, Clock, MessageSquare,
-  Radio, Database, CalendarDays, Bell, NotebookText
+  BarChart3, Users, BookOpen, ClipboardList,
+  Wand2, Radio, Mail, CreditCard, Calendar, Brain
 } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
@@ -18,34 +16,31 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const { unreadCount } = useUnreadMessages()
 
   const sidebarItems = [
-    { icon: BarChart3,     label: "Dashboard",        href: "/teacher/dashboard"        },
-    { icon: Users,         label: "My Students",      href: "/teacher/students"         },
-    { icon: Activity,      label: "Progress Monitor", href: "/teacher/progress-monitor" },
-    { icon: LineChart,     label: "Analytics",        href: "/teacher/analytics"        },
-    { icon: BookOpen,      label: "Lesson Plans",     href: "/teacher/lesson-plans"     },
-    { icon: FileText,      label: "Schemes of Work",  href: "/teacher/schemes-of-work"  },
-    { icon: NotebookText,  label: "Lesson Notes",     href: "/teacher/lesson-notes"     },
-    { icon: ClipboardList, label: "Assessments",      href: "/teacher/assignments"      },
-    { icon: Database,      label: "Exam Bank",        href: "/teacher/exam-bank"        },
-    { icon: PenTool,       label: "Marks Entry",      href: "/teacher/marks"            },
-    { icon: CheckCircle,   label: "Attendance",       href: "/teacher/attendance"       },
-    { icon: CalendarDays,  label: "Calendar",         href: "/teacher/calendar"         },
-    { icon: Wand2,         label: "AI Tools",         href: "/teacher/ai-tools"         },
-    { icon: Presentation,  label: "PowerPoint AI",    href: "/teacher/powerpoint"       },
-    { icon: Radio,         label: "Live Teaching",    href: "/teacher/live-class"       },
-    { icon: Calendar,      label: "Meetings",         href: "/teacher/meetings"         },
-    { icon: MessageSquare, label: "Discussions",      href: "/teacher/discussions"      },
-    { icon: Clock,         label: "Schedule",         href: "/teacher/schedule"         },
-    { icon: CalendarDays,  label: "Timetable",        href: "/teacher/timetable"        },
-    { icon: Bell,          label: "Notifications",    href: "/teacher/notifications"    },
-    { icon: Brain,         label: "Hope AI",          href: "/teacher/alexa"            },
+    // 1
+    { icon: BarChart3,     label: 'Dashboard',      href: '/teacher/dashboard'       },
+    // 2 — Students + Attendance + Progress Monitor (tabs inside)
+    { icon: Users,         label: 'My Students',    href: '/teacher/students'        },
+    // 3 — Lesson Plans + Schemes of Work + Lesson Notes (tabs inside — lesson-plans page)
+    { icon: BookOpen,      label: 'Planning',       href: '/teacher/lesson-plans'    },
+    // 4 — Assignments + Marks + Exam Bank (tabs inside — assignments page)
+    { icon: ClipboardList, label: 'Assessments',    href: '/teacher/assignments'     },
+    // 5
+    { icon: BarChart3,     label: 'Analytics',      href: '/teacher/analytics'       },
+    // 6 — AI Tools + Hope AI + PowerPoint AI (tabs inside — ai-tools page)
+    { icon: Wand2,         label: 'AI Tools',       href: '/teacher/ai-tools'        },
+    // 7 — Live Teaching + Discussions (tabs inside — live-class page)
+    { icon: Radio,         label: 'Live Teaching',  href: '/teacher/live-class'      },
+    // 8 — Calendar + Schedule + Timetable + Meetings (tabs inside — calendar page)
+    { icon: Calendar,      label: 'Calendar',       href: '/teacher/calendar'        },
+    // 9 — Messages + Notifications (tabs inside — messages page)
     {
       icon: Mail,
-      label: "Messages",
-      href: "/teacher/messages",
+      label: 'Messages',
+      href: '/teacher/messages',
       badge: unreadCount > 0 ? unreadCount : undefined,
     },
-    { icon: CreditCard,    label: "Billing",          href: "/teacher/billing"          },
+    // 10
+    { icon: CreditCard,    label: 'Billing',        href: '/teacher/billing'         },
   ]
 
   if (!session || loading) return <DashboardLoading />

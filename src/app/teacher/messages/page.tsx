@@ -1,9 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Mail, Send, Inbox, Clock, CheckCircle2, Reply, User } from 'lucide-react'
+import dynamic from 'next/dynamic'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Mail, Send, Inbox, Clock, CheckCircle2, Reply, User, Bell, MessageSquare, Loader2 } from 'lucide-react'
 import ComposeMessageModal from '@/components/modals/compose-message-modal'
 import ViewMessageModal from '@/components/modals/view-message-modal'
+
+const NotifTab  = dynamic(() => import('@/app/teacher/notifications/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
+const DiscTab   = dynamic(() => import('@/app/teacher/discussions/page'),   { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
 interface Message {
   id: string
@@ -183,6 +188,20 @@ export default function TeacherMessagesPage() {
 
   return (
     <div className="space-y-6">
+      {/* Tab navigation */}
+      <Tabs defaultValue="messages">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
+          <TabsList>
+            <TabsTrigger value="messages"><Mail className="w-4 h-4 mr-2"/>Messages</TabsTrigger>
+            <TabsTrigger value="notifications"><Bell className="w-4 h-4 mr-2"/>Notifications</TabsTrigger>
+            <TabsTrigger value="discussions"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="messages">
+      {/* Original messages content below */}
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -372,6 +391,13 @@ export default function TeacherMessagesPage() {
         onReply={handleReply}
         canReply={['STUDENT', 'PARENT'].includes(selectedMessage?.senderType || '')}
       />
+    </div>
+    </TabsContent>
+
+    <TabsContent value="notifications"><NotifTab /></TabsContent>
+    <TabsContent value="discussions"><DiscTab /></TabsContent>
+
+    </Tabs>
     </div>
   )
 }

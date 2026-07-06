@@ -1,12 +1,16 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import { useSession } from 'next-auth/react'
 import {
   Radio, Square, Send, Users, MessageSquare, Pen, Eraser,
   Minus, Circle, Loader2, ChevronRight, Copy, CheckCircle,
   Sparkles, BookOpen, RotateCcw, Download, Plus
 } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+const DiscussTab = dynamic(() => import('@/app/teacher/discussions/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
 interface LiveSession {
   id: string; title: string; subject: string; status: string
@@ -205,6 +209,12 @@ export default function LiveClassPage() {
 
   /* ── SETUP SCREEN ── */
   if (step === 'setup') return (
+    <Tabs defaultValue="live">
+      <TabsList className="mb-4 ml-6 mt-4">
+        <TabsTrigger value="live"><Radio className="w-4 h-4 mr-2"/>Live Teaching</TabsTrigger>
+        <TabsTrigger value="discussions"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
+      </TabsList>
+      <TabsContent value="live">
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Live Teaching Room</h1>
@@ -249,6 +259,9 @@ export default function LiveClassPage() {
         </ul>
       </div>
     </div>
+      </TabsContent>
+      <TabsContent value="discussions"><DiscussTab /></TabsContent>
+    </Tabs>
   )
 
   /* ── LIVE ROOM ── */

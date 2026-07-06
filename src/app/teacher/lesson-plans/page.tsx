@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import dynamic from 'next/dynamic'
+
+const LessonNotesTab = dynamic(() => import('@/app/teacher/lesson-notes/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><span className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-500"/></div> })
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import { 
   BookOpen, 
@@ -404,7 +407,7 @@ export default function PlanningPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full sm:w-auto grid-cols-2">
+        <TabsList className="grid w-full sm:w-auto grid-cols-3">
           <TabsTrigger value="lesson-plans">
             <BookOpen className="w-4 h-4 mr-2" />
             Lesson Plans
@@ -412,6 +415,10 @@ export default function PlanningPage() {
           <TabsTrigger value="schemes-of-work">
             <FileText className="w-4 h-4 mr-2" />
             Schemes of Work
+          </TabsTrigger>
+          <TabsTrigger value="lesson-notes">
+            <BookOpen className="w-4 h-4 mr-2" />
+            Lesson Notes
           </TabsTrigger>
         </TabsList>
 
@@ -706,6 +713,7 @@ export default function PlanningPage() {
             </div>
           )}
         </TabsContent>
+        <TabsContent value="lesson-notes"><LessonNotesTab /></TabsContent>
       </Tabs>
 
       {/* View Modal */}
