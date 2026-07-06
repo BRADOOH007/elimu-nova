@@ -218,6 +218,7 @@ export default function CreateSchemePage() {
       alert('Please generate the scheme first before downloading.')
       return
     }
+    // Open in new tab — teacher clicks Print / Save as PDF from the browser
     window.open(`/api/export/scheme-pdf?id=${schemeId}`, '_blank')
   }
 

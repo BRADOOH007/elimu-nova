@@ -321,6 +321,24 @@ export default function PlanningPage() {
     }
   }
 
+  const downloadLessonPlan = async (lp: LessonPlan) => {
+    try {
+      const res = await fetch('/api/export/lesson-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lessonPlanId: lp.id, title: lp.title, subject: lp.subject, grade: lp.grade }),
+      })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Export failed') }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      // Open in new tab so teacher can print to PDF
+      window.open(url, '_blank')
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Download Failed', description: e.message })
+    }
+  }
+
   const handleDownload = async (item: LessonPlan | SchemeOfWork, format?: 'pdf' | 'word') => {    try {
       const isLesson = 'schemeOfWork' in item
       const url = isLesson 
@@ -486,8 +504,8 @@ export default function PlanningPage() {
                           <DropdownMenuItem onClick={() => { setItemToShare(lp); setIsShareModalOpen(true) }}>
                             <Share2 className="mr-2 h-4 w-4" /> Share
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDownload(lp)}>
-                            <Download className="mr-2 h-4 w-4" /> Download
+                          <DropdownMenuItem onClick={() => downloadLessonPlan(lp)}>
+                            <Download className="mr-2 h-4 w-4" /> Download (Print-ready)
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => { setItemToDelete(lp); }} 

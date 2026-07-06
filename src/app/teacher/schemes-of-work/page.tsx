@@ -424,50 +424,8 @@ export default function SchemesOfWorkPage() {
   }
 
   const handleDownloadScheme = async (format: 'pdf' | 'word', schemeOfWork: SchemeOfWork) => {
-    try {
-      const response = await fetch('/api/export/scheme-of-work', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          content: schemeOfWork.content.generatedContent || '',
-          title: schemeOfWork.title,
-          subject: schemeOfWork.subject,
-          grade: schemeOfWork.grade,
-          duration: schemeOfWork.duration || schemeOfWork.content.duration || 12,
-          lessonsPerWeek: 5,
-          lessonDuration: 45,
-          topics: schemeOfWork.content.topics || [],
-          format: format
-        }),
-      })
-
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const element = document.createElement('a')
-        element.href = url
-        element.download = `${schemeOfWork.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_scheme_of_work.${format === 'pdf' ? 'html' : 'doc'}`
-        document.body.appendChild(element)
-        element.click()
-        document.body.removeChild(element)
-        window.URL.revokeObjectURL(url)
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Download Failed",
-          description: "Unable to generate document. Please try again.",
-        })
-      }
-    } catch (error) {
-      console.error('Error downloading scheme of work:', error)
-      toast({
-        variant: "destructive",
-        title: "Download Failed",
-        description: "Network error occurred. Please check your connection and try again.",
-      })
-    }
+    // Use the new KICD-format export (opens print view in new tab)
+    window.open(`/api/export/scheme-pdf?id=${schemeOfWork.id}`, '_blank')
   }
 
   const handleShare = (schemeOfWork: SchemeOfWork) => {
@@ -661,11 +619,7 @@ export default function SchemesOfWorkPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDownloadScheme('pdf', schemeOfWork)}>
                           <Download className="mr-2 h-4 w-4" />
-                          Download PDF
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDownloadScheme('word', schemeOfWork)}>
-                          <FileText className="mr-2 h-4 w-4" />
-                          Download Word
+                          Download (Print-ready)
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleShare(schemeOfWork)}>
                           <Share2 className="mr-2 h-4 w-4" />
