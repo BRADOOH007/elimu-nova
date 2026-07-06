@@ -324,18 +324,26 @@ export default function PlanningPage() {
     }
   }
 
-  const downloadLessonPlan = async (lp: LessonPlan) => {
+  const downloadLessonPlan = async (lp: LessonPlan, format: 'pdf' | 'word' = 'pdf') => {
     try {
       const res = await fetch('/api/export/lesson-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lessonPlanId: lp.id, title: lp.title, subject: lp.subject, grade: lp.grade }),
+        body: JSON.stringify({ lessonPlanId: lp.id, title: lp.title, subject: lp.subject, grade: lp.grade, format }),
       })
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Export failed') }
       const blob = await res.blob()
       const url  = URL.createObjectURL(blob)
-      // Open in new tab so teacher can print to PDF
-      window.open(url, '_blank')
+      if (format === 'word') {
+        // Word: download directly
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${lp.title.replace(/[^a-z0-9]/gi, '_')}.doc`
+        a.click()
+      } else {
+        // PDF: open in new tab → Ctrl+P → Save as PDF
+        window.open(url, '_blank')
+      }
       setTimeout(() => URL.revokeObjectURL(url), 10000)
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Download Failed', description: e.message })
@@ -511,8 +519,11 @@ export default function PlanningPage() {
                           <DropdownMenuItem onClick={() => { setItemToShare(lp); setIsShareModalOpen(true) }}>
                             <Share2 className="mr-2 h-4 w-4" /> Share
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => downloadLessonPlan(lp)}>
-                            <Download className="mr-2 h-4 w-4" /> Download (Print-ready)
+                          <DropdownMenuItem onClick={() => downloadLessonPlan(lp, 'pdf')}>
+                            <Download className="mr-2 h-4 w-4" /> Download PDF (Print)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => downloadLessonPlan(lp, 'word')}>
+                            <Download className="mr-2 h-4 w-4" /> Download Word (.doc)
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => { setItemToDelete(lp); }} 

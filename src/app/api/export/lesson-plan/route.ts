@@ -55,10 +55,28 @@ export async function POST(request: NextRequest) {
     const html = buildLessonPlanHTML(content, title, subject, grade, topic, duration, teacherName)
     const safeName = (title || topic || 'LessonPlan').replace(/[^a-z0-9]/gi, '_').toLowerCase()
 
+    const format = body.format || 'pdf' // 'pdf' opens in browser for print-to-PDF, 'word' downloads as .doc
+
+    if (format === 'word') {
+      // Word-compatible HTML — opens directly in Microsoft Word
+      const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="UTF-8"><title>${safeName}</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>body{font-family:Arial,sans-serif;font-size:10pt;}table{border-collapse:collapse;width:100%;}td,th{border:1px solid #999;padding:4px 8px;}</style>
+</head><body>${html.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*<\/head>|<body>|<\/body>|<!DOCTYPE[^>]*>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '')}</body></html>`
+      return new NextResponse(Buffer.from(wordHtml, 'utf-8'), {
+        headers: {
+          'Content-Type':        'application/msword; charset=utf-8',
+          'Content-Disposition': `attachment; filename="${safeName}.doc"`,
+        },
+      })
+    }
+
+    // Default: return HTML that opens in browser → teacher uses Ctrl+P → Save as PDF
     return new NextResponse(Buffer.from(html, 'utf-8'), {
       headers: {
         'Content-Type':        'text/html; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${safeName}.html"`,
+        'Content-Disposition': `inline; filename="${safeName}.html"`, // inline = opens in browser tab
       },
     })
   } catch (error) {

@@ -9,7 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Brain, Wand2, BookOpen, FileText, Zap, Sparkles } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Brain, Wand2, BookOpen, FileText, Zap, Sparkles, Send, Download, Copy, CheckCircle, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const subjects = [
   'Mathematics', 'English', 'Kiswahili', 'Science and Technology',
@@ -51,6 +53,11 @@ export function AIExamGenerator() {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedExam, setGeneratedExam] = useState<string | null>(null);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduled, setScheduled] = useState(false);
+  const [scheduleForm, setScheduleForm] = useState({ dueDate: '', dueTime: '08:00' });
+  const { toast } = useToast();
 
   const handleGenerate = async () => {
     if (!examData.examTitle || !examData.subject || !examData.gradeLevel) {
@@ -59,6 +66,7 @@ export function AIExamGenerator() {
     }
 
     setIsGenerating(true);
+    setScheduled(false);
     try {
       const response = await fetch('/api/ai/generate-exam', {
         method: 'POST',
@@ -79,6 +87,56 @@ export function AIExamGenerator() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleSchedule = async () => {
+    if (!generatedExam || !scheduleForm.dueDate) return;
+    setScheduling(true);
+    try {
+      const dueDate = new Date(`${scheduleForm.dueDate}T${scheduleForm.dueTime}:00`);
+      const res = await fetch('/api/assignments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title:       examData.examTitle,
+          description: examData.description || `${examData.subject} exam — ${examData.gradeLevel}`,
+          content:     generatedExam,
+          dueDate:     dueDate.toISOString(),
+          subject:     examData.subject,
+          grade:       examData.gradeLevel,
+          isTimed:     true,
+          timeLimit:   examData.duration,
+        }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
+      setScheduled(true);
+      setShowSchedule(false);
+      toast({ title: '✅ Exam Scheduled!', description: `"${examData.examTitle}" is now visible to your students in their Assignments tab.` });
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Schedule Failed', description: e.message });
+    } finally {
+      setScheduling(false);
+    }
+  };
+
+  const copyExam = () => {
+    if (generatedExam) { navigator.clipboard.writeText(generatedExam); toast({ title: 'Copied!' }); }
+  };
+
+  const downloadExam = (fmt: 'txt' | 'doc') => {
+    if (!generatedExam) return;
+    const mime = fmt === 'doc' ? 'application/msword' : 'text/plain';
+    const blob = new Blob([
+      fmt === 'doc'
+        ? `<html><head><meta charset="UTF-8"></head><body><pre style="font-family:Arial;font-size:11pt">${generatedExam.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre></body></html>`
+        : generatedExam
+    ], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${examData.examTitle.replace(/[^a-z0-9]/gi,'_') || 'exam'}.${fmt}`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -350,40 +408,49 @@ export function AIExamGenerator() {
                   Preview
                 </CardTitle>
                 {generatedExam && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => navigator.clipboard.writeText(generatedExam)}
-                      className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                    >
-                      Copy
+                  <div className="flex gap-1.5 flex-wrap">
+                    <button onClick={copyExam}
+                      className="text-xs px-2 py-1 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1">
+                      <Copy className="w-3 h-3" /> Copy
                     </button>
-                    <button
-                      onClick={() => {
-                        const blob = new Blob([generatedExam], { type: 'text/plain' })
-                        const url = URL.createObjectURL(blob)
-                        const a = document.createElement('a')
-                        a.href = url; a.download = 'exam.txt'; a.click()
-                        URL.revokeObjectURL(url)
-                      }}
-                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                    >
-                      Download
+                    <button onClick={() => downloadExam('txt')}
+                      className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-1">
+                      <Download className="w-3 h-3" /> TXT
+                    </button>
+                    <button onClick={() => downloadExam('doc')}
+                      className="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors flex items-center gap-1">
+                      <Download className="w-3 h-3" /> Word
                     </button>
                   </div>
                 )}
               </div>
               <CardDescription>Your exam will appear here</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
               {generatedExam ? (
-                <div
-                  className="bg-white rounded-xl border border-green-200 shadow-inner overflow-y-auto"
-                  style={{ maxHeight: 'calc(100vh - 220px)', minHeight: '400px' }}
-                >
-                  <div className="p-4">
-                    <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed break-words">{generatedExam}</pre>
+                <>
+                  <div
+                    className="bg-white rounded-xl border border-green-200 shadow-inner overflow-y-auto"
+                    style={{ maxHeight: 'calc(100vh - 320px)', minHeight: '300px' }}
+                  >
+                    <div className="p-4">
+                      <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed break-words">{generatedExam}</pre>
+                    </div>
                   </div>
-                </div>
+                  {/* Schedule button */}
+                  {scheduled ? (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
+                      <CheckCircle className="w-4 h-4 shrink-0" />
+                      Exam scheduled — visible to students in their Assignments tab
+                    </div>
+                  ) : (
+                    <Button onClick={() => setShowSchedule(true)}
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-md">
+                      <Send className="w-4 h-4 mr-2" />
+                      Schedule Exam for Students
+                    </Button>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-16">
                   <div className="w-24 h-24 bg-gradient-to-r from-green-100 to-emerald-100 rounded-full mx-auto flex items-center justify-center mb-4">
@@ -397,6 +464,47 @@ export function AIExamGenerator() {
           </Card>
         </div>
       </div>
+
+      {/* Schedule dialog */}
+      <Dialog open={showSchedule} onOpenChange={setShowSchedule}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5 text-green-600" />
+              Schedule Exam for Students
+            </DialogTitle>
+            <DialogDescription>
+              This will create an assignment visible to all students in your class.
+              They'll see it in their <strong>Assignments</strong> tab.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-800">
+              <strong>{examData.examTitle}</strong><br/>
+              {examData.subject} · {examData.gradeLevel} · {examData.duration} minutes · {examData.totalMarks} marks
+            </div>
+            <div>
+              <Label className="text-sm font-semibold">Due Date *</Label>
+              <Input type="date" value={scheduleForm.dueDate}
+                onChange={e => setScheduleForm(f => ({ ...f, dueDate: e.target.value }))}
+                className="mt-1" min={new Date().toISOString().split('T')[0]} />
+            </div>
+            <div>
+              <Label className="text-sm font-semibold">Due Time</Label>
+              <Input type="time" value={scheduleForm.dueTime}
+                onChange={e => setScheduleForm(f => ({ ...f, dueTime: e.target.value }))}
+                className="mt-1" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowSchedule(false)}>Cancel</Button>
+            <Button onClick={handleSchedule} disabled={scheduling || !scheduleForm.dueDate}
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
+              {scheduling ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scheduling…</> : <><Send className="w-4 h-4 mr-2" />Schedule Now</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
