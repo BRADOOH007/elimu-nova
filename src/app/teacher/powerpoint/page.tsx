@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Slider } from '@/components/ui/slider'
-import { toast } from 'sonner'
+import { useToast } from '@/hooks/use-toast'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
@@ -89,6 +89,7 @@ const GRADES = [
 export default function PowerPointPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const { toast } = useToast()
 
   const [activeTab, setActiveTab]       = useState('create')
   const [subject, setSubject]           = useState('')
@@ -149,7 +150,7 @@ export default function PowerPointPage() {
 
   const generate = async () => {
     if (!subject || !grade || !topic) {
-      toast.error('Please fill in subject, grade, and topic')
+      toast({ variant: 'destructive', title: 'Please fill in subject, grade, and topic' })
       return
     }
     setIsGenerating(true)
@@ -168,9 +169,9 @@ export default function PowerPointPage() {
       setCurrentSlide(0)
       setShowPreview(true)
       setActiveTab('create')
-      toast.success(`Generated ${data.presentation.slides.length} slides!`)
+      toast({ title: `Generated ${data.presentation.slides.length} slides!`, variant: 'success' } as any)
     } catch (e: any) {
-      toast.error(e.message || 'Failed to generate presentation')
+      toast({ variant: 'destructive', title: 'Generation failed', description: e.message })
     } finally {
       setIsGenerating(false)
     }
@@ -207,9 +208,9 @@ export default function PowerPointPage() {
       a.download = `${subject}_${topic.replace(/[^a-z0-9]/gi,'_')}.pptx`
       a.click()
       URL.revokeObjectURL(url)
-      toast.success('PowerPoint downloaded!')
+      toast({ title: 'PowerPoint downloaded!', variant: 'success' } as any)
     } catch (e: any) {
-      toast.error(e.message || 'Export failed')
+      toast({ variant: 'destructive', title: 'Export failed', description: e.message || 'Export failed' })
     } finally {
       setIsExporting(false)
     }

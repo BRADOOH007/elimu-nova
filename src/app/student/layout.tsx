@@ -5,8 +5,8 @@ import { ProfessionalDashboardLayout } from '@/components/layout/professional-da
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import {
-  BarChart3, BookOpen, ClipboardList, Calendar, Brain,
-  Trophy, MessageSquare, Code2, Compass, Users, Radio, Library
+  BarChart3, BookOpen, ClipboardList, Calendar,
+  Brain, Trophy, MessageSquare, Sparkles
 } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
@@ -16,21 +16,23 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const { unreadCount } = useUnreadMessages()
 
   const sidebarItems = [
-    { icon: BarChart3,     label: "Dashboard",       href: "/student/dashboard"    },
-    { icon: BookOpen,      label: "Learning Hub",    href: "/student/lesson-plans" },
-    { icon: Library,       label: "Courses",         href: "/student/courses"      },
-    { icon: ClipboardList, label: "Assignments",     href: "/student/assignments"  },
-    { icon: Calendar,      label: "Schedule",        href: "/student/schedule"     },
-    { icon: Radio,         label: "Live Class",      href: "/student/live-class"   },
-    { icon: Users,         label: "Discussions",     href: "/student/discussions"  },
-    { icon: Trophy,        label: "Progress",        href: "/student/progress"     },
-    { icon: Brain,         label: "AI Tutor",        href: "/student/ai-tutor"     },
-    { icon: Code2,         label: "Coding Studio",   href: "/student/coding"       },
-    { icon: Compass,       label: "Career Pathways", href: "/student/career"       },
+    // 1
+    { icon: BarChart3,     label: 'Dashboard',     href: '/student/dashboard'   },
+    // 2 — Lesson Plans + Courses + Schemes (tabs inside lesson-plans page)
+    { icon: BookOpen,      label: 'Learning',      href: '/student/lesson-plans' },
+    // 3
+    { icon: ClipboardList, label: 'Assignments',   href: '/student/assignments'  },
+    // 4 — Schedule + Live Class + Discussions (tabs inside schedule page)
+    { icon: Calendar,      label: 'Classes',       href: '/student/schedule'     },
+    // 5
+    { icon: Trophy,        label: 'Progress',      href: '/student/progress'     },
+    // 6 — AI Tutor + Coding Studio + Career (tabs inside ai-tutor page)
+    { icon: Brain,         label: 'AI & Growth',   href: '/student/ai-tutor'     },
+    // 7
     {
       icon: MessageSquare,
-      label: "Messages",
-      href: "/student/messages",
+      label: 'Messages',
+      href: '/student/messages',
       badge: unreadCount > 0 ? unreadCount : undefined,
     },
   ]

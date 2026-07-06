@@ -1,46 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { 
-  Calendar, 
-  Clock,
-  MapPin,
-  Users,
-  BookOpen,
-  RefreshCw,
-  Loader2,
-  Search,
-  User,
-  Brain,
-  Bot,
-  MessageCircle,
-  Star,
-  Zap,
-  CheckCircle,
-  AlertTriangle,
-  Lightbulb,
-  Target,
-  Activity,
-  BarChart3,
-  TrendingUp,
-  BookMarked,
-  AlertCircle,
-  Video,
-  Link2
+  Calendar, Radio, MessageSquare, Loader2, Clock, MapPin, Users, BookOpen,
+  RefreshCw, Search, User, Brain, Bot, MessageCircle, Star, Zap, CheckCircle,
+  AlertTriangle, Lightbulb, Target, Activity, BarChart3, TrendingUp,
+  BookMarked, AlertCircle, Video, Link2
 } from 'lucide-react'
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from '@/hooks/use-toast'
+
+const LiveClassTab = dynamic(() => import('@/app/student/live-class/page'),  { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
+const DiscussTab   = dynamic(() => import('@/app/student/discussions/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
 interface ScheduleEvent {
   id: string
@@ -78,7 +56,7 @@ interface ScheduleFilters {
   sortOrder: string
 }
 
-export default function StudentSchedulePage() {
+export function StudentSchedulePage() {
   const router = useRouter()
   const [events, setEvents] = useState<ScheduleEvent[]>([])
   const [loading, setLoading] = useState(true)
@@ -431,5 +409,21 @@ export default function StudentSchedulePage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// ── Tab wrapper — "Classes" hub ─────────────────────────────────────────────
+export default function StudentClassesPage() {
+  return (
+    <Tabs defaultValue="schedule" className="space-y-4 p-4">
+      <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-2"/>Schedule</TabsTrigger>
+        <TabsTrigger value="live"><Radio className="w-4 h-4 mr-2"/>Live Class</TabsTrigger>
+        <TabsTrigger value="discussions"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
+      </TabsList>
+      <TabsContent value="schedule"><StudentSchedulePage /></TabsContent>
+      <TabsContent value="live"><LiveClassTab /></TabsContent>
+      <TabsContent value="discussions"><DiscussTab /></TabsContent>
+    </Tabs>
   )
 }
