@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -13,18 +13,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// viewport must be exported separately in Next.js 15+
+export const viewport: Viewport = {
+  width:         'device-width',
+  initialScale:  1,
+  maximumScale:  1,
+  themeColor:    '#ffffff',
+}
+
 export const metadata: Metadata = {
   title: "ElimuNova AI - Intelligent Education Platform",
   description: "Transform education with AI-powered lesson plans, schemes of work, and personalized learning experiences.",
   keywords: ["education", "AI", "learning", "teaching", "lesson plans", "schemes of work"],
   authors: [{ name: "ElimuNova AI Team" }],
-  themeColor: '#ffffff',
-  colorScheme: 'light',
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    maximumScale: 1,
-  },
   icons: {
     icon: [
       { url: '/logo-black.png', sizes: '32x32',   type: 'image/png' },
@@ -33,9 +34,7 @@ export const metadata: Metadata = {
       { url: '/logo-black.png', sizes: '512x512', type: 'image/png' },
     ],
     shortcut: '/logo-black.png',
-    apple: [
-      { url: '/logo-black.png', sizes: '180x180', type: 'image/png' },
-    ],
+    apple: [{ url: '/logo-black.png', sizes: '180x180', type: 'image/png' }],
   },
   manifest: '/manifest.json',
   openGraph: {
