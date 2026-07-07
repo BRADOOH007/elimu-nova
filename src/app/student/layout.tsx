@@ -6,7 +6,7 @@ import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import {
   BarChart3, BookOpen, ClipboardList, Calendar,
-  Brain, Trophy, MessageSquare, Sparkles
+  Brain, Trophy, MessageSquare, Sparkles, GraduationCap
 } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
@@ -16,19 +16,17 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const { unreadCount } = useUnreadMessages()
 
   const sidebarItems = [
-    // 1
-    { icon: BarChart3,     label: 'Dashboard',     href: '/student/dashboard'   },
-    // 2 — Lesson Plans + Courses + Schemes (tabs inside lesson-plans page)
-    { icon: BookOpen,      label: 'Learning',      href: '/student/lesson-plans' },
-    // 3
-    { icon: ClipboardList, label: 'Assignments',   href: '/student/assignments'  },
-    // 4 — Schedule + Live Class + Discussions (tabs inside schedule page)
-    { icon: Calendar,      label: 'Classes',       href: '/student/schedule'     },
-    // 5
-    { icon: Trophy,        label: 'Progress',      href: '/student/progress'     },
-    // 6 — AI Tutor + Coding Studio + Career (tabs inside ai-tutor page)
-    { icon: Brain,         label: 'AI & Growth',   href: '/student/ai-tutor'     },
-    // 7
+    { icon: BarChart3,      label: 'Dashboard',     href: '/student/dashboard'    },
+    // Learning Hub — study, quiz, assignments, AI tutor all in one
+    { icon: GraduationCap,  label: 'Learn',          href: '/student/learn'        },
+    // Lesson plans from teacher + AI-generated lessons
+    { icon: BookOpen,       label: 'Lessons',        href: '/student/lesson-plans' },
+    // Schedule + Live Class + Discussions
+    { icon: Calendar,       label: 'Classes',        href: '/student/schedule'     },
+    // Progress tracking
+    { icon: Trophy,         label: 'Progress',       href: '/student/progress'     },
+    // AI Tutor + Coding + Career
+    { icon: Brain,          label: 'AI & Growth',    href: '/student/ai-tutor'     },
     {
       icon: MessageSquare,
       label: 'Messages',
