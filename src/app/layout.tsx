@@ -28,13 +28,13 @@ export const metadata: Metadata = {
   authors: [{ name: "ElimuNova AI Team" }],
   icons: {
     icon: [
+      { url: '/favicon.png',                  type: 'image/png' },
       { url: '/logo-black.png', sizes: '32x32',   type: 'image/png' },
-      { url: '/logo-black.png', sizes: '16x16',   type: 'image/png' },
       { url: '/logo-black.png', sizes: '192x192', type: 'image/png' },
       { url: '/logo-black.png', sizes: '512x512', type: 'image/png' },
     ],
-    shortcut: '/logo-black.png',
-    apple: [{ url: '/logo-black.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/favicon.png',
+    apple:    [{ url: '/logo-black.png', sizes: '180x180', type: 'image/png' }],
   },
   manifest: '/manifest.json',
   openGraph: {
