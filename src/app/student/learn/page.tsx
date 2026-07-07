@@ -369,7 +369,7 @@ export default function LearnPage() {
 
               {/* Score banner */}
               {submitted && (
-                <div className={`rounded-2xl p-4 text-center ${score>=70?'bg-green-50 border border-green-200':'score>=50?'bg-amber-50 border border-amber-200':'bg-red-50 border border-red-200'}`}>
+                <div className={`rounded-2xl p-4 text-center ${score>=70?'bg-green-50 border border-green-200':score>=50?'bg-amber-50 border border-amber-200':'bg-red-50 border border-red-200'}`}>
                   <Award className={`h-8 w-8 mx-auto mb-2 ${score>=70?'text-green-600':score>=50?'text-amber-600':'text-red-600'}`}/>
                   <p className="text-2xl font-black text-slate-900">{score}%</p>
                   <p className="text-sm text-slate-600">{score>=80?'Excellent! 🎉':score>=60?'Good work! 👍':score>=40?'Keep practising! 💪':'Review this topic 📚'}</p>
