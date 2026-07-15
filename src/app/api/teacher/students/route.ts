@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma, withRetry } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { encryptPassword, stripPasswordFromAddress } from '@/lib/password-encryption';
 
 /** Generate a simple unique password for a student */
 function generateStudentPassword(): string {
@@ -33,11 +34,12 @@ async function enrollStudent(
   const plainPassword = generateStudentPassword();
   const hashedPassword = await bcrypt.hash(plainPassword, 10);
 
-  // Store the plain password in the address field with a prefix so teachers can retrieve it.
-  // Format: "PWD:<plainPassword>" — any real address is kept below a separator.
+  // Encrypt the password so teachers can retrieve it later without storing in plaintext.
+  // Format: "PWD_ENC:<encrypted>" — any real address is kept below a separator.
+  const encryptedPassword = encryptPassword(plainPassword);
   const addressWithPassword = address
-    ? `PWD:${plainPassword}\n---\n${address}`
-    : `PWD:${plainPassword}`;
+    ? `${encryptedPassword}\n---\n${address}`
+    : encryptedPassword;
 
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
@@ -105,9 +107,9 @@ export async function GET(req: NextRequest) {
     console.log('✅ Session found:', session.user.email)
 
     // Get teacher information
-    const teacher = await prisma.teacher.findFirst({
+    const teacher = await withRetry(() => prisma.teacher.findFirst({
       where: { userId: session.user.id }
-    });
+    }));
 
     if (!teacher) {
       console.log('❌ Teacher not found for userId:', session.user.id)
@@ -164,7 +166,7 @@ export async function GET(req: NextRequest) {
         name: `${student.user.firstName} ${student.user.lastName}`,
         email: student.user.email,
         phone: student.user.phone,
-        address: student.user.address,
+        address: stripPasswordFromAddress(student.user.address),
         grade: student.class?.grade || 'Not assigned',
         className: student.class?.name || 'No class',
         classId: student.classId,

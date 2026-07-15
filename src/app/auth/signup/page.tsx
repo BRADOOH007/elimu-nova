@@ -109,7 +109,7 @@ export default function SignUpPage() {
         <div className="relative z-10">
           {/* Logo */}
           <div className="mb-14">
-            <Logo size="xl" variant="white" />
+            <Logo size="xl" variant="black" />
             <div className="mt-4 h-px w-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" />
           </div>
 

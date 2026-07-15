@@ -41,14 +41,15 @@ Mix question types:
 Keep language simple and appropriate for ${grade}. Use Kenyan examples.`
 
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC quiz creator. Return ONLY valid JSON array.' },
+      { role: 'system', content: 'You are a CBC quiz creator. Return ONLY valid JSON array. No LaTeX, no TeX commands.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 1200, temperature: 0.6 })
 
     const start = raw.indexOf('['); const end = raw.lastIndexOf(']')
     if (start === -1 || end <= start) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
 
-    const questions = JSON.parse(raw.slice(start, end + 1))
+    const { stripLatex } = await import('@/lib/clean-ai-text')
+    const questions = JSON.parse(stripLatex(raw.slice(start, end + 1)))
     return NextResponse.json({ questions, lessonTitle, totalPoints: questions.reduce((s: number, q: any) => s + (q.points || 2), 0) })
   } catch (e: any) {
     console.error('[CHECKPOINT_QUIZ]', e)

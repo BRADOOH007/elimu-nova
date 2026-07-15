@@ -269,7 +269,7 @@ export default function ResourcesPage() {
       </div>
 
       {/* Filters */}
-      <Card className=" border-0shadow-lg">
+      <Card className=" border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center text-gray-900">
             <Filter className="w-5 h-5 mr-2 text-blue-600" />
@@ -409,7 +409,7 @@ export default function ResourcesPage() {
 
       {/* Empty State */}
       {resources.length === 0 && !loading && (
-        <Card className=" border-0shadow-lg">
+        <Card className=" border-0 shadow-lg">
           <CardContent className="text-center py-12">
             <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
@@ -587,3 +587,4 @@ export default function ResourcesPage() {
     </div>
   )
 }
+

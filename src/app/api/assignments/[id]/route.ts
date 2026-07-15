@@ -90,6 +90,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
+    // Find current student's submission if student role
+    let mySubmission = null
+    if (session.user.role === 'STUDENT') {
+      const student = await prisma.student.findUnique({ where: { userId: session.user.id } })
+      if (student) {
+        mySubmission = assignment.submissions.find(s => s.studentId === student.id) || null
+      }
+    }
+
     // Format assignment for response
     const formattedAssignment = {
       id: assignment.id,
@@ -98,6 +107,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       content: assignment.content,
       dueDate: assignment.dueDate,
       status: assignment.status,
+      isTimed: assignment.isTimed,
+      timeLimit: assignment.timeLimit,
+      answerKey: assignment.answerKey,
       createdAt: assignment.createdAt,
       updatedAt: assignment.updatedAt,
       teacher: {
@@ -123,11 +135,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         feedback: submission.feedback,
         submittedAt: submission.submittedAt,
         gradedAt: submission.gradedAt,
+        isAiGraded: submission.isAiGraded,
+        questionScores: submission.questionScores,
+        needsRevision: submission.needsRevision,
+        revisionNotes: submission.revisionNotes,
         student: {
           id: submission.student.id,
           name: `${submission.student.user.firstName} ${submission.student.user.lastName}`
         }
       })),
+      mySubmission: mySubmission ? {
+        id: mySubmission.id,
+        grade: mySubmission.grade,
+        feedback: mySubmission.feedback,
+        submittedAt: mySubmission.submittedAt,
+        gradedAt: mySubmission.gradedAt,
+        isAiGraded: mySubmission.isAiGraded,
+        questionScores: mySubmission.questionScores,
+        needsRevision: mySubmission.needsRevision,
+        revisionNotes: mySubmission.revisionNotes,
+      } : null,
       stats: {
         totalStudents: assignment._count.students,
         totalSubmissions: assignment._count.submissions,

@@ -85,14 +85,14 @@ export async function POST(request: NextRequest) {
     const aiContext = {
       student: {
         name: `${student.user.firstName} ${student.user.lastName}`,
-        grade: student.class?.grade || 'Unknown',
-        school: student.school.name,
-        teacher: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`
+        grade: (student as any).class?.grade || 'Unknown',
+        school: student.school?.name ?? '',
+        teacher: student.teacher ? `${student.teacher.user.firstName} ${student.teacher.user.lastName}` : 'Unknown'
       },
       analytics: student.analytics,
       recentAssignments: recentAssignments.map(assignment => ({
         title: assignment.title,
-        subject: assignment.lessonPlan?.subject || 'General',
+        subject: (assignment as any).lessonPlan?.subject || 'General',
         dueDate: assignment.dueDate,
         status: assignment.submissions.length > 0 ? 
           assignment.submissions[0].status : 'PENDING',

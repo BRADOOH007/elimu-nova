@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
+import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
 import { 
   FileText, 
   Calendar, 
@@ -83,6 +84,8 @@ export default function AssignmentsPage() {
   const [aiInsights, setAiInsights] = useState<AIInsights | null>(null)
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showAIHelp, setShowAIHelp] = useState(false)
+  const [aiHelpLoading, setAiHelpLoading] = useState(false)
+  const [aiHelpResponse, setAiHelpResponse] = useState<string>('')
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [submitContent, setSubmitContent] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -238,7 +241,30 @@ export default function AssignmentsPage() {
 
   const handleAIHelp = (assignment: Assignment) => {
     setSelectedAssignment(assignment)
+    setAiHelpResponse('')
     setShowAIHelp(true)
+  }
+
+  const sendAIHelpPrompt = async (prompt: string) => {
+    if (!selectedAssignment) return
+    setAiHelpLoading(true)
+    setAiHelpResponse('')
+    try {
+      const r = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Assignment: "${selectedAssignment.title}"\n${selectedAssignment.description}\n\n${prompt}`,
+          context: 'student_assignment_help'
+        })
+      })
+      const d = await r.json()
+      setAiHelpResponse(d.response || 'Sorry, I could not help right now. Try again!')
+    } catch {
+      setAiHelpResponse('Network error. Please try again.')
+    } finally {
+      setAiHelpLoading(false)
+    }
   }
 
   const handleOpenSubmit = (assignment: Assignment) => {
@@ -557,7 +583,21 @@ export default function AssignmentsPage() {
                           View
                         </Button>
                         {assignment.status === 'GRADED' && (
-                          <Button size="sm" variant="outline" className="bg-white/70 backdrop-blur-sm">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-white/70 backdrop-blur-sm"
+                            onClick={() => {
+                              const text = `Assignment: ${assignment.title}\n\nGrade: ${assignment.grade ?? 'N/A'}%\n\nFeedback:\n${assignment.submissions?.[0]?.feedback || 'No feedback yet'}`
+                              const blob = new Blob([text], { type: 'text/plain' })
+                              const url = URL.createObjectURL(blob)
+                              const a = document.createElement('a')
+                              a.href = url
+                              a.download = `${assignment.title.replace(/[^a-z0-9]/gi, '_')}_result.txt`
+                              a.click()
+                              URL.revokeObjectURL(url)
+                            }}
+                          >
                             <Download className="w-4 h-4 mr-2" />
                             Download
                           </Button>
@@ -570,7 +610,7 @@ export default function AssignmentsPage() {
             </Card>
           ))
         ) : (
-          <Card className=" border-0shadow-lg">
+          <Card className=" border-0 shadow-lg">
             <CardContent className="p-12 text-center">
               <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
               <h3 className="text-lg font-semibold mb-2 text-gray-600">No assignments found</h3>
@@ -634,43 +674,73 @@ export default function AssignmentsPage() {
       </Dialog>
 
       {/* AI Help Modal */}
-      <Dialog open={showAIHelp} onOpenChange={setShowAIHelp}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <Bot className="w-5 h-5 mr-2 text-blue-600" />
+      <Dialog open={showAIHelp} onOpenChange={(open) => { setShowAIHelp(open); if (!open) setAiHelpResponse('') }}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <Bot className="w-5 h-5 text-blue-600" />
               AI Assignment Help
             </DialogTitle>
             <DialogDescription>
-              Get personalized assistance with your assignment.
+              {selectedAssignment?.title}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+
+          <div className="flex-1 overflow-y-auto space-y-4 py-4 min-h-0">
             {selectedAssignment && (
-              <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-lg">
-                  <h4 className="font-semibold text-blue-900 mb-2">{selectedAssignment.title}</h4>
-                  <p className="text-blue-800 text-sm">{selectedAssignment.description}</p>
+              <>
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+                  {selectedAssignment.description}
                 </div>
-                <div className="space-y-3">
-                  <Button className="w-full justify-start bg-gradient-to-r from-blue-500 to-purple-600 text-white">
-                    <Target className="w-4 h-4 mr-2" />
-                    Break down the assignment into steps
-                  </Button>
-                  <Button className="w-full justify-start bg-gradient-to-r from-green-500 to-emerald-600 text-white">
-                    <Lightbulb className="w-4 h-4 mr-2" />
-                    Suggest research topics and resources
-                  </Button>
-                  <Button className="w-full justify-start bg-gradient-to-r from-purple-500 to-pink-600 text-white">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Help with writing and structure
-                  </Button>
-                  <Button className="w-full justify-start bg-gradient-to-r from-orange-500 to-red-600 text-white">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Review and improve your work
-                  </Button>
-                </div>
-              </div>
+
+                {/* Quick prompt buttons */}
+                {!aiHelpResponse && !aiHelpLoading && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Choose how I can help:</p>
+                    {[
+                      { label: 'Break it into steps', prompt: 'Break this assignment into clear, manageable steps I can follow.' },
+                      { label: 'Suggest research topics', prompt: 'Suggest research topics, resources and key points I should explore for this assignment.' },
+                      { label: 'Help with structure', prompt: 'Help me structure my response — provide an outline with headings and what to include in each section.' },
+                      { label: 'Review my understanding', prompt: 'Ask me 3 questions to check whether I understand what this assignment is asking, then give feedback.' },
+                    ].map(({ label, prompt }) => (
+                      <Button
+                        key={label}
+                        variant="outline"
+                        className="w-full justify-start text-left h-auto py-3 px-4 hover:bg-blue-50 hover:border-blue-300"
+                        onClick={() => sendAIHelpPrompt(prompt)}
+                      >
+                        <Lightbulb className="w-4 h-4 mr-3 text-blue-500 shrink-0" />
+                        <span className="text-sm font-medium">{label}</span>
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Loading */}
+                {aiHelpLoading && (
+                  <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin shrink-0" />
+                    <span className="text-sm text-gray-600">AI is preparing your help…</span>
+                  </div>
+                )}
+
+                {/* AI Response */}
+                {aiHelpResponse && !aiHelpLoading && (
+                  <div className="space-y-3">
+                    <div className="p-4 bg-white border border-blue-200 rounded-xl shadow-sm">
+                      <MarkdownRenderer content={aiHelpResponse} />
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAiHelpResponse('')}
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                      ← Ask something else
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </DialogContent>

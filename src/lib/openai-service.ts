@@ -85,6 +85,65 @@ export class OpenAIService {
    * Falls back to an AI-generated SVG diagram via the text waterfall when DALL-E unavailable.
    * This mirrors TutorBot's approach: OpenAI gpt-image-1 → DALL-E 3 → SVG via Gemini/AI.
    */
+  /**
+   * Grade a student submission using AI.
+   */
+  static async gradeSubmission(input: {
+    assignmentTitle: string
+    assignmentInstructions?: string | null
+    submissionContent: string
+    rubric?: string
+    answerKey?: string
+    maxPoints?: number
+  }): Promise<{
+    grade: number
+    feedback: string
+    confidence?: number
+    questionScores?: any
+    needsRevision?: boolean
+    revisionNotes?: string
+  }> {
+    const systemPrompt = `You are an expert teacher. Grade student work fairly and consistently. Return only strict JSON.`
+
+    const userPrompt = `Grade the following student's submission.
+
+Assignment: ${input.assignmentTitle}
+Instructions: ${input.assignmentInstructions || 'N/A'}
+${input.rubric ? `Rubric: ${input.rubric.slice(0, 4000)}` : ''}
+${input.answerKey ? `Answer Key: ${input.answerKey.slice(0, 2000)}` : ''}
+Max Points: ${input.maxPoints || 100}
+
+Student Submission:
+${input.submissionContent.slice(0, 6000)}
+
+Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1, "questionScores": {}, "needsRevision": false, "revisionNotes": "string" }.`
+
+    const response = await this.generateWithReasoning([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ], { maxTokens: 2000 })
+
+    try {
+      const jsonMatch = response.match(/```json\s*(\{[\s\S]*?\})\s*```/) || response.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        const jsonStr = jsonMatch[1] || jsonMatch[0]
+        const parsed = JSON.parse(jsonStr)
+        const safeGrade = Math.max(0, Math.min(100, Number(parsed.grade) || 0))
+        return {
+          grade: safeGrade,
+          feedback: String(parsed.feedback || 'Good effort!'),
+          confidence: parsed.confidence,
+          questionScores: parsed.questionScores,
+          needsRevision: parsed.needsRevision,
+          revisionNotes: parsed.revisionNotes,
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse grading JSON:', e)
+    }
+    return { grade: 0, feedback: 'Unable to auto-grade. Teacher will review.' }
+  }
+
   static async generateImage(options: {
     prompt:   string
     style?:   'natural' | 'vivid'
@@ -112,8 +171,8 @@ export class OpenAIService {
           quality: options.quality ?? 'standard',
           style:   options.style ?? 'natural',
         })
-        const url = resp.data[0]?.url
-        if (url) return { url, provider: 'openai-dalle-3', revisedPrompt: resp.data[0]?.revised_prompt }
+        const url = resp.data?.[0]?.url
+        if (url) return { url, provider: 'openai-dalle-3', revisedPrompt: resp.data?.[0]?.revised_prompt }
       } catch (e: any) {
         console.warn('[AI] DALL-E failed:', e.message)
       }

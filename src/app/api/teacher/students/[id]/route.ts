@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -24,7 +24,7 @@ export async function GET(
 
     // Get the student with full details
     const student = await prisma.student.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
       include: {
         user: {
           select: {
@@ -80,7 +80,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -102,7 +102,7 @@ export async function PUT(
 
     // Get the student to verify it belongs to this teacher's school
     const student = await prisma.student.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
       include: { user: true }
     })
 
@@ -131,7 +131,7 @@ export async function PUT(
 
       // Update student
       await tx.student.update({
-        where: { id: params.id },
+        where: { id: (await params).id },
         data: {
           classId: classId || null
         }
@@ -153,7 +153,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -172,7 +172,7 @@ export async function DELETE(
 
     // Get the student to verify it belongs to this teacher's school
     const student = await prisma.student.findUnique({
-      where: { id: params.id }
+      where: { id: (await params).id }
     })
 
     if (!student) {
@@ -185,7 +185,7 @@ export async function DELETE(
 
     // Delete student (will cascade delete user due to onDelete: Cascade)
     await prisma.student.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     })
 
     return NextResponse.json({

@@ -6,6 +6,7 @@ import {
   TrendingUp, TrendingDown, AlertTriangle, Sparkles,
   BarChart3, Users, Target, ChevronDown
 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface ClassInfo { id: string; name: string; grade: string; subject: string; studentCount: number }
 interface Submission { id: string; studentId: string; studentName: string; grade: number | null; status: string }
@@ -31,6 +32,7 @@ const CBC_LOWER_GUIDE = [
 ]
 
 export default function MarksPage() {
+  const { toast } = useToast()
   const [classes,      setClasses]      = useState<ClassInfo[]>([])
   const [assignments,  setAssignments]  = useState<Assignment[]>([])
   const [selectedAsn,  setSelectedAsn]  = useState('')
@@ -45,13 +47,15 @@ export default function MarksPage() {
 
   useEffect(() => {
     fetch('/api/teacher/marks')
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) throw new Error('Failed to load marks')
+        return r.json()
+      })
       .then(d => {
         setClasses(d.classes || [])
         setAssignments(d.assignments || [])
         if (d.assignments?.length > 0) {
           setSelectedAsn(d.assignments[0].id)
-          // Pre-fill existing grades
           const existing: Record<string, string> = {}
           d.assignments[0].submissions.forEach((s: Submission) => {
             if (s.grade !== null) existing[s.studentId] = String(s.grade)
@@ -59,7 +63,7 @@ export default function MarksPage() {
           setMarks(existing)
         }
       })
-      .catch(console.error)
+      .catch(e => console.error('[MARKS_LOAD]', e))
       .finally(() => setLoading(false))
   }, [])
 
@@ -93,9 +97,16 @@ export default function MarksPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assignmentId: selectedAsn, marks: marksArray, gradeSystem, analyseWithAI: withAI }),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Failed to save marks' }))
+        throw new Error(err.error || 'Failed to save marks')
+      }
       const data = await res.json()
       setSaved(true)
       if (data.analysis) setAnalysis(data.analysis)
+      toast({ title: 'Marks saved', variant: 'success' })
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message, variant: 'destructive' })
     } finally {
       setSaving(false); setAnalysing(false)
     }

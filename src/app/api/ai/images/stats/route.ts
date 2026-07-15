@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     const stats = await ImageStorageService.getImageStats(
       session.user.id,
-      session.user.school?.id
+      (session.user as any).school?.id
     )
 
     return NextResponse.json(stats)

@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     // Get sender details for each message
     const messagesWithDetails = await Promise.all(
       messages.map(async (message) => {
-        let senderInfo = {
+        let senderInfo: { name: string; role: string; avatar: string | null } = {
           name: 'Unknown',
           role: message.senderType,
           avatar: null as string | null
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
           timestamp: message.createdAt.toISOString(),
           read: message.isRead,
           isSent: message.senderId === student.id,
-          hasReplies: message.replies?.length > 0,
+          hasReplies: (message as any).replies?.length > 0,
           attachments: message.attachments
         }
       })

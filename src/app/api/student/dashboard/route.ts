@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Looking for student with userId:', session.user.id)
     
     // Get student profile
-    let student = await prisma.student.findUnique({
+    let student = await withRetry(() => prisma.student.findUnique({
       where: { userId: session.user.id },
       include: {
         user: true,
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         class: true,
         analytics: true
       }
-    })
+    }))
 
     // If no student profile exists, create one for independent learning
     if (!student) {

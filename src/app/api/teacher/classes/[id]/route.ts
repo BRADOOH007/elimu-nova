@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'TEACHER') {
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // Get class with students
     const classData = await prisma.class.findUnique({
       where: { 
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id
       },
       include: {
@@ -74,7 +74,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'TEACHER') {
@@ -95,16 +95,33 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     // Check if class exists and belongs to teacher
     const existingClass = await prisma.class.findUnique({
-      where: { id: params.id }
+      where: { id: (await params).id }
     });
 
     if (!existingClass || existingClass.teacherId !== teacher.id) {
       return NextResponse.json({ error: 'Class not found or access denied' }, { status: 404 });
     }
 
+    // If renaming, check no other class has that name already
+    if (name && name.trim().toLowerCase() !== existingClass.name.toLowerCase()) {
+      const duplicate = await prisma.class.findFirst({
+        where: {
+          teacherId: teacher.id,
+          name: { equals: name.trim(), mode: 'insensitive' },
+          NOT: { id: existingClass.id },
+        }
+      })
+      if (duplicate) {
+        return NextResponse.json(
+          { error: `A class named "${duplicate.name}" already exists.` },
+          { status: 409 }
+        )
+      }
+    }
+
     // Update class
     const updatedClass = await prisma.class.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: {
         name,
         subject,
@@ -144,7 +161,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'TEACHER') {
@@ -162,7 +179,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     // Check if class exists and belongs to teacher
     const existingClass = await prisma.class.findUnique({
-      where: { id: params.id }
+      where: { id: (await params).id }
     });
 
     if (!existingClass || existingClass.teacherId !== teacher.id) {
@@ -171,7 +188,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     // Delete class (this will also unassign all students from this class)
     await prisma.class.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     });
 
     return NextResponse.json({

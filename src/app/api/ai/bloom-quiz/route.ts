@@ -98,14 +98,17 @@ Rules:
 - correct_answer is 0-indexed (0=A, 1=B, 2=C, 3=D)`
 
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC curriculum expert. Return ONLY valid JSON array, no markdown.' },
+      { role: 'system', content: 'You are a CBC curriculum expert. Return ONLY valid JSON array, no markdown, no LaTeX, no TeX commands.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 2000, temperature: 0.6 })
 
     const start = raw.indexOf('['); const end = raw.lastIndexOf(']')
     if (start === -1 || end <= start) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
 
-    const questions = JSON.parse(raw.slice(start, end + 1))
+    // Strip any LaTeX from all string fields in the questions
+    const { stripLatex } = await import('@/lib/clean-ai-text')
+    const cleanJson = stripLatex(raw.slice(start, end + 1))
+    const questions = JSON.parse(cleanJson)
     return NextResponse.json({ questions, subject, grade, strand, subStrand, topic })
   } catch (e: any) {
     console.error('[BLOOM_QUIZ]', e)

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         role: session.user.role,
         email: session.user.email
       },
-      tests: {}
+      tests: {} as any
     }
 
     // Test 1: Basic database connection
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
             prisma.school.findUnique({ 
               where: { id: schoolAdmin.schoolId },
               include: {
-                subscription: {
+                subscriptions: {
                   include: { package: true },
                   orderBy: { createdAt: 'desc' },
                   take: 1
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
               studentCount,
               school: school ? {
                 name: school.name,
-                subscription: school.subscription[0] || null
+                subscription: school.subscriptions[0] || null
               } : null
             }
           }

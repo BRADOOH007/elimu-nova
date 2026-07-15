@@ -29,7 +29,7 @@ export function PublicNav() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center">
-            <Logo variant="black" size="lg" />
+            <Logo variant="white" size="lg" />
           </Link>
 
           {/* Desktop nav */}

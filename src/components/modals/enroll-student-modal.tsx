@@ -69,9 +69,14 @@ export default function EnrollStudentModal({
     classId:   '',
     grade:     '',
     teacherId: '',
+    parentFirstName: '',
+    parentLastName:  '',
+    parentEmail:     '',
+    parentPhone:     '',
   })
   const [errors,      setErrors]      = useState<Record<string, string>>({})
   const [successData, setSuccessData] = useState<{ email: string; password: string } | null>(null)
+  const [parentSuccessData, setParentSuccessData] = useState<{ email: string; password: string; emailSent?: boolean; emailMethod?: string } | null>(null)
 
   // Auto-fill grade when class is selected
   useEffect(() => {
@@ -123,7 +128,15 @@ export default function EnrollStudentModal({
 
       if (role === 'school-admin') {
         body.teacherId = formData.teacherId
-        body.password  = previewPwd   // school-admin API requires it
+        body.password  = previewPwd
+      }
+
+      // Parent info
+      if (formData.parentFirstName.trim() || formData.parentLastName.trim() || formData.parentEmail.trim()) {
+        body.parentFirstName = formData.parentFirstName.trim()
+        body.parentLastName  = formData.parentLastName.trim()
+        body.parentEmail     = formData.parentEmail.trim()
+        body.parentPhone     = formData.parentPhone.trim() || null
       }
 
       const res  = await fetch(endpoint, {
@@ -138,6 +151,9 @@ export default function EnrollStudentModal({
           email:    body.email || `${previewUser}@student.local`,
           password: previewPwd,
         })
+        if (data.parentCredentials) {
+          setParentSuccessData(data.parentCredentials)
+        }
       } else {
         setErrors({ submit: data.error || 'Failed to enroll student' })
       }
@@ -149,9 +165,11 @@ export default function EnrollStudentModal({
   }
 
   const reset = () => {
-    setFormData({ firstName:'', lastName:'', email:'', phone:'', address:'', classId:'', grade:'', teacherId:'' })
+    setFormData({ firstName:'', lastName:'', email:'', phone:'', address:'', classId:'', grade:'', teacherId:'',
+      parentFirstName:'', parentLastName:'', parentEmail:'', parentPhone:'' })
     setErrors({})
     setSuccessData(null)
+    setParentSuccessData(null)
     setCopied(false)
   }
 
@@ -166,7 +184,11 @@ export default function EnrollStudentModal({
     const login = successData.email.endsWith('@student.local')
       ? successData.email.replace('@student.local', '')
       : successData.email
-    await navigator.clipboard.writeText(`Username: ${login}\nPassword: ${successData.password}`)
+    let text = `Student Login:\n  Username: ${login}\n  Password: ${successData.password}`
+    if (parentSuccessData) {
+      text += `\n\nParent Login:\n  Email: ${parentSuccessData.email}\n  Password: ${parentSuccessData.password}`
+    }
+    await navigator.clipboard.writeText(text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2500)
   }
@@ -248,6 +270,39 @@ export default function EnrollStudentModal({
                   </div>
                 </div>
               </div>
+
+              {/* Parent credentials */}
+              {parentSuccessData && (
+                <div className="border-2 border-green-200 rounded-xl overflow-hidden">
+                  <div className="bg-gradient-to-r from-green-600 to-teal-600 px-4 py-2">
+                    <p className="text-white font-semibold text-sm flex items-center gap-2">
+                      <UserPlus className="w-4 h-4" /> Parent Account Created
+                    </p>
+                  </div>
+                  <div className="p-4 space-y-3 bg-gray-50">
+                    <p className="text-sm text-gray-600">
+                      Parent login credentials{parentSuccessData.emailSent ? ' were sent to ' : ' for '}
+                      <strong>{parentSuccessData.email}</strong>.
+                      {parentSuccessData.emailSent
+                        ? <span className="text-green-600 font-medium"> (delivered)</span>
+                        : <span className="text-amber-600 font-medium"> (displayed below — no SMTP configured)</span>
+                      }
+                    </p>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Parent Email</Label>
+                      <code className="mt-1 block bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-900">
+                        {parentSuccessData.email}
+                      </code>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Parent Password</Label>
+                      <code className="mt-1 block bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-900">
+                        {parentSuccessData.password}
+                      </code>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Warning */}
               <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
@@ -427,6 +482,50 @@ export default function EnrollStudentModal({
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* ── Parent Information ────────────────────────────────── */}
+            <div className="bg-amber-50/60 rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm">
+                <UserPlus className="w-4 h-4 text-amber-600" /> Parent / Guardian (optional)
+              </h3>
+              <p className="text-xs text-gray-500">Enter parent details to automatically create a parent account and link them to this student.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">First Name</Label>
+                  <Input value={formData.parentFirstName} onChange={set('parentFirstName')}
+                    placeholder="Parent first name" className="mt-1 bg-white" />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Last Name</Label>
+                  <Input value={formData.parentLastName} onChange={set('parentLastName')}
+                    placeholder="Parent last name" className="mt-1 bg-white" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Email <span className="text-red-500">*</span></Label>
+                  <div className="relative mt-1">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input value={formData.parentEmail} onChange={set('parentEmail')}
+                      type="email" placeholder="parent@example.com" className="pl-9 bg-white" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-600">Phone</Label>
+                  <div className="relative mt-1">
+                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input value={formData.parentPhone} onChange={set('parentPhone')}
+                      placeholder="+254 700 000 000" className="pl-9 bg-white" />
+                  </div>
+                </div>
+              </div>
+              {formData.parentFirstName && formData.parentLastName && formData.parentEmail && (
+                <div className="bg-white border border-amber-200 rounded-lg p-3 text-xs text-gray-600">
+                  A parent account will be created for <strong>{formData.parentFirstName} {formData.parentLastName}</strong>
+                  {' '}and linked to this student. Credentials will appear after enrollment.
+                </div>
+              )}
             </div>
 
             {/* ── Actions ──────────────────────────────────────────── */}

@@ -22,6 +22,7 @@ import { UserProfileModal } from "@/components/modals/user-profile-modal"
 import { Toaster } from "@/components/ui/toaster"
 import { DashboardSplash } from "@/components/ui/dashboard-splash"
 import { IdleLogoutWarning } from "@/components/ui/idle-logout-warning"
+import { useUnreadMessages } from '@/hooks/use-unread-messages'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -53,50 +54,53 @@ export function ProfessionalDashboardLayout({
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [settingsOpen,   setSettingsOpen]   = useState(false)
   const [profileOpen,    setProfileOpen]    = useState(false)
-  const [unreadNotifications, setUnreadNotifications] = useState(0)
-  const [showSplash, setShowSplash] = useState(true)
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const key = `splash-shown-${userRole}`
+    return !sessionStorage.getItem(key)
+  })
+  const { totalUnread } = useUnreadMessages()
   const [userProfile, setUserProfile] = useState<{
     firstName: string
     lastName: string
     avatar?: string
   }>({ firstName: userName, lastName: '', avatar: undefined })
 
-  /* ── Splash min-timer ── */
+  /* ── Splash min-timer — only runs if splash is showing ── */
   useEffect(() => {
-    const t = setTimeout(() => setShowSplash(false), 2500)
+    if (!showSplash) return
+    // Hard cap: dismiss splash after 3s no matter what
+    const t = setTimeout(() => {
+      setShowSplash(false)
+      sessionStorage.setItem(`splash-shown-${userRole}`, '1')
+    }, 3000)
     return () => clearTimeout(t)
   }, [])
 
   /* ── Profile fetch ── */
   const fetchUserProfile = async () => {
-    if (!session?.user?.id) return
+    if (!session?.user?.id) {
+      setShowSplash(false)
+      return
+    }
     try {
-      const res = await fetch(`/api/user-profile?userId=${session.user.id}`)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 3000)
+      const res = await fetch(`/api/user-profile?userId=${session.user.id}`, { signal: controller.signal })
+      clearTimeout(timeout)
       if (res.ok) {
         const p = await res.json()
         setUserProfile({ firstName: p.firstName, lastName: p.lastName, avatar: p.avatar })
       }
-    } catch { /* silent */ }
-    // Dismiss splash once profile attempt is done
+    } catch { /* silent — timeout or network error */ }
+    // Always dismiss splash after profile attempt
     setShowSplash(false)
-  }
-
-  /* ── Notifications fetch ── */
-  const fetchUnreadNotifications = async () => {
-    if (!session?.user?.id) return
-    try {
-      const res = await fetch(`/api/notifications?userId=${session.user.id}&limit=100`)
-      if (res.ok) {
-        const notifs = await res.json()
-        setUnreadNotifications(notifs.filter((n: any) => !n.isRead).length)
-      }
-    } catch { /* silent */ }
+    sessionStorage.setItem(`splash-shown-${userRole}`, '1')
   }
 
   useEffect(() => {
     if (session?.user?.id) {
       fetchUserProfile()
-      fetchUnreadNotifications()
     }
   }, [session?.user?.id])
 
@@ -145,7 +149,7 @@ export function ProfessionalDashboardLayout({
                 ? <PanelLeftOpen className="w-5 h-5 text-slate-600" />
                 : <PanelLeftClose className="w-5 h-5 text-slate-600" />}
             </button>
-            <Link href="/"><Logo size="md" /></Link>
+            <Link href="/"><Logo size="md" variant="black" /></Link>
           </div>
 
           {/* Spacer */}
@@ -158,9 +162,9 @@ export function ProfessionalDashboardLayout({
               className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors"
             >
               <Bell className="w-5 h-5 text-slate-600" />
-              {unreadNotifications > 0 && (
+              {totalUnread > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                  {unreadNotifications}
+                  {totalUnread > 99 ? '99+' : totalUnread}
                 </span>
               )}
             </button>

@@ -312,7 +312,7 @@ export default function TimetablePage() {
                 {allocLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
                 {allocLoading ? 'Analysing...' : 'Analyse Allocation'}
               </button>
-              {alloc?.recommendations?.length > 0 && (
+              {(alloc?.recommendations?.length ?? 0) > 0 && (
                 <button
                   onClick={applyRecommendations}
                   disabled={applying}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sseBus } from '@/lib/sse-events'
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     // Get sender details for each message
     const messagesWithDetails = await Promise.all(
       messages.map(async (message) => {
-        let senderInfo = {
+        let senderInfo: { name: string; role: string; avatar: string | null } = {
           name: 'Unknown',
           role: message.senderType,
           avatar: null as string | null
@@ -102,6 +103,7 @@ export async function GET(request: NextRequest) {
           }
         }
 
+        const msg = message as any
         return {
           id: message.id,
           from: senderInfo,
@@ -110,7 +112,7 @@ export async function GET(request: NextRequest) {
           timestamp: message.createdAt.toISOString(),
           read: message.isRead,
           isSent: message.senderId === teacher.id,
-          hasReplies: message.replies?.length > 0,
+          hasReplies: msg.replies?.length > 0,
           attachments: message.attachments,
           senderId: message.senderId,
           senderType: message.senderType
@@ -174,6 +176,11 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('✅ Message sent:', message.id)
+
+    sseBus.publish(`messages:teacher:${teacher.id}`, 'message-sent', {
+      messageId: message.id,
+      subject: message.subject,
+    })
 
     return NextResponse.json({
       success: true,

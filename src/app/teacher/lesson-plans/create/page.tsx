@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import { 
   BookOpen, 
   Loader2, 
@@ -14,7 +15,8 @@ import {
   Share2,
   Plus,
   Trash2,
-  FileText
+  FileText,
+  Upload
 } from 'lucide-react'
 
 export default function CreateLessonPlan() {
@@ -30,6 +32,7 @@ export default function CreateLessonPlan() {
   const [generatedContent, setGeneratedContent] = useState('')
   const [isEditing, setIsEditing] = useState(false)
   const [downloading, setDownloading] = useState<'pdf' | 'word' | null>(null)
+  const [documentContext, setDocumentContext] = useState<string | null>(null)
   const router = useRouter()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -71,6 +74,12 @@ export default function CreateLessonPlan() {
     }
   }
 
+  const handleDocUploaded = (doc: { name: string; url: string; docType: string; extractedText?: string | null }) => {
+    if (doc.extractedText) {
+      setDocumentContext(doc.extractedText)
+    }
+  }
+
   const handleGenerate = async () => {
     setIsGenerating(true)
     
@@ -80,7 +89,7 @@ export default function CreateLessonPlan() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, documentContext }),
       })
 
       const data = await response.json()
@@ -391,6 +400,20 @@ export default function CreateLessonPlan() {
                   <Plus className="mr-2 h-4 w-4" />
                   Add Prerequisite
                 </Button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <DocumentUploadButton
+                  docType="lesson-plan"
+                  label="Upload Reference Document"
+                  onUploaded={handleDocUploaded}
+                />
+                {documentContext && (
+                  <span className="text-xs text-green-600 flex items-center gap-1">
+                    <FileText className="w-3 h-3" />
+                    Document loaded as reference
+                  </span>
+                )}
               </div>
 
               <Button

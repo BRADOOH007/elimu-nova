@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { rateLimitAI, getIP } from '@/lib/rate-limit'
 import { OpenAIService } from '@/lib/openai-service'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,10 +19,23 @@ export async function POST(request: NextRequest) {
     const rl = await rateLimitAI(session.user.id || getIP(request))
     if (!rl.allowed) return NextResponse.json({ error: `Rate limit. Retry in ${rl.resetInSec}s` }, { status: 429 })
 
-    const { examContent, subject, grade, totalMarks = 100 } = await request.json()
+    const { examContent, subject, grade, totalMarks = 100, documentContext } = await request.json()
     if (!examContent) return NextResponse.json({ error: 'examContent required' }, { status: 400 })
 
-    const prompt = `You are a senior Kenyan CBC examiner creating a detailed marking scheme.
+    // Fetch teacher's exam template as marking scheme format reference
+    let templateText = documentContext
+    if (!templateText && session.user.role === 'TEACHER') {
+      const t = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { examTemplate: true },
+      })
+      templateText = t?.examTemplate || null
+    }
+    const templateBlock = templateText
+      ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the marking scheme in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+      : ''
+
+    const prompt = `You are a senior Kenyan CBC examiner creating a detailed marking scheme.${templateBlock}
 
 Subject: ${subject || 'General'} | Grade: ${grade || 'Secondary'} | Total: ${totalMarks} marks
 

@@ -170,6 +170,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    const activityUser = activity.user!
     return NextResponse.json({
       message: 'Activity created successfully',
       activity: {
@@ -179,9 +180,9 @@ export async function POST(request: NextRequest) {
         description: activity.description,
         metadata: activity.metadata,
         user: {
-          name: `${activity.user.firstName} ${activity.user.lastName}`,
-          email: activity.user.email,
-          role: activity.user.role
+          name: `${activityUser.firstName} ${activityUser.lastName}`,
+          email: activityUser.email,
+          role: activityUser.role
         },
         createdAt: activity.createdAt
       }

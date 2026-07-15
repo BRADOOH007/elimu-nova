@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Brain, Wand2, BookOpen, FileText, Zap, Sparkles, Send, Download, Copy, CheckCircle, Loader2 } from 'lucide-react';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 import { useToast } from '@/hooks/use-toast';
 
 const subjects = [
@@ -433,8 +434,8 @@ export function AIExamGenerator() {
                     className="bg-white rounded-xl border border-green-200 shadow-inner overflow-y-auto"
                     style={{ maxHeight: 'calc(100vh - 320px)', minHeight: '300px' }}
                   >
-                    <div className="p-4">
-                      <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed break-words">{generatedExam}</pre>
+                    <div className="p-5">
+                      <MarkdownRenderer content={generatedExam} />
                     </div>
                   </div>
                   {/* Schedule button */}

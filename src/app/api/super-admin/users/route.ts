@@ -36,7 +36,6 @@ export async function GET(request: NextRequest) {
         select: {
           id: true, firstName: true, lastName: true, email: true,
           role: true, isActive: true, createdAt: true, avatar: true,
-          school: false,
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

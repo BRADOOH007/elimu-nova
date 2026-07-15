@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cleanAIText } from '@/lib/clean-ai-text'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { 
   Brain, 
   Send, 
@@ -298,24 +299,24 @@ export default function HopePage() {
   ]
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center">
-            <Brain className="w-8 h-8 text-white" />
+      <div className="mb-4 flex-shrink-0">
+        <div className="flex items-center space-x-4 mb-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <Brain className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Hope AI Assistant</h1>
-            <p className="text-gray-600">Your intelligent teaching companion</p>
+            <h1 className="text-2xl font-bold text-gray-900">Hope AI Assistant</h1>
+            <p className="text-sm text-gray-600">Your intelligent teaching companion</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 overflow-hidden min-h-0">
         {/* Chat Interface */}
-        <div className="lg:col-span-3">
-          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0 h-[70vh] max-h-[800px] min-h-[600px] flex flex-col">
+        <div className="lg:col-span-3 overflow-hidden min-h-0">
+          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0 h-full flex flex-col overflow-hidden">
             <CardHeader className="border-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -339,11 +340,11 @@ export default function HopePage() {
               </div>
             </CardHeader>
             
-            <CardContent className="flex-1 flex flex-col p-0 overflow-hidden relative">
+            <CardContent className="flex-1 flex flex-col p-0 overflow-hidden relative min-h-0">
               {/* Messages */}
               <div 
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/50 min-h-0"
               >
                 {messages.map((message) => (
                   <div
@@ -380,7 +381,10 @@ export default function HopePage() {
                           </div>
                         ) : (
                           <>
-                            <p className="text-sm whitespace-pre-wrap">{cleanAIText(message.content)}</p>
+                            {message.type === 'user'
+                              ? <p className="text-sm">{cleanAIText(message.content)}</p>
+                              : <MarkdownRenderer content={cleanAIText(message.content)} />
+                            }
                             <div className={`flex items-center justify-between mt-2 ${
                               message.type === 'user' ? 'text-green-100' : 'text-gray-500'
                             }`}>
@@ -486,7 +490,7 @@ export default function HopePage() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-6 overflow-y-auto min-h-0">
           {/* Quick Actions */}
           <Card className="bg-gradient-to-br from-white via-green-50 to-emerald-50 shadow-lg backdrop-blur-sm border-0">
             <CardHeader>

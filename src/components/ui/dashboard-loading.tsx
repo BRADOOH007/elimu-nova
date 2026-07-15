@@ -2,128 +2,135 @@
 
 import { useEffect, useState } from 'react'
 
-const TIPS = [
-  'Preparing your personalised learning environment…',
-  'Loading CBC curriculum data…',
-  'Connecting to AI tutors…',
-  'Syncing your latest progress…',
-  'Almost ready — setting up your dashboard…',
+const STEPS = [
+  'Verifying your session…',
+  'Loading curriculum data…',
+  'Connecting AI services…',
+  'Preparing your workspace…',
+  'Almost there…',
 ]
 
 export function DashboardLoading() {
-  const [progress, setProgress]   = useState(0)
-  const [tipIndex, setTipIndex]   = useState(0)
-  const [dotCount, setDotCount]   = useState(1)
+  const [progress, setProgress] = useState(0)
+  const [stepIndex, setStepIndex] = useState(0)
+  const [dots, setDots] = useState(1)
 
-  // Progress bar fills over ~8 seconds
+  // Smooth progress to 90
   useEffect(() => {
-    const interval = setInterval(() => {
+    const iv = setInterval(() => {
       setProgress(p => {
-        if (p >= 95) { clearInterval(interval); return 95 }
-        // Fast start, slow finish
-        const step = p < 40 ? 4 : p < 70 ? 2 : 0.8
-        return Math.min(95, p + step)
+        if (p >= 90) { clearInterval(iv); return 90 }
+        return Math.min(p + (p < 40 ? 3 : p < 70 ? 1.5 : 0.5), 90)
       })
     }, 80)
-    return () => clearInterval(interval)
+    return () => clearInterval(iv)
   }, [])
 
-  // Rotate tips every 2s
+  // Rotate steps every 1.8s
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTipIndex(i => (i + 1) % TIPS.length)
-    }, 2000)
-    return () => clearInterval(interval)
+    const iv = setInterval(() => {
+      setStepIndex(i => (i + 1) % STEPS.length)
+    }, 1800)
+    return () => clearInterval(iv)
   }, [])
 
   // Animated dots
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDotCount(d => (d % 3) + 1)
-    }, 500)
-    return () => clearInterval(interval)
+    const iv = setInterval(() => setDots(d => (d % 3) + 1), 450)
+    return () => clearInterval(iv)
   }, [])
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center"
-      style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)' }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'linear-gradient(135deg, #060918 0%, #0d1230 40%, #0a0e1f 100%)' }}
     >
-      {/* Subtle background orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }} />
-        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, #2563eb, transparent)' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5"
-          style={{ background: 'radial-gradient(circle, #7c3aed, transparent)' }} />
-      </div>
+      {/* Grid texture */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px)',
+        backgroundSize: '72px 72px',
+      }} />
 
-      {/* Main content */}
-      <div className="relative flex flex-col items-center gap-8 px-8 text-center max-w-sm w-full">
+      {/* Ambient glows */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #7c3aed18 0%, transparent 70%)', transform: 'translate(30%,-30%)' }} />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, #2563eb12 0%, transparent 70%)', transform: 'translate(-30%,30%)' }} />
 
-        {/* Logo with pulse ring */}
-        <div className="relative">
-          <div className="absolute inset-0 rounded-full animate-ping opacity-20"
-            style={{ background: 'radial-gradient(circle, #7c3aed, transparent)', animationDuration: '2s' }} />
-          <div className="w-24 h-24 rounded-2xl flex items-center justify-center shadow-2xl"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}>
-            <img
-              src="/logo-black-removebg-preview.png"
-              alt="ElimuNova"
-              className="w-16 h-16 object-contain"
-              style={{ filter: 'invert(1) brightness(2)' }}
-              onError={e => {
-                // Fallback: show text logo if image fails
-                (e.target as HTMLImageElement).style.display = 'none'
-              }}
+      {/* Content */}
+      <div className="relative z-10 flex flex-col items-center w-full max-w-sm mx-auto px-8 text-center">
+
+        {/* Logo */}
+        <div className="mb-10 flex flex-col items-center gap-4">
+          {/* Logo mark with glow ring */}
+          <div className="relative">
+            <div
+              className="absolute inset-0 rounded-2xl blur-xl opacity-60"
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)', transform: 'scale(1.2)' }}
             />
-            {/* Text fallback shown by CSS if img fails */}
-            <span className="text-white font-black text-2xl hidden">E</span>
+            <div
+              className="relative w-16 h-16 rounded-2xl flex items-center justify-center shadow-2xl"
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}
+            >
+              <img
+                src="/logo-white-removebg-preview.png"
+                alt="ElimuNova"
+                className="w-10 h-10 object-contain"
+              />
+            </div>
+          </div>
+
+          {/* Brand */}
+          <div>
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              ElimuNova <span style={{
+                background: 'linear-gradient(90deg,#7c3aed,#2563eb)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}>AI</span>
+            </h1>
+            <p className="text-slate-500 text-xs mt-0.5 tracking-widest font-medium uppercase">
+              Kenya's Smart Learning Platform
+            </p>
           </div>
         </div>
 
-        {/* Brand name */}
-        <div>
-          <h1 className="text-white font-black text-3xl tracking-tight"
-            style={{ textShadow: '0 0 40px rgba(124,58,237,0.5)' }}>
-            ElimuNova <span style={{ background: 'linear-gradient(90deg, #7c3aed, #2563eb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>AI</span>
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Kenya's Smart Learning Platform</p>
-        </div>
-
         {/* Progress bar */}
-        <div className="w-full space-y-3">
-          <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <div className="w-full mb-5">
+          <div className="w-full h-[3px] bg-white/5 rounded-full overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-200 ease-out"
               style={{
                 width: `${progress}%`,
-                background: 'linear-gradient(90deg, #7c3aed, #2563eb, #7c3aed)',
+                background: 'linear-gradient(90deg,#7c3aed,#2563eb,#7c3aed)',
                 backgroundSize: '200% 100%',
                 animation: 'shimmer 2s linear infinite',
               }}
             />
           </div>
-          <p className="text-slate-400 text-xs min-h-[1.2em] transition-all duration-500">
-            {TIPS[tipIndex]}{'.'.repeat(dotCount)}
-          </p>
         </div>
 
+        {/* Step indicator */}
+        <p className="text-slate-500 text-xs min-h-[1.25rem] transition-all duration-300">
+          {STEPS[stepIndex]}{'.'.repeat(dots)}
+        </p>
+
         {/* Feature pills */}
-        <div className="flex flex-wrap justify-center gap-2">
-          {['CBC Curriculum','AI Tutoring','Smart Exams','Live Classes'].map(f => (
-            <span key={f}
-              className="text-xs px-3 py-1 rounded-full border border-white/10 text-slate-400 bg-white/5">
+        <div className="flex flex-wrap justify-center gap-2 mt-10">
+          {['CBC Curriculum', 'AI Tutoring', 'Smart Exams', 'Live Classes'].map(f => (
+            <span
+              key={f}
+              className="text-[11px] px-3 py-1 rounded-full font-medium"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#64748b',
+              }}
+            >
               {f}
             </span>
           ))}
         </div>
-      </div>
-
-      {/* Bottom tagline */}
-      <div className="absolute bottom-8 text-center">
-        <p className="text-slate-600 text-xs">Powered by ElimuNova AI · Kenya</p>
       </div>
 
       <style>{`

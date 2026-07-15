@@ -6,7 +6,7 @@ import { generateSimplePresentation } from '@/lib/simple-presentation-generator'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -25,7 +25,7 @@ export async function GET(
 
     const presentation = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: 'POWERPOINT'
       }
@@ -46,11 +46,11 @@ export async function GET(
       title: presentation.title,
       slides: presentationData.slides || [],
       includeImages: true,
-      theme: 'education'
     })
 
     // Return the PowerPoint file
-    return new NextResponse(pptxBuffer, {
+    const uint8 = new Uint8Array(pptxBuffer.buffer, pptxBuffer.byteOffset, pptxBuffer.byteLength)
+    return new NextResponse(uint8 as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',

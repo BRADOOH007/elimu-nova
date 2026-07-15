@@ -1,0 +1,18 @@
+{{#> base}}
+{{#*inline "title"}}Subscription Renewal Reminder{{/inline}}
+{{#*inline "greeting"}}Hi {{firstName}},{{/inline}}
+{{#*inline "message"}}
+Your <strong>{{planName}}</strong> subscription will renew on <strong>{{renewalDate}}</strong>.
+{{/inline}}
+{{#*inline "message"}}
+<div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+  <p style="margin: 0 0 12px; color: #92400e;"><strong>Renewal Details:</strong></p>
+  <p style="margin: 0 0 8px;"><strong>Plan:</strong> {{planName}}</p>
+  <p style="margin: 0 0 8px;"><strong>Amount:</strong> ${{amount}}</p>
+  <p style="margin: 0;"><strong>Renewal Date:</strong> {{renewalDate}}</p>
+</div>
+{{/inline}}
+{{#*inline "action_url"}}/billing{{/action_url}}
+{{#*inline "action_text"}}Manage Subscription{{/action_text}}
+{{#*inline "footer_note"}}Your subscription will automatically renew unless cancelled. You can manage your subscription in your billing settings.{{/inline}}
+{{/base}}

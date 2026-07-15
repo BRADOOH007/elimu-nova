@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { v2 as cloudinary } from 'cloudinary'
 import { prisma } from '@/lib/prisma'
+import { PDFParse } from 'pdf-parse'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,10 +82,18 @@ export async function POST(req: NextRequest) {
       stream.end(buffer)
     })
 
-    // For text files, extract the content so AI can use it directly
+    // Extract text content so AI can use it without seeing the raw file
     let extractedText: string | null = null
     if (file.type === 'text/plain') {
-      extractedText = buffer.toString('utf-8').slice(0, 8000) // limit to 8k chars for context
+      extractedText = buffer.toString('utf-8').slice(0, 8000)
+    } else if (file.type === 'application/pdf') {
+      try {
+        const pdfData = await PDFParse(buffer)
+        extractedText = pdfData.text.slice(0, 8000)
+      } catch (parseErr) {
+        console.warn('PDF text extraction failed:', parseErr)
+        extractedText = null
+      }
     }
 
     // Store the document reference in SystemSettings so AI can retrieve it per teacher
@@ -93,25 +102,19 @@ export async function POST(req: NextRequest) {
       where: { userId: session.user.id }
     })
 
-    if (teacher) {
-      // Store document metadata for AI context retrieval
-      const contextKey = `teacher_doc_${teacher.id}_${docType}`
-      const contextValue = JSON.stringify({
-        url: uploadResult.secure_url,
-        name: file.name,
-        type: file.type,
-        docType,
-        uploadedAt: new Date().toISOString(),
-        extractedText: extractedText || null,
-      })
-
-      await prisma.userPreference.upsert({
-        where: { userId: session.user.id },
-        create: {
-          userId: session.user.id,
-        },
-        update: {}
-      })
+    if (teacher && extractedText) {
+      const updateData: any = {}
+      if (docType === 'lesson-plan')       updateData.lessonPlanTemplate = extractedText
+      if (docType === 'scheme-of-work')    updateData.schemeOfWorkTemplate = extractedText
+      if (docType === 'exam')              updateData.examTemplate = extractedText
+      if (docType === 'assignment' || docType === 'general') updateData.assignmentTemplate = extractedText
+      if (docType === 'curriculum')        updateData.curriculumTemplate = extractedText
+      if (Object.keys(updateData).length > 0) {
+        await prisma.teacher.update({
+          where: { id: teacher.id },
+          data: updateData,
+        })
+      }
     }
 
     return NextResponse.json({

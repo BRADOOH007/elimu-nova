@@ -3,18 +3,19 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { encryptPassword } from '@/lib/password-encryption';
 
 /** Extract any real address from the combined address field */
 function extractRealAddress(address: string | null): string | null {
   if (!address) return null;
-  if (!address.startsWith('PWD:')) return address;
   const parts = address.split('\n---\n');
   return parts.length > 1 ? parts[1] : null;
 }
 
-/** Build the address field with stored password */
+/** Build the address field with encrypted password */
 function buildAddressWithPassword(plainPassword: string, realAddress: string | null): string {
-  return realAddress ? `PWD:${plainPassword}\n---\n${realAddress}` : `PWD:${plainPassword}`;
+  const encrypted = encryptPassword(plainPassword);
+  return realAddress ? `${encrypted}\n---\n${realAddress}` : encrypted;
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -13,6 +13,7 @@ import {
   Send, Loader2, RefreshCw, Play, Target, Clock, Upload, X, File,
   ChevronLeft, ChevronRight, Award, Star, Zap, Paperclip, Eye, Download
 } from 'lucide-react'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface Assignment {
@@ -58,7 +59,7 @@ export default function LearnPage() {
   const [submitted,     setSubmitted]     = useState(false)
   const [score,         setScore]         = useState(0)
   const [timeLeft,      setTimeLeft]      = useState(0)
-  const timerRef = useRef<NodeJS.Timeout>()
+  const timerRef = useRef<NodeJS.Timeout>(null)
 
   // ── ASSIGNMENTS state ────────────────────────────────────────────────
   const [assignments,  setAssignments]  = useState<Assignment[]>([])
@@ -85,7 +86,7 @@ export default function LearnPage() {
   useEffect(() => {
     if (timeLeft > 0 && !submitted) {
       timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000)
-      return () => clearTimeout(timerRef.current)
+      return () => clearTimeout(timerRef.current!)
     }
     if (timeLeft === 0 && questions.length > 0 && !submitted) handleSubmitQuiz()
   }, [timeLeft, submitted, questions.length])
@@ -150,7 +151,7 @@ export default function LearnPage() {
   }
 
   const handleSubmitQuiz = useCallback(() => {
-    clearTimeout(timerRef.current)
+    clearTimeout(timerRef.current!)
     let correct = 0
     questions.forEach((q, i) => {
       if (q.type === 'multiple_choice' || q.type === 'true_false') {
@@ -267,16 +268,26 @@ export default function LearnPage() {
           </Card>
 
           {lessonMd && (
-            <Card>
-              <CardHeader>
+            <Card className="border-0 shadow-xl bg-white overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{studyTopic} — {studySubject}</CardTitle>
-                  <button onClick={()=>setLessonMd('')} className="text-slate-400 hover:text-slate-600"><X className="h-4 w-4"/></button>
+                  <div>
+                    <p className="text-xs font-semibold text-blue-200 uppercase tracking-widest mb-1">AI Lesson</p>
+                    <CardTitle className="text-lg text-white font-extrabold">
+                      {studyTopic} — {studySubject}
+                    </CardTitle>
+                  </div>
+                  <button
+                    onClick={() => setLessonMd('')}
+                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-4 w-4 text-white" />
+                  </button>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="max-h-96 overflow-y-auto prose prose-sm max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">{lessonMd}</pre>
+              <CardContent className="p-6">
+                <div className="max-h-[600px] overflow-y-auto pr-1">
+                  <MarkdownRenderer content={lessonMd} />
                 </div>
               </CardContent>
             </Card>
@@ -492,8 +503,8 @@ export default function LearnPage() {
                     {selAssn.description}
                   </div>
                   {selAssn.content && (
-                    <div className="max-h-64 overflow-y-auto p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                      <pre className="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">{selAssn.content}</pre>
+                    <div className="max-h-64 overflow-y-auto p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                      <MarkdownRenderer content={selAssn.content} />
                     </div>
                   )}
 
@@ -536,8 +547,8 @@ export default function LearnPage() {
                   {result && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-2xl space-y-2">
                       <div className="flex items-center gap-2"><CheckCircle className="h-5 w-5 text-green-600"/><span className="font-semibold text-green-800">Submitted!</span></div>
-                      {result.grade!=null && <p className="text-green-700 font-bold text-lg">{Math.round(result.grade)}%</p>}
-                      {result.feedback && <p className="text-sm text-green-700 whitespace-pre-wrap">{result.feedback}</p>}
+                      {result.grade != null && <p className="text-green-700 font-bold text-lg">{Math.round(result.grade)}%</p>}
+                      {result.feedback && <MarkdownRenderer content={result.feedback} className="text-sm text-green-700" />}
                     </div>
                   )}
                 </CardContent>
@@ -575,50 +586,95 @@ export default function LearnPage() {
 
         {/* ── AI TUTOR TAB ─────────────────────────────────────── */}
         <TabsContent value="tutor" className="mt-4">
-          <div className="flex flex-col h-[70vh]">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto space-y-3 p-2 mb-3">
-              {chat.map((m,i)=>(
-                <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                    m.role==='user'?'bg-gradient-to-r from-blue-600 to-purple-600 text-white':'bg-white border border-slate-200 text-slate-800'}`}>
-                    <pre className="whitespace-pre-wrap font-sans">{m.content}</pre>
-                  </div>
-                </div>
-              ))}
-              {chatLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3">
-                    <div className="flex gap-1.5">
-                      {[0,1,2].map(i=><div key={i} className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:`${i*0.1}s`}}/>)}
+          <Card className="border-0 shadow-xl overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-blue-600 to-purple-600 flex-shrink-0">
+              <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center">
+                <Brain className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <p className="text-white font-bold text-sm leading-tight">AI Tutor</p>
+                <p className="text-blue-100 text-xs">Ask anything · Get instant explanations</p>
+              </div>
+            </div>
+
+            {/* Messages — fixed height, internal scroll only */}
+            <div className="flex flex-col" style={{ height: '60vh' }}>
+              <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4 space-y-4 min-h-0">
+                {chat.map((m, i) => (
+                  <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {m.role === 'ai' && (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
+                        <Brain className="h-4 w-4 text-white" />
+                      </div>
+                    )}
+                    <div className={`max-w-[80%] flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                      <div className={`rounded-2xl shadow-sm overflow-hidden ${
+                        m.role === 'user'
+                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-sm px-4 py-3'
+                          : 'bg-white border border-slate-200 rounded-bl-sm'
+                      }`}>
+                        {m.role === 'user'
+                          ? <p className="text-sm leading-relaxed">{m.content}</p>
+                          : <div className="px-4 py-3"><MarkdownRenderer content={m.content} /></div>
+                        }
+                      </div>
                     </div>
                   </div>
+                ))}
+
+                {chatLoading && (
+                  <div className="flex items-end gap-2 justify-start">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
+                      <Brain className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                      <div className="flex items-center gap-1.5">
+                        {[0, 1, 2].map(i => (
+                          <div key={i} className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                        ))}
+                        <span className="text-xs text-slate-400 ml-2">AI is thinking…</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Quick prompts */}
+              <div className="flex gap-2 px-4 py-2 bg-white border-t border-slate-100 overflow-x-auto flex-shrink-0">
+                {['Explain simply', 'Practice questions', 'Key formulas', 'Quiz me!', 'Summarise topic'].map(p => (
+                  <button key={p} onClick={() => setChatInput(p)}
+                    className="text-xs whitespace-nowrap px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full hover:bg-blue-100 transition-colors font-medium flex-shrink-0">
+                    {p}
+                  </button>
+                ))}
+              </div>
+
+              {/* Input */}
+              <div className="px-4 py-3 bg-white border-t border-slate-200 flex-shrink-0">
+                <div className="flex items-end gap-2 bg-gray-100 rounded-2xl px-4 py-2">
+                  <Textarea
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    rows={1}
+                    placeholder="Ask anything — explain, practice, quiz me…"
+                    className="flex-1 resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-sm p-0 min-h-[24px] max-h-28"
+                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }}
+                  />
+                  <Button
+                    onClick={sendChat}
+                    disabled={!chatInput.trim() || chatLoading}
+                    size="sm"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 rounded-xl h-9 w-9 p-0 shrink-0 disabled:opacity-40"
+                  >
+                    {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
                 </div>
-              )}
-              <div ref={chatEndRef}/>
+                <p className="text-[10px] text-slate-400 text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
+              </div>
             </div>
-
-            {/* Quick prompts */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {['Explain this topic simply','Give me practice questions','What are key formulas?','Check my understanding'].map(p=>(
-                <button key={p} onClick={()=>{setChatInput(p)}}
-                  className="text-xs px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full hover:bg-blue-100 transition-colors">
-                  {p}
-                </button>
-              ))}
-            </div>
-
-            {/* Input */}
-            <div className="flex gap-2">
-              <Textarea value={chatInput} onChange={e=>setChatInput(e.target.value)} rows={2}
-                placeholder="Ask anything — explain, practice, quiz me..." className="flex-1 resize-none"
-                onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}}}/>
-              <Button onClick={sendChat} disabled={!chatInput.trim()||chatLoading}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 px-4 self-end h-10">
-                {chatLoading?<Loader2 className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}
-              </Button>
-            </div>
-          </div>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>

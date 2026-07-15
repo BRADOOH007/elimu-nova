@@ -7,6 +7,9 @@ import {
   ArrowLeft, Sparkles, Lightbulb, RefreshCw, CheckCircle,
   BookOpen, Target, Zap, ChevronRight, X
 } from 'lucide-react'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { CodePlayground } from '@/components/coding/code-playground'
+import { ScratchEmbed } from '@/components/coding/scratch-embed'
 
 /* ─────────────────────────── Types ─────────────────────────── */
 type Track = 'scratch' | 'web' | 'ai-kids'
@@ -17,6 +20,7 @@ interface Lesson {
   id: number; title: string; description: string
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
   practiceUrl?: string; content: string
+  starterCode?: { html?: string; css?: string; js?: string }
 }
 
 /* ─────────────────────────── Lesson data ───────────────────── */
@@ -30,12 +34,24 @@ const SCRATCH_LESSONS: Lesson[] = [
 ]
 
 const WEB_LESSONS: Lesson[] = [
-  { id: 1, title: 'Your First HTML Page', description: 'Build a webpage from scratch', difficulty: 'Beginner', content: '```html\n<!DOCTYPE html>\n<html>\n<head>\n  <title>My First Page</title>\n</head>\n<body>\n  <h1>Hello, World!</h1>\n  <p>This is my first webpage.</p>\n</body>\n</html>\n```\nSave this as `index.html` and open it in a browser!' },
-  { id: 2, title: 'Styling with CSS', description: 'Make your page look great', difficulty: 'Beginner', content: '```css\nbody { font-family: Arial; background: #f0f8ff; }\nh1   { color: #0066cc; }\np    { font-size: 18px; }\n```\nAdd this inside a `<style>` tag in your `<head>` section.' },
-  { id: 3, title: 'JavaScript Basics', description: 'Make your page interactive', difficulty: 'Beginner', content: '```javascript\n// Show a message when button is clicked\nfunction sayHello() {\n  alert("Hello from JavaScript!");\n}\n```\nAdd a button: `<button onclick="sayHello()">Click me</button>`' },
-  { id: 4, title: 'Variables & Functions', description: 'Store data and reuse code', difficulty: 'Intermediate', content: '```javascript\nlet name = "Alice";\nlet age  = 12;\n\nfunction greet(person) {\n  return "Hello, " + person + "!";\n}\n\nconsole.log(greet(name)); // Hello, Alice!\n```' },
-  { id: 5, title: 'DOM Manipulation', description: 'Change the page with JavaScript', difficulty: 'Intermediate', content: '```javascript\n// Change text content\ndocument.getElementById("myText").innerText = "Updated!";\n\n// Change style\ndocument.getElementById("myBox").style.backgroundColor = "red";\n```' },
-  { id: 6, title: 'Build a Calculator', description: 'A complete mini-project', difficulty: 'Advanced', content: 'Combine HTML forms, CSS styling, and JavaScript math functions to build a working calculator. Use `parseInt()` to convert text to numbers and display results in real time.' },
+  { id: 1, title: 'Your First HTML Page', description: 'Build a webpage from scratch', difficulty: 'Beginner',
+    starterCode: { html: '<h1>Hello, World!</h1>\n<p>This is my first webpage.</p>\n<button onclick="sayHello()">Click me</button>', css: 'body {\n  font-family: Arial, sans-serif;\n  background: #f0f8ff;\n  padding: 40px;\n  text-align: center;\n}\nh1 {\n  color: #0066cc;\n}\nbutton {\n  background: #0066cc;\n  color: white;\n  border: none;\n  padding: 10px 24px;\n  border-radius: 8px;\n  cursor: pointer;\n  font-size: 16px;\n}\nbutton:hover {\n  background: #004999;\n}', js: 'function sayHello() {\n  alert("Hello from JavaScript!");\n}' },
+    content: '```html\n<!DOCTYPE html>\n<html>\n<head>\n  <title>My First Page</title>\n</head>\n<body>\n  <h1>Hello, World!</h1>\n  <p>This is my first webpage.</p>\n</body>\n</html>\n```\nSave this as `index.html` and open it in a browser!' },
+  { id: 2, title: 'Styling with CSS', description: 'Make your page look great', difficulty: 'Beginner',
+    starterCode: { html: '<h1>Welcome to My Styled Page</h1>\n<p>This paragraph has custom styling.</p>\n<div class="card">\n  <h2>A Card Component</h2>\n  <p>Cards are great for organizing content.</p>\n</div>', css: 'body {\n  font-family: "Segoe UI", Tahoma, sans-serif;\n  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n  min-height: 100vh;\n  padding: 40px;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n}\nh1 {\n  color: white;\n  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);\n  margin-bottom: 20px;\n}\np {\n  color: #e0e0e0;\n  font-size: 18px;\n}\n.card {\n  background: white;\n  border-radius: 16px;\n  padding: 30px;\n  box-shadow: 0 10px 30px rgba(0,0,0,0.2);\n  max-width: 400px;\n  margin-top: 20px;\n}\n.card h2 {\n  color: #333;\n  margin-bottom: 10px;\n}\n.card p {\n  color: #666;\n}' },
+    content: '```css\nbody { font-family: Arial; background: #f0f8ff; }\nh1   { color: #0066cc; }\np    { font-size: 18px; }\n```\nAdd this inside a `<style>` tag in your `<head>` section.' },
+  { id: 3, title: 'JavaScript Basics', description: 'Make your page interactive', difficulty: 'Beginner',
+    starterCode: { html: '<h1>JavaScript Interactive Demo</h1>\n<p id="output">Click the button to see magic!</p>\n<button onclick="doMagic()">✨ Click Me</button>\n<button onclick="resetColor()">↩ Reset</button>', css: 'body {\n  font-family: system-ui, sans-serif;\n  padding: 40px;\n  text-align: center;\n  background: #1a1a2e;\n  color: #eee;\n}\nbutton {\n  margin: 8px;\n  padding: 12px 24px;\n  font-size: 16px;\n  border: none;\n  border-radius: 8px;\n  background: #e94560;\n  color: white;\n  cursor: pointer;\n  transition: transform 0.2s;\n}\nbutton:hover {\n  transform: scale(1.05);\n}\n#output {\n  font-size: 20px;\n  margin: 20px 0;\n  padding: 20px;\n  background: #16213e;\n  border-radius: 12px;\n}', js: 'let clicks = 0;\nfunction doMagic() {\n  clicks++;\n  const out = document.getElementById("output");\n  if (clicks === 1) {\n    out.textContent = "🎉 You clicked the button!";\n    out.style.color = "#ffd700";\n  } else if (clicks === 2) {\n    out.textContent = "⭐ Double the fun!";\n    out.style.color = "#00ff88";\n  } else {\n    out.textContent = "🔥 You\\\'re on fire! " + clicks + " clicks!";\n    out.style.color = "#ff6b6b";\n  }\n}\nfunction resetColor() {\n  clicks = 0;\n  const out = document.getElementById("output");\n  out.textContent = "Click the button to see magic!";\n  out.style.color = "#eee";\n}' },
+    content: '```javascript\n// Show a message when button is clicked\nfunction sayHello() {\n  alert("Hello from JavaScript!");\n}\n```\nAdd a button: `<button onclick="sayHello()">Click me</button>`' },
+  { id: 4, title: 'Variables & Functions', description: 'Store data and reuse code', difficulty: 'Intermediate',
+    starterCode: { html: '<h1>JS Variables & Functions</h1>\n<div id="demo">\n  <p>Player: <span id="playerName">Loading...</span></p>\n  <p>Score: <span id="playerScore">0</span></p>\n</div>\n<button onclick="updateScore(10)">+10 Points</button>\n<button onclick="resetGame()">Reset</button>', css: 'body {\n  font-family: system-ui, sans-serif;\n  padding: 40px;\n  text-align: center;\n  background: #0f0f23;\n  color: #ccc;\n}\nh1 { color: #00d4ff; }\n#demo {\n  background: #1a1a3e;\n  padding: 24px;\n  border-radius: 12px;\n  margin: 20px auto;\n  max-width: 350px;\n}\n#playerName { color: #ffd700; font-weight: bold; }\n#playerScore { color: #00ff88; font-weight: bold; font-size: 24px; }\nbutton {\n  margin: 8px;\n  padding: 10px 20px;\n  border: none;\n  border-radius: 8px;\n  background: #00d4ff;\n  color: #0f0f23;\n  font-weight: bold;\n  cursor: pointer;\n}\nbutton:hover { opacity: 0.8; }', js: 'let playerName = "Alex";\nlet score = 0;\n\nfunction updateScore(points) {\n  score += points;\n  document.getElementById("playerScore").textContent = score;\n}\n\nfunction resetGame() {\n  score = 0;\n  document.getElementById("playerScore").textContent = score;\n}\n\ndocument.getElementById("playerName").textContent = playerName;\n\n// Bonus: greet function\nfunction greet(name) {\n  return "Hello, " + name + "!";\n}\nconsole.log(greet(playerName));' },
+    content: '```javascript\nlet name = "Alice";\nlet age  = 12;\n\nfunction greet(person) {\n  return "Hello, " + person + "!";\n}\n\nconsole.log(greet(name)); // Hello, Alice!\n```' },
+  { id: 5, title: 'DOM Manipulation', description: 'Change the page with JavaScript', difficulty: 'Intermediate',
+    starterCode: { html: '<h1>DOM Playground</h1>\n<div id="box" class="box">\n  Hover over me!\n</div>\n<div class="controls">\n  <button onclick="changeText()">Change Text</button>\n  <button onclick="toggleColor()">Toggle Color</button>\n  <button onclick="addElement()">Add Element</button>\n  <button onclick="resetAll()">Reset</button>\n</div>\n<div id="container"></div>', css: 'body {\n  font-family: system-ui, sans-serif;\n  padding: 40px;\n  text-align: center;\n  background: #1e1e2e;\n  color: #cdd6f4;\n}\nh1 { color: #cba6f7; }\n.box {\n  width: 200px;\n  height: 100px;\n  background: #45475a;\n  border-radius: 12px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  margin: 20px auto;\n  transition: all 0.3s;\n  cursor: pointer;\n}\n.box:hover {\n  transform: scale(1.05);\n  background: #585b70;\n}\n.controls { margin: 16px 0; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }\nbutton {\n  padding: 8px 16px;\n  border: none;\n  border-radius: 8px;\n  background: #89b4fa;\n  color: #1e1e2e;\n  font-weight: 600;\n  cursor: pointer;\n  transition: transform 0.2s;\n}\nbutton:hover { transform: scale(1.05); }\n#container { margin-top: 20px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }', js: 'function changeText() {\n  const box = document.getElementById("box");\n  box.textContent = "Text changed! 🎉";\n}\n\nfunction toggleColor() {\n  const box = document.getElementById("box");\n  if (box.style.background === "rgb(137, 180, 250)") {\n    box.style.background = "";\n  } else {\n    box.style.background = "#89b4fa";\n    box.style.color = "#1e1e2e";\n  }\n}\n\nlet count = 0;\nfunction addElement() {\n  count++;\n  const container = document.getElementById("container");\n  const el = document.createElement("div");\n  el.textContent = "Item " + count;\n  el.style.cssText = "padding: 8px 16px; background: #45475a; border-radius: 8px; font-size: 14px;";\n  container.appendChild(el);\n}\n\nfunction resetAll() {\n  const box = document.getElementById("box");\n  box.textContent = "Hover over me!";\n  box.style.background = "";\n  box.style.color = "";\n  document.getElementById("container").innerHTML = "";\n  count = 0;\n}' },
+    content: '```javascript\n// Change text content\ndocument.getElementById("myText").innerText = "Updated!";\n\n// Change style\ndocument.getElementById("myBox").style.backgroundColor = "red";\n```' },
+  { id: 6, title: 'Build a Calculator', description: 'A complete mini-project', difficulty: 'Advanced',
+    starterCode: { html: '<h1>🧮 Calculator</h1>\n<div class="calc">\n  <div class="display" id="display">0</div>\n  <div class="buttons">\n    <button class="clear" onclick="clearDisplay()">C</button>\n    <button onclick="append(\'%\')">%</button>\n    <button onclick="backspace()">⌫</button>\n    <button class="op" onclick="append(\'/\')">÷</button>\n    <button onclick="append(\'7\')">7</button>\n    <button onclick="append(\'8\')">8</button>\n    <button onclick="append(\'9\')">9</button>\n    <button class="op" onclick="append(\'*\')">×</button>\n    <button onclick="append(\'4\')">4</button>\n    <button onclick="append(\'5\')">5</button>\n    <button onclick="append(\'6\')">6</button>\n    <button class="op" onclick="append(\'-\')">−</button>\n    <button onclick="append(\'1\')">1</button>\n    <button onclick="append(\'2\')">2</button>\n    <button onclick="append(\'3\')">3</button>\n    <button class="op" onclick="append(\'+\')">+</button>\n    <button class="zero" onclick="append(\'0\')">0</button>\n    <button onclick="append(\'.\')">.</button>\n    <button class="equals" onclick="calculate()">=</button>\n  </div>\n</div>', css: '* { margin: 0; padding: 0; box-sizing: border-box; }\nbody {\n  font-family: system-ui, sans-serif;\n  background: #1e1e2e;\n  min-height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\nh1 {\n  color: #cdd6f4;\n  text-align: center;\n  margin-bottom: 16px;\n  font-size: 24px;\n}\n.calc {\n  background: #313244;\n  padding: 24px;\n  border-radius: 20px;\n  box-shadow: 0 20px 60px rgba(0,0,0,0.5);\n  width: 340px;\n}\n.display {\n  background: #1e1e2e;\n  color: #cdd6f4;\n  font-size: 36px;\n  font-weight: bold;\n  padding: 20px 16px;\n  text-align: right;\n  border-radius: 12px;\n  margin-bottom: 16px;\n  min-height: 80px;\n  word-break: break-all;\n  font-family: "Courier New", monospace;\n}\n.buttons {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 8px;\n}\nbutton {\n  padding: 16px;\n  font-size: 20px;\n  border: none;\n  border-radius: 12px;\n  background: #45475a;\n  color: #cdd6f4;\n  cursor: pointer;\n  transition: all 0.15s;\n  font-weight: 600;\n}\nbutton:hover { background: #585b70; transform: scale(0.95); }\nbutton:active { transform: scale(0.9); }\n.op { background: #f9e2af; color: #1e1e2e; }\n.op:hover { background: #f9e2af; opacity: 0.8; }\n.equals { background: #89b4fa; color: #1e1e2e; }\n.equals:hover { background: #89b4fa; opacity: 0.8; }\n.clear { background: #f38ba8; color: #1e1e2e; }\n.clear:hover { background: #f38ba8; opacity: 0.8; }\n.zero { grid-column: span 2; }', js: 'let expression = "";\n\nfunction append(value) {\n  expression += value;\n  document.getElementById("display").textContent = expression || "0";\n}\n\nfunction clearDisplay() {\n  expression = "";\n  document.getElementById("display").textContent = "0";\n}\n\nfunction backspace() {\n  expression = expression.slice(0, -1);\n  document.getElementById("display").textContent = expression || "0";\n}\n\nfunction calculate() {\n  try {\n    const result = Function(\'"use strict"; return (\' + expression + \')\')();\n    document.getElementById("display").textContent = result;\n    expression = String(result);\n  } catch {\n    document.getElementById("display").textContent = "Error";\n    expression = "";\n  }\n}' },
+    content: 'Combine HTML forms, CSS styling, and JavaScript math functions to build a working calculator. Use `parseInt()` to convert text to numbers and display results in real time.' },
 ]
 
 const AI_LESSONS: Lesson[] = [
@@ -124,13 +140,21 @@ function AITutorPanel({ language, lessonTitle }: { language: string; lessonTitle
 
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.map((m, i) => (
-          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[90%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
+          <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {m.role === 'assistant' && (
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shrink-0 mb-1">
+                <Brain className="h-3.5 w-3.5 text-white" />
+              </div>
+            )}
+            <div className={`max-w-[90%] rounded-2xl text-sm leading-relaxed shadow-sm overflow-hidden ${
               m.role === 'user'
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-sm'
-                : 'bg-slate-100 text-slate-800 rounded-bl-sm'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-sm px-3 py-2'
+                : 'bg-white border border-slate-200 rounded-bl-sm'
             }`}>
-              <pre className="whitespace-pre-wrap font-sans">{m.content}</pre>
+              {m.role === 'user'
+                ? <p>{m.content}</p>
+                : <div className="px-3 py-2"><MarkdownRenderer content={m.content} /></div>
+              }
             </div>
           </div>
         ))}
@@ -184,10 +208,83 @@ function AITutorPanel({ language, lessonTitle }: { language: string; lessonTitle
 function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof TRACKS[0]; onBack: () => void }) {
   const Icon = track.icon
 
+  const showPlayground = track.id === 'web' && lesson.starterCode
+  const showScratch = track.id === 'scratch'
+
+  if (showPlayground) {
+    return (
+      <div className="grid xl:grid-cols-[1fr_340px] gap-5 min-h-[calc(100vh-180px)]">
+        <div className="min-h-0 space-y-4">
+          <div className={`p-5 bg-gradient-to-r ${track.grad} rounded-2xl`}>
+            <button onClick={onBack} className="flex items-center gap-2 text-white/80 hover:text-white text-sm mb-4 transition-colors">
+              <ArrowLeft className="h-4 w-4" /> Back to lessons
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Icon className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">{lesson.title}</h2>
+                <p className="text-white/80 text-sm">{lesson.description}</p>
+              </div>
+            </div>
+          </div>
+
+          {lesson.starterCode && (
+            <CodePlayground
+              title={lesson.title}
+              files={[
+                { name: 'index.html', language: 'html', content: lesson.starterCode.html ?? '' },
+                { name: 'style.css', language: 'css', content: lesson.starterCode.css ?? '' },
+                { name: 'script.js', language: 'javascript', content: lesson.starterCode.js ?? '' },
+              ]}
+            />
+          )}
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <MarkdownRenderer content={lesson.content} />
+          </div>
+        </div>
+
+        <AITutorPanel language={track.title} lessonTitle={lesson.title} />
+      </div>
+    )
+  }
+
+  if (showScratch) {
+    return (
+      <div className="grid xl:grid-cols-[1fr_340px] gap-5 min-h-[calc(100vh-180px)]">
+        <div className="min-h-0 space-y-4 overflow-y-auto">
+          <div className={`p-5 bg-gradient-to-r ${track.grad} rounded-2xl`}>
+            <button onClick={onBack} className="flex items-center gap-2 text-white/80 hover:text-white text-sm mb-4 transition-colors">
+              <ArrowLeft className="h-4 w-4" /> Back to lessons
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                <Icon className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white">{lesson.title}</h2>
+                <p className="text-white/80 text-sm">{lesson.description}</p>
+              </div>
+            </div>
+          </div>
+
+          <ScratchEmbed title={`Practice: ${lesson.title}`} />
+
+          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+            <MarkdownRenderer content={lesson.content} />
+          </div>
+        </div>
+
+        <AITutorPanel language={track.title} lessonTitle={lesson.title} />
+      </div>
+    )
+  }
+
   return (
     <div className="grid lg:grid-cols-[1fr_340px] gap-5 h-[calc(100vh-180px)]">
-      {/* Left — lesson content */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-y-auto">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-y-auto min-h-0">
         <div className={`p-5 bg-gradient-to-r ${track.grad} rounded-t-2xl`}>
           <button onClick={onBack} className="flex items-center gap-2 text-white/80 hover:text-white text-sm mb-4 transition-colors">
             <ArrowLeft className="h-4 w-4" /> Back to lessons
@@ -204,30 +301,8 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
         </div>
 
         <div className="p-6">
-          <div className="prose prose-slate max-w-none">
-            <pre className="whitespace-pre-wrap font-sans text-slate-700 leading-relaxed text-sm">{lesson.content}</pre>
-          </div>
+          <MarkdownRenderer content={lesson.content} />
 
-          {lesson.practiceUrl && (
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-blue-800 text-sm">Practice Zone</p>
-                  <p className="text-blue-600 text-xs mt-0.5">Open the editor and try what you've learned</p>
-                </div>
-                <a
-                  href={lesson.practiceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
-                >
-                  <ExternalLink className="h-4 w-4" /> Open Editor
-                </a>
-              </div>
-            </div>
-          )}
-
-          {/* Quick tips */}
           <div className="mt-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <div className="flex items-center gap-2 mb-2">
               <Lightbulb className="h-4 w-4 text-amber-600" />
@@ -240,7 +315,6 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
         </div>
       </div>
 
-      {/* Right — AI tutor */}
       <AITutorPanel language={track.title} lessonTitle={lesson.title} />
     </div>
   )

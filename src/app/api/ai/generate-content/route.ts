@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { OpenAIService } from '@/lib/openai-service';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,10 +12,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { type, subject, grade, topic, duration, objectives, requirements, difficulty, format, title, description, lessonPlanId } = await req.json();
+    const { type, subject, grade, topic, duration, objectives, requirements, difficulty, format, title, description, lessonPlanId, documentContext } = await req.json();
 
     if (!type || !subject || !grade) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Fetch teacher's saved template based on content type
+    let templateText = documentContext
+    if (!templateText && session.user.role === 'TEACHER') {
+      const templateField =
+        type === 'exam'       ? 'examTemplate' :
+        type === 'assignment' ? 'assignmentTemplate' :
+        null
+      if (templateField) {
+        const teacher = await prisma.teacher.findUnique({
+          where: { userId: session.user.id },
+          select: { [templateField]: true },
+        })
+        templateText = teacher?.[templateField as keyof typeof teacher] as string | null || null
+      }
     }
 
     let prompt = '';
@@ -234,13 +251,16 @@ Make it engaging, hands-on, and relevant to real-world applications.`;
       lessonPlanId,
       duration,
       difficulty,
-      requirements
+      requirements,
+      templateText,
     });
+
+    const { stripLatex } = await import('@/lib/clean-ai-text')
 
     return NextResponse.json({
       success: true,
       title: generatedTitle,
-      content: generatedContent,
+      content: stripLatex(generatedContent),
       metadata: {
         type,
         subject,
@@ -265,14 +285,18 @@ async function generateAIContentWithOpenAI(
   context: {
     subject: string; grade: string; topic: string; title: string;
     description?: string; lessonPlanId?: string; duration?: number;
-    difficulty?: string; requirements?: string;
+    difficulty?: string; requirements?: string; templateText?: string | null;
   }
 ): Promise<string> {
   try {
-    const systemPrompt = `You are an expert educational content creator for Kenyan schools. 
+    const templateBlock = context.templateText
+      ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the content in the same format:\n\n${context.templateText.slice(0, 6000)}\n\n---\n`
+      : ''
+    const systemPrompt = `You are an expert educational content creator for Kenyan schools.${templateBlock}
 Generate high-quality, CBC-aligned ${type} content for ${context.grade} ${context.subject} students.
 Topic: ${context.topic}. Be practical, engaging, and age-appropriate.
-Format with clear markdown headings and sections.`
+Format with clear markdown headings and sections.
+IMPORTANT: Do NOT use LaTeX, TeX or MathJax. Write maths in plain text: use "/" for fractions, "_____" for blanks, "^2" for powers.`
 
     const content = await OpenAIService.generateLongContent(
       [

@@ -3,6 +3,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma'
+import { logger } from './logger'
 
 /** Resolve a login identifier (email or username) to a full email for DB lookup.
  *  Students may log in with just their username (the part before @student.local).
@@ -27,15 +28,15 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        console.log('🔍 Auth attempt:', credentials?.email)
+        logger.debug('Auth attempt:', { email: credentials?.email })
         
         if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Missing credentials')
+          logger.warn('Missing credentials')
           return null
         }
 
         const loginEmail = await resolveLoginEmail(credentials.email)
-        console.log('🔍 Resolved login email:', loginEmail)
+        logger.debug('Resolved login email:', { loginEmail })
 
         const user = await prisma.user.findUnique({
           where: {
@@ -68,27 +69,27 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!user) {
-          console.log('❌ User not found for:', loginEmail)
+          logger.warn('User not found:', { email: loginEmail })
           return null
         }
         
         if (!user.isActive) {
-          console.log('❌ User inactive')
+          logger.warn('User inactive:', { email: loginEmail })
           return null
         }
 
-        console.log('✅ User found, checking password...')
+        logger.debug('User found, checking password...')
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
         )
 
         if (!isPasswordValid) {
-          console.log('❌ Invalid password')
+          logger.warn('Invalid password:', { email: loginEmail })
           return null
         }
         
-        console.log('✅ Authentication successful!')
+        logger.info('Authentication successful:', { userId: user.id, role: user.role })
 
         return {
           id: user.id,
@@ -119,15 +120,25 @@ export const authOptions: NextAuthOptions = {
         }
         if (user.teacher) {
           token.teacherId = user.teacher.id
+          token.schoolId = user.teacher.schoolId
         }
         if (user.student) {
           token.studentId = user.student.id
+          token.schoolId = user.student.schoolId
         }
         if (user.superAdmin) {
           token.superAdminId = user.superAdmin.id
         }
         if (user.parent) {
           token.parentId = user.parent.id
+          // Determine school affiliation via children
+          const firstLink = await prisma.parentStudent.findFirst({
+            where: { parentId: user.parent.id },
+            include: { student: { select: { schoolId: true } } }
+          })
+          if (firstLink?.student.schoolId) {
+            token.schoolId = firstLink.student.schoolId
+          }
         }
       }
       return token
@@ -142,6 +153,7 @@ export const authOptions: NextAuthOptions = {
         session.user.studentId = token.studentId as string
         session.user.superAdminId = token.superAdminId as string
         session.user.parentId = token.parentId as string
+        session.user.schoolId = token.schoolId as string
       }
       return session
     }

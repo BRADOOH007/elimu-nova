@@ -66,9 +66,10 @@ export class EducationalDiagramService {
 
       // Step 1: Generate artwork (no text)
       const artworkPrompt = this.createArtworkPrompt(request)
+      const mappedSize = size === '1536x1024' ? '1792x1024' : size === '1024x1536' ? '1024x1792' : size
       const artworkImage = await OpenAIService.generateImage({
         prompt: artworkPrompt,
-        size,
+        size: mappedSize,
         quality,
         style: 'natural'
       })

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { encryptPassword, stripPasswordFromAddress } from '@/lib/password-encryption'
+import { sendCredentialEmail } from '@/lib/email'
 
 function generateStudentPassword(): string {
   const adjs  = ['Blue','Green','Happy','Brave','Swift','Bright','Calm','Bold']
@@ -160,13 +162,13 @@ export async function GET(request: NextRequest) {
       id: student.id,
       name: `${student.user.firstName} ${student.user.lastName}`,
       email: student.user.email,
-      teacher: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`,
+      teacher: student.teacher ? `${student.teacher.user.firstName} ${student.teacher.user.lastName}` : '',
       class: student.class?.name,
       grade: student.class?.grade,
       status: student.user.isActive ? 'Active' : 'Inactive',
       joinDate: student.user.createdAt.toISOString().split('T')[0],
       phone: student.user.phone,
-      address: student.user.address
+      address: stripPasswordFromAddress(student.user.address)
     }))
 
     return NextResponse.json({
@@ -213,7 +215,8 @@ export async function POST(request: NextRequest) {
 
     const schoolId = schoolAdmin.schoolId
     const body = await request.json()
-    const { firstName, lastName, email, phone, address, teacherId, classId, grade } = body
+    const { firstName, lastName, email, phone, address, teacherId, classId, grade,
+            parentFirstName, parentLastName, parentEmail, parentPhone } = body
 
     if (!firstName || !lastName || !teacherId) {
       return NextResponse.json(
@@ -248,9 +251,56 @@ export async function POST(request: NextRequest) {
     const plainPassword  = generateStudentPassword()
     const hashedPassword = await bcrypt.hash(plainPassword, 10)
 
+    const encryptedPassword = encryptPassword(plainPassword)
     const addressWithPassword = address
-      ? `PWD:${plainPassword}\n---\n${address}`
-      : `PWD:${plainPassword}`
+      ? `${encryptedPassword}\n---\n${address}`
+      : encryptedPassword
+
+    // Handle parent account
+    let parentResult: { user?: any; parent?: any; credentials?: { email: string; password: string }; emailSent?: boolean; emailMethod?: string } = {}
+
+    if (parentFirstName && parentLastName && parentEmail) {
+      // Check if parent email already exists
+      let parentUser = await prisma.user.findUnique({ where: { email: parentEmail.trim().toLowerCase() } })
+
+      if (!parentUser) {
+        const parentPlainPassword = generateStudentPassword()
+        const parentHashed = await bcrypt.hash(parentPlainPassword, 10)
+
+        parentUser = await prisma.user.create({
+          data: {
+            firstName: parentFirstName.trim(),
+            lastName:  parentLastName.trim(),
+            email:     parentEmail.trim().toLowerCase(),
+            password:  parentHashed,
+            role:      'PARENT',
+            isActive:  true,
+            phone:     parentPhone?.trim() || null,
+          },
+        })
+
+        await prisma.parent.create({
+          data: { userId: parentUser.id },
+        })
+
+        parentResult.credentials = { email: parentEmail.trim().toLowerCase(), password: parentPlainPassword }
+
+        // Send credential email to parent
+        sendCredentialEmail({
+          to: parentEmail.trim().toLowerCase(),
+          recipientName: `${parentFirstName.trim()} ${parentLastName.trim()}`,
+          role: 'PARENT',
+          email: parentEmail.trim().toLowerCase(),
+          password: parentPlainPassword,
+          studentName: `${firstName} ${lastName}`,
+        }).then(result => {
+          parentResult.emailSent = result.sent
+          parentResult.emailMethod = result.method
+        }).catch(err => console.error('Failed to send parent credential email:', err))
+      }
+
+      parentResult.user = parentUser
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
@@ -276,10 +326,21 @@ export async function POST(request: NextRequest) {
           class: { select: { name: true, grade: true } },
         },
       })
+
+      // Link parent to student if parent was created/found
+      if (parentResult.user) {
+        const parentRecord = await tx.parent.findUnique({ where: { userId: parentResult.user.id } })
+        if (parentRecord) {
+          await tx.parentStudent.create({
+            data: { parentId: parentRecord.id, studentId: student.id },
+          })
+        }
+      }
+
       return { user, student }
     })
 
-    return NextResponse.json({
+    const response: any = {
       message: 'Student enrolled successfully',
       student: {
         id:        result.student.id,
@@ -292,7 +353,17 @@ export async function POST(request: NextRequest) {
         email:    loginEmail,
         password: plainPassword,
       },
-    })
+    }
+
+    if (parentResult.credentials) {
+      response.parentCredentials = {
+        ...parentResult.credentials,
+        emailSent:   parentResult.emailSent ?? false,
+        emailMethod: parentResult.emailMethod ?? 'none',
+      }
+    }
+
+    return NextResponse.json(response)
 
   } catch (error) {
     console.error('Error enrolling student:', error)

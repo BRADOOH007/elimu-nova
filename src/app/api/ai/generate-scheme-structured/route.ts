@@ -146,10 +146,21 @@ export async function POST(request: NextRequest) {
       lessonsPerWeek = 5,
       selectedTopics = [],
       saveToDb       = true,
+      documentContext,
     } = await request.json()
 
     if (!subject || !grade) {
       return NextResponse.json({ error: 'subject and grade are required' }, { status: 400 })
+    }
+
+    // Fetch teacher's saved template if no explicit context provided
+    let templateText = documentContext
+    if (!templateText) {
+      const t = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { schemeOfWorkTemplate: true },
+      })
+      templateText = t?.schemeOfWorkTemplate || null
     }
 
     // Only ask AI to generate the TEACHING weeks (not break weeks)
@@ -160,8 +171,12 @@ export async function POST(request: NextRequest) {
       ? selectedTopics.map((t: any) => `${t.strand} → ${t.subStrand}`).join('\n')
       : `Generate appropriate CBC ${subject} topics for ${grade} ${term}`
 
+    const templateBlock = templateText
+      ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the scheme of work in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+      : ''
+
     // ── System prompt — extremely strict about output format ───────────────
-    const systemPrompt = `You are a Kenyan CBC curriculum expert creating official KICD schemes of work.
+    const systemPrompt = `You are a Kenyan CBC curriculum expert creating official KICD schemes of work.${templateBlock}
 You MUST return ONLY a raw JSON array — no markdown, no code fences, no explanation text, nothing else.
 The first character of your response must be [ and the last must be ].
 Each element is an object with EXACTLY these keys (no extras, no missing):

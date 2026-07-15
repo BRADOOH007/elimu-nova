@@ -25,7 +25,13 @@ import {
   Shield,
   Bell,
   Database,
-  BarChart3
+  BarChart3,
+  Mail,
+  Send,
+  CheckCircle2,
+  XCircle,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react'
 import CreateSystemSettingModal from '@/components/modals/create-system-setting-modal'
 import SystemSettingDetailsModal from '@/components/modals/system-setting-details-modal'
@@ -72,6 +78,13 @@ export default function SystemSettingsPage() {
   const [selectedSetting, setSelectedSetting] = useState<SystemSetting | null>(null)
   const { toast } = useToast()
 
+  // Email/SMTP configuration
+  const [emailConfigOpen, setEmailConfigOpen] = useState(false)
+  const [emailForm, setEmailForm] = useState({ smtp_host: '', smtp_port: '587', smtp_user: '', smtp_pass: '', smtp_from: '' })
+  const [savingEmail, setSavingEmail] = useState(false)
+  const [testingEmail, setTestingEmail] = useState(false)
+  const [emailTestResult, setEmailTestResult] = useState<{ ok: boolean; message: string } | null>(null)
+
   const fetchSettings = async (page = 1, search = '', category = '', type = '', sort = 'createdAt', order = 'desc') => {
     try {
       setLoading(true)
@@ -114,6 +127,27 @@ export default function SystemSettingsPage() {
     fetchSettings(currentPage, searchTerm, categoryFilter, typeFilter, sortBy, sortOrder)
   }, [currentPage, searchTerm, categoryFilter, typeFilter, sortBy, sortOrder])
 
+  // Load existing SMTP settings
+  useEffect(() => {
+    const loadSmtp = async () => {
+      try {
+        const res = await fetch('/api/system-settings?search=smtp_&limit=10')
+        const data = await res.json()
+        if (res.ok && data.settings) {
+          const map = new Map<string, string>(data.settings.map((s: any) => [s.key, s.value]))
+          setEmailForm({
+            smtp_host: map.get('smtp_host') || '',
+            smtp_port: map.get('smtp_port') || '587',
+            smtp_user: map.get('smtp_user') || '',
+            smtp_pass: map.get('smtp_pass') || '',
+            smtp_from: map.get('smtp_from') || '',
+          })
+        }
+      } catch {}
+    }
+    loadSmtp()
+  }, [])
+
   const handleSearch = (value: string) => {
     setSearchTerm(value)
     setCurrentPage(1)
@@ -155,6 +189,48 @@ export default function SystemSettingsPage() {
     })
   }
 
+  const handleSaveEmailConfig = async () => {
+    setSavingEmail(true)
+    setEmailTestResult(null)
+    try {
+      const res = await fetch('/api/super-admin/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...emailForm, save: true }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setEmailTestResult(data.test || { ok: true, message: 'Settings saved' })
+        toast({ title: 'Email settings saved', description: data.test?.message || '' })
+        fetchSettings(currentPage, searchTerm, categoryFilter, typeFilter, sortBy, sortOrder)
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to save', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Network error', variant: 'destructive' })
+    } finally {
+      setSavingEmail(false)
+    }
+  }
+
+  const handleTestEmailConfig = async () => {
+    setTestingEmail(true)
+    setEmailTestResult(null)
+    try {
+      const res = await fetch('/api/super-admin/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...emailForm, save: false }),
+      })
+      const data = await res.json()
+      setEmailTestResult(data)
+    } catch {
+      setEmailTestResult({ ok: false, message: 'Network error' })
+    } finally {
+      setTestingEmail(false)
+    }
+  }
+
   const getCategoryIcon = (category: string) => {
     switch (category) {
       case 'general': return Settings
@@ -162,6 +238,7 @@ export default function SystemSettingsPage() {
       case 'notifications': return Bell
       case 'system': return Database
       case 'analytics': return BarChart3
+      case 'email': return Mail
       default: return Settings
     }
   }
@@ -225,6 +302,69 @@ export default function SystemSettingsPage() {
         </Button>
       </div>
 
+      {/* Email Configuration */}
+      <Card className="border-0 edugenius-card-gradient">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between cursor-pointer" onClick={() => setEmailConfigOpen(v => !v)}>
+            <div className="flex items-center gap-3">
+              <Mail className="w-5 h-5 text-blue-600" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Email / SMTP Configuration</h3>
+                <p className="text-sm text-gray-500">Configure SMTP settings for sending credential emails</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm">
+              {emailConfigOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </Button>
+          </div>
+
+          {emailConfigOpen && (
+            <div className="mt-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">SMTP Host</label>
+                  <Input value={emailForm.smtp_host} onChange={e => setEmailForm(p => ({ ...p, smtp_host: e.target.value }))} placeholder="smtp.gmail.com" className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">SMTP Port</label>
+                  <Input value={emailForm.smtp_port} onChange={e => setEmailForm(p => ({ ...p, smtp_port: e.target.value }))} placeholder="587" className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">SMTP User</label>
+                  <Input value={emailForm.smtp_user} onChange={e => setEmailForm(p => ({ ...p, smtp_user: e.target.value }))} placeholder="your@email.com" className="mt-1" />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-gray-600">SMTP Password</label>
+                  <Input value={emailForm.smtp_pass} onChange={e => setEmailForm(p => ({ ...p, smtp_pass: e.target.value }))} type="password" placeholder="App password" className="mt-1" />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-xs font-semibold text-gray-600">From Address</label>
+                  <Input value={emailForm.smtp_from} onChange={e => setEmailForm(p => ({ ...p, smtp_from: e.target.value }))} placeholder="noreply@yourdomain.com" className="mt-1" />
+                </div>
+              </div>
+
+              {emailTestResult && (
+                <div className={`flex items-center gap-2 p-3 rounded-lg text-sm ${emailTestResult.ok ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+                  {emailTestResult.ok ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <XCircle className="w-4 h-4 shrink-0" />}
+                  {emailTestResult.message}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={handleTestEmailConfig} disabled={testingEmail}>
+                  {testingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                  Test Connection
+                </Button>
+                <Button onClick={handleSaveEmailConfig} disabled={savingEmail} className="edugenius-button">
+                  {savingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings className="mr-2 h-4 w-4" />}
+                  Save & Test
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Search and Filters */}
       <Card className="border-0 edugenius-card-gradient">
         <CardContent className="p-6">
@@ -252,6 +392,7 @@ export default function SystemSettingsPage() {
                   <SelectItem value="notifications">Notifications</SelectItem>
                   <SelectItem value="system">System</SelectItem>
                   <SelectItem value="analytics">Analytics</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>

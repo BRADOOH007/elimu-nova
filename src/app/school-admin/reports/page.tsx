@@ -81,6 +81,13 @@ interface Report {
     lastName: string
     email: string
   }
+  school: {
+    id: string
+    name: string
+    email: string
+    address?: string
+    phone?: string
+  } | null
 }
 
 const reportTypes = [

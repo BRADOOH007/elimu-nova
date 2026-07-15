@@ -159,6 +159,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
     }
 
+    // Hash password — generate secure random if not provided
+    const bcrypt = await import('bcryptjs')
+    const finalPassword = password || require('crypto').randomBytes(16).toString('hex')
+    const hashedPassword = await bcrypt.hash(finalPassword, 12)
+
+    // Validate role is a known enum value
+    const validRoles = ['STUDENT', 'TEACHER', 'PARENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN']
+    if (!validRoles.includes(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+
     // Create user
     const user = await prisma.user.create({
       data: {
@@ -168,7 +179,7 @@ export async function POST(request: NextRequest) {
         phone,
         role,
         isActive,
-        password: password || 'defaultPassword123', // In production, hash this
+        password: hashedPassword,
         ...(role === 'SCHOOL_ADMIN' && schoolId && {
           schoolAdmin: {
             create: {

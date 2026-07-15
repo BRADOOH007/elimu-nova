@@ -110,13 +110,13 @@ export async function POST(req: NextRequest) {
     // Create activity
     const activity = await prisma.activity.create({
       data: {
-        schoolId: teacher.schoolId,
+        schoolId: teacher.schoolId || undefined,
         userId: session.user.id,
         type,
         action,
         description,
-        metadata: metadata || null
-      },
+        metadata: metadata as any
+      } as any,
       include: {
         user: {
           select: {
@@ -127,6 +127,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    const activityAny = activity as any
     return NextResponse.json({
       activity: {
         id: activity.id,
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
         description: activity.description,
         metadata: activity.metadata,
         createdAt: activity.createdAt,
-        user: activity.user ? `${activity.user.firstName} ${activity.user.lastName}` : 'System'
+        user: activityAny.user ? `${activityAny.user.firstName} ${activityAny.user.lastName}` : 'System'
       }
     });
 

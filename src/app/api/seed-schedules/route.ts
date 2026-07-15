@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ScheduleType, ScheduleStatus } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,9 +32,9 @@ export async function POST(request: NextRequest) {
     // Create sample schedules
     const sampleSchedules = [
       {
-        schoolId: teacher.schoolId,
+        schoolId: teacher.schoolId ?? "",
         teacherId: teacher.id,
-        classId: firstClass?.id || null,
+        classId: firstClass?.id ?? null,
         title: 'Mathematics Class',
         description: 'Algebra fundamentals and problem solving',
         subject: 'Mathematics',
@@ -41,14 +42,14 @@ export async function POST(request: NextRequest) {
         startTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
         endTime: new Date(Date.now() + 24 * 60 * 60 * 1000 + 60 * 60 * 1000), // Tomorrow + 1 hour
         location: 'Room 101',
-        type: 'CLASS',
-        status: 'SCHEDULED',
+        type: 'CLASS' as ScheduleType,
+        status: 'SCHEDULED' as ScheduleStatus,
         recurring: false
       },
       {
-        schoolId: teacher.schoolId,
+        schoolId: teacher.schoolId ?? "",
         teacherId: teacher.id,
-        classId: firstClass?.id || null,
+        classId: firstClass?.id ?? null,
         title: 'Science Lab',
         description: 'Photosynthesis experiment and observation',
         subject: 'Biology',
@@ -56,12 +57,12 @@ export async function POST(request: NextRequest) {
         startTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Day after tomorrow
         endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 90 * 60 * 1000), // Day after tomorrow + 1.5 hours
         location: 'Lab 205',
-        type: 'CLASS',
-        status: 'SCHEDULED',
+        type: 'CLASS' as ScheduleType,
+        status: 'SCHEDULED' as ScheduleStatus,
         recurring: false
       },
       {
-        schoolId: teacher.schoolId,
+        schoolId: teacher.schoolId ?? "",
         teacherId: teacher.id,
         classId: null,
         title: 'Parent Meeting',
@@ -71,12 +72,12 @@ export async function POST(request: NextRequest) {
         startTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
         endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000), // 3 days from now + 1 hour
         location: 'Office 301',
-        type: 'MEETING',
-        status: 'SCHEDULED',
+        type: 'MEETING' as ScheduleType,
+        status: 'SCHEDULED' as ScheduleStatus,
         recurring: false
       },
       {
-        schoolId: teacher.schoolId,
+        schoolId: teacher.schoolId ?? "",
         teacherId: teacher.id,
         classId: null,
         title: 'Office Hours',
@@ -86,15 +87,15 @@ export async function POST(request: NextRequest) {
         startTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000), // 4 days from now
         endTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000 + 90 * 60 * 1000), // 4 days from now + 1.5 hours
         location: 'Office 301',
-        type: 'OFFICE_HOURS',
-        status: 'SCHEDULED',
+        type: 'OFFICE_HOURS' as ScheduleType,
+        status: 'SCHEDULED' as ScheduleStatus,
         recurring: true,
         recurringPattern: 'weekly'
       },
       {
-        schoolId: teacher.schoolId,
+        schoolId: teacher.schoolId ?? "",
         teacherId: teacher.id,
-        classId: firstClass?.id || null,
+        classId: firstClass?.id ?? null,
         title: 'Mathematics Exam',
         description: 'End of chapter assessment on algebra',
         subject: 'Mathematics',
@@ -102,8 +103,8 @@ export async function POST(request: NextRequest) {
         startTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week from now
         endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000 + 120 * 60 * 1000), // 1 week from now + 2 hours
         location: 'Room 101',
-        type: 'EXAM',
-        status: 'SCHEDULED',
+        type: 'EXAM' as ScheduleType,
+        status: 'SCHEDULED' as ScheduleStatus,
         recurring: false
       }
     ]

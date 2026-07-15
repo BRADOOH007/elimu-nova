@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { encryptPassword } from '@/lib/password-encryption'
 
 function generatePassword(): string {
   const adjs  = ['Blue','Green','Happy','Brave','Swift','Bright','Calm','Bold']
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
 
       const plainPwd = generatePassword()
       const hashedPwd = await bcrypt.hash(plainPwd, 10)
-      const addressWithPwd = `PWD:${plainPwd}`
+      const addressWithPwd = encryptPassword(plainPwd)
 
       try {
         const user = await prisma.user.create({

@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
               include: {
                 user: true,
                 submissions: {
-                  include: { assignment: { select: { id: true, title: true, subject: true, dueDate: true, totalMarks: true } } },
+                  include: { assignment: { select: { id: true, title: true, subject: true, dueDate: true } } },
                   where: { grade: { not: null } },
                   orderBy: { submittedAt: 'desc' },
                 },
@@ -63,9 +63,10 @@ export async function GET(request: NextRequest) {
     })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
+    const t = teacher as any
     return NextResponse.json({
-      classes:     teacher.classes.map((c: any) => ({ id: c.id, name: c.name, grade: c.grade, subject: c.subject, studentCount: c.students.length })),
-      assignments: teacher.assignments.map((a: any) => ({
+      classes:     t.classes.map((c: any) => ({ id: c.id, name: c.name, grade: c.grade, subject: c.subject, studentCount: c.students.length })),
+      assignments: t.assignments.map((a: any) => ({
         id:          a.id,
         title:       a.title,
         subject:     a.subject,
@@ -144,7 +145,12 @@ Return: { "summary": "2-sentence summary", "strengths": ["s1","s2"], "concerns":
           analysis = JSON.parse(raw.slice(start, end + 1))
           analysis.stats = { avg: avg.toFixed(1), max, min, below, above, total: marks.length }
         }
-      } catch (e) { console.error('AI analysis failed:', e) }
+      } catch (e) {
+        console.error('[POST_MARKS_AI] AI analysis failed:', (e as any)?.message || e)
+        if ((e as any)?.message?.includes?.('image')) {
+          console.warn('[POST_MARKS_AI] Image-related error in AI call — non-vision model may have received content with image references')
+        }
+      }
     }
 
     return NextResponse.json({ updated: updates.length, analysis })

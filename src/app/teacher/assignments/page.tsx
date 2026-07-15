@@ -642,6 +642,7 @@ export default function AssessmentsPage() {
         <AIGeneratorModal
           isOpen={showAIGenerator}
           onClose={() => setShowAIGenerator(false)}
+          onSuccess={() => {}}
         />
       )}
     </div>

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import {
   BookOpen, ChevronRight, ChevronLeft, CheckCircle, Loader2,
   FileText, Presentation, Download, Sparkles, Plus, Trash2,
-  Calendar, Settings, Zap, NotebookPen
+  Calendar, Settings, Zap, NotebookPen, Upload
 } from 'lucide-react'
 
 // Import CBC curriculum data
@@ -50,6 +51,7 @@ export default function CreateSchemePage() {
   const [schemeId, setSchemeId]       = useState<string | null>(null)
   const [rows, setRows]               = useState<KICDRow[]>([])
   const [error, setError]             = useState('')
+  const [documentContext, setDocumentContext] = useState<string | null>(null)
 
   // Per-row actions
   const [generatingLesson, setGeneratingLesson] = useState<number | null>(null)
@@ -57,6 +59,10 @@ export default function CreateSchemePage() {
   const [generatingNotes, setGeneratingNotes]   = useState<number | null>(null)
   const [lessonPlanIds, setLessonPlanIds]        = useState<Record<number, string>>({})
   const [notesReady, setNotesReady]             = useState<Record<number, boolean>>({})
+
+  // Batch generation
+  const [generatingAll, setGeneratingAll] = useState(false)
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 })
   // Load CBC strands when subject+grade changes
   useEffect(() => {
     if (!subject || !grade) return
@@ -94,6 +100,10 @@ export default function CreateSchemePage() {
     setSelectedTopics(all)
   }
 
+  const handleDocUploaded = (doc: { name: string; url: string; docType: string; extractedText?: string | null }) => {
+    if (doc.extractedText) setDocumentContext(doc.extractedText)
+  }
+
   const generate = async () => {
     setGenerating(true)
     setError('')
@@ -101,7 +111,7 @@ export default function CreateSchemePage() {
       const res  = await fetch('/api/ai/generate-scheme-structured', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, subject, grade, term, weeksCount, lessonsPerWeek, selectedTopics }),
+        body: JSON.stringify({ title, subject, grade, term, weeksCount, lessonsPerWeek, selectedTopics, documentContext }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Generation failed')
@@ -132,6 +142,33 @@ export default function CreateSchemePage() {
     } finally {
       setGeneratingLesson(null)
     }
+  }
+
+  const generateAllLessons = async () => {
+    const teachingRows = rows.filter(r => (r as any).type !== 'break' && (r as any).type !== 'revision' && (r as any).type !== 'exam')
+    setGeneratingAll(true)
+    setBatchProgress({ done: 0, total: teachingRows.length })
+    let success = 0
+    let failed = 0
+    for (let i = 0; i < teachingRows.length; i++) {
+      const originalIndex = rows.indexOf(teachingRows[i])
+      try {
+        const res = await fetch('/api/ai/generate-lesson-from-scheme', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schemeId, row: teachingRows[i], subject, grade }),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        setLessonPlanIds(prev => ({ ...prev, [originalIndex]: data.lessonPlan.id }))
+        success++
+      } catch {
+        failed++
+      }
+      setBatchProgress({ done: i + 1, total: teachingRows.length })
+    }
+    setGeneratingAll(false)
+    alert(`✅ ${success}/${teachingRows.length} lesson plans generated${failed > 0 ? ` (${failed} failed)` : ''}`)
   }
 
   const generatePptx = async (row: KICDRow, rowIndex: number) => {
@@ -387,6 +424,19 @@ export default function CreateSchemePage() {
               </div>
             ))}
           </div>
+          <div className="flex items-center justify-center gap-3">
+            <DocumentUploadButton
+              docType="scheme-of-work"
+              label="Upload Reference"
+              onUploaded={handleDocUploaded}
+            />
+            {documentContext && (
+              <span className="text-xs text-green-600 flex items-center gap-1">
+                <FileText className="w-3 h-3" />
+                Reference loaded
+              </span>
+            )}
+          </div>
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
           <div className="flex gap-3 justify-center">
             <button onClick={() => setStep(2)} className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">
@@ -406,7 +456,18 @@ export default function CreateSchemePage() {
           {/* Actions */}
           <div className="flex items-center justify-between flex-wrap gap-3">
             <p className="text-sm text-slate-500">{rows.length} lessons generated</p>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {generatingAll && (
+                <span className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {batchProgress.done}/{batchProgress.total} lesson plans
+                </span>
+              )}
+              <button onClick={generateAllLessons} disabled={generatingAll}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors">
+                {generatingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                {generatingAll ? 'Generating...' : 'Generate All Plans'}
+              </button>
               <button onClick={downloadScheme}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
                 <Download className="h-4 w-4" /> Download Scheme (HTML/PDF)

@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,7 +15,7 @@ export async function GET(
     }
 
     const content = await prisma.aIGeneratedContent.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
       include: {
         teacher: {
           select: {
@@ -83,7 +83,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -106,7 +106,7 @@ export async function PUT(
     // Check if content exists and belongs to teacher
     const existingContent = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id
       }
     });
@@ -116,7 +116,7 @@ export async function PUT(
     }
 
     const updatedContent = await prisma.aIGeneratedContent.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: {
         title: title || existingContent.title,
         content: content || existingContent.content,
@@ -151,7 +151,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -172,7 +172,7 @@ export async function DELETE(
     // Check if content exists and belongs to teacher
     const existingContent = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id
       }
     });
@@ -182,7 +182,7 @@ export async function DELETE(
     }
 
     await prisma.aIGeneratedContent.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     });
 
     return NextResponse.json({

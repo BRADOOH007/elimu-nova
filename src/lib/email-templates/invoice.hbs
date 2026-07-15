@@ -1,0 +1,21 @@
+{{#> base}}
+{{#*inline "title"}}Invoice {{invoiceNumber}} from ElimuNova AI{{/inline}}
+{{#*inline "greeting"}}Hi {{firstName}},{{/inline}}
+{{#*inline "message"}}
+Your invoice for <strong>{{planName}}</strong> is ready.
+{{/inline}}
+{{#*inline "message"}}
+<div style="background-color: #f1f5f9; border-radius: 8px; padding: 20px; margin: 20px 0;">
+  <table style="width: 100%; border-collapse: collapse;">
+    <tr><td style="padding: 8px 0; color: #64748b;">Invoice Number:</td><td style="padding: 8px 0; font-weight: 600;">{{invoiceNumber}}</td></tr>
+    <tr><td style="padding: 8px 0; color: #64748b;">Plan:</td><td style="padding: 8px 0; font-weight: 600;">{{planName}}</td></tr>
+    <tr><td style="padding: 8px 0; color: #64748b;">Amount:</td><td style="padding: 8px 0; font-weight: 600; color: #667eea;">${{amount}}</td></tr>
+    <tr><td style="padding: 8px 0; color: #64748b;">Due Date:</td><td style="padding: 8px 0; font-weight: 600;">{{dueDate}}</td></tr>
+    <tr><td style="padding: 8px 0; color: #64748b;">Status:</td><td style="padding: 8px 0;"><span style="background-color: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600;">{{status}}</span></td></tr>
+  </table>
+</div>
+{{/inline}}
+{{#*inline "action_url"}}{{paymentUrl}}{{/action_url}}
+{{#*inline "action_text"}}Pay Now{{/action_text}}
+{{#*inline "footer_note"}}Thank you for choosing ElimuNova AI. If you have any questions, please contact our billing team.{{/inline}}
+{{/base}}

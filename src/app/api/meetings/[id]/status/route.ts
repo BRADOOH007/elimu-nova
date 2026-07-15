@@ -6,7 +6,7 @@ import { logActivity } from '@/lib/activity-logger';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -33,7 +33,7 @@ export async function PUT(
 
     // Check if meeting exists
     const existingMeeting = await prisma.meeting.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
       include: {
         creator: {
           select: {
@@ -50,7 +50,7 @@ export async function PUT(
 
     // Update meeting status
     const updatedMeeting = await prisma.meeting.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: { status: status as any }, // Cast to MeetingStatus enum
       include: {
         creator: {

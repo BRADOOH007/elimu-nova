@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
       student: {
         name: `${student.user.firstName} ${student.user.lastName}`,
         grade: student.class.name,
-        school: student.school.name
+        school: student.school?.name ?? ''
       }
     }
 

@@ -1,68 +1,106 @@
-/**
- * Rate limiting for ElimuNova API routes.
- * Uses Redis sliding window counter.
- * Falls back gracefully when Redis is unavailable.
- *
- * Limits per role (per minute):
- *   AI chat/tutor   → 20 requests  (prevents runaway costs)
- *   General API     → 120 requests (2 req/sec — generous for normal use)
- *   Auth endpoints  → 10 requests  (brute-force protection)
- */
+import { Redis } from '@upstash/redis'
+import { NextRequest, NextResponse } from 'next/server'
 
-import { cache } from '@/lib/redis'
-import { NextRequest } from 'next/server'
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+})
 
-interface RateLimitResult {
-  allowed:    boolean
-  remaining:  number
-  resetInSec: number
+export interface RateLimitConfig {
+  maxRequests: number
+  windowMs: number
+  keyPrefix?: string
 }
 
-export async function rateLimit(
-  identifier: string,    // e.g. userId or IP
-  action: string,        // e.g. 'ai_chat', 'api', 'auth'
-  limit   = 120,
-  windowSec = 60,
+export interface RateLimitResult {
+  allowed: boolean
+  limit: number
+  remaining: number
+  resetTime: number
+}
+
+const DEFAULT_CONFIG = {
+  maxRequests: 100,
+  windowMs: 60 * 1000,
+  keyPrefix: 'ratelimit',
+}
+
+export async function checkRateLimit(
+  key: string,
+  config: Partial<typeof DEFAULT_CONFIG> = {}
 ): Promise<RateLimitResult> {
-  const key = `rl:${action}:${identifier}:${Math.floor(Date.now() / (windowSec * 1000))}`
+  const finalConfig = { ...DEFAULT_CONFIG, ...config }
+  const fullKey = `${finalConfig.keyPrefix}:${key}`
+  const now = Date.now()
+  const windowSec = Math.ceil(finalConfig.windowMs / 1000)
 
   try {
-    const count     = await cache.incr(key)
-    const resetInSec = windowSec - (Math.floor(Date.now() / 1000) % windowSec)
+    const current = await redis.get(fullKey)
+    const count = current ? parseInt(current as string, 10) : 0
 
-    // Set TTL on first request in the window
-    if (count === 1) await cache.expire(key, windowSec + 5)
-
-    return {
-      allowed:    count <= limit,
-      remaining:  Math.max(0, limit - count),
-      resetInSec,
+    if (count >= finalConfig.maxRequests) {
+      const ttl = await redis.ttl(fullKey)
+      return {
+        allowed: false,
+        limit: finalConfig.maxRequests,
+        remaining: 0,
+        resetTime: now + (ttl > 0 ? ttl : windowSec) * 1000,
+      }
     }
-  } catch {
-    // Redis unavailable — allow the request (fail open, not closed)
-    return { allowed: true, remaining: limit, resetInSec: windowSec }
+
+    const newCount = await redis.incr(fullKey)
+    if (newCount === 1) {
+      await redis.expire(fullKey, windowSec)
+    }
+
+    const ttl = await redis.ttl(fullKey)
+    return {
+      allowed: true,
+      limit: finalConfig.maxRequests,
+      remaining: finalConfig.maxRequests - newCount,
+      resetTime: now + (ttl > 0 ? ttl : windowSec) * 1000,
+    }
+  } catch (error) {
+    console.error('Rate limit check failed:', error)
+    return {
+      allowed: true,
+      limit: finalConfig.maxRequests,
+      remaining: finalConfig.maxRequests - 1,
+      resetTime: now + finalConfig.windowMs,
+    }
   }
 }
 
-/* ── Convenience wrappers ── */
-
-export async function rateLimitAI(userId: string): Promise<RateLimitResult> {
-  return rateLimit(userId, 'ai_chat', 20, 60)
+export function getClientIdentifier(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+  const ip = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown'
+  return ip
 }
 
-export async function rateLimitAPI(userId: string): Promise<RateLimitResult> {
-  return rateLimit(userId, 'api', 120, 60)
-}
-
-export async function rateLimitAuth(ip: string): Promise<RateLimitResult> {
-  return rateLimit(ip, 'auth', 10, 60)
-}
-
-/* ── Extract IP from Next.js request ── */
 export function getIP(request: NextRequest): string {
-  return (
-    request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    request.headers.get('x-real-ip') ||
-    '127.0.0.1'
-  )
+  return getClientIdentifier(request)
+}
+
+export const rateLimitAI = {
+  maxRequests: 20,
+  windowMs: 60 * 1000,
+  keyPrefix: 'ratelimit:ai',
+}
+
+export const rateLimitAuth = {
+  maxRequests: 10,
+  windowMs: 15 * 60 * 1000,
+  keyPrefix: 'ratelimit:auth',
+}
+
+export const rateLimitUpload = {
+  maxRequests: 10,
+  windowMs: 60 * 1000,
+  keyPrefix: 'ratelimit:upload',
+}
+
+export const rateLimitAPI = {
+  maxRequests: 100,
+  windowMs: 60 * 1000,
+  keyPrefix: 'ratelimit:api',
 }

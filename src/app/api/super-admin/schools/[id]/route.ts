@@ -9,25 +9,25 @@ async function requireSuperAdmin() {
   return session
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSuperAdmin()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const data = await request.json()
-    const school = await prisma.school.update({ where: { id: params.id }, data })
+    const school = await prisma.school.update({ where: { id: (await params).id }, data })
     return NextResponse.json(school)
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await requireSuperAdmin()
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    await prisma.school.update({ where: { id: params.id }, data: { isActive: false } })
+    await prisma.school.update({ where: { id: (await params).id }, data: { isActive: false } })
     return NextResponse.json({ message: 'School deactivated' })
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

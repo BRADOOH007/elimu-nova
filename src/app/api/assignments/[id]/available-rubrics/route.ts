@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -15,7 +15,7 @@ export async function GET(
 
     // Get the assignment to check ownership and get subject/grade info
     const assignment = await prisma.assignment.findUnique({
-      where: { id: params.id },
+      where: { id: (await params).id },
       include: {
         teacher: {
           include: { user: true }

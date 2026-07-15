@@ -5,235 +5,517 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  Settings, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Loader2, 
-  ChevronLeft, 
-  ChevronRight, 
-  RefreshCw,
-  Lock,
-  Globe,
-  Shield,
-  Bell,
-  Database,
-  BarChart3,
-  Save,
-  X
+import {
+  Globe, Loader2, Save, Clock, DollarSign, Languages,
+  Monitor, BookOpen, Zap, Search,
+  ChevronLeft, ChevronRight, Eye, Lock, Settings
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter
+} from '@/components/ui/dialog'
 
-interface GlobalSetting {
-  id: string
-  key: string
-  value: string
-  type: string
-  category: string
-  description?: string
-  isPublic: boolean
-  isEditable: boolean
-  updatedBy: string
-  createdAt: string
-  updatedAt: string
-  updatedByUser: {
-    id: string
-    firstName: string
-    lastName: string
-    email: string
-  }
-}
+const TIMEZONES = [
+  'Africa/Nairobi', 'Africa/Lagos', 'Africa/Cairo', 'Africa/Johannesburg',
+  'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+  'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Moscow',
+  'Asia/Dubai', 'Asia/Kolkata', 'Asia/Shanghai', 'Asia/Tokyo',
+  'Australia/Sydney', 'Pacific/Auckland',
+]
 
-interface Pagination {
-  page: number
-  limit: number
-  total: number
-  pages: number
-}
+const CURRENCIES = [
+  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' },
+  { code: 'USD', name: 'US Dollar', symbol: '$' },
+  { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'GBP', name: 'British Pound', symbol: '£' },
+  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
+  { code: 'ZAR', name: 'South African Rand', symbol: 'R' },
+  { code: 'TZS', name: 'Tanzanian Shilling', symbol: 'TSh' },
+  { code: 'UGX', name: 'Ugandan Shilling', symbol: 'USh' },
+]
+
+const DATE_FORMATS = [
+  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY (31/12/2025)' },
+  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY (12/31/2025)' },
+  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD (2025-12-31)' },
+]
+
+const AI_MODELS = [
+  'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-opus', 'claude-3-sonnet',
+  'gemini-1.5-pro', 'gemini-1.5-flash', 'deepseek-chat', 'cerebras-cybertron',
+]
 
 export default function GlobalSettingsPage() {
-  const [settings, setSettings] = useState<GlobalSetting[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all-categories')
-  const [typeFilter, setTypeFilter] = useState('all-types')
-  const [sortBy, setSortBy] = useState('createdAt')
-  const [sortOrder, setSortOrder] = useState('desc')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pagination, setPagination] = useState<Pagination | null>(null)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
-  const [editModalOpen, setEditModalOpen] = useState(false)
-  const [viewModalOpen, setViewModalOpen] = useState(false)
-  const [selectedSetting, setSelectedSetting] = useState<GlobalSetting | null>(null)
-  const [editingSetting, setEditingSetting] = useState<Partial<GlobalSetting>>({})
   const { toast } = useToast()
+  const [saving, setSaving] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const categories = [
-    'general', 'security', 'email', 'notifications', 'ui', 'api', 
-    'database', 'cache', 'logging', 'maintenance', 'features'
-  ]
+  // Platform defaults
+  const [platform, setPlatform] = useState({
+    defaultTimezone: 'Africa/Nairobi',
+    defaultCurrency: 'KES',
+    dateFormat: 'DD/MM/YYYY',
+    defaultAiModel: 'gpt-4o-mini',
+    teacherAiModel: 'gpt-4o',
+    maxSchools: '100',
+    maxUsersPerSchool: '500',
+  })
 
-  const types = ['string', 'number', 'boolean', 'json', 'array', 'object']
+  // Feature flags
+  const [features, setFeatures] = useState({
+    enableAiTutoring: true,
+    enableParentDashboard: true,
+    enableStudentRegistration: true,
+    enablePublicSignup: false,
+    enableNotifications: true,
+    enableAnalytics: true,
+  })
 
-  const fetchSettings = async (page = 1, search = '', category = '', type = '', sort = 'createdAt', order = 'desc') => {
+  // All raw settings (key-value browser)
+  const [allSettings, setAllSettings] = useState<any[]>([])
+  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [settingsPage, setSettingsPage] = useState(1)
+  const [settingsPagination, setSettingsPagination] = useState<any>(null)
+  const [settingsSearch, setSettingsSearch] = useState('')
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
+  const [selectedSetting, setSelectedSetting] = useState<any>(null)
+
+  const SETTINGS_KEYS = {
+    timezone: 'global_timezone',
+    currency: 'global_currency',
+    dateFormat: 'global_date_format',
+    defaultAiModel: 'global_default_ai_model',
+    teacherAiModel: 'global_teacher_ai_model',
+    maxSchools: 'global_max_schools',
+    maxUsersPerSchool: 'global_max_users_per_school',
+    enableAiTutoring: 'feature_ai_tutoring',
+    enableParentDashboard: 'feature_parent_dashboard',
+    enableStudentRegistration: 'feature_student_registration',
+    enablePublicSignup: 'feature_public_signup',
+    enableNotifications: 'feature_notifications',
+    enableAnalytics: 'feature_analytics',
+  }
+
+  const loadAllSettings = async () => {
     try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '10',
-        ...(search && { search }),
-        ...(category && category !== 'all-categories' && { category }),
-        ...(type && type !== 'all-types' && { type }),
-        sortBy: sort,
-        sortOrder: order
-      })
-
-      const response = await fetch(`/api/system-settings?${params}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        setSettings(data.settings)
-        setPagination(data.pagination)
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch global settings",
-          variant: "destructive"
+      const keys = Object.values(SETTINGS_KEYS)
+      const res = await fetch(`/api/system-settings?limit=50`)
+      const data = await res.json()
+      if (res.ok && data.settings) {
+        const map = new Map<string, any>(data.settings.map((s: any) => [s.key, s]))
+        setPlatform({
+          defaultTimezone:   map.get('global_timezone')?.value || 'Africa/Nairobi',
+          defaultCurrency:   map.get('global_currency')?.value || 'KES',
+          dateFormat:        map.get('global_date_format')?.value || 'DD/MM/YYYY',
+          defaultAiModel:    map.get('global_default_ai_model')?.value || 'gpt-4o-mini',
+          teacherAiModel:    map.get('global_teacher_ai_model')?.value || 'gpt-4o',
+          maxSchools:        map.get('global_max_schools')?.value || '100',
+          maxUsersPerSchool: map.get('global_max_users_per_school')?.value || '500',
+        })
+        setFeatures({
+          enableAiTutoring:         map.get('feature_ai_tutoring')?.value === 'true',
+          enableParentDashboard:    map.get('feature_parent_dashboard')?.value === 'true',
+          enableStudentRegistration: map.get('feature_student_registration')?.value === 'true',
+          enablePublicSignup:       map.get('feature_public_signup')?.value === 'true',
+          enableNotifications:      map.get('feature_notifications')?.value === 'true',
+          enableAnalytics:          map.get('feature_analytics')?.value === 'true',
         })
       }
-    } catch (error) {
-      console.error('Error fetching settings:', error)
-      toast({
-        title: "Error",
-        description: "Failed to fetch global settings",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
+    } catch {}
   }
 
-  useEffect(() => {
-    fetchSettings(currentPage, searchTerm, categoryFilter, typeFilter, sortBy, sortOrder)
-  }, [currentPage, searchTerm, categoryFilter, typeFilter, sortBy, sortOrder])
+  useEffect(() => { loadAllSettings().finally(() => setLoading(false)) }, [])
 
-  const handleSearch = (value: string) => {
-    setSearchTerm(value)
-    setCurrentPage(1)
-  }
-
-  const handleFilter = (category: string, type: string) => {
-    setCategoryFilter(category)
-    setTypeFilter(type)
-    setCurrentPage(1)
-  }
-
-  const handleSort = (field: string) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortBy(field)
-      setSortOrder('asc')
-    }
-  }
-
-  const handleCreate = async (settingData: Partial<GlobalSetting>) => {
+  const saveSetting = async (key: string, value: string, description: string) => {
+    setSaving(key)
     try {
-      const response = await fetch('/api/system-settings', {
+      const res = await fetch('/api/system-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingData)
+        body: JSON.stringify({
+          key, value, type: 'string', category: 'global',
+          description, isPublic: false, isEditable: true,
+        }),
       })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Global setting created successfully"
-        })
-        setCreateModalOpen(false)
-        fetchSettings()
+      if (res.ok) {
+        toast({ title: 'Saved', description: `${key} updated successfully` })
       } else {
-        const error = await response.json()
-        toast({
-          title: "Error",
-          description: error.error || "Failed to create setting",
-          variant: "destructive"
-        })
+        const err = await res.json()
+        toast({ title: 'Error', description: err.error || 'Failed to save', variant: 'destructive' })
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create setting",
-        variant: "destructive"
-      })
+    } catch {
+      toast({ title: 'Error', description: 'Failed to save setting', variant: 'destructive' })
+    } finally {
+      setSaving(null)
     }
   }
 
-  const handleUpdate = async (id: string, settingData: Partial<GlobalSetting>) => {
-    try {
-      const response = await fetch(`/api/system-settings/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settingData)
-      })
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Global setting updated successfully"
-        })
-        setEditModalOpen(false)
-        setEditingSetting({})
-        fetchSettings()
-      } else {
-        const error = await response.json()
-        toast({
-          title: "Error",
-          description: error.error || "Failed to update setting",
-          variant: "destructive"
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update setting",
-        variant: "destructive"
-      })
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    // Confirmation removed - using toast notifications only
-    try {
-      const response = await fetch(`/api/super-admin/global/${id}`, {
-        method: 'DELETE'
-      })
-      
-      if (response.ok) {
-        setSettings(prev => prev.filter(s => s.id !== id))
-        toast.success('Setting deleted successfully')
-      } else {
-        toast.error('Failed to delete setting')
-      }
-    } catch (error) {
-      console.error('Error deleting setting:', error)
-      toast.error('Failed to delete setting')
-    }
+  if (loading) {
+    return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Global Settings</h1>
-      {/* Global settings content would go here */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">
+            <span className="edugenius-text-gradient">Global Settings</span>
+          </h1>
+          <p className="text-gray-600">Platform-wide defaults, feature flags, and regional configuration.</p>
+        </div>
+      </div>
+
+      <Tabs defaultValue="platform" className="space-y-6">
+        <TabsList className="bg-white border">
+          <TabsTrigger value="platform" className="flex items-center gap-2">
+            <Monitor className="w-4 h-4" /> Platform Defaults
+          </TabsTrigger>
+          <TabsTrigger value="features" className="flex items-center gap-2">
+            <Zap className="w-4 h-4" /> Feature Flags
+          </TabsTrigger>
+          <TabsTrigger value="regional" className="flex items-center gap-2">
+            <Globe className="w-4 h-4" /> Regional
+          </TabsTrigger>
+          <TabsTrigger value="all" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" /> All Settings
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ── Platform Defaults ─────────────────────────────────────────── */}
+        <TabsContent value="platform" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="w-5 h-5 text-blue-600" /> Platform Defaults
+              </CardTitle>
+              <CardDescription>Set default values applied platform-wide and to newly created schools.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label>Default AI Model (Students)</Label>
+                  <Select value={platform.defaultAiModel} onValueChange={v => setPlatform(p => ({ ...p, defaultAiModel: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {AI_MODELS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400">AI model used for student AI tutor by default</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Default AI Model (Teachers)</Label>
+                  <Select value={platform.teacherAiModel} onValueChange={v => setPlatform(p => ({ ...p, teacherAiModel: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {AI_MODELS.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400">AI model used for teacher tools by default</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Default Timezone</Label>
+                  <Select value={platform.defaultTimezone} onValueChange={v => setPlatform(p => ({ ...p, defaultTimezone: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TIMEZONES.map(tz => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Default Currency</Label>
+                  <Select value={platform.defaultCurrency} onValueChange={v => setPlatform(p => ({ ...p, defaultCurrency: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map(c => <SelectItem key={c.code} value={c.code}>{c.code} — {c.name} ({c.symbol})</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Date Format</Label>
+                  <Select value={platform.dateFormat} onValueChange={v => setPlatform(p => ({ ...p, dateFormat: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {DATE_FORMATS.map(df => <SelectItem key={df.value} value={df.value}>{df.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Schools (Platform Limit)</Label>
+                  <Input type="number" value={platform.maxSchools} onChange={e => setPlatform(p => ({ ...p, maxSchools: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Max Users Per School</Label>
+                  <Input type="number" value={platform.maxUsersPerSchool} onChange={e => setPlatform(p => ({ ...p, maxUsersPerSchool: e.target.value }))} />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={async () => {
+                  for (const [field, key] of Object.entries(SETTINGS_KEYS)) {
+                    if (['timezone', 'currency', 'dateFormat', 'defaultAiModel', 'teacherAiModel', 'maxSchools', 'maxUsersPerSchool'].includes(field)) {
+                      const val = (platform as any)[field as keyof typeof platform]
+                      if (val !== undefined) await saveSetting(key, String(val), `Global setting: ${field}`)
+                    }
+                  }
+                  toast({ title: 'All platform defaults saved' })
+                }} disabled={!!saving} className="edugenius-button">
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Save All Platform Defaults
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Feature Flags ────────────────────────────────────────────── */}
+        <TabsContent value="features" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-amber-500" /> Feature Flags
+              </CardTitle>
+              <CardDescription>Enable or disable platform-wide features. Disabling a feature hides it from all users.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {([
+                { key: 'enableAiTutoring', label: 'AI Tutoring', desc: 'Allow students to use AI tutor chat', settingKey: SETTINGS_KEYS.enableAiTutoring },
+                { key: 'enableParentDashboard', label: 'Parent Dashboard', desc: 'Enable parent portal with student progress view', settingKey: SETTINGS_KEYS.enableParentDashboard },
+                { key: 'enableStudentRegistration', label: 'Student Registration', desc: 'Allow school admins to enroll new students', settingKey: SETTINGS_KEYS.enableStudentRegistration },
+                { key: 'enablePublicSignup', label: 'Public Signup', desc: 'Allow anyone to create a school account', settingKey: SETTINGS_KEYS.enablePublicSignup },
+                { key: 'enableNotifications', label: 'Notifications', desc: 'Enable email and in-app notifications', settingKey: SETTINGS_KEYS.enableNotifications },
+                { key: 'enableAnalytics', label: 'Analytics', desc: 'Track and display platform usage analytics', settingKey: SETTINGS_KEYS.enableAnalytics },
+              ] as const).map(f => (
+                <div key={f.key} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900">{f.label}</p>
+                    <p className="text-sm text-gray-500">{f.desc}</p>
+                  </div>
+                  <Switch
+                    checked={(features as any)[f.key]}
+                    onCheckedChange={async v => {
+                      setFeatures(prev => ({ ...prev, [f.key]: v }))
+                      await saveSetting(f.settingKey, String(v), `Feature flag: ${f.label}`)
+                    }}
+                  />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Regional ─────────────────────────────────────────────────── */}
+        <TabsContent value="regional" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-green-600" /> Regional Settings
+              </CardTitle>
+              <CardDescription>Regional defaults applied to new schools and the platform dashboard.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Clock className="w-4 h-4" /> Timezone</Label>
+                  <Select value={platform.defaultTimezone} onValueChange={v => setPlatform(p => ({ ...p, defaultTimezone: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {TIMEZONES.map(tz => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><DollarSign className="w-4 h-4" /> Currency</Label>
+                  <Select value={platform.defaultCurrency} onValueChange={v => setPlatform(p => ({ ...p, defaultCurrency: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map(c => <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><BookOpen className="w-4 h-4" /> Date Format</Label>
+                  <Select value={platform.dateFormat} onValueChange={v => setPlatform(p => ({ ...p, dateFormat: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {DATE_FORMATS.map(df => <SelectItem key={df.value} value={df.value}>{df.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Languages className="w-4 h-4" /> Default Language</Label>
+                  <Select defaultValue="en">
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="sw">Swahili (Kiswahili)</SelectItem>
+                      <SelectItem value="fr">French</SelectItem>
+                      <SelectItem value="ar">Arabic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400">UI language for new users (content translations coming soon)</p>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={async () => {
+                  await saveSetting(SETTINGS_KEYS.timezone, platform.defaultTimezone, 'Platform default timezone')
+                  await saveSetting(SETTINGS_KEYS.currency, platform.defaultCurrency, 'Platform default currency')
+                  await saveSetting(SETTINGS_KEYS.dateFormat, platform.dateFormat, 'Platform default date format')
+                  toast({ title: 'Regional settings saved' })
+                }} disabled={!!saving} className="edugenius-button">
+                  {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                  Save Regional Settings
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── All Settings (raw key-value browser) ─────────────────────── */}
+        <TabsContent value="all" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="w-5 h-5" /> All Global Settings
+                  </CardTitle>
+                  <CardDescription>Browse all key-value settings stored in the system. Use with caution.</CardDescription>
+                </div>
+                <div className="relative w-72">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input className="pl-9" placeholder="Search settings..." value={settingsSearch}
+                    onChange={e => { setSettingsSearch(e.target.value); setSettingsPage(1) }} />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SettingsBrowser
+                search={settingsSearch}
+                page={settingsPage}
+                onPageChange={setSettingsPage}
+                onView={(s) => { setSelectedSetting(s); setDetailsModalOpen(true) }}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Details Dialog */}
+      <Dialog open={detailsModalOpen} onOpenChange={o => { if (!o) { setDetailsModalOpen(false); setSelectedSetting(null) }}}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" /> Setting Details
+            </DialogTitle>
+            <DialogDescription>View and manage this system setting.</DialogDescription>
+          </DialogHeader>
+          {selectedSetting && (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-xs font-semibold text-gray-500">Key</Label>
+                <p className="font-mono text-sm mt-1">{selectedSetting.key}</p>
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-gray-500">Value</Label>
+                <p className="font-mono text-sm bg-gray-50 p-2 rounded mt-1 break-all">{selectedSetting.value}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-500">Category</Label>
+                  <p className="text-sm mt-1 capitalize">{selectedSetting.category}</p>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-500">Type</Label>
+                  <p className="text-sm mt-1 capitalize">{selectedSetting.type}</p>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-500">Public</Label>
+                  <p className="text-sm mt-1">{selectedSetting.isPublic ? 'Yes' : 'No'}</p>
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-gray-500">Editable</Label>
+                  <p className="text-sm mt-1">{selectedSetting.isEditable ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+              {selectedSetting.description && (
+                <div>
+                  <Label className="text-xs font-semibold text-gray-500">Description</Label>
+                  <p className="text-sm mt-1">{selectedSetting.description}</p>
+                </div>
+              )}
+              <div className="text-xs text-gray-400">
+                Updated by {selectedSetting.updatedByUser?.firstName} {selectedSetting.updatedByUser?.lastName} · {new Date(selectedSetting.updatedAt).toLocaleDateString()}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDetailsModalOpen(false); setSelectedSetting(null) }}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+/** Inline component for browsing all settings with pagination */
+function SettingsBrowser({
+  search, page, onPageChange, onView
+}: {
+  search: string; page: number; onPageChange: (p: number) => void
+  onView: (s: any) => void
+}) {
+  const [data, setData] = useState<any[]>([])
+  const [pagination, setPagination] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    const params = new URLSearchParams({ page: String(page), limit: '10', ...(search && { search }) })
+    fetch(`/api/system-settings?${params}`)
+      .then(r => r.json())
+      .then(d => { setData(d.settings || []); setPagination(d.pagination) })
+      .finally(() => setLoading(false))
+  }, [search, page])
+
+  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+
+  if (!data.length) return <p className="text-center py-8 text-gray-500">No settings found.</p>
+
+  return (
+    <div className="space-y-3">
+      {data.map(s => (
+        <div key={s.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer" onClick={() => onView(s)}>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-medium">{s.key}</span>
+              <Badge className="bg-blue-100 text-blue-800 text-xs">{s.category}</Badge>
+              <Badge className="bg-gray-100 text-gray-700 text-xs">{s.type}</Badge>
+              {!s.isEditable && <Lock className="w-3 h-3 text-red-500" />}
+            </div>
+            <p className="text-sm text-gray-600 truncate mt-1">{s.value}</p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(s) }}>
+            <Eye className="w-4 h-4" />
+          </Button>
+        </div>
+      ))}
+      {pagination && pagination.pages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-sm text-gray-500">{pagination.total} total</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-sm">{page} of {pagination.pages}</span>
+            <Button variant="outline" size="sm" disabled={page >= pagination.pages} onClick={() => onPageChange(page + 1)}>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

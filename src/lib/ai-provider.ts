@@ -101,6 +101,12 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   const errors: string[] = []
   const start = Date.now()
 
+  // Log if messages contain non-string content (potential image data)
+  const hasNonTextContent = messages.some(m => typeof m.content !== 'string')
+  if (hasNonTextContent) {
+    console.warn('[AI] Some messages have non-text content — may fail on non-vision models')
+  }
+
   // 1. Cerebras — fastest (skip for reasoning tasks)
   if (CEREBRAS_KEY && !useReasoner) {
     try {
@@ -115,7 +121,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
       })
       const content = (res as any).choices?.[0]?.message?.content || ''
       if (content) return { content, provider: 'cerebras', model: cerebrasModel, tokensUsed: (res as any).usage?.total_tokens, latencyMs: Date.now() - start }
-    } catch (e: any) { errors.push(`Cerebras: ${e.message}`); console.warn('[AI] Cerebras:', e.message) }
+    } catch (e: any) {
+      const isImageError = e.message?.includes?.('image')
+      if (isImageError) console.warn('[AI] Cerebras rejected image input — skipping')
+      else { errors.push(`Cerebras: ${e.message}`); console.warn('[AI] Cerebras:', e.message) }
+    }
   }
 
   // 2. Groq — free, ultra-fast (moved up — confirmed working)
@@ -123,7 +133,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     try {
       const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, groqModel, messages, maxTokens, temperature)
       if (content) return { content, provider: 'groq', model: groqModel, tokensUsed, latencyMs: Date.now() - start }
-    } catch (e: any) { errors.push(`Groq: ${e.message}`); console.warn('[AI] Groq:', e.message) }
+    } catch (e: any) {
+      const isImageError = e.message?.includes?.('image')
+      if (isImageError) console.warn('[AI] Groq rejected image input — skipping')
+      else { errors.push(`Groq: ${e.message}`); console.warn('[AI] Groq:', e.message) }
+    }
   }
 
   // 3. DeepSeek — best quality (V3 for chat, R1 for reasoning)
@@ -131,7 +145,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     try {
       const { content, tokensUsed } = await callHTTP(DEEPSEEK_URL, DEEPSEEK_KEY, deepseekModel, messages, maxTokens, temperature)
       if (content) return { content, provider: 'deepseek', model: deepseekModel, tokensUsed, latencyMs: Date.now() - start }
-    } catch (e: any) { errors.push(`DeepSeek: ${e.message}`); console.warn('[AI] DeepSeek:', e.message) }
+    } catch (e: any) {
+      const isImageError = e.message?.includes?.('image')
+      if (isImageError) console.warn('[AI] DeepSeek rejected image input — skipping')
+      else { errors.push(`DeepSeek: ${e.message}`); console.warn('[AI] DeepSeek:', e.message) }
+    }
   }
 
   // 4. Gemini Flash — free quota
@@ -139,7 +157,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     try {
       const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, geminiModel, messages, maxTokens, temperature)
       if (content) return { content, provider: 'gemini', model: geminiModel, tokensUsed, latencyMs: Date.now() - start }
-    } catch (e: any) { errors.push(`Gemini: ${e.message}`); console.warn('[AI] Gemini:', e.message) }
+    } catch (e: any) {
+      const isImageError = e.message?.includes?.('image')
+      if (isImageError) console.warn('[AI] Gemini rejected image input — skipping')
+      else { errors.push(`Gemini: ${e.message}`); console.warn('[AI] Gemini:', e.message) }
+    }
   }
 
   // ── 5. OpenRouter (or direct OpenAI via same key) ────────────────────────
@@ -150,7 +172,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     try {
       const { content, tokensUsed } = await callHTTP(url, OPENROUTER_KEY, model, messages, maxTokens, temperature)
       if (content) return { content, provider: isOR ? 'openrouter' : 'openai', model, tokensUsed, latencyMs: Date.now() - start }
-    } catch (e: any) { errors.push(`OpenRouter: ${e.message}`); console.warn('[AI] OpenRouter:', e.message) }
+    } catch (e: any) {
+      const isImageError = e.message?.includes?.('image')
+      if (isImageError) console.warn('[AI] OpenRouter/OpenAI rejected image input — skipping')
+      else { errors.push(`OpenRouter: ${e.message}`); console.warn('[AI] OpenRouter:', e.message) }
+    }
   }
 
   // ── 6. OpenAI direct (only if different key from OPENROUTER_KEY) ──────────
@@ -158,9 +184,16 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     try {
       const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, openaiModel, messages, maxTokens, temperature)
       if (content) return { content, provider: 'openai', model: openaiModel, tokensUsed, latencyMs: Date.now() - start }
-    } catch (e: any) { errors.push(`OpenAI: ${e.message}`) }
+    } catch (e: any) {
+      const isImageError = e.message?.includes?.('image')
+      if (isImageError) console.warn('[AI] OpenAI rejected image input — skipping')
+      else { errors.push(`OpenAI: ${e.message}`) }
+    }
   }
 
+  if (errors.length === 0) {
+    throw new Error('All AI providers skipped — likely a non-text image input that no provider accepts')
+  }
   throw new Error(`All AI providers failed:\n${errors.join('\n')}`)
 }
 

@@ -304,10 +304,10 @@ export class PresentationGenerator {
    * Add enhanced title slide with gradient background and better typography
    */
   private addEnhancedTitleSlide(request: PresentationRequest) {
-    const slide = this.pptx.addSlide()
+    const slide = (this.pptx as any).addSlide()
 
     // Gradient background
-    (slide as any).background = {
+    slide.background = {
       fill: {
         type: 'gradient',
         angle: 45,
@@ -371,10 +371,10 @@ export class PresentationGenerator {
    * Add enhanced content slide with advanced layouts and styling
    */
   private async addEnhancedContentSlide(slideData: PresentationSlide, imageUrl?: string, slideNumber?: number, totalSlides?: number) {
-    const slide = this.pptx.addSlide()
+    const slide = (this.pptx as any).addSlide()
 
     // Enhanced background with subtle gradient
-    (slide as any).background = {
+    slide.background = {
       fill: {
         type: 'gradient',
         angle: 180,
@@ -649,10 +649,10 @@ export class PresentationGenerator {
    * Add summary slide
    */
   private addSummarySlide(request: PresentationRequest) {
-    const slide = this.pptx.addSlide()
+    const slide = (this.pptx as any).addSlide()
 
     // Background similar to title slide
-    (slide as any).background = {
+    slide.background = {
       fill: {
         type: 'gradient',
         angle: 225,

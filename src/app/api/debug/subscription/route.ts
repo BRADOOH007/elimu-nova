@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const debug = {
+    const debug: any = {
       environment: process.env.NODE_ENV,
       timestamp: new Date().toISOString(),
       user: {
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     // Get subscriptions
     try {
-      let subscriptions = []
+      let subscriptions: any[] = []
       
       if (roleRecord) {
         const schoolId = (roleRecord as any).schoolId

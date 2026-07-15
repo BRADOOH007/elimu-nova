@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma, withRetry } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Get student profile with class information
-    const student = await prisma.student.findUnique({
+    const student = await withRetry(() => prisma.student.findUnique({
       where: { userId: session.user.id },
       include: {
         class: {
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
           }
         }
       }
-    });
+    }));
 
     if (!student) {
       return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
@@ -34,7 +34,8 @@ export async function GET(req: NextRequest) {
 
     // Build where clause - show assignments that are either:
     // 1. Directly assigned to the student, OR
-    // 2. From shared lesson plans by the student's teacher
+    // 2. From shared lesson plans by the student's teacher, OR
+    // 3. Assigned to the student's class
     let where: any = {
       OR: [
         {
@@ -55,20 +56,18 @@ export async function GET(req: NextRequest) {
               }
             }
           ]
-        }
+        },
+        ...(student.classId ? [{
+          classId: student.classId
+        }] : [])
       ]
     };
 
-    // Add status filter
+    // Add status / completion filter — wrap in AND so it doesn't overwrite the OR block
     if (status && status !== 'all') {
-      where.status = status.toUpperCase();
-    }
-
-    // Filter out completed assignments if not requested
-    if (!includeCompleted) {
-      where.status = {
-        in: ['PENDING', 'SUBMITTED']
-      };
+      where = { AND: [where, { status: status.toUpperCase() }] };
+    } else if (!includeCompleted) {
+      where = { AND: [where, { status: { in: ['PENDING', 'SUBMITTED'] } }] };
     }
 
     const assignments = await prisma.assignment.findMany({
@@ -87,6 +86,7 @@ export async function GET(req: NextRequest) {
         },
         lessonPlan: {
           select: {
+            id: true,
             title: true,
             subject: true,
             grade: true

@@ -1,0 +1,14 @@
+{{#> base}}
+{{#*inline "title"}}{{notificationTitle}}{{/inline}}
+{{#*inline "greeting"}}Hi {{firstName}},{{/inline}}
+{{#*inline "message"}}
+{{{notificationMessage}}}
+{{/inline}}
+{{#if action_url}}
+{{#*inline "action_url"}}{{actionUrl}}{{/action_url}}
+{{#*inline "action_text"}}{{actionText}}{{/action_text}}
+{{/if}}
+{{#*inline "footer_note"}}
+This is an automated notification from ElimuNova AI. You can manage your notification preferences in your account settings.
+{{/inline}}
+{{/base}}

@@ -15,6 +15,8 @@ interface Message {
   isRead: boolean
   createdAt: string
   parentId: string | null
+  senderName?: string
+  recipientName?: string
 }
 
 interface Child { id: string; name: string }
@@ -23,7 +25,7 @@ export default function ParentMessages() {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [children, setChildren] = useState<Child[]>([])
-  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([])
+  const [teachers, setTeachers] = useState<{ id: string; name: string; email: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Message | null>(null)
   const [composing, setComposing] = useState(false)
@@ -37,9 +39,10 @@ export default function ParentMessages() {
   const fetchMessages = async () => {
     setLoading(true)
     try {
-      const [msgRes, childRes] = await Promise.all([
+      const [msgRes, childRes, teacherRes] = await Promise.all([
         fetch('/api/parent/messages'),
         fetch('/api/parent/children'),
+        fetch('/api/parent/teachers'),
       ])
       if (msgRes.ok) {
         const { messages: raw } = await msgRes.json()
@@ -49,8 +52,10 @@ export default function ParentMessages() {
         const { children: raw } = await childRes.json()
         const kids = raw.map((c: any) => ({ id: c.id, name: `${c.user.firstName} ${c.user.lastName}` }))
         setChildren(kids)
-        // Build teacher list from children's teacher info (would need teacher route — use kids' teacher IDs)
-        // For now just use a placeholder until teacher lookup is available
+      }
+      if (teacherRes.ok) {
+        const { teachers: raw } = await teacherRes.json()
+        setTeachers(raw || [])
       }
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
@@ -184,6 +189,9 @@ export default function ParentMessages() {
                     )}
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">{fmtDate(msg.createdAt)}</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {tab === 'inbox' ? (msg.senderName || msg.senderType) : (msg.recipientName || msg.recipientType)}
+                  </p>
                 </button>
               ))}
             </div>
@@ -196,15 +204,21 @@ export default function ParentMessages() {
             <form onSubmit={sendMessage} className="space-y-4 h-full flex flex-col">
               <h2 className="font-semibold text-slate-800">New Message</h2>
               <div>
-                <label className="block text-xs font-medium text-slate-600 mb-1.5">To (Teacher User ID)</label>
-                <input
-                  type="text"
+                <label className="block text-xs font-medium text-slate-600 mb-1.5">To (Teacher)</label>
+                <select
                   value={form.recipientId}
                   onChange={e => setForm(f => ({ ...f, recipientId: e.target.value }))}
-                  placeholder="Paste teacher's user ID (ask school admin)"
-                  className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full h-10 px-3 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
-                />
+                >
+                  <option value="">Select a teacher...</option>
+                  {teachers.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} ({t.email})</option>
+                  ))}
+                </select>
+                {teachers.length === 0 && (
+                  <p className="text-xs text-amber-600 mt-1">No teachers found linked to your children</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1.5">Subject</label>
@@ -243,7 +257,7 @@ export default function ParentMessages() {
               <div className="border-b border-slate-100 pb-4">
                 <h2 className="text-lg font-bold text-slate-900">{selected.subject}</h2>
                 <div className="flex items-center gap-4 text-xs text-slate-400 mt-1">
-                  <span>From: {selected.senderType}</span>
+                  <span>From: {selected.senderName || selected.senderType}</span>
                   <span>{fmtDate(selected.createdAt)}</span>
                 </div>
               </div>

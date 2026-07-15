@@ -1,0 +1,18 @@
+{{#> base}}
+{{#*inline "title"}}Your Free Trial is Ending Soon{{/inline}}
+{{#*inline "greeting"}}Hi {{firstName}},{{/inline}}
+{{#*inline "message"}}
+Your free trial of <strong>{{planName}}</strong> ends in <strong>{{daysRemaining}} days</strong> on <strong>{{trialEndDate}}</strong>.
+{{/inline}}
+{{#*inline "message"}}
+<div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0;">
+  <p style="margin: 0 0 12px; color: #92400e;"><strong>Trial Summary:</strong></p>
+  <p style="margin: 0 0 8px;"><strong>Plan:</strong> {{planName}}</p>
+  <p style="margin: 0 0 8px;"><strong>Trial Ends:</strong> {{trialEndDate}}</p>
+  <p style="margin: 0;"><strong>Days Remaining:</strong> {{daysRemaining}}</p>
+</div>
+{{/inline}}
+{{#*inline "action_url"}}/billing{{/action_url}}
+{{#*inline "action_text"}}Upgrade Now{{/action_text}}
+{{#*inline "footer_note"}}Don't lose access to your AI-powered education tools. Upgrade now to continue uninterrupted.{{/inline}}
+{{/base}}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma, withRetry } from '@/lib/prisma';
 import { logSchemeOfWorkCreated } from '@/lib/activity-logger';
 
 export async function GET(req: NextRequest) {
@@ -13,9 +13,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Get teacher information
-    const teacher = await prisma.teacher.findFirst({
+    const teacher = await withRetry(() => prisma.teacher.findFirst({
       where: { userId: session.user.id }
-    });
+    }));
 
     if (!teacher) {
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });

@@ -184,27 +184,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate AI resource content
-    const aiResource = await OpenAIAI.generateAIResource({
+    const aiResource = await (OpenAIService as any).generateAIResource({
       type,
       subject,
       topic,
       grade,
       description: description || '',
       studentName: `${student.user.firstName} ${student.user.lastName}`,
-      studentLevel: student.class?.name || 'Grade 8',
+      studentLevel: (student as any).class?.name || 'Grade 8',
       availableMaterials: {
-        schemesOfWork: student.teacher.schemesOfWork.map(scheme => ({
+        schemesOfWork: student.teacher?.schemesOfWork?.map((scheme: any) => ({
           title: scheme.title,
           subject: scheme.subject,
           grade: scheme.grade,
-          topics: scheme.topics.map(topic => topic.title)
-        })),
-        lessonPlans: student.teacher.lessonPlans.map(plan => ({
+          topics: scheme.topics.map((topic: any) => topic.title)
+        })) || [],
+        lessonPlans: student.teacher?.lessonPlans?.map((plan: any) => ({
           title: plan.title,
           subject: plan.subject,
           grade: plan.grade,
           content: plan.content
-        }))
+        })) || []
       }
     })
 
@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
         isPublic: true,
         isAIGenerated: true,
         studentId: student.id,
-        teacherId: student.teacherId,
+        teacherId: student.teacherId ?? '',
         lessonPlanId: lessonPlanId || null,
         metadata: {
           difficulty: aiResource.difficulty || 'medium',

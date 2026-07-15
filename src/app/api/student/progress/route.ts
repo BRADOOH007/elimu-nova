@@ -76,14 +76,14 @@ export async function GET(request: NextRequest) {
       .reduce((total, session) => total + session.duration, 0)
 
     // Assignment calculations
-    const completedAssignments = student.submissions.filter(s => s.status === 'submitted').length
+    const completedAssignments = student.submissions.filter(s => (s as any).status === 'SUBMITTED').length
     const pendingAssignments = student.assignments.filter(a => 
       a.dueDate > new Date() && 
-      !student.submissions.some(s => s.assignmentId === a.id && s.status === 'submitted')
+      !student.submissions.some(s => (s as any).assignmentId === a.id && (s as any).status === 'SUBMITTED')
     ).length
     const overdueAssignments = student.assignments.filter(a => 
       a.dueDate < new Date() && 
-      !student.submissions.some(s => s.assignmentId === a.id && s.status === 'submitted')
+      !student.submissions.some(s => (s as any).assignmentId === a.id && (s as any).status === 'SUBMITTED')
     ).length
 
     // Grade calculations
@@ -149,16 +149,16 @@ export async function GET(request: NextRequest) {
       aiInsights,
 
       // Teacher info
-      teacher: {
+      teacher: student.teacher ? {
         name: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`,
         email: student.teacher.user.email
-      },
+      } : { name: 'Unknown', email: '' },
 
       // Student info
       student: {
         name: `${student.user.firstName} ${student.user.lastName}`,
         grade: student.class?.name || 'Grade 8',
-        school: student.school.name
+        school: student.school?.name || ''
       }
     }
 

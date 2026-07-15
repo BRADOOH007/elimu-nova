@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { stripPasswordFromAddress, extractEncryptedPassword } from '@/lib/password-encryption'
 
 export async function GET(
   request: NextRequest,
@@ -74,8 +75,8 @@ export async function GET(
       name: `${student.user.firstName} ${student.user.lastName}`,
       email: student.user.email,
       phone: student.user.phone,
-      address: student.user.address,
-      teacher: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`,
+      address: stripPasswordFromAddress(student.user.address),
+      teacher: student.teacher ? `${student.teacher.user.firstName} ${student.teacher.user.lastName}` : '',
       class: student.class?.name,
       grade: student.class?.grade,
       status: student.user.isActive ? 'Active' : 'Inactive',
@@ -144,7 +145,11 @@ export async function PUT(
             lastName: lastName || existingStudent.user.lastName,
             email: email || existingStudent.user.email,
             phone: phone || existingStudent.user.phone,
-            address: address || existingStudent.user.address,
+            address: address !== undefined
+              ? (existingStudent.user.address?.startsWith('PWD_ENC:')
+                ? existingStudent.user.address.split('\n---\n')[0] + '\n---\n' + address
+                : address)
+              : existingStudent.user.address,
             isActive: isActive !== undefined ? isActive : existingStudent.user.isActive
           }
         }
@@ -186,8 +191,8 @@ export async function PUT(
       name: `${updatedStudent.user.firstName} ${updatedStudent.user.lastName}`,
       email: updatedStudent.user.email,
       phone: updatedStudent.user.phone,
-      address: updatedStudent.user.address,
-      teacher: `${updatedStudent.teacher.user.firstName} ${updatedStudent.teacher.user.lastName}`,
+      address: stripPasswordFromAddress(updatedStudent.user.address),
+      teacher: updatedStudent.teacher ? `${updatedStudent.teacher.user.firstName} ${updatedStudent.teacher.user.lastName}` : '',
       class: updatedStudent.class?.name,
       grade: updatedStudent.class?.grade,
       status: updatedStudent.user.isActive ? 'Active' : 'Inactive',

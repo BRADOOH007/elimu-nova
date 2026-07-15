@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     // Create shared lesson plan records for the class
     const sharedLessonPlans = await Promise.all(
       lessonPlanIds.map((lessonPlanId: string) =>
-        prisma.sharedLessonPlan.upsert({
+        (prisma as any).sharedLessonPlan.upsert({
           where: {
             classId_lessonPlanId: {
               classId: classId,

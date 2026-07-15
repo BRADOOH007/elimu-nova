@@ -2,188 +2,105 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { cache } from '@/lib/redis'
+import { CacheKeys, TTL } from '@/lib/cache-helpers'
 
 export async function GET(request: NextRequest) {
-  let session: any = null
-  
   try {
-    session = await getServerSession(authOptions)
+    const session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
-      console.log('School admin dashboard stats: No session found')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     if (session.user.role !== 'SCHOOL_ADMIN') {
-      console.log(`School admin dashboard stats: Invalid role ${session.user.role}`)
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    console.log(`School admin dashboard stats request for user: ${session.user.id}`)
+    const cacheKey = CacheKeys.dashboardStats(session.user.id)
+    try {
+      const cached = await cache.get(cacheKey)
+      if (cached) return NextResponse.json(JSON.parse(cached))
+    } catch { /* cache miss */ }
 
-    // Get school admin record
     const schoolAdmin = await prisma.schoolAdmin.findUnique({
       where: { userId: session.user.id },
-      include: {
-        school: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            phone: true,
-            email: true,
-            isActive: true
-          }
-        }
-      }
+      include: { school: { select: { id: true, name: true, address: true, phone: true, email: true, isActive: true } } }
     })
 
     if (!schoolAdmin || !schoolAdmin.school) {
-      console.error('School admin record not found for user:', session.user.id)
       return NextResponse.json({ error: 'School admin record not found' }, { status: 404 })
     }
 
     const schoolId = schoolAdmin.schoolId
-    console.log(`Fetching stats for school: ${schoolId}`)
 
-    // Get dashboard statistics
     const [
-      totalTeachers,
-      activeTeachers,
-      totalStudents,
-      activeStudents,
+      totalTeachers, activeTeachers,
+      totalStudents, activeStudents,
       totalClasses,
       subscription,
       recentTeachers,
-      recentStudents
+      recentStudents,
+      recentActivities,
+      upcomingMeetings,
     ] = await Promise.all([
-      // Teacher counts
-      prisma.teacher.count({
-        where: { schoolId }
-      }),
-      prisma.teacher.count({
-        where: { 
-          schoolId,
-          user: { isActive: true }
-        }
-      }),
-      
-      // Student counts
-      prisma.student.count({
-        where: { schoolId }
-      }),
-      prisma.student.count({
-        where: { 
-          schoolId,
-          user: { isActive: true }
-        }
-      }),
-
-      // Class count (assuming classes are linked to teachers)
-      prisma.class.count({
-        where: {
-          teacher: { schoolId }
-        }
-      }),
-
-      // School subscription
+      prisma.teacher.count({ where: { schoolId } }),
+      prisma.teacher.count({ where: { schoolId, user: { isActive: true } } }),
+      prisma.student.count({ where: { schoolId } }),
+      prisma.student.count({ where: { schoolId, user: { isActive: true } } }),
+      prisma.class.count({ where: { teacher: { schoolId } } }),
       prisma.subscription.findFirst({
         where: { schoolId },
         include: { package: true },
         orderBy: { createdAt: 'desc' }
       }),
-
-      // Recent teachers (last 5)
       prisma.teacher.findMany({
         where: { schoolId },
         include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-              isActive: true,
-              createdAt: true
-            }
-          },
-          students: {
-            select: { id: true }
-          }
+          user: { select: { firstName: true, lastName: true, email: true, isActive: true, createdAt: true } },
+          students: { select: { id: true } }
         },
-        orderBy: { 
-          user: { createdAt: 'desc' }
-        },
+        orderBy: { user: { createdAt: 'desc' } },
         take: 5
       }),
-
-      // Recent students (last 5)
       prisma.student.findMany({
         where: { schoolId },
         include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-              isActive: true,
-              createdAt: true
-            }
-          },
-          teacher: {
-            include: {
-              user: {
-                select: {
-                  firstName: true,
-                  lastName: true
-                }
-              }
-            }
-          }
+          user: { select: { firstName: true, lastName: true, email: true, isActive: true, createdAt: true } },
+          teacher: { include: { user: { select: { firstName: true, lastName: true } } } }
         },
-        orderBy: { 
-          user: { createdAt: 'desc' }
-        },
+        orderBy: { user: { createdAt: 'desc' } },
         take: 5
-      })
+      }),
+      prisma.activity.findMany({
+        where: { schoolId },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true, role: true } }
+        }
+      }),
+      prisma.meeting.findMany({
+        where: { schoolId, status: { notIn: ['COMPLETED', 'CANCELLED'] }, date: { gte: new Date() } },
+        orderBy: { date: 'asc' },
+        take: 5,
+        include: {
+          creator: { select: { firstName: true, lastName: true } }
+        }
+      }),
     ])
 
-    // Calculate monthly revenue (if subscription exists)
-    let monthlyRevenue = 0
-    if (subscription) {
-      monthlyRevenue = subscription.amount
-    }
+    const monthlyRevenue = subscription?.amount || 0
 
-    // Format data to match what the frontend expects
     const responseData = {
       stats: {
-        totalTeachers: {
-          value: totalTeachers,
-          change: `${activeTeachers} active`
-        },
-        activeTeachers: {
-          value: activeTeachers,
-          change: `${Math.round((activeTeachers / Math.max(totalTeachers, 1)) * 100)}% active`
-        },
-        totalStudents: {
-          value: totalStudents,
-          change: `${activeStudents} active`
-        },
-        activeStudents: {
-          value: activeStudents,
-          change: `${Math.round((activeStudents / Math.max(totalStudents, 1)) * 100)}% active`
-        },
-        totalClasses: {
-          value: totalClasses,
-          change: totalClasses > 0 ? `${Math.round(totalStudents / Math.max(totalClasses, 1))} avg students/class` : 'No classes'
-        },
-        activeClasses: {
-          value: totalClasses, // For now, assume all classes are active
-          change: totalClasses > 0 ? `${Math.round(totalStudents / Math.max(totalClasses, 1))} avg students/class` : 'No active classes'
-        },
-        monthlyRevenue: {
-          value: monthlyRevenue,
-          change: subscription ? `${subscription.package.name} plan` : 'No subscription'
-        }
+        totalTeachers: { value: totalTeachers, change: `${activeTeachers} active` },
+        activeTeachers: { value: activeTeachers, change: `${Math.round((activeTeachers / Math.max(totalTeachers, 1)) * 100)}% active` },
+        totalStudents: { value: totalStudents, change: `${activeStudents} active` },
+        activeStudents: { value: activeStudents, change: `${Math.round((activeStudents / Math.max(totalStudents, 1)) * 100)}% active` },
+        totalClasses: { value: totalClasses, change: totalClasses > 0 ? `${Math.round(totalStudents / Math.max(totalClasses, 1))} avg students/class` : 'No classes' },
+        activeClasses: { value: totalClasses, change: totalClasses > 0 ? `${Math.round(totalStudents / Math.max(totalClasses, 1))} avg students/class` : 'No active classes' },
+        monthlyRevenue: { value: monthlyRevenue, change: subscription ? `${subscription.package.name} plan` : 'No subscription' }
       },
       schoolInfo: {
         id: schoolAdmin.school.id,
@@ -222,34 +139,33 @@ export async function GET(request: NextRequest) {
         isActive: student.user.isActive,
         joinedAt: student.user.createdAt
       })),
-      recentActivities: [] // Add empty array for now, can be populated later
+      recentActivities: recentActivities.map(a => ({
+        id: a.id,
+        type: a.type,
+        action: a.type,
+        description: a.description,
+        metadata: a.metadata,
+        user: a.user ? { name: `${a.user.firstName} ${a.user.lastName}`, email: a.user.email, role: a.user.role } : null,
+        createdAt: a.createdAt.toISOString()
+      })),
+      upcomingMeetings: upcomingMeetings.map(m => ({
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        date: m.date.toISOString(),
+        time: m.time,
+        duration: m.duration,
+        location: m.location,
+        status: m.status,
+        creator: m.creator ? `${m.creator.firstName} ${m.creator.lastName}` : 'Unknown',
+      })),
     }
 
-    console.log('School admin dashboard stats retrieved successfully:', {
-      schoolId,
-      totalTeachers,
-      totalStudents,
-      hasSubscription: !!subscription
-    })
+    try { await cache.set(cacheKey, JSON.stringify(responseData), TTL.MEDIUM) } catch { /* non-fatal */ }
 
     return NextResponse.json(responseData)
   } catch (error) {
     console.error('Error fetching school admin dashboard stats:', error)
-    console.error('Error details:', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      userId: session?.user?.id,
-      role: session?.user?.role
-    })
-    
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch dashboard statistics',
-        debug: process.env.NODE_ENV === 'development' ? {
-          message: error instanceof Error ? error.message : 'Unknown error'
-        } : undefined
-      },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch dashboard statistics' }, { status: 500 })
   }
 }

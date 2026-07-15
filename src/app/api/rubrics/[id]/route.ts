@@ -6,7 +6,7 @@ import { AIContentType } from '@prisma/client';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -26,7 +26,7 @@ export async function GET(
 
     const rubric = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: AIContentType.RUBRIC
       }
@@ -60,7 +60,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -92,7 +92,7 @@ export async function PUT(
     // Check if rubric exists and belongs to teacher
     const existingRubric = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: AIContentType.RUBRIC
       }
@@ -111,11 +111,11 @@ export async function PUT(
       totalPoints: totalPoints || 100,
       performanceLevels: performanceLevels || [],
       criteria: criteria || [],
-      metadata: { ...existingRubric.metadata, ...metadata }
+      metadata: { ...(existingRubric.metadata as Record<string, any> || {}), ...metadata }
     };
 
     const updatedRubric = await prisma.aIGeneratedContent.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: {
         title: title || existingRubric.title,
         content: JSON.stringify(rubricContent),
@@ -147,7 +147,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -168,7 +168,7 @@ export async function DELETE(
     // Check if rubric exists and belongs to teacher
     const existingRubric = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: AIContentType.RUBRIC
       }
@@ -179,7 +179,7 @@ export async function DELETE(
     }
 
     await prisma.aIGeneratedContent.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     });
 
     return NextResponse.json({

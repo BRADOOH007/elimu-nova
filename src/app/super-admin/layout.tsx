@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
-import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical } from 'lucide-react'
+import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, Globe } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +16,9 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { icon: Brain,        label: "AI Config",   href: "/super-admin/ai-config"      },
     { icon: FlaskConical, label: "AI Test Lab",  href: "/super-admin/ai-test"        },
     { icon: Settings,     label: "Settings",     href: "/super-admin/system-settings"},
+    { icon: FileText,     label: "Reports",     href: "/super-admin/reports"        },
+    { icon: Shield,       label: "Security",    href: "/super-admin/security"       },
+    { icon: Globe,        label: "Global",      href: "/super-admin/global"         },
   ]
 
   if (!session) return <DashboardLoading />

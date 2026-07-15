@@ -59,16 +59,15 @@ interface RecentActivity {
 
 interface AIInsight {
   id: string
-  studentName: string
-  className: string
-  subject: string
-  progress: number
-  notes: string
-  submittedAt: string
-  type?: string
-  recommendation?: string
-  priority?: string
-  createdAt?: string
+  type: 'performance' | 'assignment' | 'submission'
+  studentName?: string
+  className?: string
+  subject?: string
+  progress?: number
+  notes?: string
+  recommendation: string
+  priority: 'high' | 'medium' | 'low'
+  createdAt: string
 }
 
 interface AnalyticsResponse {
@@ -493,12 +492,14 @@ export default function AnalyticsPage() {
         {/* AI Insight Modal */}
         {showInsightModal && selectedInsight && (
           <AIInsightModal
+            isOpen={showInsightModal}
             insight={selectedInsight}
             onClose={() => setShowInsightModal(false)}
-            onUpdate={() => {
+            onInsightUpdated={() => {
               setShowInsightModal(false)
               fetchAnalytics()
             }}
+            action="view"
           />
         )}
       </div>

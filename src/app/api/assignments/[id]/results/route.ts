@@ -3,14 +3,14 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const assignmentId = params.id;
+    const assignmentId = (await params).id;
 
     const assignment = await prisma.assignment.findUnique({
       where: { id: assignmentId },
@@ -99,7 +99,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         gradedAt: sub.gradedAt,
         timeSpent: sub.timeSpent,
         questionScores: sub.questionScores,
-        needsRevision: sub.needsRevision
+        needsRevision: sub.needsRevision,
+        revisionNotes: sub.revisionNotes
       }))
     };
 

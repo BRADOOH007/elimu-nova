@@ -52,7 +52,7 @@ export default function LiveClassPage() {
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   // Poll for updates every 3s when live
-  const pollRef = useRef<NodeJS.Timeout>()
+  const pollRef = useRef<NodeJS.Timeout>(null)
 
   useEffect(() => {
     fetch('/api/teacher/classes').then(r => r.json()).then(d => setClasses(d.classes || []))
@@ -65,7 +65,7 @@ export default function LiveClassPage() {
   useEffect(() => {
     if (!liveSession) return
     pollRef.current = setInterval(pollSession, 3000)
-    return () => clearInterval(pollRef.current)
+    return () => clearInterval(pollRef.current!)
   }, [liveSession?.id])
 
   const pollSession = async () => {
@@ -103,7 +103,7 @@ export default function LiveClassPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sessionId: liveSession.id, action: 'end', data: {} }),
     })
-    clearInterval(pollRef.current)
+    clearInterval(pollRef.current!)
     setStep('setup')
     setLiveSession(null)
   }

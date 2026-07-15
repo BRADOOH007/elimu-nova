@@ -125,35 +125,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Check if key already exists
-    const existingSetting = await prisma.systemSettings.findUnique({
-      where: { key }
-    })
-
-    if (existingSetting) {
-      return NextResponse.json({ error: 'Setting key already exists' }, { status: 400 })
-    }
-
-    // Create system setting
-    const setting = await prisma.systemSettings.create({
-      data: {
+    // Upsert — create or update
+    const setting = await prisma.systemSettings.upsert({
+      where: { key },
+      update: {
+        value,
+        type,
+        category,
+        description: description || null,
+        isPublic: isPublic || false,
+        isEditable: isEditable !== false,
+        updatedBy: session.user.id,
+      },
+      create: {
         key,
         value,
         type,
         category,
-        description,
+        description: description || null,
         isPublic: isPublic || false,
-        isEditable: isEditable !== false, // Default to true
-        updatedBy: session.user.id
+        isEditable: isEditable !== false,
+        updatedBy: session.user.id,
       },
       include: {
         updatedByUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
+          select: { id: true, firstName: true, lastName: true, email: true }
         }
       }
     })

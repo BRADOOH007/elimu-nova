@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma, withRetry } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -16,9 +16,9 @@ export async function GET(req: NextRequest) {
     console.log('✅ Session found:', session.user.email)
 
     // Get teacher information
-    const teacher = await prisma.teacher.findFirst({
+    const teacher = await withRetry(() => prisma.teacher.findFirst({
       where: { userId: session.user.id }
-    });
+    }));
 
     if (!teacher) {
       console.log('❌ Teacher not found for userId:', session.user.id)
@@ -99,5 +99,83 @@ export async function GET(req: NextRequest) {
       { error: 'Failed to fetch parents' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * POST /api/teacher/parents
+ * Create or link a parent to a student.
+ * Body: { firstName, lastName, email, phone?, studentId }
+ */
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id || session.user.role !== 'TEACHER') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const teacher = await prisma.teacher.findFirst({ where: { userId: session.user.id } })
+    if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
+
+    const { firstName, lastName, email, phone, studentId } = await req.json()
+    if (!firstName || !lastName || !email || !studentId) {
+      return NextResponse.json({ error: 'firstName, lastName, email and studentId are required' }, { status: 400 })
+    }
+
+    // Verify student belongs to this teacher
+    const student = await prisma.student.findFirst({
+      where: { id: studentId, teacherId: teacher.id },
+    })
+    if (!student) return NextResponse.json({ error: 'Student not found or not your student' }, { status: 404 })
+
+    // Check if parent user already exists
+    let parentUser = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } })
+    let parent: any
+
+    if (parentUser) {
+      // Link existing user as parent if not already
+      parent = await prisma.parent.upsert({
+        where: { userId: parentUser.id },
+        update: {},
+        create: { userId: parentUser.id },
+      })
+    } else {
+      // Create new user + parent
+      const bcrypt = await import('bcryptjs')
+      const tempPwd  = `Parent${Math.floor(100000 + Math.random() * 900000)}`
+      const hashed   = await bcrypt.hash(tempPwd, 10)
+      parentUser = await prisma.user.create({
+        data: {
+          firstName, lastName,
+          email:    email.toLowerCase().trim(),
+          password: hashed,
+          role:     'PARENT',
+          isActive: true,
+          phone:    phone || null,
+        },
+      })
+      parent = await prisma.parent.create({ data: { userId: parentUser.id } })
+    }
+
+    // Link parent → student (upsert to avoid duplicates)
+    await (prisma as any).parentStudent.upsert({
+      where:  { parentId_studentId: { parentId: parent.id, studentId } },
+      update: {},
+      create: { parentId: parent.id, studentId },
+    })
+
+    return NextResponse.json({
+      success: true,
+      parent: {
+        id:    parent.id,
+        name:  `${parentUser.firstName} ${parentUser.lastName}`,
+        email: parentUser.email,
+        phone: parentUser.phone,
+      },
+      message: 'Parent linked to student successfully',
+    }, { status: 201 })
+  } catch (error: any) {
+    console.error('Error creating/linking parent:', error)
+    return NextResponse.json({ error: error.message || 'Failed to add parent' }, { status: 500 })
   }
 }

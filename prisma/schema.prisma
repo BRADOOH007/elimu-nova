@@ -163,11 +163,18 @@ model SchoolAdmin {
 }
 
 model Teacher {
-  id       String  @id @default(cuid())
-  userId   String  @unique
+  id       String   @id @default(cuid())
+  userId   String   @unique
   schoolId String?
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school   School? @relation(fields: [schoolId], references: [id])
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school   School?  @relation(fields: [schoolId], references: [id])
+
+  // Template text for AI-generated content
+  lessonPlanTemplate    String?
+  schemeOfWorkTemplate String?
+  examTemplate          String?
+  assignmentTemplate    String?
+  curriculumTemplate    String?
 
   // Relationships
   students           Student[]

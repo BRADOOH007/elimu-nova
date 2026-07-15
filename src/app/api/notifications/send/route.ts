@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
               select: {
                 id: true,
                 userId: true,
-                parent: {
+                parents: {
                   select: { parentId: true }
                 }
               }
@@ -99,10 +99,11 @@ export async function POST(request: NextRequest) {
           }
         })
 
-        if (teacher?.students) {
-          const studentUserIds = teacher.students.map(s => s.userId)
-          const parentUserIds = teacher.students
-            .flatMap(s => s.parent?.parentId || [])
+        const teacherWithStudents = teacher as any
+        if (teacherWithStudents?.students) {
+          const studentUserIds = teacherWithStudents.students.map((s: any) => s.userId)
+          const parentUserIds = teacherWithStudents.students
+            .flatMap((s: any) => s.parents?.map((p: any) => p.parentId) || [])
           targetUserIds = [...new Set([...studentUserIds, ...parentUserIds])]
         }
       }

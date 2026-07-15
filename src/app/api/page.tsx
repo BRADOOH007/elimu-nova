@@ -315,7 +315,7 @@ console.log(lessonPlan);`}
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8">
             <div>
-              <Logo className="mb-4" />
+              <Logo variant="black" className="mb-4" />
               <p className="text-gray-400">
                 Transforming education with AI-powered tools for teachers and students.
               </p>

@@ -21,6 +21,7 @@ import {
   CheckCircle
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 
 interface AIGeneratorModalProps {
   isOpen: boolean
@@ -781,10 +782,8 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                     </Button>
                   </div>
                 </div>
-                <div className="prose max-w-none">
-                  <pre className="whitespace-pre-wrap text-sm text-gray-700 bg-white p-4 rounded-lg overflow-auto max-h-96 border border-gray-200">
-                    {generatedContent.content}
-                  </pre>
+                <div className="max-h-[500px] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-sm p-5">
+                  <MarkdownRenderer content={generatedContent.content} />
                 </div>
               </div>
             )}
