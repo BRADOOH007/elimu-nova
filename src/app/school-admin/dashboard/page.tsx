@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { SubscriptionAlert } from '@/components/subscription/subscription-alert'
 import { Button } from "@/components/ui/button"
@@ -29,7 +31,13 @@ import {
   LogOut,
   Trash2,
   UserCheck,
-  UserX
+  UserX,
+  Clock,
+  MapPin,
+  Brain,
+  AlertCircle,
+  CheckCircle,
+  RefreshCw
 } from "lucide-react"
 import { EnrollTeacherModal } from "@/components/modals/enroll-teacher-modal"
 import EnrollStudentModal from "@/components/modals/enroll-student-modal"
@@ -49,6 +57,7 @@ interface DashboardStats {
   totalStudents: { value: number; change: string }
   activeClasses: { value: number; change: string }
   monthlyRevenue: { value: number; change: string }
+  activeTeachers: { value: number; change: string }
 }
 
 interface RecentTeacher {
@@ -87,17 +96,25 @@ interface SchoolInfo {
   name: string
   address: string
   package: string
-  subscription: string
+  subscription: {
+    packageName: string
+    status: string
+    amount: number
+    daysRemaining: number
+  }
   packagePrice: number
 }
 
 export default function SchoolAdminDashboard() {
+  const router = useRouter()
   const { schoolInfo: schoolData } = useSchoolInfo()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentTeachers, setRecentTeachers] = useState<RecentTeacher[]>([])
   const [recentStudents, setRecentStudents] = useState<RecentStudent[]>([])
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
   const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
+  const [upcomingMeetings, setUpcomingMeetings] = useState<any[]>([])
+  const [availableClasses, setAvailableClasses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   
   // Modal states
@@ -117,22 +134,23 @@ export default function SchoolAdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/school-admin/dashboard-stats')
+      const [statsRes, classesRes] = await Promise.all([
+        fetch('/api/school-admin/dashboard-stats'),
+        fetch('/api/school-admin/classes'),
+      ])
       
-      if (response.ok) {
-        const data = await response.json()
+      if (statsRes.ok) {
+        const data = await statsRes.json()
         setStats(data.stats)
         setRecentTeachers(data.recentTeachers)
         setRecentStudents(data.recentStudents)
         setRecentActivities(data.recentActivities)
         setSchoolInfo(data.schoolInfo)
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-        console.error('Failed to fetch dashboard data:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: errorData
-        })
+        setUpcomingMeetings(data.upcomingMeetings || [])
+      }
+      if (classesRes.ok) {
+        const { classes } = await classesRes.json()
+        setAvailableClasses(classes || [])
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -412,7 +430,7 @@ export default function SchoolAdminDashboard() {
               <Button 
                 variant="outline" 
                 className="w-full edugenius-glass justify-start"
-                onClick={() => window.location.href = '/school-admin/credentials'}
+                onClick={() => router.push('/school-admin/credentials')}
               >
                 <Users className="w-4 h-4 mr-2" />
                 Credential Generator
@@ -451,6 +469,14 @@ export default function SchoolAdminDashboard() {
                   <span className="text-sm text-gray-600 flex-shrink-0">Package Price</span>
                   <span className="text-sm text-blue-600 font-medium">
                     {formatCurrency(schoolInfo.subscription.amount)}
+                  </span>
+                </div>
+              )}
+              {schoolInfo?.subscription?.daysRemaining !== undefined && (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-gray-600 flex-shrink-0">Days Remaining</span>
+                  <span className={`text-sm font-medium ${schoolInfo.subscription.daysRemaining <= 7 ? 'text-red-600' : schoolInfo.subscription.daysRemaining <= 30 ? 'text-amber-600' : 'text-green-600'}`}>
+                    {schoolInfo.subscription.daysRemaining} days
                   </span>
                 </div>
               )}
@@ -498,7 +524,7 @@ export default function SchoolAdminDashboard() {
               <Button 
                 variant="outline" 
                 className="edugenius-glass"
-                onClick={() => window.location.href = '/school-admin/teachers'}
+                onClick={() => router.push('/school-admin/teachers')}
               >
                 <Eye className="w-4 h-4 mr-2" />
                 View All
@@ -590,7 +616,7 @@ export default function SchoolAdminDashboard() {
               <Button 
                 variant="outline" 
                 className="edugenius-glass"
-                onClick={() => window.location.href = '/school-admin/students'}
+                onClick={() => router.push('/school-admin/students')}
               >
                 <Eye className="w-4 h-4 mr-2" />
                 View All
@@ -673,6 +699,92 @@ export default function SchoolAdminDashboard() {
           </Card>
         </div>
 
+        {/* Upcoming Meetings + AI Insights */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 mb-8">
+          <Card className="bg-gradient-to-br from-white via-orange-50 to-amber-50 shadow-lg backdrop-blur-sm border-0">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-orange-600" />
+                  Upcoming Meetings
+                </CardTitle>
+                <CardDescription>Scheduled meetings and events</CardDescription>
+              </div>
+              <Link href="/school-admin/meetings">
+                <Button variant="outline" size="sm" className="edugenius-glass">
+                  <Eye className="w-4 h-4 mr-1" /> View All
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {upcomingMeetings.length === 0 ? (
+                <div className="text-center py-6">
+                  <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No upcoming meetings</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {upcomingMeetings.slice(0, 4).map((m: any) => (
+                    <div key={m.id} className="flex items-start gap-3 p-3 rounded-xl bg-white/70 border border-orange-100">
+                      <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center shrink-0">
+                        <Calendar className="w-5 h-5 text-orange-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{m.title}</p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-gray-500 mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />{new Date(m.date).toLocaleDateString()} {m.time}
+                          </span>
+                          {m.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />{m.location}
+                            </span>
+                          )}
+                          <span>{m.duration}min</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-0.5">by {m.creator}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-white via-green-50 to-emerald-50 shadow-lg backdrop-blur-sm border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="w-5 h-5 text-green-600" />
+                School Overview
+              </CardTitle>
+              <CardDescription>Quick snapshot of your school</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Teachers', value: stats?.totalTeachers.value || 0, icon: GraduationCap, color: 'text-blue-600', bg: 'bg-blue-100' },
+                  { label: 'Students', value: stats?.totalStudents.value || 0, icon: Users, color: 'text-purple-600', bg: 'bg-purple-100' },
+                  { label: 'Classes', value: stats?.activeClasses.value || 0, icon: BookOpen, color: 'text-pink-600', bg: 'bg-pink-100' },
+                  { label: 'Active %', value: stats?.activeTeachers ? `${Math.round((stats.activeTeachers.value / Math.max(stats.totalTeachers.value, 1)) * 100)}%` : '—', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100' },
+                ].map(s => (
+                  <div key={s.label} className="p-3 rounded-xl bg-white/70 border border-slate-100 text-center">
+                    <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center mx-auto mb-1`}>
+                      <s.icon className={`w-4 h-4 ${s.color}`} />
+                    </div>
+                    <p className="text-lg font-bold text-slate-800">{s.value}</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wide">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              <Link href="/school-admin/reports">
+                <Button variant="outline" size="sm" className="w-full mt-4 edugenius-glass">
+                  <FileText className="w-4 h-4 mr-2" /> View Reports
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Modals */}
         <EnrollTeacherModal
           isOpen={enrollTeacherModalOpen}
@@ -684,7 +796,7 @@ export default function SchoolAdminDashboard() {
           isOpen={enrollStudentModalOpen}
           onClose={() => setEnrollStudentModalOpen(false)}
           onSuccess={handleModalSuccess}
-          classes={[]}
+          classes={availableClasses}
         />
         
         <CreateClassModal
@@ -722,3 +834,5 @@ export default function SchoolAdminDashboard() {
     </div>
   )
 }
+
+

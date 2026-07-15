@@ -216,7 +216,7 @@ export async function POST(request: NextRequest) {
           recurring: recurring || false,
           recurringPattern: recurringPattern || null,
           metadata: metadata || null
-        },
+        } as any,
         include: {
           class: {
             select: {
@@ -236,25 +236,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const sch = schedule as any
     return NextResponse.json({
       message: 'Schedule created successfully',
       schedule: {
-        id: schedule.id,
-        title: schedule.title,
-        description: schedule.description,
-        subject: schedule.subject,
-        grade: schedule.grade,
-        startTime: schedule.startTime.toISOString(),
-        endTime: schedule.endTime.toISOString(),
-        location: schedule.location,
-        type: schedule.type,
-        status: schedule.status,
-        recurring: schedule.recurring,
-        recurringPattern: schedule.recurringPattern,
-        metadata: schedule.metadata,
-        class: schedule.class,
-        createdAt: schedule.createdAt.toISOString(),
-        updatedAt: schedule.updatedAt.toISOString()
+        id: sch.id,
+        title: sch.title,
+        description: sch.description,
+        subject: sch.subject,
+        grade: sch.grade,
+        startTime: sch.startTime.toISOString(),
+        endTime: sch.endTime.toISOString(),
+        location: sch.location,
+        type: sch.type,
+        status: sch.status,
+        recurring: sch.recurring,
+        recurringPattern: sch.recurringPattern,
+        metadata: sch.metadata,
+        class: sch.class,
+        createdAt: sch.createdAt.toISOString(),
+        updatedAt: sch.updatedAt.toISOString()
       }
     }, { status: 201 })
 

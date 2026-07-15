@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { simplePresentationGenerator } from '@/lib/simple-presentation-generator'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
       slides, 
       generateImages, 
       imageStyle, 
-      theme 
+      theme,
+      documentContext,
     } = await request.json()
 
     // Handle both old format (title) and new format (subject/grade/topic)
@@ -32,6 +34,16 @@ export async function POST(request: NextRequest) {
     
     if (!presentationTitle && !subject && !topic) {
       return NextResponse.json({ error: 'Title, subject, or topic is required' }, { status: 400 })
+    }
+
+    // Fetch teacher's curriculum template as presentation style reference
+    let templateText = documentContext
+    if (!templateText && session.user.role === 'TEACHER') {
+      const t = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { curriculumTemplate: true },
+      })
+      templateText = t?.curriculumTemplate || null
     }
 
     console.log('Generating AI presentation:', presentationTitle)
@@ -50,7 +62,8 @@ export async function POST(request: NextRequest) {
         duration: duration || 45,
         objectives: objectives || [],
         difficulty: difficulty || 'medium',
-        slideCount: slideCount || 8
+        slideCount: slideCount || 8,
+        templateText: templateText || undefined,
       })
 
       // Return the AI-generated content as JSON (not a file)
@@ -182,11 +195,16 @@ async function generateAIPresentation(params: {
   objectives: string[]
   difficulty: string
   slideCount: number
+  templateText?: string
 }): Promise<string> {
   try {
-    const { subject, grade, topic, duration, objectives, difficulty, slideCount } = params
+    const { subject, grade, topic, duration, objectives, difficulty, slideCount, templateText } = params
 
-    const prompt = `Create a comprehensive educational presentation about "${topic}" for ${grade} ${subject} students.
+    const templateBlock = templateText
+      ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the presentation in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+      : ''
+
+    const prompt = `Create a comprehensive educational presentation about "${topic}" for ${grade} ${subject} students.${templateBlock}
 
 Requirements:
 - Duration: ${duration} minutes

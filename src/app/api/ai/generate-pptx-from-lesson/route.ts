@@ -35,7 +35,18 @@ export async function POST(request: NextRequest) {
       grade,
       slideCount = 8,
       generateImages = true,
+      documentContext,
     } = await request.json()
+
+    // Fetch teacher's curriculum template as presentation style reference
+    let templateText = documentContext
+    if (!templateText) {
+      const t = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { curriculumTemplate: true },
+      })
+      templateText = t?.curriculumTemplate || null
+    }
 
     let content: any = lessonContent
     let planTitle = 'Lesson Plan'
@@ -54,7 +65,10 @@ export async function POST(request: NextRequest) {
     if (!content) return NextResponse.json({ error: 'lessonPlanId or lessonContent required' }, { status: 400 })
 
     // ── Generate slide structure from lesson content ────────────────────────
-    const systemPrompt = `You are an educational presentation designer.
+    const templateBlock = templateText
+      ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the presentation in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+      : ''
+    const systemPrompt = `You are an educational presentation designer.${templateBlock}
 Return ONLY a valid JSON array of slide objects. No markdown.
 Each slide object: { "id": string, "title": string, "content": string[], "imagePrompt": string, "layout": "title"|"content"|"split"|"image", "speakerNotes": string }`
 
@@ -148,7 +162,7 @@ For each slide:
     const safeTitle = planTitle.replace(/[^a-z0-9]/gi, '_')
     // Convert Buffer to Uint8Array for proper BodyInit
     const uint8 = new Uint8Array(pptxBuffer.buffer, pptxBuffer.byteOffset, pptxBuffer.byteLength)
-    return new NextResponse(uint8, {
+    return new NextResponse(uint8 as any, {
       headers: {
         'Content-Type':        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'Content-Disposition': `attachment; filename="${safeTitle}.pptx"`,

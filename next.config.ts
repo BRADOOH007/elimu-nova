@@ -1,15 +1,8 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
-  },
   typescript: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has type errors.
     ignoreBuildErrors: true,
   },
   experimental: {
@@ -17,7 +10,6 @@ const nextConfig: NextConfig = {
       bodySizeLimit: '10mb',
     },
   },
-  // Increase header size limit
   async headers() {
     return [
       {
@@ -33,4 +25,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.SENTRY_DSN,
+  telemetry: false,
+  widenClientFileUpload: true,
+  tunnelRoute: '/monitoring',
+  hideSourceMaps: true,
+});

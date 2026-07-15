@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ActivityType } from '@prisma/client'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
       {
         schoolId: schoolAdmin.schoolId,
         userId: session.user.id,
-        type: 'TEACHER_ENROLLED',
+        type: 'TEACHER_ENROLLED' as ActivityType,
         action: 'Teacher Enrolled',
         description: 'A new teacher has been enrolled in the system',
         metadata: { teacherName: 'John Doe', department: 'Mathematics' }
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
       {
         schoolId: schoolAdmin.schoolId,
         userId: session.user.id,
-        type: 'STUDENT_ENROLLED',
+        type: 'STUDENT_ENROLLED' as ActivityType,
         action: 'Student Enrolled',
         description: 'A new student has been enrolled in the system',
         metadata: { studentName: 'Jane Smith', grade: '10th Grade' }
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       {
         schoolId: schoolAdmin.schoolId,
         userId: session.user.id,
-        type: 'CLASS_CREATED',
+        type: 'CLASS_CREATED' as ActivityType,
         action: 'Class Created',
         description: 'A new class has been created',
         metadata: { className: 'Mathematics 101', subject: 'Mathematics' }
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
       {
         schoolId: schoolAdmin.schoolId,
         userId: session.user.id,
-        type: 'USER_LOGIN',
+        type: 'USER_LOGIN' as ActivityType,
         action: 'User Login',
         description: 'User logged into the system',
         metadata: { loginTime: new Date().toISOString() }
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       {
         schoolId: schoolAdmin.schoolId,
         userId: session.user.id,
-        type: 'SETTINGS_UPDATED',
+        type: 'SETTINGS_UPDATED' as ActivityType,
         action: 'Settings Updated',
         description: 'School settings have been updated',
         metadata: { settingType: 'General', updatedBy: session.user.name }

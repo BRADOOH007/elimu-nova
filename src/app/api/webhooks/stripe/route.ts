@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getStripeAsync, getWebhookSecret } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   const body      = await request.text()
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const webhookSec  = await getWebhookSecret()
     event             = stripe.webhooks.constructEvent(body, signature, webhookSec)
   } catch (err) {
-    console.error('Webhook signature verification failed:', err)
+    logger.error('Webhook signature verification failed', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
         if (!invoice.subscription) {
-          console.log('No subscription associated with this invoice')
+          logger.info('No subscription associated with this invoice')
           break
         }
         const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
@@ -41,14 +42,14 @@ export async function POST(request: NextRequest) {
           }
         })
         
-        console.log('Payment succeeded for subscription:', subscription.id)
+        logger.info('Payment succeeded for subscription', { subscriptionId: subscription.id })
         break
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
         if (!invoice.subscription) {
-          console.log('No subscription associated with this invoice')
+          logger.info('No subscription associated with this invoice')
           break
         }
         const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
           }
         })
         
-        console.log('Payment failed for subscription:', subscription.id)
+        logger.info('Payment failed for subscription', { subscriptionId: subscription.id })
         break
       }
 
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
           }
         })
         
-        console.log('Subscription cancelled:', subscription.id)
+        logger.info('Subscription cancelled', { subscriptionId: subscription.id })
         break
       }
 
@@ -104,17 +105,17 @@ export async function POST(request: NextRequest) {
           }
         })
         
-        console.log('Subscription updated:', subscription.id, 'Status:', status)
+        logger.info('Subscription updated', { subscriptionId: subscription.id, status })
         break
       }
 
       default:
-        console.log('Unhandled event type:', event.type)
+        logger.warn('Unhandled event type', { eventType: event.type })
     }
 
     return NextResponse.json({ received: true })
   } catch (error) {
-    console.error('Error processing webhook:', error)
+    logger.error('Error processing webhook', error)
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
   }
 }

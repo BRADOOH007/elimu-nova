@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { OpenAIService } from '@/lib/openai-service'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,10 +25,20 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { subject, grade, topic, duration, lessonsPerWeek, prerequisites, language = 'english', topics: requestTopics } = body
+    const { subject, grade, topic, duration, lessonsPerWeek, prerequisites, language = 'english', topics: requestTopics, documentContext } = body
 
     // Use topics array if provided, otherwise fall back to single topic
     const topicsList = requestTopics && requestTopics.length > 0 ? requestTopics : (topic ? [topic] : [])
+
+    // Fetch teacher's saved scheme-of-work template if no explicit context provided
+    let templateText = documentContext
+    if (!templateText && userRole === 'TEACHER') {
+      const teacher = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { schemeOfWorkTemplate: true },
+      })
+      templateText = teacher?.schemeOfWorkTemplate || null
+    }
 
     // Validate required fields
     if (!subject || !grade || topicsList.length === 0 || !duration) {
@@ -58,7 +69,7 @@ Lessons per week: ${lessonsPerWeek || 5}
 Topics to cover: ${topicsList.join(', ')}
 Prerequisites: ${filteredPrerequisites.length > 0 ? filteredPrerequisites.join(', ') : 'None specified'}
 
-${languageInstruction}
+${languageInstruction}${templateText ? `\n\n## Reference Document Context\nThis document was uploaded as a format reference. Extract the scheme structure, sections, and style from it, then generate the new scheme of work in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n` : ''}
 
 ## Scheme of Work Structure:
 

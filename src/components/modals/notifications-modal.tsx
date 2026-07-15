@@ -59,7 +59,7 @@ export function NotificationsModal({ isOpen, onClose, userId }: NotificationsMod
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+      const response = await fetch(`/api/notifications/${notificationId}`, {
         method: 'PATCH'
       })
       if (response.ok) {

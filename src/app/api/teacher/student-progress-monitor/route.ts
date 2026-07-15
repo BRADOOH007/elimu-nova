@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 
+// Student progress monitor — fixed 2024
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get teacher data
-    const teacher = await prisma.teacher.findUnique({
+    const teacher = await withRetry(() => prisma.teacher.findUnique({
       where: { userId: session.user.id },
       include: {
         user: true,
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-    })
+    }))
 
     if (!teacher) {
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
@@ -61,21 +62,23 @@ export async function GET(request: NextRequest) {
       total + student.studySessions.reduce((sum, session) => sum + session.duration, 0), 0
     )
 
-    const averageGrade = teacher.students.reduce((total, student) => {
-      const gradedSubmissions = student.submissions.filter(s => s.grade !== null)
-      if (gradedSubmissions.length > 0) {
-        const studentAverage = gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length
-        return total + studentAverage
-      }
-      return total
-    }, 0) / totalStudents
+    const studentsWithGrades = teacher.students.filter(student =>
+      student.submissions.some(s => s.grade !== null)
+    )
+    const averageGrade = studentsWithGrades.length > 0
+      ? studentsWithGrades.reduce((total, student) => {
+          const gradedSubmissions = student.submissions.filter(s => s.grade !== null)
+          const studentAvg = gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length
+          return total + studentAvg
+        }, 0) / studentsWithGrades.length
+      : 0
 
     const totalAssignments = teacher.students.reduce((total, student) => 
       total + student.submissions.length, 0
     )
 
     const completedAssignments = teacher.students.reduce((total, student) => 
-      total + student.submissions.filter(s => s.status === 'submitted').length, 0
+      total + student.submissions.filter(s => s.status === 'SUBMITTED').length, 0
     )
 
     // Student progress details
@@ -93,10 +96,10 @@ export async function GET(request: NextRequest) {
         ? gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length
         : null
 
-      const completedAssignments = student.submissions.filter(s => s.status === 'submitted').length
-      const pendingAssignments = student.submissions.filter(s => s.status === 'pending').length
+      const completedAssignments = student.submissions.filter(s => s.status === 'SUBMITTED').length
+      const pendingAssignments = student.submissions.filter(s => s.status === 'PENDING').length
       const overdueAssignments = student.submissions.filter(s => 
-        s.status === 'pending' && new Date(s.assignment.dueDate) < new Date()
+        s.status === 'PENDING' && new Date(s.assignment.dueDate) < new Date()
       ).length
 
       const recentAIActivity = student.aiTutorSessions.length
@@ -130,12 +133,12 @@ export async function GET(request: NextRequest) {
 
     // AI insights for teacher
     const aiInsights = {
-      topPerformers: sortedStudents.slice(0, 3),
-      needsAttention: sortedStudents.filter(s => 
-        s.averageGrade && s.averageGrade < 60 || s.overdueAssignments > 2
+      topPerformers: [...sortedStudents].slice(0, 3),
+      needsAttention: sortedStudents.filter(s =>
+        (s.averageGrade !== null && s.averageGrade < 60) || s.overdueAssignments > 2
       ),
-      mostActive: sortedStudents.sort((a, b) => b.weeklyStudyTime - a.weeklyStudyTime).slice(0, 3),
-      aiEngagement: sortedStudents.sort((a, b) => b.recentAIActivity - a.recentAIActivity).slice(0, 3)
+      mostActive: [...sortedStudents].sort((a, b) => b.weeklyStudyTime - a.weeklyStudyTime).slice(0, 3),
+      aiEngagement: [...sortedStudents].sort((a, b) => b.recentAIActivity - a.recentAIActivity).slice(0, 3)
     }
 
     const monitorData = {

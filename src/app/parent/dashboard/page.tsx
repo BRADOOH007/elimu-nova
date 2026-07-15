@@ -37,6 +37,17 @@ export default function ParentDashboard() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
   const [alertsLoading, setAlertsLoading] = useState(true)
+  const [displayName, setDisplayName] = useState<string>('')
+
+  useEffect(() => {
+    // Fetch fresh profile name
+    if (session?.user?.id) {
+      fetch(`/api/user-profile?userId=${session.user.id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(p => { if (p) setDisplayName(`${p.firstName || ''} ${p.lastName || ''}`.trim()) })
+        .catch(() => {})
+    }
+  }, [session?.user?.id])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -105,11 +116,11 @@ export default function ParentDashboard() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Parent Overview</h1>
           <p className="text-slate-500 text-sm mt-0.5">
-            Welcome back, {session?.user?.name?.split(' ')[0] || 'Parent'}
+            Welcome back, {(displayName || session?.user?.name || 'Parent').split(' ')[0]}
           </p>
         </div>
-        <Link href="/parent/messages">
-          <button className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors">
+        <Link href="/parent/progress">
+          <button className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors" title="View AI alerts">
             <Bell className="h-5 w-5 text-slate-600" />
             {(criticalAlerts + warningAlerts) > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
@@ -123,21 +134,25 @@ export default function ParentDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'My Children', value: totalChildren, icon: Users,         color: 'text-blue-600',   bg: 'bg-blue-50'  },
+          { label: 'My Children', value: totalChildren, icon: Users,         color: 'text-blue-600',   bg: 'bg-blue-50',  href: '/parent/children'  },
           { label: 'Pending Work', value: totalPending, icon: ClipboardList,  color: 'text-amber-600',  bg: 'bg-amber-50' },
           { label: 'Avg Grade',    value: avgGrade !== null ? `${avgGrade}%` : '—', icon: TrendingUp, color: gradeColor(avgGrade), bg: 'bg-green-50' },
-          { label: 'AI Alerts',    value: criticalAlerts + warningAlerts, icon: AlertTriangle, color: criticalAlerts > 0 ? 'text-red-600' : 'text-amber-600', bg: criticalAlerts > 0 ? 'bg-red-50' : 'bg-amber-50' },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-slate-200 p-5">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{s.label}</p>
-              <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center`}>
-                <s.icon className={`h-4 w-4 ${s.color}`} />
+          { label: 'AI Alerts',    value: criticalAlerts + warningAlerts, icon: AlertTriangle, color: criticalAlerts > 0 ? 'text-red-600' : 'text-amber-600', bg: criticalAlerts > 0 ? 'bg-red-50' : 'bg-amber-50', href: '/parent/progress' },
+        ].map(s => {
+          const content = (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{s.label}</p>
+                <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center`}>
+                  <s.icon className={`h-4 w-4 ${s.color}`} />
+                </div>
               </div>
+              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
             </div>
-            <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
-          </div>
-        ))}
+          )
+          if (s.href) return <Link key={s.label} href={s.href}>{content}</Link>
+          return <div key={s.label}>{content}</div>
+        })}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -233,8 +248,9 @@ export default function ParentDashboard() {
       </div>
 
       {/* Quick nav */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
+          { href: '/parent/children',    icon: Users,        label: 'My Children', color: 'text-blue-600',   bg: 'bg-blue-50'   },
           { href: '/parent/progress',    icon: TrendingUp,   label: 'Progress',    color: 'text-green-600',  bg: 'bg-green-50'  },
           { href: '/parent/assignments', icon: ClipboardList, label: 'Assignments', color: 'text-blue-600',   bg: 'bg-blue-50'   },
           { href: '/parent/schedule',    icon: Calendar,     label: 'Schedule',    color: 'text-purple-600', bg: 'bg-purple-50' },

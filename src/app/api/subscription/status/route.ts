@@ -5,8 +5,9 @@ import { getSubscriptionStatus } from '@/lib/subscription-service'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
+  let session: any = null
   try {
-    const session = await getServerSession(authOptions)
+    session = await getServerSession(authOptions)
     
     if (!session?.user?.id) {
       console.log('Subscription status: No session found')
@@ -51,9 +52,10 @@ export async function GET(request: NextRequest) {
       const schoolAdmin = await prisma.schoolAdmin.findUnique({
         where: { userId: session.user.id }
       })
-      
-      console.log(`School admin record found:`, schoolAdmin ? { id: schoolAdmin.id, schoolId: schoolAdmin.schoolId } : 'null')
       schoolId = schoolAdmin?.schoolId
+    } else if (session.user.role === 'PARENT' || session.user.role === 'SUPER_ADMIN') {
+      // Parents and super admins use their own userId for subscription context
+      userId = session.user.id
     }
 
     console.log(`Subscription context determined: userId=${userId}, schoolId=${schoolId}`)

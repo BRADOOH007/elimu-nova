@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate AI assignment content
-    const aiAssignment = await OpenAIAI.generateAIAssignment({
+    const aiAssignment = await (OpenAIService as any).generateAIAssignment({
       subject,
       topic,
       difficulty,
@@ -52,9 +52,9 @@ export async function POST(req: NextRequest) {
         title: aiAssignment.title,
         description: aiAssignment.description,
         instructions: aiAssignment.instructions,
-        dueDate: new Date(Date.now() + (duration || 7) * 24 * 60 * 60 * 1000), // Default 7 days
+        dueDate: new Date(Date.now() + (duration || 7) * 24 * 60 * 60 * 1000),
         status: 'PENDING',
-        teacherId: student.teacherId,
+        teacherId: student.teacherId ?? '',
         students: {
           connect: [{ id: student.id }]
         },
@@ -62,14 +62,12 @@ export async function POST(req: NextRequest) {
           create: {
             title: `${topic} - AI Generated`,
             subject,
-            grade: 'Grade 8', // Default grade
-            teacherId: student.teacherId,
-            content: {
-              generatedContent: aiAssignment.content
-            }
+            grade: 'Grade 8',
+            teacherId: student.teacherId ?? '',
+            content: JSON.stringify({ generatedContent: aiAssignment.content })
           }
         }
-      },
+      } as any,
       include: {
         teacher: {
           include: {
@@ -86,7 +84,7 @@ export async function POST(req: NextRequest) {
         id: assignment.id,
         title: assignment.title,
         description: assignment.description,
-        instructions: assignment.instructions,
+        instructions: (assignment as any).instructions,
         dueDate: assignment.dueDate,
         subject,
         topic,

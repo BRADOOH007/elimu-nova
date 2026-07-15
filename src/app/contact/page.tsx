@@ -19,7 +19,7 @@ const INFO = [
     content: (
       <div className="space-y-1">
         <a href="tel:+254791269918" className="block text-blue-400 hover:text-blue-300 transition-colors">+254 791 269 918</a>
-        <button onClick={() => window.open('https://wa.me/254791269918?text=Hello! I need help with ElimuNova AI platform.', '_blank')} className="text-green-400 hover:text-green-300 text-sm transition-colors">💬 Chat on WhatsApp</button>
+        <button onClick={() => window.open('https://wa.me/254791269918?text=Hello! I need help with ElimuNova AI platform.', '_blank')} className="text-green-400 hover:text-green-300 text-sm transition-colors">Chat on WhatsApp</button>
       </div>
     ),
     grad: 'from-purple-600 to-pink-600',
@@ -35,8 +35,8 @@ const INFO = [
     title: 'Business Hours',
     content: (
       <div className="space-y-0.5 text-slate-300 text-sm">
-        <p>Mon – Fri: 8:00 AM – 6:00 PM EAT</p>
-        <p>Sat: 9:00 AM – 4:00 PM EAT</p>
+        <p>Mon &ndash; Fri: 8:00 AM &ndash; 6:00 PM EAT</p>
+        <p>Sat: 9:00 AM &ndash; 4:00 PM EAT</p>
         <p>Sun: Closed</p>
       </div>
     ),

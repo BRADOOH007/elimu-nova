@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma, withRetry } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,9 +11,9 @@ export async function GET(req: NextRequest) {
     }
 
     // Get teacher profile
-    const teacher = await prisma.teacher.findUnique({
+    const teacher = await withRetry(() => prisma.teacher.findUnique({
       where: { userId: session.user.id }
-    });
+    }));
 
     if (!teacher) {
       return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });

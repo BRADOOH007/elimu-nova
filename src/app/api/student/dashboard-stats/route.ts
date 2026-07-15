@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
           }
         }
       }
-    })
+    } as any) as any
 
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
@@ -41,22 +41,22 @@ export async function GET(request: NextRequest) {
 
     // Calculate assignment statistics
     const totalAssignments = student.assignments.length
-    const completedAssignments = student.assignments.filter(a => a.status === 'SUBMITTED' || a.status === 'GRADED').length
-    const pendingAssignments = student.assignments.filter(a => a.status === 'PENDING').length
-    const overdueAssignments = student.assignments.filter(a => {
+    const completedAssignments = student.assignments.filter((a: any) => a.status === 'SUBMITTED' || a.status === 'GRADED').length
+    const pendingAssignments = student.assignments.filter((a: any) => a.status === 'PENDING').length
+    const overdueAssignments = student.assignments.filter((a: any) => {
       const dueDate = new Date(a.assignment.dueDate)
       return dueDate < new Date() && a.status === 'PENDING'
     }).length
 
     // Calculate average grade
-    const gradedAssignments = student.assignments.filter(a => a.grade !== null)
+    const gradedAssignments = student.assignments.filter((a: any) => a.grade !== null)
     const averageGrade = gradedAssignments.length > 0 
-      ? gradedAssignments.reduce((sum, a) => sum + (a.grade || 0), 0) / gradedAssignments.length
+      ? gradedAssignments.reduce((sum: number, a: any) => sum + (a.grade || 0), 0) / gradedAssignments.length
       : null
 
     // Get AI tutor sessions
-    const aiTutorSessions = await prisma.aiTutorSession.findMany({
-      where: { userId },
+    const aiTutorSessions = await prisma.aITutorSession.findMany({
+      where: { userId } as any,
       orderBy: { createdAt: 'desc' },
       take: 10
     })
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
         studyTime,
         overdueAssignments
       },
-      assignments: student.assignments.map(a => ({
+      assignments: student.assignments.map((a: any) => ({
         id: a.assignment.id,
         title: a.assignment.title,
         description: a.assignment.description,
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
         teacher: student.class?.teacher ? `${student.class.teacher.user.firstName} ${student.class.teacher.user.lastName}` : 'System',
         subject: a.assignment.subject || 'General'
       })),
-      aiTutorSessions: aiTutorSessions.map(session => ({
+      aiTutorSessions: aiTutorSessions.map((session: any) => ({
         id: session.id,
         sessionType: session.sessionType,
         subject: session.subject,

@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
           assignment: {
             teacherId: teacher.id
           },
-          createdAt: {
+          submittedAt: {
             gte: startDate
           }
         },
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
           assignment: true
         },
         orderBy: {
-          createdAt: 'desc'
+          submittedAt: 'desc'
         }
       }).catch(() => []),
       
@@ -119,21 +119,24 @@ export async function GET(request: NextRequest) {
     const insights = []
 
     // 1. Student Performance Insights
-    const studentPerformance = studentProgress.map(progress => ({
-      type: 'performance',
-      studentName: `${progress.student.user.firstName} ${progress.student.user.lastName}`,
-      className: progress.student.class.name,
-      subject: progress.subject,
-      progress: progress.progress,
-      notes: progress.notes,
-      recommendation: progress.progress < 50 ? 
-        'Student needs additional support and intervention' :
-        progress.progress < 75 ? 
-        'Student is progressing but may benefit from extra practice' :
-        'Student is performing well and on track',
-      priority: progress.progress < 50 ? 'high' : progress.progress < 75 ? 'medium' : 'low',
-      createdAt: progress.createdAt
-    }))
+    const studentPerformance = studentProgress.map(p => {
+      const sp = p as any
+      return {
+        type: 'performance',
+        studentName: `${sp.student.user.firstName} ${sp.student.user.lastName}`,
+        className: sp.student.class?.name,
+        subject: sp.subject,
+        progress: sp.progress,
+        notes: sp.notes,
+        recommendation: sp.progress < 50 ? 
+          'Student needs additional support and intervention' :
+          sp.progress < 75 ? 
+          'Student is progressing but may benefit from extra practice' :
+          'Student is performing well and on track',
+        priority: sp.progress < 50 ? 'high' : sp.progress < 75 ? 'medium' : 'low',
+        createdAt: sp.createdAt
+      }
+    })
 
     // 2. Assignment Completion Insights
     const assignmentInsights = assignments.map(assignment => {
@@ -163,15 +166,16 @@ export async function GET(request: NextRequest) {
     })
 
     // 3. Submission Quality Insights
-    const submissionInsights = submissions.map(submission => {
-      const grade = submission.grade || 0
-      const isLate = submission.submittedAt && submission.assignment.dueDate && 
-        new Date(submission.submittedAt) > new Date(submission.assignment.dueDate)
+    const submissionInsights = submissions.map(s => {
+      const sub = s as any
+      const grade = sub.grade || 0
+      const isLate = sub.submittedAt && sub.assignment.dueDate && 
+        new Date(sub.submittedAt) > new Date(sub.assignment.dueDate)
       
       return {
         type: 'submission',
-        studentName: `${submission.student.user.firstName} ${submission.student.user.lastName}`,
-        assignmentTitle: submission.assignment.title,
+        studentName: `${sub.student.user.firstName} ${sub.student.user.lastName}`,
+        assignmentTitle: sub.assignment.title,
         grade,
         isLate,
         quality: grade >= 90 ? 'excellent' : grade >= 75 ? 'good' : grade >= 60 ? 'fair' : 'needs_improvement',
@@ -183,7 +187,7 @@ export async function GET(request: NextRequest) {
           'Student is performing adequately with room for improvement' :
           'Student is excelling - consider advanced challenges',
         priority: grade < 60 ? 'high' : grade < 75 ? 'medium' : 'low',
-        createdAt: submission.createdAt
+        createdAt: sub.createdAt
       }
     })
 
@@ -192,7 +196,7 @@ export async function GET(request: NextRequest) {
 
     // Sort by priority and date
     insights.sort((a, b) => {
-      const priorityOrder = { high: 3, medium: 2, low: 1 }
+      const priorityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 }
       if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
         return priorityOrder[b.priority] - priorityOrder[a.priority]
       }

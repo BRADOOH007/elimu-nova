@@ -6,9 +6,9 @@ import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
 
 const team = [
-  { name: 'Dr. Mary Mwangi',  role: 'CEO & Co-Founder',            description: 'Engineering and technology instructor.',                       image: '/team/mary-mwangi.jpg'    },
-  { name: 'Joseph Mwaura',    role: 'CTO & Co-Founder',            description: 'AI engineer with expertise in educational technology.',         image: '/team/joseph-mwaura.jpg'  },
-  { name: 'Ezekiel Manyara',  role: 'School Director & Co-Founder', description: 'Technology specialist and school administrator.',              image: '/team/ezekiel-manyara.jpg' },
+  { name: 'Dr. Mary Mwangi',      role: 'CEO & Founder',                   description: 'Engineering and technology instructor.',                       image: '/team/mary-mwangi.jpg'           },
+  { name: 'InfinitiTech Solutions', role: 'Technology & Innovation Partner', description: 'Driving cutting-edge AI solutions and platform innovation.',     image: ''                                },
+  { name: 'Ezekiel Manyara',      role: 'School Director & Co-Founder',    description: 'Technology specialist and school administrator.',              image: '/team/ezekiel-manyara.jpg'       },
 ]
 
 const values = [
@@ -129,8 +129,12 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-3 gap-6">
             {team.map((m) => (
               <div key={m.name} className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-6 text-center hover:border-slate-600 transition-colors">
-                <div className="w-24 h-24 mx-auto mb-4 relative overflow-hidden rounded-full border-2 border-slate-700">
-                  <Image src={m.image} alt={m.name} fill className="object-cover" sizes="96px" />
+                <div className="w-24 h-24 mx-auto mb-4 relative overflow-hidden rounded-full border-2 border-slate-700 bg-slate-800 flex items-center justify-center">
+                  {m.image ? (
+                    <Image src={m.image} alt={m.name} fill className="object-cover" sizes="96px" />
+                  ) : (
+                    <span className="text-2xl font-bold text-purple-400">IT</span>
+                  )}
                 </div>
                 <h3 className="font-bold text-white mb-1">{m.name}</h3>
                 <p className="text-purple-400 text-sm font-medium mb-3">{m.role}</p>
@@ -156,9 +160,9 @@ export default function AboutPage() {
               on administrative tasks instead of focusing on what they love most — teaching and inspiring students.
             </p>
             <p>
-              Our founders, Dr. Mary Mwangi and Joseph Mwaura, connected at an education technology conference
-              where they discovered a shared commitment to transforming learning through AI. With years of
-              experience in academia and technology, they recognised AI's potential to deliver sustainable,
+              Our founder, Dr. Mary Mwangi, partnered with InfinitiTech Solutions to bring a shared
+              vision to life — transforming learning through AI. With deep experience in academia and
+              cutting-edge technology, they recognised AI's potential to deliver sustainable,
               data-driven solutions to education's biggest challenges.
             </p>
             <p>

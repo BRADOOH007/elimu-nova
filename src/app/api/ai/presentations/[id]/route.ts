@@ -8,7 +8,7 @@ import path from 'path'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -18,7 +18,7 @@ export async function GET(
 
     const presentation = await prisma.aIGeneratedContent.findUnique({
       where: {
-        id: params.id,
+        id: (await params).id,
         type: 'POWERPOINT'
       },
       include: {
@@ -75,8 +75,8 @@ export async function GET(
       pptxUrl: parsedContent.pptxUrl,
       slides: parsedContent.slides || [],
       metadata: {
-        ...presentation.metadata,
-        ...parsedContent.metadata
+        ...(presentation.metadata as Record<string, any> || {}),
+        ...(parsedContent.metadata || {})
       },
       createdAt: presentation.createdAt,
       updatedAt: presentation.updatedAt,
@@ -97,7 +97,7 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -107,7 +107,7 @@ export async function DELETE(
 
     const presentation = await prisma.aIGeneratedContent.findUnique({
       where: {
-        id: params.id,
+        id: (await params).id,
         type: 'POWERPOINT'
       },
       include: {
@@ -174,7 +174,7 @@ export async function DELETE(
 
     // Delete from database
     await prisma.aIGeneratedContent.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     })
 
     return NextResponse.json({

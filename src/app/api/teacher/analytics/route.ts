@@ -148,11 +148,11 @@ export async function GET(request: NextRequest) {
       // Recent activity - with error handling
       prisma.activity.findMany({
         where: {
-          schoolId: teacher.schoolId,
+          schoolId: teacher.schoolId ?? undefined,
           type: {
             in: ['STUDENT_ENROLLED', 'USER_LOGIN', 'OTHER']
           },
-          submittedAt: {
+          createdAt: {
             gte: startDate
           }
         },
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
           }
         },
         orderBy: {
-          submittedAt: 'desc'
+          createdAt: 'desc'
         },
         take: 10
       }).catch(() => []),
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
               teacherId: teacher.id
             }
           },
-          submittedAt: {
+          createdAt: {
             gte: startDate
           }
         },
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
           }
         },
         orderBy: {
-          submittedAt: 'desc'
+          createdAt: 'desc'
         },
         take: 20
       }).catch(() => [])
@@ -221,14 +221,14 @@ export async function GET(request: NextRequest) {
     }, 0)
 
     // Process student progress for AI insights
-    const processedAiInsights = aiInsights.map(progress => ({
-      id: progress.id,
-      studentName: progress.student?.user ? `${progress.student.user.firstName} ${progress.student.user.lastName}` : 'Unknown Student',
-      className: progress.student?.class?.name || 'No Class',
-      subject: progress.subject || 'Unknown Subject',
-      progress: progress.progress || 0,
-      notes: progress.notes || '',
-      submittedAt: progress.submittedAt
+    const processedAiInsights = (aiInsights as any[]).map(p => ({
+      id: p.id,
+      studentName: p.student?.user ? `${p.student.user.firstName} ${p.student.user.lastName}` : 'Unknown Student',
+      className: p.student?.class?.name || 'No Class',
+      subject: p.subject || 'Unknown Subject',
+      progress: p.progress || 0,
+      notes: p.notes || '',
+      submittedAt: p.createdAt
     }))
 
     // Process assignment statistics
@@ -243,12 +243,12 @@ export async function GET(request: NextRequest) {
     }))
 
     // Process recent activity
-    const processedRecentActivity = recentActivity.map(activity => ({
-      id: activity.id,
-      type: activity.type,
-      description: activity.description,
-      user: activity.user ? `${activity.user.firstName} ${activity.user.lastName}` : 'System',
-      submittedAt: activity.submittedAt
+    const processedRecentActivity = (recentActivity as any[]).map(a => ({
+      id: a.id,
+      type: a.type,
+      description: a.description,
+      user: a.user ? `${a.user.firstName} ${a.user.lastName}` : 'System',
+      submittedAt: a.createdAt
     }))
 
     const result = {

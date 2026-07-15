@@ -1,11 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import dynamic from 'next/dynamic'
+import { useSession } from 'next-auth/react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Mail, Send, Inbox, Clock, CheckCircle2, Reply, User, Bell, MessageSquare, Loader2 } from 'lucide-react'
 import ComposeMessageModal from '@/components/modals/compose-message-modal'
 import ViewMessageModal from '@/components/modals/view-message-modal'
+import { useSSE } from '@/hooks/use-sse'
 
 const NotifTab  = dynamic(() => import('@/app/teacher/notifications/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 const DiscTab   = dynamic(() => import('@/app/teacher/discussions/page'),   { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
@@ -29,6 +31,7 @@ interface Message {
 }
 
 export default function TeacherMessagesPage() {
+  const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
@@ -38,18 +41,36 @@ export default function TeacherMessagesPage() {
   const [students, setStudents] = useState<Array<{ id: string; name: string; email?: string }>>([])
   const [parents, setParents] = useState<Array<{ id: string; name: string; email?: string }>>([])
 
+  const fetchMessages = useCallback(async () => {
+    try {
+      const response = await fetch('/api/teacher/messages')
+      const data = await response.json()
+      if (data.messages) setMessages(data.messages)
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   useEffect(() => {
     fetchMessages()
     fetchStudents()
     fetchParents()
-  }, [])
+  }, [fetchMessages])
+
+  useSSE(
+    session?.user?.role === 'TEACHER' ? 'messages:teacher:' + session.user.id : null,
+    {
+      'message-sent': () => { fetchMessages() },
+      'new-message': () => { fetchMessages() },
+    }
+  )
 
   const fetchStudents = async () => {
     try {
       const response = await fetch('/api/teacher/students')
       const data = await response.json()
-      
-      console.log('📚 Fetched students:', data)
       
       if (data.students) {
         const studentList = data.students.map((s: any) => ({
@@ -57,7 +78,6 @@ export default function TeacherMessagesPage() {
           name: s.name,
           email: s.email
         }))
-        console.log('📋 Student list for dropdown:', studentList)
         setStudents(studentList)
       }
     } catch (error) {
@@ -70,34 +90,16 @@ export default function TeacherMessagesPage() {
       const response = await fetch('/api/teacher/parents')
       const data = await response.json()
       
-      console.log('👨‍👩‍👧‍👦 Fetched parents:', data)
-      
       if (data.parents) {
         const parentList = data.parents.map((p: any) => ({
           id: p.id,
           name: p.name,
           email: p.email
         }))
-        console.log('📋 Parent list for dropdown:', parentList)
         setParents(parentList)
       }
     } catch (error) {
       console.error('Error fetching parents:', error)
-    }
-  }
-
-  const fetchMessages = async () => {
-    try {
-      const response = await fetch('/api/teacher/messages')
-      const data = await response.json()
-      
-      if (data.messages) {
-        setMessages(data.messages)
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -118,8 +120,6 @@ export default function TeacherMessagesPage() {
   }
 
   const handleSendMessage = async (data: { recipientId?: string; subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' }) => {
-    console.log('📤 Sending message with data:', data)
-    
     if (!data.recipientId) {
       throw new Error('Please select a recipient')
     }

@@ -16,22 +16,19 @@ export async function GET(request: NextRequest) {
       include: {
         classes: true
       }
-    })
+    } as any) as any
 
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
     }
 
     // Get presentations shared directly with the student
-    const directShares = await prisma.sharedAIContent.findMany({
+    const directSharesRaw = await prisma.sharedAIContent.findMany({
       where: {
         studentId: student.id
       },
       include: {
         content: {
-          where: {
-            type: 'POWERPOINT'
-          },
           include: {
             teacher: {
               include: {
@@ -47,10 +44,11 @@ export async function GET(request: NextRequest) {
         }
       }
     })
+    const directShares = directSharesRaw.filter(s => s.content?.type === 'POWERPOINT') as any
 
     // Get presentations shared with student's classes
-    const classIds = student.classes.map(cls => cls.id)
-    const classShares = await prisma.sharedAIContentWithClass.findMany({
+    const classIds = student.classes.map((cls: any) => cls.id)
+    const classSharesRaw = await prisma.sharedAIContentWithClass.findMany({
       where: {
         classId: {
           in: classIds
@@ -58,9 +56,6 @@ export async function GET(request: NextRequest) {
       },
       include: {
         content: {
-          where: {
-            type: 'POWERPOINT'
-          },
           include: {
             teacher: {
               include: {
@@ -76,14 +71,15 @@ export async function GET(request: NextRequest) {
         }
       }
     })
+    const classShares = classSharesRaw.filter(s => s.content?.type === 'POWERPOINT') as any
 
     // Combine and deduplicate presentations
     const allShares = [
-      ...directShares.map(share => ({
+      ...directShares.map((share: any) => ({
         ...share,
         shareType: 'direct' as const
       })),
-      ...classShares.map(share => ({
+      ...classShares.map((share: any) => ({
         ...share,
         shareType: 'class' as const
       }))

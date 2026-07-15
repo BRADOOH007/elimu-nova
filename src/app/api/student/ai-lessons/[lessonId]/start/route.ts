@@ -5,10 +5,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { lessonId: string } }
+  { params }: { params: Promise<{ lessonId: string }> }
 ) {
   try {
-    console.log('🎓 Starting AI lesson:', params.lessonId)
+    console.log('🎓 Starting AI lesson:', (await params).lessonId)
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.id || session.user.role !== 'STUDENT') {
@@ -37,12 +37,42 @@ export async function POST(
     let learningSession = null
 
     // Handle 'current' lesson ID - get the most recent lesson plan
-    if (params.lessonId === 'current') {
+    if ((await params).lessonId === 'current') {
       if (!student.teacherId) {
-        return NextResponse.json({ 
-          error: 'No teacher assigned',
-          message: 'You need a teacher to access lesson plans. Try the AI Tutor for independent learning!'
-        }, { status: 404 })
+        // Independent student — synthesise a virtual lesson from session storage / AI insights
+        // Return a lightweight "open-ended" lesson so the AI chat opens with context
+        return NextResponse.json({
+          success: true,
+          lesson: {
+            id: 'independent',
+            sessionId: null,
+            title: 'Personalised AI Learning Session',
+            subject: 'General',
+            grade: 'Independent',
+            progress: 0,
+            objectives: [
+              'Explore any topic you choose',
+              'Get step-by-step explanations from your AI Teacher',
+              'Practice with instant feedback',
+            ],
+            introduction: "Welcome! I'm your personal AI Teacher. Tell me what subject or topic you'd like to study, and I'll create a full lesson just for you.",
+            mainContent: '',
+            examples: [],
+            activities: [],
+            assessment: '',
+            resources: [],
+            schemeContext: { unit: null, unitObjectives: [], prerequisites: [], nextTopics: [] },
+            teachingInstructions: { approach: 'interactive', pace: 'moderate', difficulty: 'adaptive', focusAreas: [], commonMistakes: [], tips: [] },
+            sections: [
+              { name: 'Introduction', completed: false },
+              { name: 'Main Content', completed: false },
+              { name: 'Practice', completed: false },
+              { name: 'Assessment', completed: false },
+            ],
+            teacher: { name: 'AI Teacher', email: 'ai@elimunova.com' },
+          },
+          message: 'Starting personalised AI session',
+        })
       }
 
       lessonPlan = await prisma.lessonPlan.findFirst({
@@ -58,15 +88,47 @@ export async function POST(
       })
 
       if (!lessonPlan) {
-        return NextResponse.json({ 
-          error: 'No lesson plan available',
-          message: 'Your teacher hasn\'t created any lesson plans yet. Try the AI Tutor for personalized learning!'
-        }, { status: 404 })
+        // Teacher has no lesson plans yet — return a virtual open session
+        return NextResponse.json({
+          success: true,
+          lesson: {
+            id: 'no-plans',
+            sessionId: null,
+            title: 'AI Learning Session',
+            subject: 'General',
+            grade: (student as any).class?.name || 'Student',
+            progress: 0,
+            objectives: [
+              'Explore any curriculum topic',
+              'Get personalised explanations',
+              'Practice with AI-generated questions',
+            ],
+            introduction: "Your teacher hasn't uploaded a lesson plan yet — but that's fine! Tell me any topic you're studying and I'll teach you right now.",
+            mainContent: '',
+            examples: [],
+            activities: [],
+            assessment: '',
+            resources: [],
+            schemeContext: { unit: null, unitObjectives: [], prerequisites: [], nextTopics: [] },
+            teachingInstructions: { approach: 'interactive', pace: 'moderate', difficulty: 'adaptive', focusAreas: [], commonMistakes: [], tips: [] },
+            sections: [
+              { name: 'Introduction', completed: false },
+              { name: 'Main Content', completed: false },
+              { name: 'Practice', completed: false },
+              { name: 'Assessment', completed: false },
+            ],
+            teacher: student.teacher ? {
+              name: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`,
+              email: student.teacher.user.email,
+            } : { name: 'AI Teacher', email: 'ai@elimunova.com' },
+          },
+          message: 'Starting AI session — no lesson plans yet',
+        })
       }
     } else {
       // Get specific lesson plan by ID
       lessonPlan = await prisma.lessonPlan.findUnique({
-        where: { id: params.lessonId },
+        where: { id: (await params).lessonId },
         include: {
           schemeOfWork: true
         }
@@ -242,7 +304,7 @@ export async function POST(
 // PUT endpoint to update lesson progress
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { lessonId: string } }
+  { params }: { params: Promise<{ lessonId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)

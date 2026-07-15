@@ -72,9 +72,14 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
       } else {
         try {
           const error = await response.json()
-          console.error('Error creating class:', error)
-        } catch (parseError) {
-          console.error('Error creating class - could not parse response:', response.status, response.statusText)
+          // Show the error to the user — most likely a duplicate name
+          if (response.status === 409 || error.error) {
+            setErrors({ name: error.error || 'A class with this name already exists.' })
+          } else {
+            setErrors({ name: 'Failed to create class. Please try again.' })
+          }
+        } catch {
+          setErrors({ name: 'Failed to create class. Please try again.' })
         }
       }
     } catch (error) {

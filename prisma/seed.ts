@@ -110,6 +110,77 @@ async function main() {
     },
   })
 
+  // Create classes and assign teacher/students
+  const class1 = await prisma.class.create({
+    data: {
+      name: 'Grade 3A',
+      grade: 'Grade 3',
+      subject: 'General',
+      schoolId: school.id,
+      teacherId: teacherRecord.id,
+    },
+  })
+
+  const class2 = await prisma.class.create({
+    data: {
+      name: 'Grade 4B',
+      grade: 'Grade 4',
+      subject: 'General',
+      schoolId: school.id,
+      teacherId: teacherRecord.id,
+    },
+  })
+
+  // Create additional students for classes
+  const studentNames = [
+    { first: 'Alice', last: 'Wambui' },
+    { first: 'Brian', last: 'Otieno' },
+    { first: 'Catherine', last: 'Njeri' },
+    { first: 'David', last: 'Kiprotich' },
+    { first: 'Esther', last: 'Muthoni' },
+    { first: 'Francis', last: 'Mwangi' },
+    { first: 'Grace', last: 'Akinyi' },
+    { first: 'Henry', last: 'Ochieng' },
+    { first: 'Irene', last: 'Njoki' },
+    { first: 'James', last: 'Kamau' },
+  ]
+
+  for (let i = 0; i < studentNames.length; i++) {
+    const { first, last } = studentNames[i]
+    const email = `${first.toLowerCase()}.${last.toLowerCase()}@demoschool.edu`
+    const hashedPassword = await bcrypt.hash('password123', 12)
+    
+    const stuUser = await prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        email,
+        password: hashedPassword,
+        firstName: first,
+        lastName: last,
+        role: 'STUDENT',
+        isActive: true,
+      },
+    })
+
+    await prisma.student.upsert({
+      where: { userId: stuUser.id },
+      update: {},
+      create: {
+        userId: stuUser.id,
+        schoolId: school.id,
+        teacherId: teacherRecord.id,
+        classId: i < 5 ? class1.id : class2.id,
+      },
+    })
+  }
+
+  // Assign existing student to class1
+  await prisma.student.update({
+    where: { userId: student.id },
+    data: { classId: class1.id },
+  })
+
   // Create sample packages
   const basicPackage = await prisma.package.create({
     data: {
@@ -679,8 +750,10 @@ async function main() {
       ]
       
       for (const setting of schoolSettings) {
-        await prisma.schoolSettings.create({
-          data: setting
+        await prisma.schoolSettings.upsert({
+          where: { schoolId_key: { schoolId: school.id, key: setting.key } },
+          update: setting,
+          create: setting
         })
       }
     }

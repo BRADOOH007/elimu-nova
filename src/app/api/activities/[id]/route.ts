@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
 // GET - Fetch a specific activity
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +17,7 @@ export async function GET(
 
     const activity = await prisma.activity.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         userId: session.user.id
       },
       include: {
@@ -58,7 +58,7 @@ export async function GET(
 // PUT - Update an activity
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -73,7 +73,7 @@ export async function PUT(
     // Check if activity exists and belongs to user
     const existingActivity = await prisma.activity.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         userId: session.user.id
       }
     });
@@ -84,7 +84,7 @@ export async function PUT(
 
     // Update activity
     const activity = await prisma.activity.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: {
         type,
         action,
@@ -125,7 +125,7 @@ export async function PUT(
 // DELETE - Delete an activity
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -137,7 +137,7 @@ export async function DELETE(
     // Check if activity exists and belongs to user
     const existingActivity = await prisma.activity.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         userId: session.user.id
       }
     });
@@ -148,7 +148,7 @@ export async function DELETE(
 
     // Delete activity
     await prisma.activity.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     });
 
     return NextResponse.json({ message: 'Activity deleted successfully' });

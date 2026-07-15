@@ -76,6 +76,7 @@ export async function GET(req: NextRequest) {
         },
         lessonPlan: {
           select: {
+            id: true,
             title: true,
             subject: true,
             grade: true
@@ -237,7 +238,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });
     }
 
-    // Create assignment
+    // Create assignment — if no studentIds given, assign to all students in the class
+    let studentConnect: { id: string }[] | undefined = undefined
+
+    if (studentIds && studentIds.length > 0) {
+      studentConnect = studentIds.map((id: string) => ({ id }))
+    } else if (classId) {
+      // Auto-assign to every student in the class
+      const classStudents = await prisma.student.findMany({
+        where: { classId },
+        select: { id: true },
+      })
+      studentConnect = classStudents.map((s: any) => ({ id: s.id }))
+    } else {
+      // Fallback: assign to all students belonging to this teacher
+      const teacherStudents = await prisma.student.findMany({
+        where: { teacherId: teacher.id },
+        select: { id: true },
+      })
+      studentConnect = teacherStudents.map((s: any) => ({ id: s.id }))
+    }
+
     const assignment = await prisma.assignment.create({
       data: {
         title,
@@ -255,9 +276,7 @@ export async function POST(req: NextRequest) {
         classId: classId || null,
         subject: subject || null,
         grade: grade || null,
-        students: studentIds ? {
-          connect: studentIds.map((id: string) => ({ id }))
-        } : undefined
+        students: studentConnect ? { connect: studentConnect } : undefined,
       },
       include: {
         teacher: {
@@ -273,6 +292,7 @@ export async function POST(req: NextRequest) {
         },
         lessonPlan: {
           select: {
+            id: true,
             title: true,
             subject: true,
             grade: true

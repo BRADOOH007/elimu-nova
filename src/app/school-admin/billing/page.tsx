@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useSubscription } from '@/hooks/use-subscription'
+import { useToast } from "@/hooks/use-toast"
 import { useSchoolBillingData } from '@/hooks/use-school-billing-data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ export default function SchoolAdminBilling() {
   const [loading, setLoading] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [paymentLoading, setPaymentLoading] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const handleStartTrial = async () => {
     setLoading('trial')
@@ -95,11 +97,11 @@ export default function SchoolAdminBilling() {
       } else {
         // Refresh billing data to show updates
         await refetchBilling()
-        alert(result.message || 'Payment method updated successfully')
+        toast({ title: result.message || 'Payment method updated successfully' })
       }
     } catch (error) {
       console.error('Payment method error:', error)
-      alert('Failed to update payment method. Please try again.')
+      toast({ title: 'Failed to update payment method', variant: 'destructive' })
     } finally {
       setPaymentLoading(null)
     }
@@ -118,10 +120,10 @@ export default function SchoolAdminBilling() {
       
       // In a real implementation, this would open a new page or download files
       console.log('Available invoices:', result.invoices)
-      alert(`Found ${result.invoices.length} invoices. Download functionality would be implemented here.`)
+      toast({ title: `Found ${result.invoices.length} invoice(s) ready for download` })
     } catch (error) {
       console.error('Invoice fetch error:', error)
-      alert('Failed to fetch invoices. Please try again.')
+      toast({ title: 'Failed to fetch invoices', variant: 'destructive' })
     } finally {
       setPaymentLoading(null)
     }

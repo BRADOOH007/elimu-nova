@@ -56,6 +56,11 @@ interface Billing {
   notes?: string
   createdAt: string
   updatedAt: string
+  user?: {
+    firstName: string
+    lastName: string
+    email: string
+  }
   school: {
     id: string
     name: string

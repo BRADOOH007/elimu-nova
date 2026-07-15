@@ -21,6 +21,7 @@ import { Slider } from '@/components/ui/slider'
 import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 
 // ── Section styles matching TutorBot exactly ─────────────────────────────────
 const SECTION = {

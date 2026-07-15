@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { rateLimitAI, getIP } from '@/lib/rate-limit'
 import { OpenAIService } from '@/lib/openai-service'
+import { stripLatex } from '@/lib/clean-ai-text'
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,7 +57,7 @@ Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan
                 take: 5
               }),
               prisma.sharedSchemeOfWork.findMany({
-                where: { studentId: student.id, isActive: true },
+                where: { studentId: student.id } as any,
                 include: { schemeOfWork: { select: { title: true, subject: true, grade: true } } },
                 take: 3
               })
@@ -66,7 +67,7 @@ Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan
               contextInfo += `\n\nYour teacher has shared these lesson plans: ${lessonPlans.map(p => `${p.title} (${p.subject} ${p.grade})`).join(', ')}.`
             }
             if (sharedSchemes.length > 0) {
-              contextInfo += `\n\nShared schemes of work: ${sharedSchemes.map(s => `${s.schemeOfWork.title} (${s.schemeOfWork.subject})`).join(', ')}.`
+              contextInfo += `\n\nShared schemes of work: ${sharedSchemes.map(s => `${(s as any).schemeOfWork.title} (${(s as any).schemeOfWork.subject})`).join(', ')}.`
             }
           }
         }
@@ -109,7 +110,7 @@ ${contextInfo}`
       { maxTokens: 1000, temperature: 0.7 }
     )
 
-    return NextResponse.json({ response })
+    return NextResponse.json({ response: stripLatex(response) })
 
   } catch (error) {
     console.error('Chat API error:', error)

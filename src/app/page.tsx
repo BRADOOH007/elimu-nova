@@ -107,7 +107,7 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5">
-              <Logo variant="black" size="lg" />
+              <Logo variant="white" size="lg" />
             </Link>
 
             {/* Desktop nav */}
@@ -920,7 +920,7 @@ export default function Home() {
 
             {/* Brand column */}
             <div className="space-y-5">
-              <Logo variant="white" size="md" />
+              <Logo variant="black" size="md" />
               <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
                 The AI-powered cloud school platform built for teachers, school owners and learners worldwide.
               </p>

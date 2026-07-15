@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { useNotificationSound } from './use-notification-sound'
 
 export function useUnreadMessages() {
   const { data: session } = useSession()
   const [unreadCount, setUnreadCount] = useState(0)
-  const [loading, setLoading]         = useState(true)
+  const [loading, setLoading] = useState(true)
+  const [notificationUnread, setNotificationUnread] = useState(0)
+  const prevCountRef = useRef(0)
+  const { play } = useNotificationSound()
 
   const fetchCount = useCallback(async () => {
     if (!session?.user) { setLoading(false); return }
@@ -12,6 +16,7 @@ export function useUnreadMessages() {
     const endpoint =
       session.user.role === 'STUDENT'  ? '/api/student/messages/unread'  :
       session.user.role === 'TEACHER'  ? '/api/teacher/messages/unread'  :
+      session.user.role === 'PARENT'   ? '/api/parent/messages/unread'   :
       null
 
     if (!endpoint) { setLoading(false); return }
@@ -20,29 +25,53 @@ export function useUnreadMessages() {
       const res = await fetch(endpoint)
       if (res.ok) {
         const d = await res.json()
-        setUnreadCount(d.unreadCount || 0)
+        const count = d.unreadCount || 0
+        if (count > prevCountRef.current && prevCountRef.current >= 0) {
+          play('message', 'sidebar')
+        }
+        prevCountRef.current = count
+        setUnreadCount(count)
       }
     } catch { /* silent */ }
     finally { setLoading(false) }
+  }, [session, play])
+
+  const fetchNotificationCount = useCallback(async () => {
+    if (!session?.user?.id) return
+    try {
+      const res = await fetch(`/api/notifications?userId=${session.user.id}&limit=100`)
+      if (res.ok) {
+        const notifs = await res.json()
+        const count = Array.isArray(notifs) ? notifs.filter((n: any) => !n.isRead).length : 0
+        setNotificationUnread(count)
+      }
+    } catch { /* silent */ }
   }, [session])
 
   useEffect(() => {
     fetchCount()
+    fetchNotificationCount()
 
-    // Poll every 60 seconds — but only when tab is visible
     const interval = setInterval(() => {
-      if (!document.hidden) fetchCount()
-    }, 60_000)
+      if (!document.hidden) {
+        fetchCount()
+        fetchNotificationCount()
+      }
+    }, 30_000)
 
-    // Refetch when user switches back to the tab
-    const onVisible = () => { if (!document.hidden) fetchCount() }
+    const onVisible = () => {
+      if (!document.hidden) {
+        fetchCount()
+        fetchNotificationCount()
+      }
+    }
     document.addEventListener('visibilitychange', onVisible)
 
     return () => {
       clearInterval(interval)
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [fetchCount])
+  }, [fetchCount, fetchNotificationCount])
 
-  return { unreadCount, loading }
+  return { unreadCount, loading, totalUnread: unreadCount + notificationUnread }
 }

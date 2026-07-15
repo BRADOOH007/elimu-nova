@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -54,6 +54,7 @@ import {
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 
 interface LessonPlan {
   id: string
@@ -140,7 +141,14 @@ export default function PlanningPage() {
   const [generatingPptx, setGeneratingPptx] = useState<string | null>(null)
   const [generatingNotes, setGeneratingNotes] = useState<string | null>(null)
 
-  // Fetch Data
+  // Send to Students modal state
+  const [sendModal, setSendModal] = useState(false)
+  const [sendItem, setSendItem] = useState<LessonPlan | null>(null)
+  const [sendDueDate, setSendDueDate] = useState('')
+  const [sendClassId, setSendClassId] = useState('')
+  const [sending, setSending] = useState(false)
+
+  // Fetch Data — wait for session to be ready
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -154,7 +162,15 @@ export default function PlanningPage() {
         if (lessonsRes.ok) setLessonPlans((await lessonsRes.json()).lessonPlans || [])
         if (schemesRes.ok) setSchemesOfWork((await schemesRes.json()).schemesOfWork || [])
         if (studentsRes.ok) setStudents((await studentsRes.json()).students || [])
-        if (classesRes.ok) setClasses((await classesRes.json()).classes || [])
+        if (classesRes.ok) {
+          setClasses((await classesRes.json()).classes || [])
+        } else if (classesRes.status === 401) {
+          // Session not ready yet — retry once after a short delay
+          setTimeout(async () => {
+            const retry = await fetch('/api/teacher/classes').catch(() => null)
+            if (retry?.ok) setClasses((await retry.json()).classes || [])
+          }, 1500)
+        }
       } catch (err) {
         console.error('Error fetching data:', err)
       } finally {
@@ -255,7 +271,22 @@ export default function PlanningPage() {
     }
   }
 
-  const generatePptxFromLesson = async (lp: LessonPlan) => {
+  const handleViewLessonPlan = async (lp: LessonPlan) => {
+    // Open modal immediately with whatever we have, then enrich with full content
+    setSelectedLessonPlan(lp)
+    setIsViewModalOpen(true)
+    try {
+      const res = await fetch(`/api/lesson-plans/${lp.id}`)
+      if (res.ok) {
+        const full = await res.json()
+        // API returns the plan directly — content is either parsed object or string
+        const content = full.content ?? full.generatedContent ?? full
+        setSelectedLessonPlan(prev => prev ? { ...prev, content } : prev)
+      }
+    } catch {
+      // Keep original data if fetch fails
+    }
+  }
     setGeneratingPptx(lp.id)
     try {
       const res = await fetch('/api/ai/generate-pptx-from-lesson', {
@@ -387,6 +418,37 @@ export default function PlanningPage() {
     }
   }
 
+  const sendAsAssignment = async () => {
+    if (!sendItem || !sendDueDate) {
+      toast({ variant: 'destructive', title: 'Please set a due date' }); return
+    }
+    setSending(true)
+    try {
+      const content = sendItem.content?.generatedContent || sendItem.content?.content || (typeof sendItem.content === 'string' ? sendItem.content : '')
+      const res = await fetch('/api/teacher/send-to-class', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `[Lesson] ${sendItem.title}`,
+          description: `Lesson plan: ${sendItem.subject} — ${sendItem.grade}`,
+          content,
+          dueDate: sendDueDate,
+          subject: sendItem.subject,
+          grade: sendItem.grade,
+          lessonPlanId: sendItem.id,
+          classId: sendClassId || undefined,
+          type: 'ASSIGNMENT',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      toast({ title: '✅ Sent!', description: data.message, variant: 'success' })
+      setSendModal(false); setSendItem(null); setSendDueDate(''); setSendClassId('')
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Failed to send', description: e.message })
+    } finally { setSending(false) }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -510,7 +572,7 @@ export default function PlanningPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => { setSelectedLessonPlan(lp); setIsViewModalOpen(true) }}>
+                          <DropdownMenuItem onClick={() => { handleViewLessonPlan(lp) }}>
                             <Eye className="mr-2 h-4 w-4" /> View
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/teacher/lesson-plans/edit/${lp.id}`)}>
@@ -518,6 +580,9 @@ export default function PlanningPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => { setItemToShare(lp); setIsShareModalOpen(true) }}>
                             <Share2 className="mr-2 h-4 w-4" /> Share
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setSendItem(lp); setSendModal(true) }}>
+                            <Send className="mr-2 h-4 w-4 text-green-600" /> Send to Students
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => downloadLessonPlan(lp, 'pdf')}>
                             <Download className="mr-2 h-4 w-4" /> Download PDF (Print)
@@ -546,7 +611,7 @@ export default function PlanningPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => { setSelectedLessonPlan(lp); setIsViewModalOpen(true) }}
+                          onClick={() => { handleViewLessonPlan(lp) }}
                         >
                           <Eye className="w-4 h-4 mr-1" /> View
                         </Button>
@@ -743,12 +808,22 @@ export default function PlanningPage() {
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-2">Content</h4>
-              <div className="prose prose-sm max-w-none">
-                <div className="whitespace-pre-wrap text-gray-700">
-                  {selectedLessonPlan?.content?.generatedContent || selectedLessonPlan?.content?.content || selectedLessonPlan?.content ||
-                   selectedScheme?.content?.generatedContent || 'No content available'}
-                </div>
-              </div>
+              {(() => {
+                const c = selectedLessonPlan?.content ?? selectedScheme?.content
+                // Extract text from any shape the content might arrive in
+                const text =
+                  typeof c === 'string' ? c :
+                  c?.generatedContent ??
+                  c?.content ??
+                  c?.lessonPlan ??
+                  (typeof c === 'object' && c !== null ? JSON.stringify(c, null, 2) : null)
+
+                return text ? (
+                  <MarkdownRenderer content={text} />
+                ) : (
+                  <p className="text-gray-500 italic text-sm">No content available</p>
+                )
+              })()}
             </div>
             <div className="flex justify-end space-x-2">
               {selectedLessonPlan && (
@@ -879,6 +954,48 @@ export default function PlanningPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Send to Students as Assignment Modal */}
+      <Dialog open={sendModal} onOpenChange={setSendModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <Send className="mr-2 h-5 w-5 text-green-600" />
+              Send Lesson as Assignment
+            </DialogTitle>
+            <DialogDescription>
+              "{sendItem?.title}" will be sent as an assignment to students
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Due Date *</label>
+              <Input type="datetime-local" value={sendDueDate} onChange={e => setSendDueDate(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Send to Class (optional)</label>
+              <Select value={sendClassId} onValueChange={setSendClassId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All my students (no specific class)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All my students</SelectItem>
+                  {classes.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name} — {c.grade}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2 pt-2">
+              <Button variant="outline" onClick={() => setSendModal(false)} disabled={sending}>Cancel</Button>
+              <Button onClick={sendAsAssignment} disabled={sending || !sendDueDate} className="bg-gradient-to-r from-green-600 to-blue-600">
+                {sending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Sending...</> : <><Send className="mr-2 h-4 w-4"/>Send</>}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
+

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
@@ -21,6 +21,7 @@
     "@auth/prisma-adapter": "^2.10.0",
     "@cerebras/cerebras_cloud_sdk": "^1.64.1",
     "@hookform/resolvers": "^5.2.1",
+    "@monaco-editor/react": "^4.7.0",
     "@prisma/client": "^6.15.0",
     "@radix-ui/react-accordion": "^1.2.14",
     "@radix-ui/react-avatar": "^1.1.10",
@@ -37,9 +38,11 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
+    "@sentry/nextjs": "^10.64.0",
     "@stripe/stripe-js": "^8.5.2",
     "@supabase/supabase-js": "^2.108.2",
     "@types/bcryptjs": "^2.4.6",
+    "@upstash/redis": "^1.38.0",
     "@vercel/blob": "^2.0.0",
     "africastalking": "^0.7.0",
     "bcryptjs": "^3.0.2",
@@ -56,6 +59,7 @@
     "next-auth": "^4.24.13",
     "nodemailer": "^7.0.13",
     "openai": "^5.19.1",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.14.0",
     "pptxgenjs": "^4.0.1",
     "prisma": "^6.15.0",
@@ -73,14 +77,18 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.20.5",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

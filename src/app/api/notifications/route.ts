@@ -11,8 +11,9 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId') || session.user.id
-    const limit = parseInt(searchParams.get('limit') || '50')
+    // Always use the authenticated user's own ID — never allow fetching another user's notifications
+    const userId = session.user.id
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100) // cap at 100
     const offset = parseInt(searchParams.get('offset') || '0')
 
     const notifications = await prisma.notification.findMany({

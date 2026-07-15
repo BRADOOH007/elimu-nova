@@ -26,24 +26,39 @@ export async function POST(request: NextRequest) {
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
     const {
-      schemeId,       // optional — link to existing scheme
-      row,            // KICDRow data
+      schemeId,        // optional — link to existing scheme
+      row,             // KICDRow data
       subject,
       grade,
       saveToDb = true,
+      documentContext,
     }: {
       schemeId?: string
       row: KICDRow
       subject: string
       grade: string
       saveToDb?: boolean
+      documentContext?: string
     } = await request.json()
 
     if (!row || !subject || !grade) {
       return NextResponse.json({ error: 'row, subject and grade are required' }, { status: 400 })
     }
 
-    const systemPrompt = `You are a Kenyan CBC curriculum expert creating detailed lesson plans.
+    // Fetch teacher's saved lesson plan template if no explicit context
+    let templateText = documentContext
+    if (!templateText) {
+      const t = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { lessonPlanTemplate: true },
+      })
+      templateText = t?.lessonPlanTemplate || null
+    }
+    const templateBlock = templateText
+      ? `\n\nA reference lesson plan document was uploaded as a format template. Study its structure, sections, and style, then generate the lesson plan in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+      : ''
+
+    const systemPrompt = `You are a Kenyan CBC curriculum expert creating detailed lesson plans.${templateBlock}
 The lesson plan must match exactly what is in the scheme of work row provided.
 Return a JSON object with these fields:
 {

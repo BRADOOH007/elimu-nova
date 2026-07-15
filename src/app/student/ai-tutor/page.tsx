@@ -2,24 +2,23 @@
 
 import { useState, useEffect, useRef } from "react"
 import dynamic from "next/dynamic"
+import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Brain, Code2, Compass, Loader2 } from "lucide-react"
-
-const CodingTab  = dynamic(() => import('@/app/student/coding/page'),  { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
-const CareerTab  = dynamic(() => import('@/app/student/career/page'),  { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { FormattedMessage } from "@/components/ai/formatted-message"
 import { PreviousLearningRecap } from "@/components/ui/previous-learning-recap"
 import { LessonCompletionCelebration } from "@/components/ui/lesson-completion-celebration"
-import { 
-  Brain, 
-  Send, 
+import {
+  Brain,
+  Code2,
+  Compass,
+  Send,
   Loader2,
   AlertCircle,
   CheckCircle,
@@ -34,6 +33,9 @@ import {
   ArrowRight,
   RefreshCw
 } from "lucide-react"
+
+const CodingTab = dynamic(() => import('@/app/student/coding/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
+const CareerTab = dynamic(() => import('@/app/student/career/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
 interface TutorTask {
   subject: string
@@ -61,6 +63,8 @@ interface StudentStats {
 
 export function AutonomousAITutorPage() {
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
+  const examRevisionParam = searchParams.get('examRevision')
   const [currentTask, setCurrentTask] = useState<TutorTask | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
@@ -85,7 +89,29 @@ export function AutonomousAITutorPage() {
 
   // Load current task on mount
   useEffect(() => {
-    loadCurrentTask()
+    if (examRevisionParam) {
+      try {
+        const examContext = JSON.parse(decodeURIComponent(examRevisionParam))
+        setCurrentTask({
+          subject: examContext.subject || 'General',
+          topic: examContext.topic || 'Exam Revision',
+          mode: 'revise',
+          objective: `Review and learn from mistakes in ${examContext.subject || 'your'} exam`,
+          estimatedMinutes: 15,
+          difficulty: 'medium',
+          context: examContext
+        })
+        setMessages([{
+          role: 'assistant',
+          content: `I see you had some questions to review from your ${examContext.subject || ''} exam on "${examContext.topic}". I'll help you understand the concepts you found challenging. What specific topic would you like to go over?`,
+          timestamp: new Date()
+        }])
+      } catch {
+        loadCurrentTask()
+      }
+    } else {
+      loadCurrentTask()
+    }
   }, [])
 
   const loadCurrentTask = async () => {
@@ -340,9 +366,9 @@ export function AutonomousAITutorPage() {
       {/* Chat Interface */}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="h-[600px] flex flex-col bg-white rounded-3xl shadow-lg">
+          <div className="h-[680px] flex flex-col bg-white rounded-3xl shadow-lg overflow-hidden">
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50 min-h-0">
               {messages.map((message, index) => (
                 <FormattedMessage
                   key={index}

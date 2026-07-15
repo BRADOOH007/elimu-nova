@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 // GET - Get a specific presentation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -25,7 +25,7 @@ export async function GET(
 
     const presentation = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: 'POWERPOINT'
       }
@@ -65,7 +65,7 @@ export async function GET(
 // PUT - Update a presentation
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -87,7 +87,7 @@ export async function PUT(
     // Verify presentation exists and belongs to teacher
     const existingPresentation = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: 'POWERPOINT'
       }
@@ -118,7 +118,7 @@ export async function PUT(
     }
 
     const updatedPresentation = await prisma.aIGeneratedContent.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: {
         title,
         content: JSON.stringify(updatedPresentationData),
@@ -133,10 +133,6 @@ export async function PUT(
       success: true,
       presentation: {
         id: updatedPresentation.id,
-        title: updatedPresentation.title,
-        subject: updatedPresentation.subject,
-        grade: updatedPresentation.grade,
-        topic: updatedPresentation.topic,
         ...updatedPresentationData,
         isShared: updatedPresentation.isShared,
         createdAt: updatedPresentation.createdAt,
@@ -156,7 +152,7 @@ export async function PUT(
 // DELETE - Delete a presentation
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -176,7 +172,7 @@ export async function DELETE(
     // Verify presentation exists and belongs to teacher
     const presentation = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: 'POWERPOINT'
       }
@@ -187,7 +183,7 @@ export async function DELETE(
     }
 
     await prisma.aIGeneratedContent.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     })
 
     return NextResponse.json({

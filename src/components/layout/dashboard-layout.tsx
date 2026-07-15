@@ -29,6 +29,7 @@ import {
 import Link from 'next/link'
 import { NotificationsModal } from '@/components/modals/notifications-modal'
 import SendNotificationModal from '@/components/modals/SendNotificationModal'
+import { useUnreadMessages } from '@/hooks/use-unread-messages'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -42,6 +43,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
   const [sendNotificationModalOpen, setSendNotificationModalOpen] = useState(false)
   const { data: session } = useSession()
   const router = useRouter()
+  const { totalUnread } = useUnreadMessages()
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/' })
@@ -103,7 +105,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
         <div className="fixed inset-y-0 left-0 flex w-64 flex-col bg-white shadow-xl">
           <div className="flex h-16 items-center justify-between px-4">
-            <Logo size="sm" />
+            <Logo size="sm" variant="white" />
             <button
               onClick={() => setSidebarOpen(false)}
               className="text-gray-400 hover:text-gray-600"
@@ -131,7 +133,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
       <div className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-300 ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}`}>
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex h-16 items-center px-4 justify-center">
-            <Logo size="md" />
+            <Logo size="md" variant="white" />
           </div>
           <nav className="flex-1 px-3 py-4 space-y-2">
             {navigationItems.map((item) => (
@@ -190,10 +192,15 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
               
               <button
                 type="button"
-                className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500"
+                className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500 relative"
                 onClick={() => setNotificationsModalOpen(true)}
               >
                 <Bell className="h-6 w-6" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                    {totalUnread > 99 ? '99+' : totalUnread}
+                  </span>
+                )}
               </button>
 
               <div className="relative">

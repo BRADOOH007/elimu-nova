@@ -9,10 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Users, Search, Plus, Edit, Trash2, MoreHorizontal, User, Mail, Calendar,
   UserCheck, UserX, Loader2, GraduationCap, BookOpen, School, UserPlus,
-  Settings, Eye, Key, Copy, Lock, CheckCircle, Activity
+  Settings, Eye, Key, Copy, Lock, CheckCircle, Activity,
+  Send, MessageSquare, AlertTriangle, Save
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
@@ -27,6 +30,12 @@ import GeneratePasswordModal from "@/components/modals/generate-password-modal"
 // Lazy-load merged tab pages — no re-implementation needed
 const AttendanceTab   = dynamic(() => import('@/app/teacher/attendance/page'),      { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
 const ProgressTab     = dynamic(() => import('@/app/teacher/progress-monitor/page'),{ ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
+
+// ── Parent types ──────────────────────────────────────────────────────────
+interface Parent {
+  id: string; name: string; email: string; phone?: string; status: string
+  children: Array<{ id: string; name: string }>
+}
 
 interface Student {
   id: string
@@ -80,9 +89,79 @@ export default function TeacherStudentsPage() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [selectedClass, setSelectedClass] = useState<Class | null>(null)
 
+  // ── Class management state ────────────────────────────────────────────
+  const [showEditClassModal, setShowEditClassModal] = useState(false)
+  const [showDeleteClassModal, setShowDeleteClassModal] = useState(false)
+  const [classToDelete, setClassToDelete] = useState<Class | null>(null)
+  const [editingClass, setEditingClass] = useState<Class | null>(null)
+  const [editClassForm, setEditClassForm] = useState({ name: '', subject: '', grade: '', description: '' })
+  const [savingClass, setSavingClass] = useState(false)
+  const [deletingClass, setDeletingClass] = useState(false)
+
+  // ── Parent state ──────────────────────────────────────────────────────
+  const [parents,       setParents]       = useState<Parent[]>([])
+  const [loadingParents,setLoadingParents] = useState(false)
+  const [showAddParent, setShowAddParent] = useState(false)
+  const [parentForm,    setParentForm]    = useState({ firstName:'', lastName:'', email:'', phone:'', studentId:'' })
+  const [addingParent,  setAddingParent]  = useState(false)
+  const [msgParent,     setMsgParent]     = useState<Parent|null>(null)
+  const [msgSubject,    setMsgSubject]    = useState('')
+  const [msgContent,    setMsgContent]    = useState('')
+  const [sendingMsg,    setSendingMsg]    = useState(false)
+
   useEffect(() => {
     fetchData()
+    fetchParents()
   }, [])
+
+  const fetchParents = async () => {
+    setLoadingParents(true)
+    try {
+      const r = await fetch('/api/teacher/parents')
+      if (r.ok) { const d = await r.json(); setParents(d.parents || []) }
+    } finally { setLoadingParents(false) }
+  }
+
+  const handleAddParent = async () => {
+    const { firstName, lastName, email, studentId } = parentForm
+    if (!firstName || !lastName || !email || !studentId) {
+      toast({ variant:'destructive', title:'Fill in all required fields' }); return
+    }
+    setAddingParent(true)
+    try {
+      const r = await fetch('/api/teacher/parents', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(parentForm),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error)
+      toast({ title:'✅ Parent added and linked to student!' })
+      setShowAddParent(false)
+      setParentForm({ firstName:'', lastName:'', email:'', phone:'', studentId:'' })
+      fetchParents()
+    } catch(e:any) { toast({ variant:'destructive', title:'Failed', description:e.message }) }
+    finally { setAddingParent(false) }
+  }
+
+  const handleSendMessage = async () => {
+    if (!msgParent || !msgSubject.trim() || !msgContent.trim()) return
+    setSendingMsg(true)
+    try {
+      const r = await fetch('/api/teacher/messages', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          recipientId:   msgParent.id,
+          recipientType: 'PARENT',
+          subject:       msgSubject,
+          content:       msgContent,
+        }),
+      })
+      if (!r.ok) { const d = await r.json(); throw new Error(d.error) }
+      toast({ title:'✅ Message sent to parent!' })
+      setMsgParent(null); setMsgSubject(''); setMsgContent('')
+    } catch(e:any) { toast({ variant:'destructive', title:'Send failed', description:e.message }) }
+    finally { setSendingMsg(false) }
+  }
 
   const fetchData = async () => {
     await Promise.all([
@@ -132,6 +211,48 @@ export default function TeacherStudentsPage() {
   const handleClassSuccess = () => {
     fetchClasses()
     setShowCreateClassModal(false)
+  }
+
+  const openEditClass = (cls: Class) => {
+    setEditingClass(cls)
+    setEditClassForm({ name: cls.name, subject: cls.subject, grade: cls.grade, description: cls.description || '' })
+    setShowEditClassModal(true)
+  }
+
+  const handleEditClass = async () => {
+    if (!editingClass || !editClassForm.name.trim()) return
+    setSavingClass(true)
+    try {
+      const r = await fetch(`/api/teacher/classes/${editingClass.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editClassForm),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error)
+      toast({ title: '✅ Class updated!' })
+      setShowEditClassModal(false)
+      setEditingClass(null)
+      fetchClasses()
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Failed to update', description: e.message })
+    } finally { setSavingClass(false) }
+  }
+
+  const handleDeleteClass = async () => {
+    if (!classToDelete) return
+    setDeletingClass(true)
+    try {
+      const r = await fetch(`/api/teacher/classes/${classToDelete.id}`, { method: 'DELETE' })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error)
+      toast({ title: '🗑️ Class deleted successfully' })
+      setShowDeleteClassModal(false)
+      setClassToDelete(null)
+      fetchClasses()
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Failed to delete', description: e.message })
+    } finally { setDeletingClass(false) }
   }
 
   const handleEditStudent = (student: Student) => {
@@ -230,7 +351,7 @@ export default function TeacherStudentsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 bg-gradient-to-r from-blue-50 to-purple-50">
+        <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-blue-50 to-purple-50">
           <TabsTrigger value="students" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="mr-2 h-4 w-4" />
             Students
@@ -246,6 +367,10 @@ export default function TeacherStudentsPage() {
           <TabsTrigger value="progress" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Activity className="mr-2 h-4 w-4" />
             Progress
+          </TabsTrigger>
+          <TabsTrigger value="parents" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+            <User className="mr-2 h-4 w-4" />
+            Parents
           </TabsTrigger>
         </TabsList>
 
@@ -435,94 +560,86 @@ export default function TeacherStudentsPage() {
         </TabsContent>
 
         {/* Classes Tab */}
-        <TabsContent value="classes" className="space-y-6">
-          {/* Classes Grid */}
+        <TabsContent value="classes" className="space-y-5">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
           ) : filteredClasses.length === 0 ? (
-            <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-              <CardContent className="text-center py-12">
-                <School className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No classes found</h3>
-                <p className="text-gray-600 mb-4">
-                  Create your first class to organize your students.
-                </p>
-                <Button 
-                  onClick={() => setShowCreateClassModal(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Class
+            <Card className="border-0 shadow-sm bg-white">
+              <CardContent className="text-center py-16">
+                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <School className="h-8 w-8 text-blue-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">No classes yet</h3>
+                <p className="text-gray-500 text-sm mb-5">Create a class to organise your students into groups.</p>
+                <Button onClick={() => setShowCreateClassModal(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                  <Plus className="mr-2 h-4 w-4" />Create First Class
                 </Button>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredClasses.map((cls) => (
-                <Card key={cls.id} className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0 hover:shadow-xl transition-all duration-300">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg font-semibold text-gray-900">
-                          {cls.name}
-                        </CardTitle>
-                        <CardDescription className="mt-2">
-                          <span className="flex items-center space-x-2 text-sm text-gray-600">
-                            <GraduationCap className="h-4 w-4" />
-                            <span>{cls.grade}</span>
-                            <span>•</span>
-                            <span>{cls.subject}</span>
-                          </span>
-                        </CardDescription>
+                <div key={cls.id} className="group bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden">
+                  {/* Colour bar at top */}
+                  <div className={`h-1.5 w-full ${cls.isActive ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-slate-200'}`} />
+
+                  <div className="p-5">
+                    {/* Title row */}
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-slate-900 text-base truncate">{cls.name}</h3>
+                        <p className="text-xs text-slate-500 mt-0.5">{cls.grade} &nbsp;·&nbsp; {cls.subject}</p>
                       </div>
-                      <Badge 
-                        variant={cls.isActive ? 'default' : 'secondary'}
-                        className={cls.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                        }
-                      >
+                      <span className={`shrink-0 text-[11px] font-semibold px-2.5 py-1 rounded-full ${
+                        cls.isActive
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}>
                         {cls.isActive ? 'Active' : 'Inactive'}
-                      </Badge>
+                      </span>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="h-4 w-4 mr-2" />
-                        <span>{cls.studentCount} students</span>
-                      </div>
-                      
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 mr-2" />
-                        <span>Created {new Date(cls.createdAt).toLocaleDateString()}</span>
-                      </div>
 
-                      {cls.description && (
-                        <p className="text-sm text-gray-600 line-clamp-2">
-                          {cls.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-between pt-2">
-                        <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-purple-100 text-blue-800">
-                          {cls.subject}
-                        </Badge>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedClass(cls)}
-                          className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm hover:shadow-md transition-all duration-300"
-                        >
-                          <Settings className="h-4 w-4 mr-1" />
-                          Manage
-                        </Button>
+                    {/* Stats */}
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                        <Users className="h-4 w-4 text-blue-400" />
+                        <span className="font-semibold text-slate-800">{cls.studentCount}</span>
+                        <span className="text-slate-400">students</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {new Date(cls.createdAt).toLocaleDateString()}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    {cls.description && (
+                      <p className="text-xs text-slate-500 mb-4 line-clamp-2 leading-relaxed">{cls.description}</p>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openEditClass(cls)}
+                        className="flex-1 h-8 text-xs font-medium border-slate-200 hover:border-blue-300 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                      >
+                        <Edit className="h-3.5 w-3.5 mr-1.5" />Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { setClassToDelete(cls); setShowDeleteClassModal(true) }}
+                        className="h-8 text-xs font-medium border-slate-200 hover:border-red-300 hover:text-red-600 hover:bg-red-50 transition-colors px-3"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -536,6 +653,142 @@ export default function TeacherStudentsPage() {
         {/* ── Progress Monitor Tab ───────────────── */}
         <TabsContent value="progress">
           <ProgressTab />
+        </TabsContent>
+
+        {/* ── Parents Tab ─────────────────────────── */}
+        <TabsContent value="parents" className="space-y-5">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Parents & Guardians</h2>
+              <p className="text-gray-500 text-sm">View, add, and message parents of your students</p>
+            </div>
+            <Button onClick={()=>setShowAddParent(true)}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+              <UserPlus className="mr-2 h-4 w-4"/>Add Parent
+            </Button>
+          </div>
+
+          {/* Add Parent form */}
+          {showAddParent && (
+            <Card className="border-blue-200 bg-blue-50/30">
+              <CardContent className="pt-5 space-y-4">
+                <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                  <UserPlus className="h-4 w-4 text-blue-600"/>Link a Parent/Guardian to a Student
+                </h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">First Name *</label>
+                    <Input value={parentForm.firstName} onChange={e=>setParentForm(f=>({...f,firstName:e.target.value}))} placeholder="Jane"/>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Last Name *</label>
+                    <Input value={parentForm.lastName} onChange={e=>setParentForm(f=>({...f,lastName:e.target.value}))} placeholder="Wanjiku"/>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Email *</label>
+                    <Input type="email" value={parentForm.email} onChange={e=>setParentForm(f=>({...f,email:e.target.value}))} placeholder="parent@example.com"/>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Phone (optional)</label>
+                    <Input value={parentForm.phone} onChange={e=>setParentForm(f=>({...f,phone:e.target.value}))} placeholder="+254 700 000000"/>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Student *</label>
+                    <select value={parentForm.studentId} onChange={e=>setParentForm(f=>({...f,studentId:e.target.value}))}
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Select student…</option>
+                      {students.map((s:any)=>(
+                        <option key={s.id} value={s.id}>{s.name} — {s.class?.grade||''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={()=>setShowAddParent(false)}>Cancel</Button>
+                  <Button onClick={handleAddParent} disabled={addingParent}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                    {addingParent?<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Adding…</>:<><UserPlus className="h-4 w-4 mr-2"/>Link Parent</>}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Send message modal */}
+          {msgParent && (
+            <Card className="border-green-200 bg-green-50/30">
+              <CardContent className="pt-5 space-y-3">
+                <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-green-600"/>Message to {msgParent.name}
+                </h3>
+                <Input value={msgSubject} onChange={e=>setMsgSubject(e.target.value)} placeholder="Subject…"/>
+                <textarea value={msgContent} onChange={e=>setMsgContent(e.target.value)}
+                  placeholder="Type your message…" rows={4}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"/>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={()=>setMsgParent(null)}>Cancel</Button>
+                  <Button onClick={handleSendMessage} disabled={sendingMsg||!msgSubject.trim()||!msgContent.trim()}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
+                    {sendingMsg?<><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Sending…</>:<><Send className="h-4 w-4 mr-2"/>Send Message</>}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Parents list */}
+          {loadingParents ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div>
+          ) : parents.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <User className="mx-auto h-12 w-12 text-gray-300 mb-4"/>
+                <h3 className="font-medium text-gray-600 mb-2">No parents linked yet</h3>
+                <p className="text-gray-400 text-sm mb-4">Add parents to enable direct communication</p>
+                <Button onClick={()=>setShowAddParent(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                  <UserPlus className="mr-2 h-4 w-4"/>Add First Parent
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {parents.map((p:Parent)=>(
+                <Card key={p.id} className="hover:shadow-lg transition-shadow bg-gradient-to-br from-white to-blue-50/30">
+                  <CardContent className="pt-5 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-800">{p.name}</p>
+                          <p className="text-xs text-slate-400">{p.email}</p>
+                          {p.phone && <p className="text-xs text-slate-400">{p.phone}</p>}
+                        </div>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${p.status==='Active'?'bg-green-100 text-green-700':'bg-gray-100 text-gray-600'}`}>
+                        {p.status}
+                      </span>
+                    </div>
+
+                    {p.children.length > 0 && (
+                      <div className="text-xs text-slate-500">
+                        <span className="font-semibold text-slate-600">Children: </span>
+                        {p.children.map(c=>c.name).join(', ')}
+                      </div>
+                    )}
+
+                    <Button onClick={()=>{ setMsgParent(p); setMsgSubject(''); setMsgContent('') }}
+                      size="sm" variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-50">
+                      <MessageSquare className="h-3.5 w-3.5 mr-1.5"/>Send Message
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
       </Tabs>
@@ -583,6 +836,117 @@ export default function TeacherStudentsPage() {
           student={selectedStudent}
         />
       )}
+
+      {/* ── Edit Class Modal ───────────────────────────────────────── */}
+      <Dialog open={showEditClassModal} onOpenChange={open => { setShowEditClassModal(open); if (!open) setEditingClass(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Edit className="h-4 w-4 text-blue-600" />
+              Edit Class
+            </DialogTitle>
+            <DialogDescription>Update the details for this class.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Class Name *</label>
+              <Input
+                value={editClassForm.name}
+                onChange={e => setEditClassForm(f => ({ ...f, name: e.target.value }))}
+                placeholder="e.g. Grade 4B"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Subject *</label>
+                <Input
+                  value={editClassForm.subject}
+                  onChange={e => setEditClassForm(f => ({ ...f, subject: e.target.value }))}
+                  placeholder="e.g. Mathematics"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Grade *</label>
+                <Input
+                  value={editClassForm.grade}
+                  onChange={e => setEditClassForm(f => ({ ...f, grade: e.target.value }))}
+                  placeholder="e.g. Grade 4"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Description</label>
+              <Textarea
+                value={editClassForm.description}
+                onChange={e => setEditClassForm(f => ({ ...f, description: e.target.value }))}
+                placeholder="Optional description..."
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" onClick={() => setShowEditClassModal(false)} disabled={savingClass} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleEditClass}
+                disabled={savingClass || !editClassForm.name.trim()}
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90"
+              >
+                {savingClass
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</>
+                  : <><Save className="h-4 w-4 mr-2" />Save Changes</>
+                }
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Class Confirmation Modal ────────────────────────── */}
+      <Dialog open={showDeleteClassModal} onOpenChange={open => { setShowDeleteClassModal(open); if (!open) setClassToDelete(null) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Class
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            {classToDelete && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                <p className="font-semibold text-red-900 mb-1">{classToDelete.name}</p>
+                <p className="text-sm text-red-700">
+                  {classToDelete.grade} · {classToDelete.subject} · {classToDelete.studentCount} student{classToDelete.studentCount !== 1 ? 's' : ''}
+                </p>
+              </div>
+            )}
+            <p className="text-sm text-slate-600">
+              Deleting this class will <strong>unassign all students</strong> from it. The students themselves will not be deleted. You can re-create this class and re-enrol them afterwards.
+            </p>
+            <div className="flex gap-2 pt-1">
+              <Button variant="outline" onClick={() => setShowDeleteClassModal(false)} disabled={deletingClass} className="flex-1">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteClass}
+                disabled={deletingClass}
+                variant="destructive"
+                className="flex-1"
+              >
+                {deletingClass
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Deleting…</>
+                  : <><Trash2 className="h-4 w-4 mr-2" />Delete Class</>
+                }
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

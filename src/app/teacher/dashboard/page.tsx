@@ -1,6 +1,7 @@
-'use client'
+﻿'use client'
 
 import { useSchoolInfo } from '@/hooks/use-school-info'
+import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { IndependentUserWelcome } from '@/components/onboarding/independent-user-welcome'
@@ -26,7 +27,11 @@ import {
   AlertCircle,
   MapPin,
   Activity,
-  Trash2
+  Trash2,
+  Mail,
+  Bell,
+  Award,
+  Sparkles
 } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
@@ -97,6 +102,9 @@ interface RecentActivity {
 export default function TeacherDashboard() {
   const { data: session } = useSession()
   const { schoolInfo, isIndependent, loading: schoolInfoLoading } = useSchoolInfo()
+  const { unreadCount } = useUnreadMessages()
+  // Fresh name from DB — overrides the stale JWT name
+  const [displayName, setDisplayName] = useState<string>('')
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -104,19 +112,63 @@ export default function TeacherDashboard() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [activityLoading, setActivityLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [todaySchedule, setTodaySchedule] = useState<any[]>([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [aiAlerts, setAiAlerts] = useState<any[]>([]);
+  const [alertsLoading, setAlertsLoading] = useState(false);
+  const [recentSubmissions, setRecentSubmissions] = useState<any[]>([]);
+  const [submissionsLoading, setSubmissionsLoading] = useState(false);
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats with retry on DB connection errors
   useEffect(() => {
-    const fetchStats = async () => {
+    // Fetch fresh name from DB so profile changes reflect immediately
+    const fetchProfile = async () => {
+      if (!session?.user?.id) return
+      try {
+        const res = await fetch(`/api/user-profile?userId=${session.user.id}`)
+        if (res.ok) {
+          const p = await res.json()
+          setDisplayName(`${p.firstName || ''} ${p.lastName || ''}`.trim())
+        }
+      } catch { /* silent */ }
+    }
+    fetchProfile()
+  }, [session?.user?.id])
+
+  // Fetch dashboard stats with retry on DB connection errors
+  useEffect(() => {
+    const fetchStats = async (attempt = 0) => {
       try {
         const response = await fetch('/api/teacher/dashboard-stats');
         if (response.ok) {
           const data = await response.json();
           setStats(data.stats);
           setRecentActivities(data.recentActivities || []);
+        } else if (response.status >= 500 && attempt < 2) {
+          // Retry on server errors (DB connection drops)
+          setTimeout(() => fetchStats(attempt + 1), 1500 * (attempt + 1));
+          return;
+        } else {
+          // Use zero-value fallback so dashboard always renders
+          setStats({
+            totalStudents:    { value: 0, change: 'Unable to load', changeType: 'neutral' },
+            activeLessonPlans:{ value: 0, change: 'Unable to load', changeType: 'neutral' },
+            pendingAssignments:{ value: 0, change: 'Unable to load', changeType: 'neutral' },
+            completedThisWeek:{ value: 0, change: 'Unable to load', changeType: 'neutral' },
+          });
         }
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
+        if (attempt < 2) {
+          setTimeout(() => fetchStats(attempt + 1), 1500 * (attempt + 1));
+          return;
+        }
+        setStats({
+          totalStudents:    { value: 0, change: 'Connection error', changeType: 'neutral' },
+          activeLessonPlans:{ value: 0, change: 'Connection error', changeType: 'neutral' },
+          pendingAssignments:{ value: 0, change: 'Connection error', changeType: 'neutral' },
+          completedThisWeek:{ value: 0, change: 'Connection error', changeType: 'neutral' },
+        });
       } finally {
         setStatsLoading(false);
       }
@@ -223,6 +275,55 @@ export default function TeacherDashboard() {
     }
   };
 
+  // Fetch today's schedule
+  useEffect(() => {
+    const fetchSchedule = async () => {
+      setScheduleLoading(true);
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const res = await fetch(`/api/teacher/schedules?date=${today}&limit=10&sortOrder=asc`);
+        if (res.ok) {
+          const data = await res.json();
+          setTodaySchedule(data.schedules || []);
+        }
+      } catch { /* silent */ }
+      finally { setScheduleLoading(false); }
+    };
+    fetchSchedule();
+  }, []);
+
+  // Fetch AI insights/alerts
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      setAlertsLoading(true);
+      try {
+        const res = await fetch('/api/teacher/analytics/ai-insights?period=7');
+        if (res.ok) {
+          const data = await res.json();
+          setAiAlerts((data.insights || []).filter((i: any) => i.priority === 'high' || i.priority === 'medium').slice(0, 5));
+        }
+      } catch { /* silent */ }
+      finally { setAlertsLoading(false); }
+    };
+    fetchAlerts();
+  }, []);
+
+  // Fetch recent submissions
+  useEffect(() => {
+    const fetchSubmissions = async () => {
+      setSubmissionsLoading(true);
+      try {
+        const res = await fetch('/api/assignments?limit=5');
+        if (res.ok) {
+          const data = await res.json();
+          setRecentSubmissions(data.assignments || data.submissions || []);
+        }
+      } catch { /* silent */ }
+      finally { setSubmissionsLoading(false); }
+    };
+    fetchSubmissions();
+  }, []);
+
   // Check if this is a new independent user
   useEffect(() => {
     if (!schoolInfoLoading && isIndependent && !localStorage.getItem('independent-teacher-onboarded')) {
@@ -236,6 +337,13 @@ export default function TeacherDashboard() {
   }
 
   const quickActions = [
+    {
+      title: 'My Students',
+      description: 'View and manage your students',
+      icon: Users,
+      href: '/teacher/students',
+      color: 'from-green-500 to-green-600'
+    },
     {
       title: 'Create Lesson Plan',
       description: 'Generate AI-powered lesson plans',
@@ -260,7 +368,7 @@ export default function TeacherDashboard() {
     {
       title: 'Ask Hope AI',
       description: 'Get instant teaching support',
-      icon: Brain,
+      icon: Sparkles,
       href: '/teacher/alexa',
       color: 'from-pink-500 to-pink-600'
     }
@@ -271,7 +379,7 @@ export default function TeacherDashboard() {
     return (
       <IndependentUserWelcome 
         userRole="TEACHER"
-        userName={session.user.name || 'Teacher'}
+        userName={displayName || session.user.name || 'Teacher'}
         onComplete={handleOnboardingComplete}
       />
     )
@@ -285,7 +393,7 @@ export default function TeacherDashboard() {
       {/* Welcome Section */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Welcome back, Teacher!
+          Welcome back, {(displayName || session?.user?.name || 'Teacher').split(' ')[0]}!
         </h1>
         <p className="text-gray-600">
           {isIndependent 
@@ -315,27 +423,27 @@ export default function TeacherDashboard() {
               </CardContent>
             </Card>
           ))
-        ) : stats ? (
+        ) : (
           <>
             <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Total Students</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.totalStudents.value}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats?.totalStudents.value ?? 0}</p>
                   </div>
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                     <Users className="w-6 h-6 text-white" />
                   </div>
                 </div>
                 <div className={`mt-4 flex items-center text-sm ${
-                  stats.totalStudents.changeType === 'positive' ? 'text-green-600' :
-                  stats.totalStudents.changeType === 'negative' ? 'text-red-600' :
-                  stats.totalStudents.changeType === 'warning' ? 'text-orange-600' :
-                  'text-gray-600'
+                  stats?.totalStudents.changeType === 'positive' ? 'text-green-600' :
+                  stats?.totalStudents.changeType === 'negative' ? 'text-red-600' :
+                  stats?.totalStudents.changeType === 'warning' ? 'text-orange-600' :
+                  'text-gray-500'
                 }`}>
                   <TrendingUp className="w-4 h-4 mr-1" />
-                  <span>{stats.totalStudents.change}</span>
+                  <span>{stats?.totalStudents.change ?? '—'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -345,20 +453,20 @@ export default function TeacherDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Active Lesson Plans</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.activeLessonPlans.value}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats?.activeLessonPlans.value ?? 0}</p>
                   </div>
                   <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                     <BookOpen className="w-6 h-6 text-white" />
                   </div>
                 </div>
                 <div className={`mt-4 flex items-center text-sm ${
-                  stats.activeLessonPlans.changeType === 'positive' ? 'text-green-600' :
-                  stats.activeLessonPlans.changeType === 'negative' ? 'text-red-600' :
-                  stats.activeLessonPlans.changeType === 'warning' ? 'text-orange-600' :
+                  stats?.activeLessonPlans.changeType === 'positive' ? 'text-green-600' :
+                  stats?.activeLessonPlans.changeType === 'negative' ? 'text-red-600' :
+                  stats?.activeLessonPlans.changeType === 'warning' ? 'text-orange-600' :
                   'text-gray-600'
                 }`}>
                   <CheckCircle className="w-4 h-4 mr-1" />
-                  <span>{stats.activeLessonPlans.change}</span>
+                  <span>{stats?.activeLessonPlans.change ?? '—'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -368,20 +476,20 @@ export default function TeacherDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Pending Assignments</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.pendingAssignments.value}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats?.pendingAssignments.value ?? 0}</p>
                   </div>
                   <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
                     <ClipboardList className="w-6 h-6 text-white" />
                   </div>
                 </div>
                 <div className={`mt-4 flex items-center text-sm ${
-                  stats.pendingAssignments.changeType === 'positive' ? 'text-green-600' :
-                  stats.pendingAssignments.changeType === 'negative' ? 'text-red-600' :
-                  stats.pendingAssignments.changeType === 'warning' ? 'text-orange-600' :
+                  stats?.pendingAssignments.changeType === 'positive' ? 'text-green-600' :
+                  stats?.pendingAssignments.changeType === 'negative' ? 'text-red-600' :
+                  stats?.pendingAssignments.changeType === 'warning' ? 'text-orange-600' :
                   'text-gray-600'
                 }`}>
                   <Clock className="w-4 h-4 mr-1" />
-                  <span>{stats.pendingAssignments.change}</span>
+                  <span>{stats?.pendingAssignments.change ?? '—'}</span>
                 </div>
               </CardContent>
             </Card>
@@ -391,37 +499,31 @@ export default function TeacherDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Completed This Week</p>
-                    <p className="text-3xl font-bold text-gray-900">{stats.completedThisWeek.value}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stats?.completedThisWeek.value ?? 0}</p>
                   </div>
                   <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
                     <CheckCircle className="w-6 h-6 text-white" />
                   </div>
                 </div>
                 <div className={`mt-4 flex items-center text-sm ${
-                  stats.completedThisWeek.changeType === 'positive' ? 'text-green-600' :
-                  stats.completedThisWeek.changeType === 'negative' ? 'text-red-600' :
-                  stats.completedThisWeek.changeType === 'warning' ? 'text-orange-600' :
+                  stats?.completedThisWeek.changeType === 'positive' ? 'text-green-600' :
+                  stats?.completedThisWeek.changeType === 'negative' ? 'text-red-600' :
+                  stats?.completedThisWeek.changeType === 'warning' ? 'text-orange-600' :
                   'text-gray-600'
                 }`}>
                   <TrendingUp className="w-4 h-4 mr-1" />
-                  <span className="text-xs">{stats.completedThisWeek.change}</span>
+                  <span className="text-xs">{stats?.completedThisWeek.change ?? '—'}</span>
                 </div>
               </CardContent>
             </Card>
           </>
-        ) : (
-          // Error state
-          <div className="col-span-full text-center py-8">
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-            <p className="text-red-600">Failed to load dashboard stats</p>
-          </div>
         )}
       </div>
 
       {/* Quick Actions */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {quickActions.map((action, index) => (
             <Link key={index} href={action.href}>
               <Card className="bg-gradient-to-br from-white via-gray-50 to-blue-50 shadow-lg backdrop-blur-sm border-0 hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer h-full">
@@ -443,6 +545,194 @@ export default function TeacherDashboard() {
             </Link>
           ))}
         </div>
+      </div>
+
+      {/* Today's Schedule + AI Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Today's Schedule */}
+        <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                Today's Schedule
+              </CardTitle>
+              <Link href="/teacher/calendar">
+                <Button variant="ghost" size="sm" className="text-xs">View All</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {scheduleLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-14 bg-gray-200 rounded-lg animate-pulse" />)}
+              </div>
+            ) : todaySchedule.length === 0 ? (
+              <div className="text-center py-6">
+                <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No classes scheduled today</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {todaySchedule.map((item: any) => (
+                  <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/70 border border-blue-100">
+                    <div className="w-14 text-center shrink-0">
+                      <p className="text-xs font-bold text-blue-600">
+                        {new Date(item.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{item.title}</p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        {item.class && <span>{item.class.name}</span>}
+                        {item.location && <><span>·</span><MapPin className="w-3 h-3" />{item.location}</>}
+                      </div>
+                    </div>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                      item.type === 'CLASS' ? 'bg-blue-100 text-blue-700' :
+                      item.type === 'EXAM' ? 'bg-red-100 text-red-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>{item.type}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* AI Insights / Alerts */}
+        <Card className="bg-gradient-to-br from-white via-amber-50 to-orange-50 shadow-lg backdrop-blur-sm border-0">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Brain className="w-5 h-5 text-amber-600" />
+                AI Insights
+              </CardTitle>
+              <Link href="/teacher/analytics">
+                <Button variant="ghost" size="sm" className="text-xs">View All</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {alertsLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-14 bg-gray-200 rounded-lg animate-pulse" />)}
+              </div>
+            ) : aiAlerts.length === 0 ? (
+              <div className="text-center py-6">
+                <CheckCircle className="w-10 h-10 text-green-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No alerts — everything looks good</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {aiAlerts.map((alert: any, i: number) => (
+                  <div key={alert.id || i} className={`flex gap-3 p-3 rounded-xl border ${
+                    alert.priority === 'high' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'
+                  }`}>
+                    {alert.priority === 'high'
+                      ? <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      : <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    }
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">{alert.title || alert.type}</p>
+                      <p className="text-xs text-gray-600 mt-0.5 line-clamp-2">{alert.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Submissions + Messages */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <Card className="bg-gradient-to-br from-white via-green-50 to-emerald-50 shadow-lg backdrop-blur-sm border-0">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Award className="w-5 h-5 text-green-600" />
+                Recent Submissions
+              </CardTitle>
+              <Link href="/teacher/assignments">
+                <Button variant="ghost" size="sm" className="text-xs">View All</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {submissionsLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-14 bg-gray-200 rounded-lg animate-pulse" />)}
+              </div>
+            ) : recentSubmissions.length === 0 ? (
+              <div className="text-center py-6">
+                <ClipboardList className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No recent submissions</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recentSubmissions.slice(0, 4).map((sub: any) => (
+                  <div key={sub.id} className="flex items-center gap-3 p-3 rounded-xl bg-white/70 border border-green-100">
+                    <div className="w-9 h-9 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{sub.title}</p>
+                      <p className="text-xs text-gray-500">{sub.subject} · {sub.studentName || 'Student'}</p>
+                    </div>
+                    {sub.grade !== null && sub.grade !== undefined && (
+                      <span className="text-sm font-bold text-green-600">{Math.round(sub.grade)}%</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-white via-purple-50 to-violet-50 shadow-lg backdrop-blur-sm border-0">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Mail className="w-5 h-5 text-purple-600" />
+                Messages
+              </CardTitle>
+              <Link href="/teacher/messages">
+                <Button variant="ghost" size="sm" className="text-xs">View All</Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {session ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-4 p-4 rounded-xl bg-white/70 border border-purple-100">
+                  <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                    <Bell className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {unreadCount > 0 ? `${unreadCount} unread message${unreadCount > 1 ? 's' : ''}` : 'No unread messages'}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {unreadCount > 0 ? 'Check your inbox for new messages' : 'All caught up!'}
+                    </p>
+                  </div>
+                </div>
+                <Link href="/teacher/messages">
+                  <Button variant="outline" size="sm" className="w-full">
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Open Messages
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Mail className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">Loading messages...</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity */}

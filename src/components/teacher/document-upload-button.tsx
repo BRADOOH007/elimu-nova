@@ -9,6 +9,7 @@ interface UploadedDoc {
   name: string
   url: string
   docType: string
+  extractedText?: string | null
 }
 
 interface DocumentUploadButtonProps {
@@ -56,7 +57,7 @@ export default function DocumentUploadButton({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Upload failed')
 
-      const doc: UploadedDoc = { name: data.name, url: data.url, docType: data.docType }
+      const doc: UploadedDoc = { name: data.name, url: data.url, docType: data.docType, extractedText: data.extractedText }
       setUploaded(doc)
       onUploaded?.(doc)
     } catch (err) {

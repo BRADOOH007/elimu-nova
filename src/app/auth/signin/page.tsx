@@ -65,6 +65,27 @@ export default function SignInPage() {
         const session = await getSession()
 
         if (session?.user?.role) {
+          // Role tab enforcement — make sure user is on the right tab
+          const roleToTab: Record<string, Role | null> = {
+            STUDENT:      'STUDENT',
+            TEACHER:      'TEACHER',
+            PARENT:       'PARENT',
+            SCHOOL_ADMIN: null,  // uses admin login
+            SUPER_ADMIN:  null,  // uses admin login
+          }
+          const expectedTab = roleToTab[session.user.role]
+          if (expectedTab && expectedTab !== activeRole) {
+            // Wrong tab — sign out and show a clear message
+            await signIn('credentials', { redirect: false }) // clear
+            const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
+            setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
+            setIsLoading(false)
+            // Also force NextAuth signout
+            const { signOut } = await import('next-auth/react')
+            await signOut({ redirect: false })
+            return
+          }
+
           const dashboardRoutes: Record<string, string> = {
             SUPER_ADMIN:  '/super-admin/dashboard',
             SCHOOL_ADMIN: '/school-admin/dashboard',
@@ -103,7 +124,7 @@ export default function SignInPage() {
         <div className="relative z-10">
           {/* Logo */}
           <div className="mb-14">
-            <Logo size="xl" variant="white" />
+            <Logo size="xl" variant="black" />
             <div className="mt-4 h-px w-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" />
           </div>
 

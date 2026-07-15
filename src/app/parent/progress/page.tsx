@@ -88,11 +88,6 @@ function ProgressContent() {
             subjects:             progress,
           })
         }
-        // Filter alerts for this student
-        const childAlerts = (alertsRes.alerts || []).filter(
-          (a: Alert) => children.find(c => c.id === selectedId)?.name === a.studentName ||
-                        (alertsRes.alerts || []).some((al: Alert) => al.studentName)
-        )
         setAlerts(alertsRes.alerts || [])
       })
       .catch(console.error)

@@ -6,7 +6,7 @@ import { AIContentType } from '@prisma/client';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -27,7 +27,7 @@ export async function GET(
     // Find the PowerPoint
     const powerpoint = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: AIContentType.POWERPOINT
       },
@@ -91,7 +91,7 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -128,7 +128,7 @@ export async function PUT(
     // Check if PowerPoint exists and belongs to teacher
     const existingPowerPoint = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: AIContentType.POWERPOINT
       }
@@ -153,7 +153,7 @@ export async function PUT(
 
     // Update the PowerPoint
     const updatedPowerPoint = await prisma.aIGeneratedContent.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: {
         title,
         content: JSON.stringify(powerpointContent),
@@ -196,7 +196,7 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -217,7 +217,7 @@ export async function DELETE(
     // Check if PowerPoint exists and belongs to teacher
     const existingPowerPoint = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: AIContentType.POWERPOINT
       }
@@ -229,7 +229,7 @@ export async function DELETE(
 
     // Delete the PowerPoint
     await prisma.aIGeneratedContent.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     });
 
     return NextResponse.json({

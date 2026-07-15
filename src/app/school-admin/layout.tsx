@@ -1,6 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
+import { useEffect, useState } from 'react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import {
@@ -10,27 +11,26 @@ import {
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
 export default function SchoolAdminLayout({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession()
-  const { schoolInfo, loading } = useSchoolInfo()
+  const { data: session, status } = useSession()
+  const { schoolInfo } = useSchoolInfo()
+  const [timedOut, setTimedOut] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 4000)
+    return () => clearTimeout(t)
+  }, [])
 
   const sidebarItems = [
-    // 1
-    { icon: BarChart3,  label: 'Overview',       href: '/school-admin/dashboard'       },
-    // 2 — Teachers + Teacher Allocation (tabs inside teachers page)
-    { icon: Users,      label: 'Staff',          href: '/school-admin/teachers'        },
-    // 3 — Students + Learning Areas (tabs inside students page)
-    { icon: School,     label: 'Students',       href: '/school-admin/students'        },
-    // 4 — Timetable + Meetings + Activities (tabs inside timetable page)
-    { icon: Calendar,   label: 'Academics',      href: '/school-admin/timetable'       },
-    // 5 — Reports + Security (tabs inside reports page)
-    { icon: FileText,   label: 'Reports',        href: '/school-admin/reports'         },
-    // 6 — Billing + Settings (tabs inside billing page)
-    { icon: CreditCard, label: 'Billing',        href: '/school-admin/billing'         },
-    // 7
-    { icon: Settings,   label: 'Settings',       href: '/school-admin/settings'        },
+    { icon: BarChart3,  label: 'Overview',  href: '/school-admin/dashboard'  },
+    { icon: Users,      label: 'Staff',     href: '/school-admin/teachers'   },
+    { icon: School,     label: 'Students',  href: '/school-admin/students'   },
+    { icon: Calendar,   label: 'Academics', href: '/school-admin/timetable'  },
+    { icon: FileText,   label: 'Reports',   href: '/school-admin/reports'    },
+    { icon: CreditCard, label: 'Billing',   href: '/school-admin/billing'    },
+    { icon: Settings,   label: 'Settings',  href: '/school-admin/settings'   },
   ]
 
-  if (!session || loading) return <DashboardLoading />
+  if (status === 'loading' && !timedOut) return <DashboardLoading />
+  if (!session) return <DashboardLoading />
 
   return (
     <ProfessionalDashboardLayout

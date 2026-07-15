@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useSSE } from '@/hooks/use-sse'
 import {
   Video,
   VideoOff,
@@ -21,37 +23,73 @@ import {
 } from 'lucide-react'
 
 export default function StudentLiveRoom() {
+  const { data: session } = useSession()
   const params = useParams()
   const router = useRouter()
+  const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
   const [isVideoOn, setIsVideoOn] = useState(true)
   const [isAudioOn, setIsAudioOn] = useState(true)
   const [isHandRaised, setIsHandRaised] = useState(false)
-  const [chatMessages, setChatMessages] = useState([
-    { id: 1, sender: 'Hope AI', type: 'system', content: 'Welcome to the live class! Raise your hand if you need help.', time: '10:00 AM' },
-    { id: 2, sender: 'Teacher Smith', type: 'teacher', content: 'Good morning, class! Today we are learning about algebra.', time: '10:01 AM' },
-    { id: 3, sender: 'Sarah Johnson', type: 'student', content: 'Good morning, teacher!', time: '10:02 AM' },
-  ])
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string | number; sender: string; type: string; content: string; time: string }>>([])
   const [newMessage, setNewMessage] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(true)
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const addChatMessage = useCallback((msg: { id: string | number; sender: string; type: string; content: string; time: string }) => {
+    setChatMessages(prev => [...prev, msg])
+  }, [])
+
+  useEffect(() => {
+    if (!id) return
+
+    addChatMessage({
+      id: 1, sender: 'Hope AI', type: 'system',
+      content: 'Welcome to the live class! Raise your hand if you need help.',
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    })
+
+    fetch(`/api/teacher/meetings/${id}/chat`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (data.messages?.length) {
+          setChatMessages(prev => {
+            const existing = new Set(prev.map(m => m.id))
+            const newMsgs = data.messages.filter((m: any) => !existing.has(m.id))
+            return [...prev, ...newMsgs.map((m: any) => ({ ...m, type: m.senderType }))]
+          })
+        }
+      })
+      .catch(() => {})
+  }, [id, addChatMessage])
+
+  useSSE(id ? `meeting:${id}` : null, {
+    'chat-message': (data: any) => {
+      addChatMessage({ ...data, type: data.senderType })
+    },
+  })
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [chatMessages])
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return
-
-    const message = {
-      id: Date.now(),
-      sender: 'You',
-      type: 'student',
-      content: newMessage,
-      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !id) return
+    try {
+      await fetch(`/api/teacher/meetings/${id}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: newMessage }),
+      })
+    } catch {
+      addChatMessage({
+        id: 'error-' + Date.now(),
+        sender: 'System',
+        type: 'system',
+        content: 'Failed to send message',
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      })
     }
-
-    setChatMessages(prev => [...prev, message])
     setNewMessage('')
   }
 

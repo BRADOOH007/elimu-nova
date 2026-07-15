@@ -43,13 +43,13 @@ export class ImageGenerationService {
         style:   request.style || 'natural',
       })
 
-      const imageUrl = response.data[0]?.url
+      const imageUrl = response.data?.[0]?.url
       if (!imageUrl) throw new Error('No image URL returned from DALL-E')
 
       return {
         url:           imageUrl,
         provider:      'openai-dalle-3',
-        revisedPrompt: response.data[0]?.revised_prompt,
+        revisedPrompt: response.data?.[0]?.revised_prompt,
         metadata: {
           model:          'dall-e-3',
           size:           request.size || '1024x1024',

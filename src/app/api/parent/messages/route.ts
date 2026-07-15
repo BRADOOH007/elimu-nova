@@ -23,7 +23,26 @@ export async function GET(request: NextRequest) {
       take: 50,
     })
 
-    return NextResponse.json({ messages })
+    // Resolve sender/recipient names
+    const userIds = new Set<string>()
+    messages.forEach((m: any) => { userIds.add(m.senderId); userIds.add(m.recipientId) })
+    const users = await prismaClient.user.findMany({
+      where: { id: { in: Array.from(userIds) } },
+      select: { id: true, firstName: true, lastName: true, role: true },
+    })
+    const userMap = Object.fromEntries(users.map((u: any) => [u.id, u]))
+
+    const enriched = messages.map((m: any) => {
+      const sender = userMap[m.senderId]
+      const recipient = userMap[m.recipientId]
+      return {
+        ...m,
+        senderName: sender ? `${sender.firstName} ${sender.lastName}` : m.senderType,
+        recipientName: recipient ? `${recipient.firstName} ${recipient.lastName}` : m.recipientType,
+      }
+    })
+
+    return NextResponse.json({ messages: enriched })
   } catch (error) {
     console.error('[GET_PARENT_MESSAGES]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

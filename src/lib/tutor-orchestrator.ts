@@ -626,12 +626,17 @@ Respond in JSON format:
         }
       });
     } else {
-      // Create new
+      // Create new - fetch teacher from class
+      const classInfo = await prisma.class.findUnique({
+        where: { id: this.classId },
+        select: { teacherId: true }
+      })
+
       progress = await prisma.studentProgress.create({
         data: {
           studentId: this.studentId,
           classId: this.classId,
-          teacherId: '', // Will be set by caller
+          teacherId: classInfo?.teacherId || '',
           subject,
           topic,
           masteryScore: isCorrect ? 5 : 0,

@@ -4,9 +4,7 @@
  */
 
 import { put, del, list } from '@vercel/blob'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export interface SaveImageRequest {
   imageUrl: string // OpenAI image URL

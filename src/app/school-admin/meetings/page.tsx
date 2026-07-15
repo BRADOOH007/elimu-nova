@@ -69,6 +69,7 @@ export default function MeetingsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
+  const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null)
 
   useEffect(() => {
     fetchMeetings()
@@ -95,6 +96,12 @@ export default function MeetingsPage() {
   const handleScheduleSuccess = () => {
     fetchMeetings()
     setIsScheduleModalOpen(false)
+    setEditingMeeting(null)
+  }
+
+  const handleEditMeeting = (meeting: Meeting) => {
+    setEditingMeeting(meeting)
+    setIsScheduleModalOpen(true)
   }
 
   const handleDeleteMeeting = async (meetingId: string) => {
@@ -348,7 +355,7 @@ export default function MeetingsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {/* TODO: Edit meeting */}}>
+                            <DropdownMenuItem onClick={() => handleEditMeeting(meeting)}>
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
                             </DropdownMenuItem>
@@ -412,8 +419,9 @@ export default function MeetingsPage() {
       {/* Modals */}
       <ScheduleMeetingModal
         isOpen={isScheduleModalOpen}
-        onClose={() => setIsScheduleModalOpen(false)}
+        onClose={() => { setIsScheduleModalOpen(false); setEditingMeeting(null) }}
         onSuccess={handleScheduleSuccess}
+        meeting={editingMeeting}
       />
     </div>
   )

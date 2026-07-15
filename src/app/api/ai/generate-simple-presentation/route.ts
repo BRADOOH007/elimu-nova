@@ -52,14 +52,28 @@ export async function POST(request: NextRequest) {
       slideCount    = 8,
       difficulty    = 'medium',
       customInstructions = '',
+      documentContext,
     } = await request.json()
 
     if (!subject || !grade || !topic) {
       return NextResponse.json({ error: 'subject, grade, and topic are required' }, { status: 400 })
     }
 
+    // Fetch teacher's saved curriculum template as presentation style reference
+    let templateText = documentContext
+    if (!templateText && session.user.role === 'TEACHER') {
+      const t = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { curriculumTemplate: true },
+      })
+      templateText = t?.curriculumTemplate || null
+    }
+    const templateBlock = templateText
+      ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the presentation slides in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+      : ''
+
     // ── Build AI prompt (same structure as TutorBot generate-lesson-slides) ──
-    const systemPrompt = `You are an expert Kenyan teacher creating a PowerPoint presentation for CBC curriculum.
+    const systemPrompt = `You are an expert Kenyan teacher creating a PowerPoint presentation for CBC curriculum.${templateBlock}
 Return ONLY valid JSON — no markdown fences, no explanation.
 Use section values strictly: introduction, body, conclusion.
 Do NOT use asterisks (*) in content or speaker notes.

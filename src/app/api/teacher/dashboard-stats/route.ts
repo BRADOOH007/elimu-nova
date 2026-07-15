@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 import { cache } from '@/lib/redis'
 import { CacheKeys, TTL } from '@/lib/cache-helpers'
 
@@ -23,7 +23,7 @@ export async function GET() {
     console.log('🔍 Looking for teacher with userId:', session.user.id)
     
     // Get teacher profile
-    let teacher = await prisma.teacher.findUnique({
+    let teacher = await withRetry(() => prisma.teacher.findUnique({
       where: { userId: session.user.id },
       include: {
         user: true,
@@ -31,33 +31,24 @@ export async function GET() {
         students: true,
         lessonPlans: true,
         assignments: {
-          include: {
-            submissions: true
-          }
+          include: { submissions: true }
         }
       }
-    })
+    }))
 
     // If no teacher profile exists, create one for independent teaching
     if (!teacher) {
       console.log('🆕 Creating independent teacher profile for userId:', session.user.id)
-      teacher = await prisma.teacher.create({
-        data: {
-          userId: session.user.id,
-          // schoolId is optional and will be undefined for independent teachers
-        },
+      teacher = await withRetry(() => prisma.teacher.create({
+        data: { userId: session.user.id },
         include: {
           user: true,
           school: true,
           students: true,
           lessonPlans: true,
-          assignments: {
-            include: {
-              submissions: true
-            }
-          }
+          assignments: { include: { submissions: true } }
         }
-      })
+      }))
       console.log('✅ Created independent teacher profile')
     }
 

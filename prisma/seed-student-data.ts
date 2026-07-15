@@ -46,7 +46,7 @@ async function main() {
           ]
         }),
         dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
-        teacherId: raelStudent.teacherId,
+        teacherId: raelStudent.teacherId ?? "",
         students: {
           connect: { id: raelStudent.id }
         }
@@ -65,7 +65,7 @@ async function main() {
           ]
         }),
         dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
-        teacherId: raelStudent.teacherId,
+        teacherId: raelStudent.teacherId ?? "",
         students: {
           connect: { id: raelStudent.id }
         }
@@ -84,7 +84,7 @@ async function main() {
           ]
         }),
         dueDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago (overdue)
-        teacherId: raelStudent.teacherId,
+        teacherId: raelStudent.teacherId ?? "",
         students: {
           connect: { id: raelStudent.id }
         }
@@ -258,8 +258,8 @@ async function main() {
   await Promise.all([
     prisma.schedule.create({
       data: {
-        schoolId: raelStudent.schoolId,
-        teacherId: raelStudent.teacherId,
+        schoolId: raelStudent.schoolId ?? "",
+        teacherId: raelStudent.teacherId ?? "",
         title: 'Mathematics Class',
         description: 'Algebra Basics and Problem Solving',
         subject: 'Mathematics',
@@ -273,8 +273,8 @@ async function main() {
     }),
     prisma.schedule.create({
       data: {
-        schoolId: raelStudent.schoolId,
-        teacherId: raelStudent.teacherId,
+        schoolId: raelStudent.schoolId ?? "",
+        teacherId: raelStudent.teacherId ?? "",
         title: 'Science Class',
         description: 'Photosynthesis and Plant Biology',
         subject: 'Science',
@@ -288,8 +288,8 @@ async function main() {
     }),
     prisma.schedule.create({
       data: {
-        schoolId: raelStudent.schoolId,
-        teacherId: raelStudent.teacherId,
+        schoolId: raelStudent.schoolId ?? "",
+        teacherId: raelStudent.teacherId ?? "",
         title: 'English Class',
         description: 'Creative Writing Workshop',
         subject: 'English',

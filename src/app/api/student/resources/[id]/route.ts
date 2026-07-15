@@ -7,7 +7,7 @@ import { OpenAIService } from '@/lib/openai-service'
 // GET - Fetch specific resource
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -28,7 +28,7 @@ export async function GET(
     // Fetch resource
     const resource = await prisma.resource.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         studentId: student.id,
         isPublic: true
       },
@@ -66,7 +66,7 @@ export async function GET(
 // PUT - Update resource
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -90,7 +90,7 @@ export async function PUT(
     // Check if resource exists and belongs to student
     const existingResource = await prisma.resource.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         studentId: student.id
       }
     })
@@ -101,7 +101,7 @@ export async function PUT(
 
     // Update resource
     const resource = await prisma.resource.update({
-      where: { id: params.id },
+      where: { id: (await params).id },
       data: {
         title: title || existingResource.title,
         content: content || existingResource.content,
@@ -142,7 +142,7 @@ export async function PUT(
 // DELETE - Delete resource
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -163,7 +163,7 @@ export async function DELETE(
     // Check if resource exists and belongs to student
     const existingResource = await prisma.resource.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         studentId: student.id
       }
     })
@@ -174,7 +174,7 @@ export async function DELETE(
 
     // Delete resource
     await prisma.resource.delete({
-      where: { id: params.id }
+      where: { id: (await params).id }
     })
 
     return NextResponse.json({

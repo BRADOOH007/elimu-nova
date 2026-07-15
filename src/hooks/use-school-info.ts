@@ -60,10 +60,17 @@ export function useSchoolInfo() {
             endpoint = '/api/student/school-info'
             break
           default:
-            throw new Error('Invalid user role')
+            // PARENT, SUPER_ADMIN etc. — no school info needed
+            setIsIndependent(false)
+            return
         }
 
-        const response = await fetch(endpoint)
+        // 8-second timeout so the app never hangs indefinitely
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 8000)
+
+        const response = await fetch(endpoint, { signal: controller.signal })
+        clearTimeout(timeoutId)
         if (!response.ok) {
           // If no school info found, user is independent
           if (response.status === 404) {
@@ -78,12 +85,15 @@ export function useSchoolInfo() {
         setSchoolInfo(data)
         setIsIndependent(false)
       } catch (err) {
-        console.error('Error fetching school info:', err)
-        // For teachers and students, assume independent mode if school info fails
+        // Abort/timeout or network error — assume independent mode for students/teachers
+        const isAbort = err instanceof Error && err.name === 'AbortError'
+        if (isAbort) console.warn('School info fetch timed out — defaulting to independent mode')
+        else console.error('Error fetching school info:', err)
+
         if (session.user.role === 'TEACHER' || session.user.role === 'STUDENT') {
           setIsIndependent(true)
           setSchoolInfo(null)
-          setError(null) // Clear error for independent users
+          setError(null)
         } else {
           setError(err instanceof Error ? err.message : 'Unknown error')
         }

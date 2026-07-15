@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
             schemeOfWorkId: schemeOfWork.id,
             studentId: studentId,
             teacherId: teacher.id,
-            schoolId: teacher.schoolId,
+            schoolId: teacher.schoolId as any,
           },
         })
       )
@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
         schemeOfWork: {
           include: {
             teacher: {
-              select: { user: { select: { name: true } } }
+              select: { user: { select: { firstName: true, lastName: true } } }
             }
           }
         }
@@ -112,13 +112,16 @@ export async function GET(req: NextRequest) {
     });
 
     // Parse content for each shared scheme of work
-    const parsedSharedSchemesOfWork = sharedSchemesOfWork.map(shared => ({
-      ...shared,
-      schemeOfWork: {
-        ...shared.schemeOfWork,
-        content: shared.schemeOfWork.content ? JSON.parse(shared.schemeOfWork.content) : null
+    const parsedSharedSchemesOfWork = sharedSchemesOfWork.map(shared => {
+      const sow = (shared as any).schemeOfWork
+      return {
+        ...shared,
+        schemeOfWork: {
+          ...sow,
+          content: sow?.content ? JSON.parse(sow.content) : null
+        }
       }
-    }));
+    });
 
     return NextResponse.json({ sharedSchemesOfWork: parsedSharedSchemesOfWork });
 

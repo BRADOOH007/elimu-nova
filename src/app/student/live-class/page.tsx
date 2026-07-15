@@ -22,7 +22,7 @@ export default function StudentLiveClass() {
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([])
   const [boardImg, setBoardImg] = useState('')
   const chatEndRef = useRef<HTMLDivElement>(null)
-  const pollRef = useRef<NodeJS.Timeout>()
+  const pollRef = useRef<NodeJS.Timeout>(null)
 
   useEffect(() => {
     loadActiveSessions()
@@ -35,7 +35,7 @@ export default function StudentLiveClass() {
   useEffect(() => {
     if (!joinedSession) return
     pollRef.current = setInterval(pollSession, 3000)
-    return () => clearInterval(pollRef.current)
+    return () => clearInterval(pollRef.current!)
   }, [joinedSession?.id])
 
   const loadActiveSessions = async () => {
@@ -56,7 +56,7 @@ export default function StudentLiveClass() {
         setChatMessages(meta.chat || [])
         if (meta.boardContent) setBoardImg(meta.boardContent)
         if (data.session.status === 'COMPLETED') {
-          clearInterval(pollRef.current)
+          clearInterval(pollRef.current!)
           setJoinedSession(null)
         }
       }

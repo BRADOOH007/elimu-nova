@@ -50,18 +50,22 @@ export async function POST(request: NextRequest) {
     const teacher = await (prisma as any).teacher.findUnique({ where: { userId: session.user.id } })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-    const { assignmentId, title, subject, grade, term, type, description, questions } = await request.json()
+    const {
+      assignmentId, title, subject, grade, term, type, description,
+      questions, content, answerKey, isTimed, timeLimit, startTime, totalMarks, metadata,
+    } = await request.json()
 
     if (assignmentId) {
       // Save existing assignment to bank
       const updated = await prisma.assignment.update({
         where: { id: assignmentId },
-        data: { metadata: { isExamBank: true, savedAt: new Date().toISOString(), term, type } },
+        data: { metadata: { isExamBank: true, savedAt: new Date().toISOString(), term, type } } as any,
       })
       return NextResponse.json({ exam: updated })
     }
 
     // Create new exam bank entry directly
+    const bankMetadata = metadata || { isExamBank: true, savedAt: new Date().toISOString(), term, type }
     const exam = await prisma.assignment.create({
       data: {
         title:       title || 'Untitled Exam',
@@ -70,11 +74,16 @@ export async function POST(request: NextRequest) {
         grade:       grade   || '',
         teacherId:   teacher.id,
         schoolId:    teacher.schoolId,
-        dueDate:     new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-        totalMarks:  100,
+        dueDate:     new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+        totalMarks:  totalMarks ?? 100,
         questions:   questions || [],
-        metadata: { isExamBank: true, savedAt: new Date().toISOString(), term, type },
-      },
+        content:     content ?? '',
+        answerKey:   answerKey ?? null,
+        isTimed:     isTimed ?? false,
+        timeLimit:   timeLimit ?? null,
+        startTime:   startTime ?? null,
+        metadata:    bankMetadata,
+      } as any,
     })
     return NextResponse.json({ exam }, { status: 201 })
   } catch (error) {
@@ -92,7 +101,7 @@ export async function DELETE(request: NextRequest) {
     // Remove from bank (clear metadata flag, don't delete the record)
     await prisma.assignment.update({
       where: { id },
-      data: { metadata: { isExamBank: false } },
+      data: { metadata: { isExamBank: false } } as any,
     })
     return NextResponse.json({ success: true })
   } catch (error) {

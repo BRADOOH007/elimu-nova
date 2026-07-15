@@ -57,7 +57,7 @@ export function PublicFooter() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Logo variant="white" size="lg" className="mb-4" />
+            <Logo variant="black" size="lg" className="mb-4" />
             <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
               The AI-powered cloud school platform built for teachers, school owners and learners worldwide.
             </p>

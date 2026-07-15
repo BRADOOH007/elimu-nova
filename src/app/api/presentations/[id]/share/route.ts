@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 // POST - Share a presentation with students or classes
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -29,7 +29,7 @@ export async function POST(
     // Verify presentation exists and belongs to teacher
     const presentation = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: 'POWERPOINT'
       }
@@ -60,7 +60,7 @@ export async function POST(
       // Check if already shared with this class
       const existingShare = await prisma.sharedAIContentWithClass.findFirst({
         where: {
-          contentId: params.id,
+          contentId: (await params).id,
           classId: classId
         }
       })
@@ -68,7 +68,7 @@ export async function POST(
       if (!existingShare) {
         await prisma.sharedAIContentWithClass.create({
           data: {
-            contentId: params.id,
+            contentId: (await params).id,
             classId: classId
           }
         })
@@ -91,7 +91,7 @@ export async function POST(
           // Check if already shared with this student
           const existingShare = await prisma.sharedAIContent.findFirst({
             where: {
-              contentId: params.id,
+              contentId: (await params).id,
               studentId: studentId
             }
           })
@@ -99,7 +99,7 @@ export async function POST(
           if (!existingShare) {
             await prisma.sharedAIContent.create({
               data: {
-                contentId: params.id,
+                contentId: (await params).id,
                 studentId: studentId
               }
             })
@@ -112,7 +112,7 @@ export async function POST(
     // Update presentation to mark as shared
     if (sharedCount > 0) {
       await prisma.aIGeneratedContent.update({
-        where: { id: params.id },
+        where: { id: (await params).id },
         data: { isShared: true }
       })
     }
@@ -138,7 +138,7 @@ export async function POST(
 // GET - Get sharing info for a presentation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -158,7 +158,7 @@ export async function GET(
 
     const presentation = await prisma.aIGeneratedContent.findFirst({
       where: {
-        id: params.id,
+        id: (await params).id,
         teacherId: teacher.id,
         type: 'POWERPOINT'
       },

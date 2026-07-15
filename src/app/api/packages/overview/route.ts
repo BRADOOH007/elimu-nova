@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
           include: {
             school: {
               select: {
+                id: true,
                 name: true,
                 students: {
                   select: {
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
       const activeSubscriptions = pkg.subscriptions
       const totalSchools = activeSubscriptions.length
       const totalStudents = activeSubscriptions.reduce((sum, sub) => {
-        return sum + sub.school.students.length
+        return sum + (sub.school?.students.length || 0)
       }, 0)
       
       // Calculate revenue
@@ -89,9 +90,9 @@ export async function GET(request: NextRequest) {
           totalCapacity: totalCapacity
         },
         schools: activeSubscriptions.map(sub => ({
-          id: sub.school.id,
-          name: sub.school.name,
-          studentCount: sub.school.students.length,
+          id: sub.school?.id || '',
+          name: sub.school?.name || '',
+          studentCount: sub.school?.students.length || 0,
           startDate: sub.startDate,
           endDate: sub.endDate
         }))

@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { rateLimitAI, getIP } from '@/lib/rate-limit'
 import { OpenAIService } from '@/lib/openai-service'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,12 +19,25 @@ export async function POST(request: NextRequest) {
     const rl = await rateLimitAI(session.user.id || getIP(request))
     if (!rl.allowed) return NextResponse.json({ error: `Rate limit. Retry in ${rl.resetInSec}s` }, { status: 429 })
 
-    const { originalExam, subject, grade, versionsCount = 2 } = await request.json()
+    const { originalExam, subject, grade, versionsCount = 2, documentContext } = await request.json()
     if (!originalExam) return NextResponse.json({ error: 'originalExam content required' }, { status: 400 })
+
+    // Fetch teacher's exam template as format reference
+    let templateText = documentContext
+    if (!templateText && session.user.role === 'TEACHER') {
+      const t = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { examTemplate: true },
+      })
+      templateText = t?.examTemplate || null
+    }
+    const templateBlock = templateText
+      ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the exam versions in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+      : ''
 
     const versionLabels = ['A', 'B', 'C', 'D'].slice(0, Math.min(versionsCount, 4))
 
-    const prompt = `You are an experienced Kenyan exam setter. Create ${versionLabels.length} versions of this exam to prevent cheating.
+    const prompt = `You are an experienced Kenyan exam setter. Create ${versionLabels.length} versions of this exam to prevent cheating.${templateBlock}
 
 ORIGINAL EXAM:
 """

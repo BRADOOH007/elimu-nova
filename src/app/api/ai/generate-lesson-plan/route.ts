@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { OpenAIService } from '@/lib/openai-service'
+import { prisma } from '@/lib/prisma'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +25,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { subject, grade, topic, duration, objectives, prerequisites } = body
+    const { subject, grade, topic, duration, objectives, prerequisites, documentContext } = body
+
+    // Fetch teacher's saved template if no explicit documentContext provided
+    let templateText = documentContext
+    if (!templateText && userRole === 'TEACHER') {
+      const teacher = await prisma.teacher.findUnique({
+        where: { userId: session.user.id },
+        select: { lessonPlanTemplate: true },
+      })
+      templateText = teacher?.lessonPlanTemplate || null
+    }
 
     // Validate required fields
     if (!subject || !grade || !topic || !duration || !objectives) {
@@ -55,6 +66,10 @@ export async function POST(request: NextRequest) {
       ? 'IMPORTANT: Generate this lesson plan entirely in Swahili language. All content, instructions, and explanations should be in Swahili.'
       : 'IMPORTANT: Generate this lesson plan entirely in English language. All content, instructions, and explanations should be in English.'
 
+    const documentContextBlock = templateText
+      ? `\n\n## Reference Document Context\nThis document was uploaded as a format reference. Extract the lesson structure, sections, and style from it, then generate the new lesson plan in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+      : ''
+
     const prompt = `Create a detailed lesson plan for:
 Subject: ${subject}
 Grade: ${grade}
@@ -63,7 +78,7 @@ Duration: ${duration} minutes
 Learning Objectives: ${filteredObjectives.join(', ')}
 Prerequisites: ${filteredPrerequisites.length > 0 ? filteredPrerequisites.join(', ') : 'None specified'}
 
-${languageInstruction}
+${languageInstruction}${documentContextBlock}
 
 Please create a comprehensive lesson plan that includes:
 

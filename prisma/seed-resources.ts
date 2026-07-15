@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, ResourceType } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -295,7 +295,8 @@ Photosynthesis is the process by which plants convert light energy into chemical
         isPublic: true,
         isAIGenerated: true,
         studentId: student.id,
-        teacherId: student.teacherId
+        teacherId: student.teacherId ?? "",
+        type: resourceData.type as ResourceType
       }
     })
   }

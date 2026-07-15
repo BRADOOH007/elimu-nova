@@ -38,11 +38,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
+    const nameParts = (session.user.name || '').split(' ')
     return NextResponse.json({ 
       school: schoolAdmin.school,
       admin: {
-        firstName: session.user.firstName,
-        lastName: session.user.lastName,
+        firstName: nameParts[0] || '',
+        lastName: nameParts.slice(1).join(' ') || '',
         email: session.user.email
       }
     })

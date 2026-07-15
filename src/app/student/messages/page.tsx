@@ -61,7 +61,7 @@ export default function StudentMessagesPage() {
     }
   }
 
-  const handleSendMessage = async (data: { subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' }) => {
+  const handleSendMessage = async (data: { subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' }) => {
     const response = await fetch('/api/student/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

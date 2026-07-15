@@ -122,11 +122,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to database
-    const savedPresentation = await prisma.aIGeneratedContent.create({
+    const savedPresentation = await (prisma.aIGeneratedContent.create as any)({
       data: {
         title: slidePlan.title,
         content: JSON.stringify({
-          slides: slidesWithImages.map(slide => ({
+          slides: slidesWithImages.map((slide: any) => ({
             title: slide.title,
             bullets: slide.bullets,
             speakerNotes: slide.speaker_notes,
@@ -352,8 +352,9 @@ async function buildPresentationPPTX(params: {
             color: accentColor,
             align: 'center',
             valign: 'middle',
-            border: { type: 'solid', color: accentColor, pt: 2 }
-          })
+            border: { type: 'solid', color: accentColor, pt: 2 },
+            margin: 0
+          } as any)
         } else {
           // Full width content
           slide.addText(bulletText, {
