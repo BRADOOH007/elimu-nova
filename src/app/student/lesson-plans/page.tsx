@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cleanAIText } from '@/lib/clean-ai-text'
@@ -120,6 +122,8 @@ interface StudySession {
 }
 
 export default function StudentLessonPlansPage() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [sharedLessonPlans, setSharedLessonPlans] = useState<SharedLessonPlan[]>([])
   const [aiLessons, setAiLessons] = useState<AILesson[]>([])
   const [currentSession, setCurrentSession] = useState<StudySession | null>(null)
@@ -226,7 +230,7 @@ export default function StudentLessonPlansPage() {
       }
     }
     sessionStorage.setItem('currentLessonContext', JSON.stringify(context))
-    window.location.href = '/student/ai-tutor'
+    router.push('/student/learn')
   }
 
   const handleStartAILesson = async (lesson: AILesson) => {
@@ -295,13 +299,13 @@ export default function StudentLessonPlansPage() {
       if (response.ok) {
         const data = await response.json()
         sessionStorage.setItem('currentAssessment', JSON.stringify(data.assessment))
-        alert('Assessment generated! You can now take the assessment.')
+        toast({ title: '✅ Assessment ready!', description: 'You can now take the assessment.' })
       } else {
-        alert('Error generating assessment')
+        toast({ variant: 'destructive', title: 'Failed to generate assessment' })
       }
     } catch (error) {
       console.error('Error generating assessment:', error)
-      alert('Error generating assessment')
+      toast({ variant: 'destructive', title: 'Failed to generate assessment' })
     }
   }
 
@@ -319,13 +323,13 @@ export default function StudentLessonPlansPage() {
       if (response.ok) {
         const data = await response.json()
         sessionStorage.setItem('currentNotes', JSON.stringify(data.notes))
-        alert('Lesson notes generated! You can now view the notes.')
+        toast({ title: '✅ Notes ready!', description: 'Lesson notes have been generated.' })
       } else {
-        alert('Error generating lesson notes')
+        toast({ variant: 'destructive', title: 'Failed to generate notes' })
       }
     } catch (error) {
       console.error('Error generating lesson notes:', error)
-      alert('Error generating lesson notes')
+      toast({ variant: 'destructive', title: 'Failed to generate notes' })
     }
   }
 
@@ -370,7 +374,7 @@ export default function StudentLessonPlansPage() {
           }
           
           setAiLessons(prev => [newLesson, ...prev])
-          alert('AI lesson generated successfully!')
+          toast({ title: '✅ AI lesson ready!', variant: 'success' })
         } else {
           throw new Error('Invalid lesson data received')
         }
@@ -380,7 +384,7 @@ export default function StudentLessonPlansPage() {
       }
     } catch (error) {
       console.error('Error generating AI lesson:', error)
-      alert(`Error generating AI lesson: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast({ variant: 'destructive', title: 'Failed to generate lesson', description: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setIsGenerating(false)
     }
@@ -430,7 +434,7 @@ export default function StudentLessonPlansPage() {
           
           setAiLessons(prev => [newLesson, ...prev])
           setCustomLessonModalOpen(false)
-          alert('Custom AI lesson generated successfully!')
+          toast({ title: '✅ Custom lesson ready!' })
         } else {
           throw new Error('Invalid lesson data received')
         }
@@ -440,7 +444,7 @@ export default function StudentLessonPlansPage() {
       }
     } catch (error) {
       console.error('Error generating custom AI lesson:', error)
-      alert(`Error generating custom AI lesson: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      toast({ variant: 'destructive', title: 'Failed to generate lesson', description: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setIsGenerating(false)
     }
@@ -462,7 +466,7 @@ export default function StudentLessonPlansPage() {
         setAiLessons(prev => 
           prev.map(l => l.id === lesson.id ? { ...l, completed: true, progress: 100 } : l)
         )
-        alert('Lesson completed! Great job!')
+        toast({ title: '🎉 Lesson completed! Great job!' })
       }
     } catch (error) {
       console.error('Error completing lesson:', error)

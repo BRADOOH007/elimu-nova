@@ -73,7 +73,7 @@ export function DashboardLoading() {
               style={{ background: 'linear-gradient(135deg,#7c3aed,#2563eb)' }}
             >
               <img
-                src="/logo-white-removebg-preview.png"
+                src="/logo-black-removebg-preview.png"
                 alt="ElimuNova"
                 className="w-10 h-10 object-contain"
               />

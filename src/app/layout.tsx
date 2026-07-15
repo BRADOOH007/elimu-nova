@@ -26,12 +26,14 @@ export const metadata: Metadata = {
   description: "Transform education with AI-powered lesson plans, schemes of work, and personalized learning experiences.",
   keywords: ["education", "AI", "learning", "teaching", "lesson plans", "schemes of work"],
   authors: [{ name: "ElimuNova AI Team" }],
-icons: {
+  icons: {
     icon: [
-      { url: '/logo-black-removebg-preview.png', type: 'image/png', sizes: 'any' },
+      { url: '/favicon.png', type: 'image/png', sizes: 'any' },
+      { url: '/favicon.png', sizes: '32x32',   type: 'image/png' },
+      { url: '/favicon.png', sizes: '16x16',   type: 'image/png' },
     ],
-    shortcut: '/logo-black-removebg-preview.png',
-    apple:    [{ url: '/logo-black-removebg-preview.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: '/favicon.png',
+    apple:    [{ url: '/favicon.png', sizes: '180x180', type: 'image/png' }],
   },
   manifest: '/manifest.json',
   openGraph: {
@@ -49,11 +51,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-<head>
-        <link rel="icon" href="/logo-black-removebg-preview.png" type="image/png" sizes="any" />
-        <link rel="shortcut icon" href="/logo-black-removebg-preview.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logo-black-removebg-preview.png" />
-        <meta name="msapplication-TileImage" content="/logo-black-removebg-preview.png" />
+      <head>
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="any" />
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="32x32" />
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="16x16" />
+        <link rel="shortcut icon" href="/favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
+        <meta name="msapplication-TileImage" content="/favicon.png" />
         <meta name="msapplication-TileColor" content="#667eea" />
         <link rel="manifest" href="/manifest.json" />
       </head>
