@@ -426,19 +426,19 @@ export default function ProgressPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Peak Study Hour</span>
                       <Badge className="bg-purple-100 text-purple-700">
-                        {progressData.learningPatterns.peakStudyHour}:00
+                        {progressData.learningPatterns?.peakStudyHour}:00
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Most Active Day</span>
                       <Badge className="bg-pink-100 text-pink-700">
-                        {progressData.learningPatterns.peakStudyDay}
+                        {progressData.learningPatterns?.peakStudyDay || 'N/A'}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Average Session</span>
                       <Badge className="bg-blue-100 text-blue-700">
-                        {formatStudyTime(progressData.learningPatterns.averageSessionDuration)}
+                        {formatStudyTime(progressData.learningPatterns?.averageSessionDuration || 0)}
                       </Badge>
                     </div>
                   </div>
@@ -450,7 +450,7 @@ export default function ProgressPage() {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Total Sessions</span>
                       <Badge className="bg-green-100 text-green-700">
-                        {progressData.learningPatterns.totalSessions}
+                        {progressData.learningPatterns?.totalSessions || 0}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">

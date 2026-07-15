@@ -94,8 +94,6 @@ export default function AnalyticsPage() {
       setLoading(true)
       setError(null)
       
-      console.log('Fetching analytics for period:', selectedPeriod, 'class:', selectedClass)
-      
       const params = new URLSearchParams({
         period: selectedPeriod,
         ...(selectedClass !== 'all' && { classId: selectedClass })
@@ -103,12 +101,8 @@ export default function AnalyticsPage() {
       
       const response = await fetch(`/api/teacher/analytics?${params}`)
       
-      console.log('Analytics API Response Status:', response.status)
-      console.log('Analytics API Response Headers:', Object.fromEntries(response.headers.entries()))
-      
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Analytics API Error Response:', errorText)
         
         if (response.headers.get('content-type')?.includes('application/json')) {
           try {
@@ -123,7 +117,6 @@ export default function AnalyticsPage() {
       }
       
       const data = await response.json()
-      console.log('Analytics API Success - Received data:', data)
       
       setAnalytics(data)
     } catch (err) {

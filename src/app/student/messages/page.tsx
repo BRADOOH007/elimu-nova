@@ -1,28 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { 
-  MessageSquare, 
-  Send, 
-  Search,
-  User,
-  Clock,
-  Loader2
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/hooks/use-toast'
+import {
+  MessageSquare, Send, Search, User, Clock, Loader2, Reply, CheckCheck
 } from 'lucide-react'
 import ComposeMessageModal from '@/components/modals/compose-message-modal'
-import ViewMessageModal from '@/components/modals/view-message-modal'
 
 interface Message {
   id: string
-  from: {
-    name: string
-    role: string
-    avatar?: string
-  }
+  from: { name: string; role: string; avatar?: string }
   subject: string
   content: string
   timestamp: string
@@ -30,256 +21,246 @@ interface Message {
 }
 
 export default function StudentMessagesPage() {
+  const { toast } = useToast()
   const [messages, setMessages] = useState<Message[]>([])
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [selected, setSelected] = useState<Message | null>(null)
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showComposeModal, setShowComposeModal] = useState(false)
-  const [showViewModal, setShowViewModal] = useState(false)
+  const [search, setSearch] = useState('')
+  const [showCompose, setShowCompose] = useState(false)
+  const [reply, setReply] = useState('')
+  const [sending, setSending] = useState(false)
+  const replyRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => {
-    fetchMessages()
-  }, [])
+  useEffect(() => { fetchMessages() }, [])
 
   const fetchMessages = async () => {
+    setLoading(true)
     try {
-      setLoading(true)
-      const response = await fetch('/api/student/messages')
-      
-      if (response.ok) {
-        const data = await response.json()
-        setMessages(data.messages || [])
-      } else {
-        console.error('Failed to fetch messages')
-        setMessages([])
-      }
-    } catch (error) {
-      console.error('Error fetching messages:', error)
-      setMessages([])
-    } finally {
-      setLoading(false)
+      const r = await fetch('/api/student/messages')
+      if (r.ok) { const d = await r.json(); setMessages(d.messages || []) }
+    } catch { /* silent */ }
+    finally { setLoading(false) }
+  }
+
+  const openMessage = async (msg: Message) => {
+    setSelected(msg)
+    setReply('')
+    if (!msg.read) {
+      try {
+        await fetch('/api/student/messages', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messageId: msg.id }),
+        })
+        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, read: true } : m))
+      } catch { /* silent */ }
     }
   }
 
-  const handleSendMessage = async (data: { subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' }) => {
-    const response = await fetch('/api/student/messages', {
+  const handleReply = async () => {
+    if (!selected || !reply.trim()) return
+    setSending(true)
+    try {
+      const r = await fetch('/api/student/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientId: 'teacher',
+          subject: `Re: ${selected.subject}`,
+          content: reply.trim(),
+          recipientType: 'TEACHER',
+          parentId: selected.id,
+        }),
+      })
+      if (!r.ok) throw new Error('Failed to send')
+      toast({ title: '✅ Reply sent!' })
+      setReply('')
+      await fetchMessages()
+    } catch {
+      toast({ variant: 'destructive', title: 'Failed to send reply' })
+    } finally { setSending(false) }
+  }
+
+  const handleNewMessage = async (data: any) => {
+    const r = await fetch('/api/student/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipientId: 'teacher',
-        subject: data.subject,
-        content: data.content,
-        recipientType: data.recipientType
-      })
+      body: JSON.stringify({ recipientId: 'teacher', ...data }),
     })
-
-    if (!response.ok) {
-      throw new Error('Failed to send message')
-    }
-
+    if (!r.ok) throw new Error('Failed to send')
     await fetchMessages()
   }
 
-  const handleReply = async (messageId: string, content: string) => {
-    const message = messages.find(m => m.id === messageId)
-    if (!message) return
-
-    const response = await fetch('/api/student/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipientId: 'teacher',
-        subject: `Re: ${message.subject}`,
-        content,
-        recipientType: 'TEACHER',
-        parentId: messageId
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to send reply')
-    }
-
-    await fetchMessages()
-  }
-
-  const filteredMessages = messages.filter(msg =>
-    msg.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    msg.from.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const filtered = messages.filter(m =>
+    m.subject.toLowerCase().includes(search.toLowerCase()) ||
+    m.from.name.toLowerCase().includes(search.toLowerCase())
   )
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading messages...</p>
-        </div>
-      </div>
-    )
-  }
+  const unreadCount = messages.filter(m => !m.read).length
 
   return (
     <>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="h-[calc(100vh-80px)] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-            <p className="text-gray-600 mt-1">Communicate with your teacher and classmates</p>
+            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+              Messages
+              {unreadCount > 0 && (
+                <span className="text-xs font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full">{unreadCount}</span>
+              )}
+            </h1>
+            <p className="text-slate-500 text-sm">Communicate with your teacher</p>
           </div>
-          <Button 
-            onClick={() => setShowComposeModal(true)}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg"
+          <Button
+            onClick={() => setShowCompose(true)}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 shadow-md"
           >
-            <Send className="w-4 h-4 mr-2" />
-            New Message
+            <Send className="w-4 h-4 mr-2" />New Message
           </Button>
         </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Messages List */}
-        <Card className=" border-0lg:col-span-1 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              Inbox
-            </CardTitle>
-            <div className="mt-2">
+        {/* Body — 2-column layout */}
+        <div className="flex flex-1 min-h-0">
+
+          {/* ── Left: Inbox list ── */}
+          <div className="w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
+            {/* Search */}
+            <div className="p-3 border-b border-slate-100">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <Input
-                  placeholder="Search messages..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  placeholder="Search messages…"
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="pl-9 h-9 bg-slate-50 border-slate-200 text-sm"
                 />
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {filteredMessages.length === 0 ? (
-              <div className="text-center py-12">
-                <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No messages yet</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Messages from your teacher will appear here
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredMessages.map((message) => (
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-16 px-4">
+                  <MessageSquare className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                  <p className="text-slate-500 text-sm font-medium">No messages</p>
+                  <p className="text-slate-400 text-xs mt-1">Messages from your teacher appear here</p>
+                </div>
+              ) : (
+                filtered.map(msg => (
                   <button
-                    key={message.id}
-                    onClick={async () => {
-                      setSelectedMessage(message)
-                      setShowViewModal(true)
-                      // Mark as read if unread
-                      if (!message.read) {
-                        try {
-                          await fetch('/api/student/messages', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ messageId: message.id })
-                          })
-                          // Update local state
-                          setMessages(messages.map(msg => 
-                            msg.id === message.id ? { ...msg, read: true } : msg
-                          ))
-                        } catch (error) {
-                          console.error('Error marking message as read:', error)
-                        }
-                      }
-                    }}
-                    className={`w-full text-left p-4 rounded-lg transition-all ${
-                      selectedMessage?.id === message.id
-                        ? 'bg-blue-50 border-2 border-blue-500'
-                        : 'bg-gray-50 hover:bg-gray-100'
+                    key={msg.id}
+                    onClick={() => openMessage(msg)}
+                    className={`w-full text-left px-4 py-3.5 border-b border-slate-100 transition-colors ${
+                      selected?.id === msg.id
+                        ? 'bg-blue-50 border-l-2 border-l-blue-500'
+                        : 'hover:bg-slate-50'
                     }`}
                   >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium text-sm">{message.from.name}</span>
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <span className={`text-sm font-semibold truncate ${!msg.read ? 'text-slate-900' : 'text-slate-600'}`}>
+                        {msg.from.name}
+                      </span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!msg.read && <span className="w-2 h-2 bg-blue-500 rounded-full" />}
+                        <span className="text-[10px] text-slate-400">{new Date(msg.timestamp).toLocaleDateString()}</span>
                       </div>
-                      {!message.read && (
-                        <Badge className="bg-blue-500">New</Badge>
-                      )}
                     </div>
-                    <p className="font-medium text-gray-900 text-sm mb-1 line-clamp-1">
-                      {message.subject}
+                    <p className={`text-xs truncate mb-0.5 ${!msg.read ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
+                      {msg.subject}
                     </p>
-                    <p className="text-xs text-gray-500 line-clamp-2">
-                      {message.content}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                      <Clock className="w-3 h-3" />
-                      {new Date(message.timestamp).toLocaleDateString()}
-                    </div>
+                    <p className="text-xs text-slate-400 truncate">{msg.content}</p>
                   </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                ))
+              )}
+            </div>
+          </div>
 
-        {/* Message Preview */}
-        <Card className=" border-0lg:col-span-2 shadow-lg">
-          <CardHeader>
-            <CardTitle>Message Preview</CardTitle>
-            <CardDescription>Click on a message to view full details and reply</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {selectedMessage ? (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
-                    {selectedMessage.from.name.charAt(0)}
+          {/* ── Right: Full message + inline reply ── */}
+          <div className="flex-1 flex flex-col bg-slate-50 min-h-0">
+            {selected ? (
+              <>
+                {/* Message header */}
+                <div className="px-6 py-4 bg-white border-b border-slate-200 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      {selected.from.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-900 text-sm">{selected.from.name}</p>
+                      <p className="text-xs text-slate-500 capitalize">{selected.from.role.toLowerCase()}</p>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-slate-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      {new Date(selected.timestamp).toLocaleString()}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{selectedMessage.from.name}</p>
-                    <p className="text-sm text-gray-500">{selectedMessage.from.role}</p>
+                  <h2 className="text-lg font-bold text-slate-900 mt-3">{selected.subject}</h2>
+                </div>
+
+                {/* Message body */}
+                <div className="flex-1 overflow-y-auto px-6 py-5">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 max-w-3xl">
+                    <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{selected.content}</p>
                   </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-2">
-                    {selectedMessage.subject}
-                  </h3>
-                  <p className="text-gray-700 line-clamp-4">
-                    {selectedMessage.content}
-                  </p>
+
+                {/* Inline reply box */}
+                <div className="px-6 py-4 bg-white border-t border-slate-200 shrink-0">
+                  <div className="max-w-3xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Reply className="h-4 w-4 text-blue-500" />
+                      <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
+                        Reply to {selected.from.name}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 items-end">
+                      <Textarea
+                        ref={replyRef}
+                        value={reply}
+                        onChange={e => setReply(e.target.value)}
+                        placeholder={`Reply to ${selected.from.name}…`}
+                        rows={3}
+                        className="flex-1 resize-none border-slate-200 bg-slate-50 focus:bg-white text-sm"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleReply()
+                        }}
+                      />
+                      <Button
+                        onClick={handleReply}
+                        disabled={sending || !reply.trim()}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 h-10 px-5 shrink-0"
+                      >
+                        {sending
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <><Send className="h-4 w-4 mr-1.5" />Send</>
+                        }
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1.5">Ctrl+Enter to send</p>
+                  </div>
                 </div>
-                <Button 
-                  onClick={() => setShowViewModal(true)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                >
-                  View Full Message & Reply
-                </Button>
-              </div>
+              </>
             ) : (
-              <div className="text-center py-12">
-                <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">Select a message to view</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                <MessageSquare className="h-16 w-16 mb-4 opacity-20" />
+                <p className="text-sm font-medium">Select a message to read</p>
+                <p className="text-xs mt-1 opacity-70">Your conversations appear here</p>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-    </div>
 
-      {/* Modals */}
       <ComposeMessageModal
-        isOpen={showComposeModal}
-        onClose={() => setShowComposeModal(false)}
-        onSend={handleSendMessage}
+        isOpen={showCompose}
+        onClose={() => setShowCompose(false)}
+        onSend={handleNewMessage}
         recipientType="TEACHER"
-      />
-
-      <ViewMessageModal
-        isOpen={showViewModal}
-        onClose={() => setShowViewModal(false)}
-        message={selectedMessage}
-        onReply={handleReply}
-        canReply={true}
       />
     </>
   )

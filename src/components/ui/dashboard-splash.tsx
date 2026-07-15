@@ -150,7 +150,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
         {/* Logo */}
         <div className="mb-8 flex flex-col items-center gap-3">
           <img
-            src="/logo-white-removebg-preview.png"
+            src="/logo-black-removebg-preview.png"
             alt="ElimuNova"
             className="h-14 w-auto object-contain"
           />

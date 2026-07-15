@@ -44,6 +44,7 @@ export default function MarksPage() {
   const [analysing,    setAnalysing]    = useState(false)
   const [analysis,     setAnalysis]     = useState<AIAnalysis | null>(null)
   const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/teacher/marks')
@@ -63,7 +64,10 @@ export default function MarksPage() {
           setMarks(existing)
         }
       })
-      .catch(e => console.error('[MARKS_LOAD]', e))
+      .catch(e => {
+        console.error('[MARKS_LOAD]', e)
+        setError('Failed to load marks. Please refresh.')
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -144,6 +148,20 @@ export default function MarksPage() {
   if (loading) return (
     <div className="flex items-center justify-center py-20">
       <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  if (error) return (
+    <div className="flex items-center justify-center py-20">
+      <div className="text-center">
+        <p className="text-red-600 font-medium mb-2">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="text-sm text-blue-600 underline hover:text-blue-800"
+        >
+          Refresh page
+        </button>
+      </div>
     </div>
   )
 
