@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,7 +50,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useToast } from '@/hooks/use-toast'
 import SchemeOfWorkModal from '@/components/modals/scheme-of-work-modal'
 
 interface Topic {
@@ -246,10 +246,10 @@ export default function SchemesOfWorkPage() {
         setGeneratedContent(data.content)
         setIsEditing(true)
       } else {
-        alert('Error generating scheme of work: ' + data.error)
+        toast({ variant:'destructive', title:'Generation failed', description: data.error })
       }
     } catch (error) {
-      alert('Error generating scheme of work')
+      toast({ variant:'destructive', title:'Failed to generate scheme of work' })
     } finally {
       setIsGenerating(false)
     }
@@ -268,15 +268,15 @@ export default function SchemesOfWorkPage() {
       if (response.ok) {
         const newSchemeOfWork = await response.json()
         setSchemesOfWork(prev => [newSchemeOfWork, ...prev])
-        alert('Scheme of work created successfully!')
+        toast({ title:'✅ Scheme created!', variant:'success' as any })
         return true
       } else {
         const errorData = await response.json()
-        alert('Error creating scheme of work: ' + (errorData.error || 'Unknown error'))
+        toast({ variant:'destructive', title:'Failed to create' })
         return false
       }
     } catch (error) {
-      alert('Error creating scheme of work')
+      toast({ variant:'destructive', title:'Failed to create scheme' })
       return false
     }
   }
@@ -298,15 +298,15 @@ export default function SchemesOfWorkPage() {
         setSchemesOfWork(prev => prev.map(scheme => 
           scheme.id === editingScheme.id ? updatedSchemeOfWork : scheme
         ))
-        alert('Scheme of work updated successfully!')
+        toast({ title:'✅ Scheme updated!', variant:'success' as any })
         return true
       } else {
         const errorData = await response.json()
-        alert('Error updating scheme of work: ' + (errorData.error || 'Unknown error'))
+        toast({ variant:'destructive', title:'Failed to update' }))
         return false
       }
     } catch (error) {
-      alert('Error updating scheme of work')
+      toast({ variant:'destructive', title:'Failed to update scheme' })
       return false
     }
   }
@@ -344,7 +344,7 @@ export default function SchemesOfWorkPage() {
 
   const handleSaveSchemeOfWork = async () => {
     if (!generatedContent) {
-      alert('No content to save')
+      toast({ variant:'destructive', title:'No content to save' })
       return
     }
 
@@ -380,12 +380,12 @@ export default function SchemesOfWorkPage() {
           topics: [''],
           objectives: ['']
         })
-        alert('Scheme of work saved successfully!')
+        toast({ title:'✅ Scheme saved!', variant:'success' as any })
       } else {
-        alert('Error saving scheme of work')
+        toast({ variant:'destructive', title:'Failed to save scheme' })
       }
     } catch (error) {
-      alert('Error saving scheme of work')
+      toast({ variant:'destructive', title:'Failed to save scheme' })
     }
   }
 

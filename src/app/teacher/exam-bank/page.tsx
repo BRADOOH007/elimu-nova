@@ -1,4 +1,5 @@
 'use client'
+import { useRouter } from 'next/navigation'
 
 import { useEffect, useState } from 'react'
 import { BookOpen, Search, Plus, Trash2, Share2, RefreshCw, Filter, Download, Loader2, Database } from 'lucide-react'
@@ -16,6 +17,7 @@ const TERMS    = ['Term 1', 'Term 2', 'Term 3']
 const TYPES    = ['CAT', 'Mid-Term', 'End-Term', 'Mock', 'Holiday', 'Opener']
 
 export default function ExamBankPage() {
+  const router = useRouter()
   const [exams, setExams]         = useState<Exam[]>([])
   const [loading, setLoading]     = useState(true)
   const [search, setSearch]       = useState('')
@@ -69,7 +71,7 @@ export default function ExamBankPage() {
       subject: exam.subject,
       grade: exam.grade,
     })
-    window.location.href = `/teacher/assignments?${params}`
+    router.push("/teacher/assignments?${params}")
   }
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })

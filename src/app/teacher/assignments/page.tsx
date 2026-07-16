@@ -97,42 +97,8 @@ export default function AssessmentsPage() {
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('assignments')
   const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [exams, setExams] = useState<Exam[]>([
-    {
-      id: '1',
-      title: 'Midterm Math Exam',
-      subject: 'Mathematics',
-      grade: 'Grade 7',
-      description: 'Algebra and Geometry assessment',
-      date: '2026-06-20',
-      duration: 60,
-      status: 'SCHEDULED',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      stats: {
-        totalStudents: 25,
-        completed: 0,
-        averageGrade: 0
-      }
-    },
-    {
-      id: '2',
-      title: 'End-of-Term Science Exam',
-      subject: 'Science',
-      grade: 'Grade 9',
-      description: 'Biology and Chemistry assessment',
-      date: '2026-06-25',
-      duration: 90,
-      status: 'DRAFT',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      stats: {
-        totalStudents: 30,
-        completed: 0,
-        averageGrade: 0
-      }
-    }
-  ])
+  const [exams, setExams] = useState<Exam[]>([])
+  const [examsLoading, setExamsLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [assignmentSearch, setAssignmentSearch] = useState('')
   const [assignmentStatusFilter, setAssignmentStatusFilter] = useState('all')
@@ -152,27 +118,56 @@ export default function AssessmentsPage() {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const [assignmentsRes] = await Promise.all([
-          fetch(`/api/assignments${assignmentSearch || assignmentStatusFilter !== 'all' 
+        const assignmentsRes = await fetch(
+          `/api/assignments${assignmentSearch || assignmentStatusFilter !== 'all'
             ? `?${new URLSearchParams({
               ...(assignmentSearch && { search: assignmentSearch }),
               ...(assignmentStatusFilter !== 'all' && { status: assignmentStatusFilter })
-            }).toString()}`
-            : ''}`)
-        ])
-
+            })}`
+            : ''}`
+        )
         if (assignmentsRes.ok) {
           const data = await assignmentsRes.json()
           setAssignments(data.assignments || [])
         }
       } catch (error) {
-        console.error('Error fetching data:', error)
+        console.error('Error fetching assignments:', error)
       } finally {
         setLoading(false)
       }
     }
     fetchData()
   }, [assignmentSearch, assignmentStatusFilter])
+
+  // Fetch scheduled exams (assignments that were scheduled from the exam generator)
+  useEffect(() => {
+    if (activeTab !== 'exams') return
+    setExamsLoading(true)
+    fetch('/api/assignments?type=EXAM')
+      .then(r => r.ok ? r.json() : { assignments: [] })
+      .then(d => {
+        const examAssignments = (d.assignments || []).map((a: any) => ({
+          id: a.id,
+          title: a.title,
+          subject: a.subject || '',
+          grade: a.grade || '',
+          description: a.description || '',
+          date: a.dueDate,
+          duration: a.timeLimit || 60,
+          status: a.status === 'GRADED' ? 'COMPLETED' : a.status === 'PENDING' ? 'SCHEDULED' : 'DRAFT',
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
+          stats: {
+            totalStudents: a.stats?.totalStudents || 0,
+            completed: a.stats?.gradedSubmissions || 0,
+            averageGrade: a.stats?.averageGrade || 0,
+          }
+        }))
+        setExams(examAssignments)
+      })
+      .catch(() => setExams([]))
+      .finally(() => setExamsLoading(false))
+  }, [activeTab])
 
   // Filter exams
   const filteredExams = exams.filter(exam => {
@@ -504,105 +499,102 @@ export default function AssessmentsPage() {
                     <option value="ONGOING">Ongoing</option>
                     <option value="COMPLETED">Completed</option>
                   </select>
-                  <Button
-                    variant="outline"
-                    onClick={() => { setExamSearch(''); setExamStatusFilter('all') }}
-                  >
-                    <Filter className="w-4 h-4 mr-2" />
-                    Clear
+                  <Button variant="outline" onClick={() => { setExamSearch(''); setExamStatusFilter('all') }}>
+                    <Filter className="w-4 h-4 mr-2" />Clear
                   </Button>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredExams.map((exam) => (
-              <Card key={exam.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
-                        {exam.title}
-                      </CardTitle>
-                      <CardDescription className="mt-2 line-clamp-3">
-                        {exam.description}
-                      </CardDescription>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleDeleteExam(exam.id)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Badge className={getStatusColor(exam.status)}>
-                        {getStatusIcon(exam.status)}
-                        <span className="ml-1">{exam.status}</span>
-                      </Badge>
-                      <div className="flex items-center text-sm text-gray-500">
-                        <Calendar className="w-4 h-4 mr-1" />
-                        {new Date(exam.date).toLocaleDateString()}
+          {examsLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredExams.map((exam) => (
+                  <Card key={exam.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">{exam.title}</CardTitle>
+                          <CardDescription className="mt-2 line-clamp-2">{exam.description || `${exam.subject} · ${exam.grade}`}</CardDescription>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm"><MoreHorizontal className="w-4 h-4" /></Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => { setViewAssignmentId(exam.id); setShowViewModal(true) }}>
+                              <Eye className="w-4 h-4 mr-2" />View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDeleteExam(exam.id)} className="text-red-600">
+                              <Trash2 className="w-4 h-4 mr-2" />Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                    </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <Badge className={getStatusColor(exam.status)}>
+                            {getStatusIcon(exam.status)}
+                            <span className="ml-1">{exam.status}</span>
+                          </Badge>
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            {new Date(exam.date).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center">
+                            <GraduationCap className="w-4 h-4 mr-2 text-blue-500" />
+                            <span>{exam.grade || '—'}</span>
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="w-4 h-4 mr-2 text-green-500" />
+                            <span>{exam.duration} min</span>
+                          </div>
+                        </div>
+                        {exam.stats && exam.stats.totalStudents > 0 && (
+                          <div className="text-xs text-gray-500 pt-1 border-t border-gray-100">
+                            {exam.stats.completed}/{exam.stats.totalStudents} completed
+                            {exam.stats.averageGrade > 0 && ` · Avg ${Math.round(exam.stats.averageGrade)}%`}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
 
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center">
-                        <GraduationCap className="w-4 h-4 mr-2 text-blue-500" />
-                        <span>{exam.grade}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="w-4 h-4 mr-2 text-green-500" />
-                        <span>{exam.duration} min</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {filteredExams.length === 0 && (
-            <Card>
-              <CardContent className="p-12 text-center">
-                <GraduationCap className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No exams found</h3>
-                <p className="text-gray-600 mb-6">
-                  {examSearch || examStatusFilter !== 'all'
-                    ? 'Try adjusting your search or filters'
-                    : 'Create your first exam to get started'
-                  }
-                </p>
-                {!examSearch && examStatusFilter === 'all' && (
-                  <Button onClick={handleCreateNew} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Exam
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
+              {filteredExams.length === 0 && (
+                <Card>
+                  <CardContent className="p-12 text-center">
+                    <GraduationCap className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No scheduled exams</h3>
+                    <p className="text-gray-600 mb-6">
+                      {examSearch || examStatusFilter !== 'all'
+                        ? 'Try adjusting your search or filters'
+                        : 'Generate an exam in AI Tools and click "Schedule for Students" to see it here'
+                      }
+                    </p>
+                    {!examSearch && examStatusFilter === 'all' && (
+                      <Button
+                        onClick={() => router.push('/teacher/ai-tools')}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      >
+                        <Brain className="w-4 h-4 mr-2" />
+                        Go to AI Exam Generator
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </>
           )}
         </TabsContent>
 
