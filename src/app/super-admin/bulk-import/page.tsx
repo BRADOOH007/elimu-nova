@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/hooks/use-toast'
+
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,6 +46,7 @@ interface ImportRow {
 }
 
 export default function BulkImportPage() {
+  const { toast } = useToast()
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const [importType, setImportType] = useState('schools')
@@ -71,7 +74,7 @@ export default function BulkImportPage() {
       const text = evt.target?.result as string
       const lines = text.split('\n').filter(l => l.trim())
       if (lines.length < 2) {
-        alert('CSV must have a header row and at least one data row.')
+        toast({ variant:'destructive', title:'Invalid CSV', description:'Must have a header row and at least one data row.' })
         return
       }
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
@@ -116,7 +119,7 @@ export default function BulkImportPage() {
       setImportResult(data)
       if (data.success > 0) setParsedRows([])
     } catch {
-      alert('Import failed. Please try again.')
+      toast({ variant:'destructive', title:'Import failed. Please try again.' })
     } finally {
       setImporting(false)
     }

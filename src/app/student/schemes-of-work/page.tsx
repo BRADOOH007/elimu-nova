@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/hooks/use-toast'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -75,6 +77,7 @@ interface SharedSchemeOfWork {
 }
 
 export default function StudentSchemesOfWorkPage() {
+  const { toast } = useToast()
   const [sharedSchemesOfWork, setSharedSchemesOfWork] = useState<SharedSchemeOfWork[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -119,7 +122,7 @@ export default function StudentSchemesOfWorkPage() {
       }
     }
     sessionStorage.setItem('currentSchemeContext', JSON.stringify(context))
-    window.location.href = '/student/ai-tutor'
+    router.push('/student/learn')
   }
 
   const handleGenerateAssessment = async (schemeOfWork: any) => {
@@ -144,13 +147,13 @@ export default function StudentSchemesOfWorkPage() {
       if (response.ok) {
         const data = await response.json()
         sessionStorage.setItem('currentAssessment', JSON.stringify(data.assessment))
-        alert('Assessment generated! You can now take the assessment.')
+        toast({ title:'✅ Assessment ready!' })
       } else {
-        alert('Error generating assessment')
+        toast({ variant:'destructive', title:'Failed to generate assessment' })
       }
     } catch (error) {
       console.error('Error generating assessment:', error)
-      alert('Error generating assessment')
+      toast({ variant:'destructive', title:'Failed to generate assessment' })
     }
   }
 
@@ -175,13 +178,13 @@ export default function StudentSchemesOfWorkPage() {
       if (response.ok) {
         const data = await response.json()
         sessionStorage.setItem('currentNotes', JSON.stringify(data.notes))
-        alert('Study notes generated! You can now view the notes.')
+        toast({ title:'✅ Study notes ready!' })
       } else {
-        alert('Error generating study notes')
+        toast({ variant:'destructive', title:'Failed to generate notes' })
       }
     } catch (error) {
       console.error('Error generating study notes:', error)
-      alert('Error generating study notes')
+      toast({ variant:'destructive', title:'Failed to generate notes' })
     }
   }
 
@@ -209,11 +212,11 @@ export default function StudentSchemesOfWorkPage() {
         document.body.removeChild(element)
         window.URL.revokeObjectURL(url)
       } else {
-        alert('Error generating document')
+        toast({ variant:'destructive', title:'Download failed' })
       }
     } catch (error) {
       console.error('Error downloading scheme of work:', error)
-      alert('Error downloading scheme of work')
+      toast({ variant:'destructive', title:'Download failed' })
     }
   }
 

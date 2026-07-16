@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/hooks/use-toast'
+
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
@@ -31,6 +33,7 @@ interface KICDRow {
 }
 
 export default function CreateSchemePage() {
+  const { toast } = useToast()
   const router = useRouter()
   const [step, setStep] = useState(1) // 1=Setup, 2=Topics, 3=Generate, 4=View
 
@@ -136,9 +139,9 @@ export default function CreateSchemePage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setLessonPlanIds(prev => ({ ...prev, [rowIndex]: data.lessonPlan.id }))
-      alert(`✅ Lesson plan created: "${data.lessonPlan.title}"`)
+      toast({ title: "✅ Lesson plan created!" })
     } catch (e: any) {
-      alert(`❌ ${e.message}`)
+      toast({ variant:"destructive", title: e.message })
     } finally {
       setGeneratingLesson(null)
     }
@@ -168,7 +171,7 @@ export default function CreateSchemePage() {
       setBatchProgress({ done: i + 1, total: teachingRows.length })
     }
     setGeneratingAll(false)
-    alert(`✅ ${success}/${teachingRows.length} lesson plans generated${failed > 0 ? ` (${failed} failed)` : ''}`)
+    toast({ variant: 'destructive', title: 'Something went wrong' })` : ''}`)
   }
 
   const generatePptx = async (row: KICDRow, rowIndex: number) => {
@@ -189,7 +192,7 @@ export default function CreateSchemePage() {
       a.click()
       URL.revokeObjectURL(url)
     } catch (e: any) {
-      alert(`❌ ${e.message}`)
+      toast({ variant:"destructive", title: e.message })
     } finally {
       setGeneratingPptx(null)
     }
@@ -197,7 +200,7 @@ export default function CreateSchemePage() {
 
   const generateNotes = async (row: KICDRow, rowIndex: number) => {
     const lessonId = lessonPlanIds[rowIndex]
-    if (!lessonId) { alert('Generate lesson plan first'); return }
+    if (!lessonId) { toast({ variant:'destructive', title:'Generate lesson plan first' }); return }
     setGeneratingNotes(rowIndex)
     try {
       // Fetch the lesson plan content first
@@ -244,7 +247,7 @@ export default function CreateSchemePage() {
       URL.revokeObjectURL(url)
       setNotesReady(prev => ({ ...prev, [rowIndex]: true }))
     } catch (e: any) {
-      alert(`❌ ${e.message}`)
+      toast({ variant:"destructive", title: e.message })
     } finally {
       setGeneratingNotes(null)
     }
@@ -252,7 +255,7 @@ export default function CreateSchemePage() {
 
   const downloadScheme = async () => {
     if (!schemeId) {
-      alert('Please generate the scheme first before downloading.')
+      toast({ variant:'destructive', title:'Generate scheme first' })
       return
     }
     // Open in new tab — teacher clicks Print / Save as PDF from the browser

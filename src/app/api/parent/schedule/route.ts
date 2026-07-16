@@ -38,7 +38,16 @@ export async function GET(request: NextRequest) {
         include: {
           class: {
             include: {
-              schedules: { orderBy: { startTime: 'asc' } }
+              schedules: {
+                include: {
+                  teacher: {
+                    include: {
+                      user: { select: { firstName: true, lastName: true } }
+                    }
+                  }
+                },
+                orderBy: { startTime: 'asc' }
+              }
             }
           }
         }
@@ -50,7 +59,18 @@ export async function GET(request: NextRequest) {
         where: { id: { in: studentIds } },
         include: {
           class: {
-            include: { schedules: { orderBy: { startTime: 'asc' } } }
+            include: {
+              schedules: {
+                include: {
+                  teacher: {
+                    include: {
+                      user: { select: { firstName: true, lastName: true } }
+                    }
+                  }
+                },
+                orderBy: { startTime: 'asc' }
+              }
+            }
           }
         }
       })

@@ -154,7 +154,7 @@ export default function CreateLessonPlan() {
         } else {
           // Handle non-JSON responses (like 405 Method Not Allowed)
           const errorText = await response.text();
-          alert(`Error saving lesson plan: ${response.status} ${response.statusText} - ${errorText}`);
+          toast({ variant:"destructive", title:"Failed to save", description: `${response.status} ${response.statusText}` });
         }
       }
     } catch (error) {

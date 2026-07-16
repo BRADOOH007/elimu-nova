@@ -189,11 +189,11 @@ export default function RubricsPage() {
         window.URL.revokeObjectURL(url)
         document.body.removeChild(a)
       } else {
-        alert(`Error exporting to ${format.toUpperCase()}`)
+        toast({ variant:"destructive", title:"Export failed" })
       }
     } catch (error) {
       console.error(`Error exporting to ${format}:`, error)
-      alert(`Error exporting to ${format.toUpperCase()}`)
+      toast({ variant:"destructive", title:"Export failed" })
     }
   }
 
@@ -323,7 +323,7 @@ export default function RubricsPage() {
       })
 
       if (response.ok) {
-        alert(isEditing ? 'Rubric updated successfully!' : 'Rubric saved successfully!')
+        toast({ title: isEditing ? "✅ Rubric updated!" : "✅ Rubric saved!" })
         
         if (!isEditing) {
           setRubricForm({
@@ -352,11 +352,11 @@ export default function RubricsPage() {
         setActiveTab('browse')
       } else {
         const error = await response.json()
-        alert(`Error ${isEditing ? 'updating' : 'saving'} rubric: ${error.error}`)
+        toast({ variant:"destructive", title:"Operation failed" })
       }
     } catch (error) {
       console.error(`Error ${isEditing ? 'updating' : 'saving'} rubric:`, error)
-      alert(`Error ${isEditing ? 'updating' : 'saving'} rubric. Please try again.`)
+      toast({ variant:"destructive", title:"Operation failed" })
     } finally {
       setIsGenerating(false)
     }

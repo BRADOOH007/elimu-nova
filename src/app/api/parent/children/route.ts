@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
               include: {
                 user: true,
                 class: true,
+                school: true,
                 analytics: true
               }
             }

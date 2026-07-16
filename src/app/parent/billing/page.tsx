@@ -44,16 +44,10 @@ export default function ParentBillingPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [billingRes, invoicesRes] = await Promise.all([
-          fetch('/api/billing'),
-          fetch('/api/billing/invoices'),
-        ])
-        if (billingRes.ok) {
-          const data = await billingRes.json()
-          setBilling(data)
-        }
-        if (invoicesRes.ok) {
-          const data = await invoicesRes.json()
+        const res = await fetch('/api/parent/billing')
+        if (res.ok) {
+          const data = await res.json()
+          setBilling(data.billing)
           setInvoices(data.invoices || [])
         }
       } catch {} finally {
