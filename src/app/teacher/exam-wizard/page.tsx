@@ -1,5 +1,7 @@
 'use client'
 
+
+import { useToast } from '@/hooks/use-toast'
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -71,6 +73,7 @@ const createQuestion = (type: Question['type'] = 'multiple_choice'): Question =>
 }
 
 export default function ExamWizardPage() {
+  const { toast } = useToast()
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
@@ -129,7 +132,7 @@ export default function ExamWizardPage() {
 
   const generateWithAI = async () => {
     if (!form.title.trim() || !form.subject || !form.grade) {
-      alert('Please fill in title, subject, and grade before generating questions.')
+      toast({ variant:'destructive', title:'Fill in title, subject and grade first' }); return
       return
     }
     setGenerating(true)
@@ -152,14 +155,14 @@ export default function ExamWizardPage() {
         if (data.questions) {
           setQuestions(data.questions.map((q: any) => ({ ...createQuestion(q.type || 'multiple_choice'), ...q })))
         } else if (data.content) {
-          alert('AI generated text content. Please review and adjust.')
+          toast({ title:'AI content generated', description:'Please review and adjust the questions.' })
         }
       } else {
         const err = await res.json()
         alert(`AI generation failed: ${err.error || 'Unknown error'}`)
       }
     } catch {
-      alert('Failed to generate questions. Please try again.')
+      toast({ variant:'destructive', title:'Failed to generate questions' })
     } finally {
       setGenerating(false)
     }
@@ -210,7 +213,7 @@ export default function ExamWizardPage() {
         alert(`Failed to save exam: ${err.error || 'Unknown error'}`)
       }
     } catch (e) {
-      alert('Failed to save exam. Please try again.')
+      toast({ variant:'destructive', title:'Failed to save exam' })
     } finally {
       setSaving(false)
     }
@@ -234,7 +237,7 @@ export default function ExamWizardPage() {
 
   const nextStep = () => {
     if (validateStep(step)) setStep(s => Math.min(s + 1, 5))
-    else alert('Please fill in all required fields before proceeding.')
+    else toast({ variant:'destructive', title:'Please fill in all required fields' })
   }
 
   const prevStep = () => setStep(s => Math.max(s - 1, 1))

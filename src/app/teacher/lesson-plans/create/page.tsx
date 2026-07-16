@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/hooks/use-toast'
 // Layout is handled by the parent layout.tsx
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,8 @@ import {
 } from 'lucide-react'
 
 export default function CreateLessonPlan() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [formData, setFormData] = useState({
     subject: '',
     grade: '',
@@ -98,10 +101,10 @@ export default function CreateLessonPlan() {
         setGeneratedContent(data.content)
         setIsEditing(true)
       } else {
-        alert('Error generating lesson plan: ' + data.error)
+        toast({ variant:'destructive', title:'Generation failed', description: data.error })
       }
     } catch (error) {
-      alert('Error generating lesson plan')
+      toast({ variant:'destructive', title:'Failed to generate lesson plan' })
     } finally {
       setIsGenerating(false)
     }
@@ -112,8 +115,7 @@ export default function CreateLessonPlan() {
       console.log('Saving lesson plan with generated content:', generatedContent);
       
       if (!generatedContent || generatedContent.trim() === '') {
-        alert('Please generate lesson plan content first before saving.');
-        return;
+        toast({ variant:'destructive', title:'Please generate content first' }); return;
       }
 
       const response = await fetch('/api/lesson-plans', {
@@ -141,14 +143,14 @@ export default function CreateLessonPlan() {
       if (response.ok) {
         const savedLessonPlan = await response.json();
         console.log('Successfully saved lesson plan:', savedLessonPlan);
-        alert('Lesson plan saved successfully!');
+        toast({ title:'✅ Lesson plan saved!', variant:'success' as any });
         router.push('/teacher/lesson-plans');
       } else {
         // Check if response has JSON content
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const errorData = await response.json();
-          alert('Error saving lesson plan: ' + (errorData.error || 'Unknown error'));
+          toast({ variant:'destructive', title:'Failed to save', description: errorData.error });
         } else {
           // Handle non-JSON responses (like 405 Method Not Allowed)
           const errorText = await response.text();
@@ -157,7 +159,7 @@ export default function CreateLessonPlan() {
       }
     } catch (error) {
       console.error('Error saving lesson plan:', error);
-      alert('Error saving lesson plan');
+      toast({ variant:'destructive', title:'Failed to save lesson plan' });
     }
   }
 
@@ -191,10 +193,10 @@ export default function CreateLessonPlan() {
         document.body.removeChild(element)
         window.URL.revokeObjectURL(url)
       } else {
-        alert('Error generating document')
+        toast({ variant:'destructive', title:'Download failed' })
       }
     } catch (error) {
-      alert('Error downloading document')
+      toast({ variant:'destructive', title:'Download failed' })
     } finally {
       setDownloading(null)
     }

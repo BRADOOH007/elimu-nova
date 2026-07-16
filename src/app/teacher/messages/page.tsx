@@ -1,24 +1,27 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useSession } from 'next-auth/react'
+import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Mail, Send, Inbox, Clock, CheckCircle2, Reply, User, Bell, MessageSquare, Loader2 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Mail, Send, Inbox, Search, Clock, Reply,
+  MessageSquare, Loader2, Bell, CheckCheck
+} from 'lucide-react'
 import ComposeMessageModal from '@/components/modals/compose-message-modal'
-import ViewMessageModal from '@/components/modals/view-message-modal'
 import { useSSE } from '@/hooks/use-sse'
 
-const NotifTab  = dynamic(() => import('@/app/teacher/notifications/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
-const DiscTab   = dynamic(() => import('@/app/teacher/discussions/page'),   { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
+const NotifTab = dynamic(() => import('@/app/teacher/notifications/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
+const DiscTab  = dynamic(() => import('@/app/teacher/discussions/page'),   { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
 interface Message {
   id: string
-  from: {
-    name: string
-    role: string
-    avatar?: string
-  }
+  from: { name: string; role: string; avatar?: string }
   subject: string
   content: string
   timestamp: string
@@ -32,372 +35,255 @@ interface Message {
 
 export default function TeacherMessagesPage() {
   const { data: session } = useSession()
-  const [messages, setMessages] = useState<Message[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
-  const [filter, setFilter] = useState<'all' | 'unread' | 'sent'>('all')
-  const [showComposeModal, setShowComposeModal] = useState(false)
-  const [showViewModal, setShowViewModal] = useState(false)
-  const [students, setStudents] = useState<Array<{ id: string; name: string; email?: string }>>([])
-  const [parents, setParents] = useState<Array<{ id: string; name: string; email?: string }>>([])
+  const { toast } = useToast()
+  const [messages, setMessages]     = useState<Message[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [selected, setSelected]     = useState<Message | null>(null)
+  const [filter, setFilter]         = useState<'all' | 'unread' | 'sent'>('all')
+  const [search, setSearch]         = useState('')
+  const [showCompose, setShowCompose] = useState(false)
+  const [students, setStudents]     = useState<Array<{ id: string; name: string; email?: string }>>([])
+  const [parents, setParents]       = useState<Array<{ id: string; name: string; email?: string }>>([])
+  const [reply, setReply]           = useState('')
+  const [sending, setSending]       = useState(false)
+  const replyRef = useRef<HTMLTextAreaElement>(null)
 
   const fetchMessages = useCallback(async () => {
     try {
-      const response = await fetch('/api/teacher/messages')
-      const data = await response.json()
-      if (data.messages) setMessages(data.messages)
-    } catch (error) {
-      console.error('Error fetching messages:', error)
-    } finally {
-      setLoading(false)
-    }
+      const r = await fetch('/api/teacher/messages')
+      const d = await r.json()
+      if (d.messages) setMessages(d.messages)
+    } catch { /* silent */ }
+    finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
     fetchMessages()
-    fetchStudents()
-    fetchParents()
+    fetch('/api/teacher/students').then(r => r.json()).then(d => {
+      if (d.students) setStudents(d.students.map((s: any) => ({ id: s.id, name: s.name, email: s.email })))
+    }).catch(() => {})
+    fetch('/api/teacher/parents').then(r => r.json()).then(d => {
+      if (d.parents) setParents(d.parents.map((p: any) => ({ id: p.id, name: p.name, email: p.email })))
+    }).catch(() => {})
   }, [fetchMessages])
 
   useSSE(
     session?.user?.role === 'TEACHER' ? 'messages:teacher:' + session.user.id : null,
-    {
-      'message-sent': () => { fetchMessages() },
-      'new-message': () => { fetchMessages() },
-    }
+    { 'message-sent': fetchMessages, 'new-message': fetchMessages }
   )
 
-  const fetchStudents = async () => {
-    try {
-      const response = await fetch('/api/teacher/students')
-      const data = await response.json()
-      
-      if (data.students) {
-        const studentList = data.students.map((s: any) => ({
-          id: s.id,
-          name: s.name,
-          email: s.email
-        }))
-        setStudents(studentList)
-      }
-    } catch (error) {
-      console.error('Error fetching students:', error)
+  const openMessage = async (msg: Message) => {
+    setSelected(msg)
+    setReply('')
+    if (!msg.read && !msg.isSent) {
+      try {
+        await fetch('/api/teacher/messages', {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messageId: msg.id })
+        })
+        setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, read: true } : m))
+      } catch { /* silent */ }
     }
   }
 
-  const fetchParents = async () => {
-    try {
-      const response = await fetch('/api/teacher/parents')
-      const data = await response.json()
-      
-      if (data.parents) {
-        const parentList = data.parents.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          email: p.email
-        }))
-        setParents(parentList)
-      }
-    } catch (error) {
-      console.error('Error fetching parents:', error)
+  const handleReply = async () => {
+    if (!selected || !reply.trim()) return
+    if (!['STUDENT', 'PARENT'].includes(selected.senderType)) {
+      toast({ variant: 'destructive', title: 'Can only reply to students or parents' }); return
     }
-  }
-
-  const markAsRead = async (messageId: string) => {
+    setSending(true)
     try {
-      await fetch('/api/teacher/messages', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messageId })
+      const r = await fetch('/api/teacher/messages', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientId: selected.senderId,
+          subject: `Re: ${selected.subject}`,
+          content: reply.trim(),
+          recipientType: selected.senderType,
+          parentId: selected.id,
+        }),
       })
-      
-      setMessages(messages.map(msg => 
-        msg.id === messageId ? { ...msg, read: true } : msg
-      ))
-    } catch (error) {
-      console.error('Error marking message as read:', error)
-    }
+      if (!r.ok) throw new Error('Failed')
+      toast({ title: '✅ Reply sent!' })
+      setReply('')
+      await fetchMessages()
+    } catch {
+      toast({ variant: 'destructive', title: 'Failed to send reply' })
+    } finally { setSending(false) }
   }
 
-  const handleSendMessage = async (data: { recipientId?: string; subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' }) => {
-    if (!data.recipientId) {
-      throw new Error('Please select a recipient')
-    }
-
-    const response = await fetch('/api/teacher/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipientId: data.recipientId,
-        subject: data.subject,
-        content: data.content,
-        recipientType: data.recipientType
-      })
+  const handleSend = async (data: any) => {
+    if (!data.recipientId) throw new Error('Please select a recipient')
+    const r = await fetch('/api/teacher/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to send message')
-    }
-
+    if (!r.ok) { const e = await r.json(); throw new Error(e.error || 'Failed') }
     await fetchMessages()
   }
 
-  const handleReply = async (messageId: string, content: string) => {
-    const message = messages.find(m => m.id === messageId)
-    if (!message) return
-
-    if (!['STUDENT', 'PARENT'].includes(message.senderType)) {
-      throw new Error('Can only reply to messages from students or parents')
-    }
-
-    const response = await fetch('/api/teacher/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        recipientId: message.senderId,
-        subject: `Re: ${message.subject}`,
-        content,
-        recipientType: message.senderType,
-        parentId: messageId
-      })
-    })
-
-    if (!response.ok) {
-      throw new Error('Failed to send reply')
-    }
-
-    await fetchMessages()
-  }
-
-  const filteredMessages = messages.filter(msg => {
-    if (filter === 'unread') return !msg.read && !msg.isSent
-    if (filter === 'sent') return msg.isSent
-    return true
+  const filtered = messages.filter(m => {
+    const matchFilter = filter === 'all' ? true : filter === 'unread' ? (!m.read && !m.isSent) : m.isSent
+    const matchSearch = !search || m.subject.toLowerCase().includes(search.toLowerCase()) || m.from.name.toLowerCase().includes(search.toLowerCase())
+    return matchFilter && matchSearch
   })
 
-  const unreadCount = messages.filter(msg => !msg.read && !msg.isSent).length
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
+  const unreadCount = messages.filter(m => !m.read && !m.isSent).length
+  const canReply = selected ? ['STUDENT', 'PARENT'].includes(selected.senderType) : false
 
   return (
-    <div className="space-y-6">
-      {/* Tab navigation */}
-      <Tabs defaultValue="messages">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <TabsList>
-            <TabsTrigger value="messages"><Mail className="w-4 h-4 mr-2"/>Messages</TabsTrigger>
-            <TabsTrigger value="notifications"><Bell className="w-4 h-4 mr-2"/>Notifications</TabsTrigger>
-            <TabsTrigger value="discussions"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="messages">
-      {/* Original messages content below */}
-      <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Messages</h1>
-          <p className="text-gray-600 mt-1">
-            Communicate with your students and parents
-          </p>
-        </div>
-        <button 
-          onClick={() => setShowComposeModal(true)}
-          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg shadow-lg flex items-center gap-2 transition-all"
-        >
-          <Send className="w-4 h-4" />
-          New Message
-        </button>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            filter === 'all'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Inbox className="w-4 h-4" />
-            All Messages
-          </div>
-        </button>
-        <button
-          onClick={() => setFilter('unread')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            filter === 'unread'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <div className="flex items-center gap-2">
-            <Mail className="w-4 h-4" />
-            Unread
+    <div className="h-[calc(100vh-80px)] flex flex-col">
+      <Tabs defaultValue="messages" className="flex flex-col flex-1 min-h-0">
+        {/* Tab header */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-white shrink-0 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-bold text-slate-900">Messages</h1>
             {unreadCount > 0 && (
-              <span className="px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded-full">
-                {unreadCount}
-              </span>
+              <span className="text-xs font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full">{unreadCount}</span>
             )}
           </div>
-        </button>
-        <button
-          onClick={() => setFilter('sent')}
-          className={`px-4 py-2 font-medium transition-colors ${
-            filter === 'sent'
-              ? 'text-blue-600 border-b-2 border-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
           <div className="flex items-center gap-2">
-            <Send className="w-4 h-4" />
-            Sent
+            <TabsList className="h-8">
+              <TabsTrigger value="messages" className="text-xs h-7"><Mail className="w-3.5 h-3.5 mr-1.5"/>Messages</TabsTrigger>
+              <TabsTrigger value="notifications" className="text-xs h-7"><Bell className="w-3.5 h-3.5 mr-1.5"/>Notifications</TabsTrigger>
+              <TabsTrigger value="discussions" className="text-xs h-7"><MessageSquare className="w-3.5 h-3.5 mr-1.5"/>Discussions</TabsTrigger>
+            </TabsList>
+            <Button size="sm" onClick={() => setShowCompose(true)}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 h-8 text-xs">
+              <Send className="w-3.5 h-3.5 mr-1.5"/>New Message
+            </Button>
           </div>
-        </button>
-      </div>
-
-      {/* Messages Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Messages List */}
-        <div className="space-y-3">
-          {filteredMessages.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <Mail className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">No messages found</p>
-            </div>
-          ) : (
-            filteredMessages.map((message) => (
-              <div
-                key={message.id}
-                onClick={() => {
-                  setSelectedMessage(message)
-                  setShowViewModal(true)
-                  if (!message.read && !message.isSent) {
-                    markAsRead(message.id)
-                  }
-                }}
-                className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                  selectedMessage?.id === message.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : message.read || message.isSent
-                    ? 'border-gray-200 bg-white hover:border-gray-300'
-                    : 'border-blue-200 bg-blue-50 hover:border-blue-300'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                      {message.from.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">
-                          {message.from.name}
-                        </p>
-                        {!message.read && !message.isSent && (
-                          <span className="w-2 h-2 bg-blue-600 rounded-full"></span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500">{message.from.role}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <Clock className="w-3 h-3" />
-                    {new Date(message.timestamp).toLocaleDateString()}
-                  </div>
-                </div>
-                <h3 className="font-medium text-gray-900 mb-1">{message.subject}</h3>
-                <p className="text-sm text-gray-600 line-clamp-2">{message.content}</p>
-              </div>
-            ))
-          )}
         </div>
 
-        {/* Message Preview */}
-        <div className="lg:sticky lg:top-6 h-fit">
-          {selectedMessage ? (
-            <div className="bg-white rounded-lg border-0 p-6 shadow-lg">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-lg">
-                    {selectedMessage.from.name.charAt(0)}
+        {/* Messages tab — 2-column layout */}
+        <TabsContent value="messages" className="flex-1 flex min-h-0 m-0">
+          {/* Left: list */}
+          <div className="w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
+            {/* Filter + search */}
+            <div className="p-3 border-b border-slate-100 space-y-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400"/>
+                <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…" className="pl-8 h-8 text-xs bg-slate-50 border-slate-200"/>
+              </div>
+              <div className="flex gap-1">
+                {(['all','unread','sent'] as const).map(f => (
+                  <button key={f} onClick={() => setFilter(f)}
+                    className={`flex-1 text-[11px] font-medium py-1 rounded-md transition-colors capitalize ${filter===f?'bg-blue-600 text-white':'text-slate-500 hover:bg-slate-100'}`}>
+                    {f}{f==='unread'&&unreadCount>0?` (${unreadCount})`:''}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-blue-500"/></div>
+              ) : filtered.length === 0 ? (
+                <div className="text-center py-16 px-4">
+                  <Mail className="h-10 w-10 text-slate-300 mx-auto mb-3"/>
+                  <p className="text-slate-500 text-sm font-medium">No messages</p>
+                </div>
+              ) : filtered.map(msg => (
+                <button key={msg.id} onClick={() => openMessage(msg)}
+                  className={`w-full text-left px-4 py-3.5 border-b border-slate-100 transition-colors ${selected?.id===msg.id?'bg-blue-50 border-l-2 border-l-blue-500':'hover:bg-slate-50'}`}>
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className={`text-sm truncate ${!msg.read&&!msg.isSent?'font-bold text-slate-900':'font-medium text-slate-600'}`}>
+                      {msg.isSent ? `→ ${msg.from.name}` : msg.from.name}
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {!msg.read&&!msg.isSent&&<span className="w-2 h-2 bg-blue-500 rounded-full"/>}
+                      {msg.isSent&&<Badge className="text-[9px] h-4 bg-green-100 text-green-700 px-1">Sent</Badge>}
+                      <span className="text-[10px] text-slate-400">{new Date(msg.timestamp).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900">
-                      {selectedMessage.from.name}
-                    </p>
-                    <p className="text-sm text-gray-500">{selectedMessage.from.role}</p>
+                  <p className={`text-xs truncate mb-0.5 ${!msg.read&&!msg.isSent?'font-semibold text-slate-800':'text-slate-600'}`}>{msg.subject}</p>
+                  <p className="text-xs text-slate-400 truncate">{msg.content}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: full message + reply */}
+          <div className="flex-1 flex flex-col bg-slate-50 min-h-0">
+            {selected ? (
+              <>
+                {/* Message header */}
+                <div className="px-6 py-4 bg-white border-b border-slate-200 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+                      {selected.from.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-slate-900 text-sm">{selected.from.name}</p>
+                      <p className="text-xs text-slate-500 capitalize">{selected.from.role?.toLowerCase()}</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-400 shrink-0">
+                      {selected.read && <span className="flex items-center gap-1 text-green-600"><CheckCheck className="h-3.5 w-3.5"/>Read</span>}
+                      <Clock className="h-3.5 w-3.5"/>
+                      {new Date(selected.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                  <h2 className="text-lg font-bold text-slate-900 mt-3">{selected.subject}</h2>
+                </div>
+
+                {/* Message body */}
+                <div className="flex-1 overflow-y-auto px-6 py-5">
+                  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 max-w-3xl">
+                    <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{selected.content}</p>
                   </div>
                 </div>
-                {selectedMessage.read && (
-                  <div className="flex items-center gap-1 text-green-600 text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    Read
+
+                {/* Reply box — only for student/parent messages */}
+                {canReply ? (
+                  <div className="px-6 py-4 bg-white border-t border-slate-200 shrink-0">
+                    <div className="max-w-3xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Reply className="h-4 w-4 text-blue-500"/>
+                        <span className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Reply to {selected.from.name}</span>
+                      </div>
+                      <div className="flex gap-3 items-end">
+                        <Textarea ref={replyRef} value={reply} onChange={e => setReply(e.target.value)}
+                          placeholder={`Reply to ${selected.from.name}…`} rows={3}
+                          className="flex-1 resize-none border-slate-200 bg-slate-50 focus:bg-white text-sm"
+                          onKeyDown={e => { if (e.key==='Enter'&&(e.ctrlKey||e.metaKey)) handleReply() }}/>
+                        <Button onClick={handleReply} disabled={sending||!reply.trim()}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 h-10 px-5 shrink-0">
+                          {sending?<Loader2 className="h-4 w-4 animate-spin"/>:<><Send className="h-4 w-4 mr-1.5"/>Send</>}
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1.5">Ctrl+Enter to send</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="px-6 py-3 bg-white border-t border-slate-100 shrink-0">
+                    <p className="text-xs text-slate-400 text-center">This is a sent message — no reply needed</p>
                   </div>
                 )}
+              </>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                <Mail className="h-16 w-16 mb-4 opacity-20"/>
+                <p className="text-sm font-medium">Select a message to read</p>
+                <p className="text-xs mt-1 opacity-70">Your conversations appear here</p>
               </div>
+            )}
+          </div>
+        </TabsContent>
 
-              <h2 className="text-lg font-bold text-gray-900 mb-2">
-                {selectedMessage.subject}
-              </h2>
+        <TabsContent value="notifications" className="flex-1 overflow-y-auto m-0 p-0"><NotifTab/></TabsContent>
+        <TabsContent value="discussions"   className="flex-1 overflow-y-auto m-0 p-0"><DiscTab/></TabsContent>
+      </Tabs>
 
-              <p className="text-gray-700 line-clamp-4 mb-4">
-                {selectedMessage.content}
-              </p>
-
-              <button 
-                onClick={() => setShowViewModal(true)}
-                className="w-full px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all"
-              >
-                <Mail className="w-4 h-4" />
-                View Full Message & Reply
-              </button>
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg border-0 p-12 text-center">
-              <Mail className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Select a message to view details</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Modals */}
       <ComposeMessageModal
-        isOpen={showComposeModal}
-        onClose={() => setShowComposeModal(false)}
-        onSend={handleSendMessage}
+        isOpen={showCompose}
+        onClose={() => setShowCompose(false)}
+        onSend={handleSend}
         recipientType="STUDENT"
         showRecipientTypeSelector={true}
         studentRecipients={students}
         parentRecipients={parents}
       />
-
-      <ViewMessageModal
-        isOpen={showViewModal}
-        onClose={() => setShowViewModal(false)}
-        message={selectedMessage}
-        onReply={handleReply}
-        canReply={['STUDENT', 'PARENT'].includes(selectedMessage?.senderType || '')}
-      />
-    </div>
-    </TabsContent>
-
-    <TabsContent value="notifications"><NotifTab /></TabsContent>
-    <TabsContent value="discussions"><DiscTab /></TabsContent>
-
-    </Tabs>
     </div>
   )
 }

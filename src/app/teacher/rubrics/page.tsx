@@ -1,5 +1,7 @@
 'use client'
 
+
+import { useToast } from '@/hooks/use-toast'
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -83,6 +85,7 @@ const defaultPerformanceLevels: PerformanceLevel[] = [
 ]
 
 export default function RubricsPage() {
+  const { toast } = useToast()
   const [rubrics, setRubrics] = useState<Rubric[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -150,11 +153,11 @@ export default function RubricsPage() {
       if (response.ok) {
         setRubrics(prev => prev.filter(r => r.id !== rubricId))
       } else {
-        alert('Error deleting rubric')
+        toast({ variant:'destructive', title:'Failed to delete rubric' })
       }
     } catch (error) {
       console.error('Error deleting rubric:', error)
-      alert('Error deleting rubric')
+      toast({ variant:'destructive', title:'Failed to delete rubric' })
     }
   }
 
@@ -201,7 +204,7 @@ export default function RubricsPage() {
 
     const rubricText = generateRubricText(rubricData)
     navigator.clipboard.writeText(rubricText)
-    alert('Rubric copied to clipboard!')
+    toast({ title:'📋 Copied to clipboard!' })
   }
 
   const generateRubricText = (rubricData: any) => {
@@ -290,7 +293,7 @@ export default function RubricsPage() {
 
   const saveRubric = async () => {
     if (!rubricForm.title || !rubricForm.subject || !rubricForm.grade || rubricForm.criteria.length === 0) {
-      alert('Please fill in all required fields and add at least one criterion.')
+      toast({ variant:'destructive', title:'Fill in all required fields' })
       return
     }
 
@@ -361,7 +364,7 @@ export default function RubricsPage() {
 
   const generateRubric = async () => {
     if (!rubricForm.title || !rubricForm.subject || !rubricForm.grade || rubricForm.criteria.length === 0) {
-      alert('Please fill in all required fields and add at least one criterion.')
+      toast({ variant:'destructive', title:'Fill in all required fields' })
       return
     }
 
@@ -391,11 +394,11 @@ export default function RubricsPage() {
           criteria: data.rubric.criteria || prev.criteria,
           performanceLevels: data.rubric.performanceLevels || prev.performanceLevels
         }))
-        alert('Rubric enhanced with AI! You can now save it.')
+        toast({ title:'✅ Rubric enhanced with AI!' })
       }
     } catch (error) {
       console.error('Error generating rubric:', error)
-      alert('Error generating rubric. Please try again.')
+      toast({ variant:'destructive', title:'Failed to enhance rubric' })
     } finally {
       setIsGenerating(false)
     }
