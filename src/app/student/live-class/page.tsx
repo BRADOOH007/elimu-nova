@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/hooks/use-toast'
+
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { Radio, MessageSquare, Send, Users, Loader2, Sparkles, Eye } from 'lucide-react'
@@ -13,6 +15,7 @@ interface ChatMsg { userId: string; name: string; message: string; ts: string; i
 interface Participant { userId: string; name: string; joinedAt: string }
 
 export default function StudentLiveClass() {
+  const { toast } = useToast()
   const { data: session } = useSession()
   const [activeSessions, setActiveSessions] = useState<LiveSession[]>([])
   const [joinedSession, setJoinedSession] = useState<LiveSession | null>(null)
@@ -84,7 +87,7 @@ export default function StudentLiveClass() {
     if (!code) return
     const found = activeSessions.find(s => s.metadata?.sessionCode === code)
     if (found) { joinSession(found); return }
-    alert('Session code not found. Make sure your teacher has started the session.')
+    toast({ variant:'destructive', title:'Session not found', description:'Ask your teacher to share the session code.' })
   }
 
   const sendChat = async () => {

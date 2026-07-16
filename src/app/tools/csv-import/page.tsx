@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/hooks/use-toast'
+
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -43,6 +45,7 @@ interface ParsedRow {
 }
 
 export default function CsvImportPage() {
+  const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
   const [importType, setImportType] = useState(IMPORT_TYPES[0].value)
   const [parsedRows, setParsedRows] = useState<ParsedRow[]>([])
@@ -69,7 +72,7 @@ export default function CsvImportPage() {
       const text = evt.target?.result as string
       const lines = text.split('\n').filter(l => l.trim())
       if (lines.length < 2) {
-        alert('CSV must have a header row and at least one data row.')
+        toast({ variant:'destructive', title:'Invalid CSV', description:'Must have a header row and at least one data row.' })
         return
       }
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
@@ -108,7 +111,7 @@ export default function CsvImportPage() {
       setResult(data)
       if (data.success > 0) setParsedRows([])
     } catch {
-      alert('Import failed.')
+      toast({ variant:'destructive', title:'Import failed' })
     } finally {
       setImporting(false)
     }

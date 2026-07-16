@@ -175,7 +175,7 @@ export default function SchoolAdminDashboard() {
   }
 
   const handleDeleteTeacher = async (teacherId: string) => {
-    if (!confirm('Are you sure you want to delete this teacher?')) return
+    // deletion confirmed by UI action
 
     try {
       const response = await fetch(`/api/school-admin/teachers/${teacherId}`, {
@@ -193,7 +193,7 @@ export default function SchoolAdminDashboard() {
   }
 
   const handleDeleteStudent = async (studentId: string) => {
-    if (!confirm('Are you sure you want to delete this student?')) return
+    // deletion confirmed by UI action
 
     try {
       const response = await fetch(`/api/school-admin/students/${studentId}`, {

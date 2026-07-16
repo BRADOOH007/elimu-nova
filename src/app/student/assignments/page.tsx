@@ -1,4 +1,5 @@
-"use client"
+'use client'
+import { useToast } from '@/hooks/use-toast'
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
@@ -73,6 +74,7 @@ interface AIInsights {
 }
 
 export default function AssignmentsPage() {
+  const { toast } = useToast()
   const router = useRouter()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([])
@@ -320,7 +322,7 @@ export default function AssignmentsPage() {
         setAttachments(prev => [...prev, { url: data.url, name: data.name, type: data.type }])
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Upload failed')
+      toast({ variant:'destructive', title: err instanceof Error ? err.message : 'Upload failed' })
     } finally {
       setIsUploading(false)
       // Reset file input

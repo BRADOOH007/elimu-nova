@@ -159,7 +159,7 @@ export default function ExamWizardPage() {
         }
       } else {
         const err = await res.json()
-        alert(`AI generation failed: ${err.error || 'Unknown error'}`)
+        toast({ variant:"destructive", title:"AI generation failed", description: err.error })
       }
     } catch {
       toast({ variant:'destructive', title:'Failed to generate questions' })
@@ -210,7 +210,7 @@ export default function ExamWizardPage() {
         router.push('/teacher/exam-bank')
       } else {
         const err = await res.json()
-        alert(`Failed to save exam: ${err.error || 'Unknown error'}`)
+        toast({ variant:"destructive", title:"Failed to save exam", description: err.error })
       }
     } catch (e) {
       toast({ variant:'destructive', title:'Failed to save exam' })

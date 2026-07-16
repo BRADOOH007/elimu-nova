@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -60,6 +61,7 @@ interface Meeting {
 const DURATIONS = [15, 30, 45, 60, 90]
 
 export default function ParentMeetingsPage() {
+  const { toast } = useToast()
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
@@ -113,17 +115,17 @@ export default function ParentMeetingsPage() {
         setMeetings(d.meetings || [])
       } else {
         const err = await res.json()
-        alert(`Failed: ${err.error || 'Unknown error'}`)
+        toast({ variant: 'destructive', title: 'Request failed', description: err.error || 'Unknown error' })
       }
     } catch {
-      alert('Failed to request meeting.')
+      toast({ variant: 'destructive', title: 'Failed to request meeting' })
     } finally {
       setSaving(false)
     }
   }
 
   const cancelMeeting = async (id: string) => {
-    if (!confirm('Cancel this meeting request?')) return
+    if (!window.confirm('Cancel this meeting request?')) return
     try {
       await fetch(`/api/parent/meetings/${id}`, {
         method: 'PATCH',

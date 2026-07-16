@@ -1,5 +1,7 @@
 'use client'
 
+import { useToast } from '@/hooks/use-toast'
+
 import { useState, useRef, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,6 +37,7 @@ interface Message {
 }
 
 export default function HopePage() {
+  const { toast } = useToast()
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -129,7 +132,7 @@ export default function HopePage() {
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {
-      alert('Speech recognition is not supported in your browser.');
+      toast({ variant:'destructive', title:'Speech recognition not supported', description:'Please use Chrome or Edge.' });
       return;
     }
 
