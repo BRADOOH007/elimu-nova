@@ -545,7 +545,7 @@ async function main() {
   }
 
   console.log('\n🔐 Test Login Credentials:')
-  console.log('Super Admin: admin@edugenius.ai / password123')
+  console.log('Super Admin: admin@elimunova.ai / password123')
   console.log('School Admin: admin@demoschool.edu / password123')
   console.log('Teacher: teacher@demoschool.edu / password123')
   // Create a subscription for the demo school
