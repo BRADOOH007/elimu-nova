@@ -37,7 +37,8 @@ export default function StudentDiscussions() {
       setDiscussions((data.discussions || []).filter(
         (d: Discussion) => d.status === 'approved' || d.senderRole === 'STUDENT'
       ))
-    } finally { setLoading(false) }
+    } catch { console.error('Failed to load discussions') }
+    finally { setLoading(false) }
   }
 
   useEffect(() => { load() }, [])
@@ -60,7 +61,8 @@ export default function StudentDiscussions() {
         setTimeout(() => setPosted(false), 4000)
         await load()
       }
-    } finally { setPosting(false) }
+    } catch { console.error('Failed to post discussion') }
+    finally { setPosting(false) }
   }
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', {

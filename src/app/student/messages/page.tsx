@@ -38,7 +38,7 @@ export default function StudentMessagesPage() {
     try {
       const r = await fetch('/api/student/messages')
       if (r.ok) { const d = await r.json(); setMessages(d.messages || []) }
-    } catch { /* silent */ }
+    } catch { toast({ variant: 'destructive', title: 'Failed to load messages' }) }
     finally { setLoading(false) }
   }
 
@@ -53,7 +53,7 @@ export default function StudentMessagesPage() {
           body: JSON.stringify({ messageId: msg.id }),
         })
         setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, read: true } : m))
-      } catch { /* silent */ }
+      } catch { /* mark-as-read errors are non-critical */ }
     }
   }
 

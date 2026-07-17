@@ -60,7 +60,7 @@ export default function StudentLiveRoom() {
           })
         }
       })
-      .catch(() => {})
+      .catch(() => console.error('Failed to fetch chat messages'))
   }, [id, addChatMessage])
 
   useSSE(id ? `meeting:${id}` : null, {

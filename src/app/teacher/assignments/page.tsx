@@ -269,10 +269,23 @@ export default function AssessmentsPage() {
 
   const handleAssignmentCreated = () => {
     setShowCreateModal(false)
-    window.location.reload()
+    // Refetch instead of full page reload
+    setLoading(true)
+    fetch(`/api/assignments`)
+      .then(r => r.ok ? r.json() : { assignments: [] })
+      .then(d => setAssignments(d.assignments || []))
+      .finally(() => setLoading(false))
   }
 
   const handleAssignmentUpdated = () => {
+    setShowEditModal(false)
+    setSelectedAssignment(null)
+    setLoading(true)
+    fetch(`/api/assignments`)
+      .then(r => r.ok ? r.json() : { assignments: [] })
+      .then(d => setAssignments(d.assignments || []))
+      .finally(() => setLoading(false))
+  }  const handleAssignmentUpdated = () => {
     setShowEditModal(false)
     setSelectedAssignment(null)
     window.location.reload()
