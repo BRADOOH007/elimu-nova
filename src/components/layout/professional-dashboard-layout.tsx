@@ -131,37 +131,40 @@ export function ProfessionalDashboardLayout({
 
       {/* ── HEADER ── */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-        <div className="flex items-center justify-between h-16 px-4">
+        <div className="flex items-center justify-between h-14 sm:h-16 px-3 sm:px-4">
 
           {/* Left */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 sm:gap-3">
             <button
-              className="lg:hidden p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="lg:hidden p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 transition-colors"
               onClick={() => setSidebarOpen(v => !v)}
+              aria-label="Toggle sidebar"
             >
               {sidebarOpen ? <X className="w-5 h-5 text-slate-600" /> : <Menu className="w-5 h-5 text-slate-600" />}
             </button>
             <button
-              className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="hidden lg:flex p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 transition-colors"
               onClick={() => setSidebarCollapsed(v => !v)}
+              aria-label="Toggle sidebar collapse"
             >
               {sidebarCollapsed
                 ? <PanelLeftOpen className="w-5 h-5 text-slate-600" />
                 : <PanelLeftClose className="w-5 h-5 text-slate-600" />}
             </button>
-            <Link href="/"><Logo size="md" variant="black" /></Link>
+            <Link href="/" className="shrink-0"><Logo size="sm" variant="black" /></Link>
           </div>
 
           {/* Spacer */}
           <div className="flex-1" />
 
           {/* Right */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={() => setNotificationsOpen(true)}
-              className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="relative p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              aria-label="Notifications"
             >
-              <Bell className="w-5 h-5 text-slate-600" />
+              <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
               {totalUnread > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
                   {totalUnread > 99 ? '99+' : totalUnread}
@@ -171,30 +174,30 @@ export function ProfessionalDashboardLayout({
 
             <button
               onClick={() => setSettingsOpen(true)}
-              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 transition-colors hidden sm:block"
+              aria-label="Settings"
             >
-              <Settings className="w-5 h-5 text-slate-600" />
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
             </button>
 
-            <div className="flex items-center gap-2 ml-1">
-              <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium text-slate-900 leading-tight">
-                  {userProfile.firstName} {userProfile.lastName}
-                </p>
+            <div className="flex items-center gap-1 sm:gap-2 ml-1">
+              <div className="hidden md:block text-right">
+                <p className="text-sm font-medium text-slate-900 leading-tight">{userProfile.firstName} {userProfile.lastName}</p>
                 <p className="text-xs text-slate-500">{getRoleDisplayName(userRole)}</p>
               </div>
               <button
                 onClick={() => setProfileOpen(true)}
-                className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center overflow-hidden hover:opacity-90 transition-opacity"
+                className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center overflow-hidden hover:opacity-90 transition-opacity shrink-0"
+                aria-label="Profile"
               >
                 {userProfile.avatar
                   ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
-                  : <User className="w-4 h-4 text-white" />
+                  : <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 }
               </button>
               <button
                 onClick={() => signOut()}
-                className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+                className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 transition-colors"
                 title="Sign out"
               >
                 <LogOut className="w-4 h-4 text-slate-500" />
@@ -207,16 +210,16 @@ export function ProfessionalDashboardLayout({
 
       {/* ── SIDEBAR ── */}
       <aside
-        className={`fixed top-16 left-0 bottom-0 z-40 flex flex-col bg-[#0f172a] border-r border-white/5 transition-all duration-200 ${
+        className={`fixed top-14 sm:top-16 left-0 bottom-0 z-40 flex flex-col bg-[#0f172a] border-r border-white/5 transition-all duration-200 ease-in-out ${
           sidebarCollapsed ? 'w-16' : 'w-64'
         } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
         {/* User strip */}
-        <div className={`flex items-center gap-3 px-3 py-4 border-b border-white/5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shrink-0 overflow-hidden">
+        <div className={`flex items-center gap-3 px-3 py-3 sm:py-4 border-b border-white/5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shrink-0 overflow-hidden">
             {userProfile.avatar
               ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
-              : <span className="text-white font-bold text-sm">{(userProfile.firstName || userName).slice(0, 2).toUpperCase()}</span>
+              : <span className="text-white font-bold text-xs sm:text-sm">{(userProfile.firstName || userName).slice(0, 2).toUpperCase()}</span>
             }
           </div>
           {!sidebarCollapsed && (
@@ -228,9 +231,9 @@ export function ProfessionalDashboardLayout({
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2">
+        <nav className="flex-1 overflow-y-auto py-3 sm:py-4 px-2">
           {!sidebarCollapsed && (
-            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-600">Navigation</p>
+            <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Navigation</p>
           )}
           <div className="space-y-0.5">
             {sidebarItems.map((item, index) => {
@@ -240,8 +243,8 @@ export function ProfessionalDashboardLayout({
                   key={index}
                   href={item.href}
                   title={sidebarCollapsed ? item.label : undefined}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+                  onClick={() => { setSidebarOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+                  className={`relative flex items-center gap-3 px-3 py-2 sm:py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                     isActive
                       ? 'bg-gradient-to-r from-blue-600/25 to-purple-600/25 text-white border border-blue-500/30'
                       : 'text-slate-400 hover:bg-white/5 hover:text-slate-100'
@@ -275,7 +278,7 @@ export function ProfessionalDashboardLayout({
           <button
             onClick={() => signOut()}
             title={sidebarCollapsed ? 'Sign Out' : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-white/5 hover:text-slate-200 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
+            className={`w-full flex items-center gap-3 px-3 py-2 sm:py-2.5 rounded-lg text-sm font-medium text-slate-500 hover:bg-white/5 hover:text-slate-200 transition-colors ${sidebarCollapsed ? 'justify-center' : ''}`}
           >
             <LogOut className="h-4 w-4 shrink-0" />
             {!sidebarCollapsed && <span>Sign Out</span>}
@@ -285,12 +288,12 @@ export function ProfessionalDashboardLayout({
 
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* ── MAIN CONTENT ── */}
-      <main className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'} pt-16`}>
-        <div className="p-6">
+      <main className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'} pt-14 sm:pt-16`}>
+        <div className="p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
           {children}
         </div>
       </main>

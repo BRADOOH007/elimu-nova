@@ -93,6 +93,12 @@ export function DashboardSplash({ role, userName, visible }: Props) {
 
   useEffect(() => { setMounted(true) }, [])
 
+  // Hard safety timeout — if visible never goes false, dismiss after 5s
+  useEffect(() => {
+    const hard = setTimeout(() => setFadeOut(true), 5000)
+    return () => clearTimeout(hard)
+  }, [])
+
   // Progress animation
   useEffect(() => {
     if (!visible) return

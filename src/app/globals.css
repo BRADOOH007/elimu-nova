@@ -103,12 +103,19 @@ html {
 /* Mobile optimization */
 @media (max-width: 640px) {
   html {
+    font-size: 14px;
+  }
+}
+
+/* Tablet optimization */
+@media (min-width: 641px) and (max-width: 1024px) {
+  html {
     font-size: 15px;
   }
 }
 
 /* Ensure all elements are responsive */
-img, video {
+img, video, svg {
   max-width: 100%;
   height: auto;
 }
@@ -116,12 +123,283 @@ img, video {
 /* Prevent horizontal scroll on mobile */
 body {
   overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 /* Better touch targets for mobile */
 button, a {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* ── Responsive Layout Utilities ── */
+
+/* Responsive container that prevents overflow */
+.responsive-container {
+  width: 100%;
+  max-width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+@media (min-width: 640px) {
+  .responsive-container {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .responsive-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Responsive page header */
+.responsive-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+@media (min-width: 640px) {
+  .responsive-page-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+.responsive-page-header h1 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+@media (min-width: 640px) {
+  .responsive-page-header h1 {
+    font-size: 1.75rem;
+  }
+}
+@media (min-width: 1024px) {
+  .responsive-page-header h1 {
+    font-size: 2rem;
+  }
+}
+
+/* Responsive stat card grid — auto-stacks on mobile */
+.responsive-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+@media (min-width: 640px) {
+  .responsive-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+}
+@media (min-width: 1024px) {
+  .responsive-stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Responsive content grid — stacks on mobile, 2 cols on tablet, 3 on desktop */
+.responsive-content-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 640px) {
+  .responsive-content-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+@media (min-width: 1024px) {
+  .responsive-content-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+@media (min-width: 1280px) {
+  .responsive-content-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Responsive table wrapper — horizontal scroll on mobile */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+.responsive-table-wrapper table {
+  width: 100%;
+  min-width: 500px;
+  border-collapse: collapse;
+}
+.responsive-table-wrapper table th,
+.responsive-table-wrapper table td {
+  white-space: nowrap;
+  padding: 0.75rem;
+  text-align: left;
+}
+@media (max-width: 640px) {
+  .responsive-table-wrapper table th,
+  .responsive-table-wrapper table td {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Responsive two-column layout — stacks on mobile */
+.responsive-two-col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+@media (min-width: 768px) {
+  .responsive-two-col {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (min-width: 1024px) {
+  .responsive-two-col {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+/* Responsive sidebar + main layout */
+.responsive-sidebar-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+@media (min-width: 768px) {
+  .responsive-sidebar-layout {
+    flex-direction: row;
+  }
+  .responsive-sidebar-layout > :first-child {
+    width: 16rem;
+    flex-shrink: 0;
+  }
+  .responsive-sidebar-layout > :last-child {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* Typography responsiveness */
+.responsive-heading-xl {
+  font-size: 1.75rem;
+  line-height: 1.2;
+}
+@media (min-width: 640px) {
+  .responsive-heading-xl { font-size: 2rem; }
+}
+@media (min-width: 1024px) {
+  .responsive-heading-xl { font-size: 2.5rem; }
+}
+
+.responsive-heading-lg {
+  font-size: 1.375rem;
+  line-height: 1.3;
+}
+@media (min-width: 640px) {
+  .responsive-heading-lg { font-size: 1.5rem; }
+}
+@media (min-width: 1024px) {
+  .responsive-heading-lg { font-size: 1.75rem; }
+}
+
+/* Responsive card — adapts padding on mobile */
+.responsive-card {
+  padding: 1rem;
+}
+@media (min-width: 640px) {
+  .responsive-card { padding: 1.25rem; }
+}
+@media (min-width: 1024px) {
+  .responsive-card { padding: 1.5rem; }
+}
+
+/* Hide on mobile / show on desktop utilities */
+@media (max-width: 639px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: block !important; }
+}
+@media (min-width: 640px) {
+  .hide-desktop { display: none !important; }
+  .show-desktop { display: block !important; }
+}
+
+/* Responsive flex wrap */
+.responsive-flex-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .responsive-flex-wrap { gap: 1rem; }
+}
+
+/* Responsive gap */
+.responsive-gap {
+  gap: 0.75rem;
+}
+@media (min-width: 640px) {
+  .responsive-gap { gap: 1rem; }
+}
+@media (min-width: 1024px) {
+  .responsive-gap { gap: 1.5rem; }
+}
+
+/* Force all common grid patterns to be responsive */
+[class*="grid-cols-"]:not(.no-responsive-grid) {
+  @media (max-width: 639px) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Responsive text truncation */
+.responsive-text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Responsive button full-width on mobile */
+@media (max-width: 639px) {
+  .responsive-button-full {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Responsive modal/dialog content */
+@media (max-width: 639px) {
+  .responsive-modal-content {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    margin: 0 auto;
+    border-radius: 0.75rem;
+  }
+}
+
+/* Safe area for notched phones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
 }
 
 @layer base {

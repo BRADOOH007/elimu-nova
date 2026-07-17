@@ -63,7 +63,7 @@ export default function StudentLiveClass() {
           setJoinedSession(null)
         }
       }
-    } catch { /* silent */ }
+    } catch { toast({ variant: 'destructive', title: 'Connection error', description: 'Failed to sync session updates' }) }
   }
 
   const joinSession = async (sess: LiveSession) => {
