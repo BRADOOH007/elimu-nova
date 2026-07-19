@@ -180,7 +180,7 @@ export default function AIConfigPage() {
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
         <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
         <div className="text-sm text-blue-800">
-          <strong>AI Waterfall:</strong> ElimuNova tries providers in order — Gemini → Groq → OpenRouter → OpenAI.
+          <strong>AI Waterfall:</strong> ElimuNova tries providers in order — Groq → Cerebras → DeepSeek → Gemini → OpenRouter → OpenAI.
           If one fails, it automatically moves to the next. Both EduGenius and TutorBot share the same keys and waterfall.
           <span className="block mt-1 text-blue-600">Configure your keys below. Values are stored securely in the database.</span>
         </div>

@@ -9,9 +9,41 @@
  *   4. Gemini Flash  — gemini-2.0-flash  (free quota)
  *   5. OpenRouter    — gpt-4o-mini       (paid fallback)
  *   6. OpenAI direct — gpt-4o-mini       (last resort)
+ *
+ * Keys are read from process.env first, then fall back to the
+ * system_settings DB table (configured via super-admin AI config page).
  */
 
 import Cerebras from '@cerebras/cerebras_cloud_sdk'
+import { prisma } from './prisma'
+
+const DB_KEY_MAP: Record<string, string> = {
+  CEREBRAS_API_KEY:   'ai_provider_cerebras_key',
+  DEEPSEEK_API_KEY:   'ai_provider_deepseek_key',
+  GEMINI_API_KEY:     'ai_provider_gemini_key',
+  GROQ_API_KEY:       'ai_provider_groq_key',
+  OPENROUTER_API_KEY: 'ai_provider_openrouter_key',
+  OPENAI_API_KEY:     'ai_provider_openai_key',
+}
+
+let dbKeysCache: Record<string, string> | null = null
+let dbKeysCacheTime = 0
+
+async function getKey(envVar: string): Promise<string | undefined> {
+  if (process.env[envVar]) return process.env[envVar]
+  const dbKey = DB_KEY_MAP[envVar]
+  if (!dbKey) return undefined
+  if (dbKeysCache && Date.now() - dbKeysCacheTime < 60_000) return dbKeysCache[dbKey]
+  try {
+    const settings = await (prisma as any).systemSettings.findMany({
+      where: { key: { in: Object.values(DB_KEY_MAP) } },
+    })
+    dbKeysCache = {}
+    for (const s of settings) dbKeysCache[s.key] = s.value
+    dbKeysCacheTime = Date.now()
+    return dbKeysCache[dbKey]
+  } catch { return undefined }
+}
 
 export type AIProvider = 'cerebras' | 'deepseek' | 'gemini' | 'groq' | 'openrouter' | 'openai'
 
@@ -24,7 +56,7 @@ export interface AICallOptions {
   messages:         AIMessage[]
   maxTokens?:       number
   temperature?:     number
-  useReasoner?:     boolean   // true = DeepSeek-R1 for complex reasoning
+  useReasoner?:     boolean
   cerebrasModel?:   string
   deepseekModel?:   string
   geminiModel?:     string
@@ -87,21 +119,22 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     openaiModel     = process.env.OPENAI_MODEL     || 'gpt-4o-mini',
   } = opts
 
-  const CEREBRAS_KEY   = process.env.CEREBRAS_API_KEY
-  const DEEPSEEK_KEY   = process.env.DEEPSEEK_API_KEY
-  const GEMINI_KEY     = process.env.GEMINI_API_KEY
-  const GROQ_KEY       = process.env.GROQ_API_KEY
-  const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY
-  const OPENAI_KEY     = process.env.OPENAI_API_KEY
+  const [CEREBRAS_KEY, DEEPSEEK_KEY, GEMINI_KEY, GROQ_KEY, OPENROUTER_KEY, OPENAI_KEY] = await Promise.all([
+    getKey('CEREBRAS_API_KEY'),
+    getKey('DEEPSEEK_API_KEY'),
+    getKey('GEMINI_API_KEY'),
+    getKey('GROQ_API_KEY'),
+    getKey('OPENROUTER_API_KEY'),
+    getKey('OPENAI_API_KEY'),
+  ])
 
   if (!CEREBRAS_KEY && !DEEPSEEK_KEY && !GEMINI_KEY && !GROQ_KEY && !OPENROUTER_KEY && !OPENAI_KEY) {
-    throw new Error('No AI keys configured. Add CEREBRAS_API_KEY, DEEPSEEK_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, or OPENROUTER_API_KEY')
+    throw new Error('No AI keys configured. Add keys via super-admin AI config page or set env vars.')
   }
 
   const errors: string[] = []
   const start = Date.now()
 
-  // Log if messages contain non-string content (potential image data)
   const hasNonTextContent = messages.some(m => typeof m.content !== 'string')
   if (hasNonTextContent) {
     console.warn('[AI] Some messages have non-text content — may fail on non-vision models')
@@ -164,7 +197,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     }
   }
 
-  // ── 5. OpenRouter (or direct OpenAI via same key) ────────────────────────
+  // 5. OpenRouter (or direct OpenAI via same key)
   if (OPENROUTER_KEY) {
     const isOR  = OPENROUTER_KEY.startsWith('sk-or-')
     const url   = isOR ? OPENROUTER_URL : OPENAI_URL
@@ -179,7 +212,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     }
   }
 
-  // ── 6. OpenAI direct (only if different key from OPENROUTER_KEY) ──────────
+  // 6. OpenAI direct (only if different key from OPENROUTER_KEY)
   if (OPENAI_KEY && OPENAI_KEY !== OPENROUTER_KEY && !OPENAI_KEY.startsWith('sk-or-')) {
     try {
       const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, openaiModel, messages, maxTokens, temperature)
@@ -197,7 +230,6 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   throw new Error(`All AI providers failed:\n${errors.join('\n')}`)
 }
 
-/** Convenience: returns just the content string */
 export async function getAIResponse(
   systemPrompt: string,
   userMessage: string,
@@ -213,10 +245,6 @@ export async function getAIResponse(
   return result.content
 }
 
-/**
- * Reasoning call — uses DeepSeek-R1 for complex tasks.
- * Best for: exam analysis, career guidance, CBC rubric generation.
- */
 export async function getAIReasoning(
   systemPrompt: string,
   userMessage: string,

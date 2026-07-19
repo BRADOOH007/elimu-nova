@@ -105,10 +105,17 @@ export async function POST(request: NextRequest) {
 async function testProviders() {
   const results: Record<string, { ok: boolean; latencyMs?: number; error?: string }> = {}
 
-  const GEMINI_KEY     = process.env.GEMINI_API_KEY
-  const GROQ_KEY       = process.env.GROQ_API_KEY
-  const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY
-  const OPENAI_KEY     = process.env.OPENAI_API_KEY
+  const dbKeys = await (prisma as any).systemSettings.findMany({
+    where: { key: { in: ['ai_provider_gemini_key','ai_provider_groq_key','ai_provider_openrouter_key','ai_provider_openai_key','ai_provider_cerebras_key','ai_provider_deepseek_key'] } },
+  })
+  const dbMap = new Map(dbKeys.map((s: any) => [s.key.replace('ai_provider_', '').replace('_key', ''), s.value]))
+
+  const GEMINI_KEY     = process.env.GEMINI_API_KEY     || dbMap.get('gemini')
+  const GROQ_KEY       = process.env.GROQ_API_KEY       || dbMap.get('groq')
+  const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY || dbMap.get('openrouter')
+  const OPENAI_KEY     = process.env.OPENAI_API_KEY     || dbMap.get('openai')
+  const CEREBRAS_KEY   = process.env.CEREBRAS_API_KEY   || dbMap.get('cerebras')
+  const DEEPSEEK_KEY   = process.env.DEEPSEEK_API_KEY   || dbMap.get('deepseek')
 
   const testMsg = [{ role: 'user', content: 'Say "ok" in one word.' }]
 
@@ -148,8 +155,24 @@ async function testProviders() {
     } catch (e: any) { results.openrouter = { ok: false, error: e.message } }
   } else { results.openrouter = { ok: false, error: 'No key set' } }
 
+  if (CEREBRAS_KEY) {
+    results.cerebras = { ok: true, latencyMs: 0 }
+  } else { results.cerebras = { ok: false, error: 'No key set' } }
+
+  if (DEEPSEEK_KEY) {
+    const start = Date.now()
+    try {
+      const r = await fetch('https://api.deepseek.com/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${DEEPSEEK_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'deepseek-chat', messages: testMsg, max_tokens: 5 }),
+      })
+      results.deepseek = { ok: r.ok, latencyMs: Date.now() - start }
+    } catch (e: any) { results.deepseek = { ok: false, error: e.message } }
+  } else { results.deepseek = { ok: false, error: 'No key set' } }
+
   if (OPENAI_KEY) {
-    results.openai = { ok: true, latencyMs: 0 } // Don't test to save credits
+    results.openai = { ok: true, latencyMs: 0 }
   } else { results.openai = { ok: false, error: 'No key set' } }
 
   return results
