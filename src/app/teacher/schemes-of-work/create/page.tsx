@@ -171,7 +171,9 @@ export default function CreateSchemePage() {
       setBatchProgress({ done: i + 1, total: teachingRows.length })
     }
     setGeneratingAll(false)
-    toast({ variant: 'destructive', title: 'Something went wrong' })` : ''}`)
+    if (failed > 0 && success === 0) {
+      toast({ variant: 'destructive', title: 'Something went wrong' })
+    }
   }
 
   const generatePptx = async (row: KICDRow, rowIndex: number) => {

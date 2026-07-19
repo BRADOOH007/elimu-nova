@@ -285,10 +285,6 @@ export default function AssessmentsPage() {
       .then(r => r.ok ? r.json() : { assignments: [] })
       .then(d => setAssignments(d.assignments || []))
       .finally(() => setLoading(false))
-  }  const handleAssignmentUpdated = () => {
-    setShowEditModal(false)
-    setSelectedAssignment(null)
-    window.location.reload()
   }
 
   if (loading) {

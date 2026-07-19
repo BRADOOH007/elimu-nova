@@ -228,8 +228,6 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess }: Cr
         requirements: formData.description // Use description as requirements
       };
       
-      console.log('Sending AI generation request with data:', requestData);
-      
       const response = await fetch('/api/ai/generate-content', {
         method: 'POST',
         headers: {

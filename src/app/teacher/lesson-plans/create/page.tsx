@@ -36,7 +36,6 @@ export default function CreateLessonPlan() {
   const [isEditing, setIsEditing] = useState(false)
   const [downloading, setDownloading] = useState<'pdf' | 'word' | null>(null)
   const [documentContext, setDocumentContext] = useState<string | null>(null)
-  const router = useRouter()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -112,8 +111,6 @@ export default function CreateLessonPlan() {
 
   const handleSave = async () => {
     try {
-      console.log('Saving lesson plan with generated content:', generatedContent);
-      
       if (!generatedContent || generatedContent.trim() === '') {
         toast({ variant:'destructive', title:'Please generate content first' }); return;
       }
@@ -141,8 +138,6 @@ export default function CreateLessonPlan() {
       })
 
       if (response.ok) {
-        const savedLessonPlan = await response.json();
-        console.log('Successfully saved lesson plan:', savedLessonPlan);
         toast({ title:'✅ Lesson plan saved!', variant:'success' as any });
         router.push('/teacher/lesson-plans');
       } else {

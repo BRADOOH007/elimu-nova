@@ -1,10 +1,10 @@
 /**
  * ElimuNova AI Provider — shared across EduGenius and TutorBot.
  *
- * Waterfall (tested live — working providers first):
- *   1. Cerebras      — gpt-oss-120b      (2,000 tok/sec — FASTEST) ✅
- *   2. Groq          — llama-3.3-70b-versatile (free, ultra-fast)  ✅
- *   3. DeepSeek      — deepseek-chat     (best quality — balance dependent)
+ * Waterfall (tested live — Groq first, then fallbacks):
+ *   1. Groq          — llama-3.3-70b-versatile (free, ultra-fast)  ⭐
+ *   2. Cerebras      — gpt-oss-120b      (2,000 tok/sec — FASTEST)
+ *   3. DeepSeek      — deepseek-chat     (best quality)
  *   3b. DeepSeek-R1  — deepseek-reasoner (for reasoning tasks)
  *   4. Gemini Flash  — gemini-2.0-flash  (free quota)
  *   5. OpenRouter    — gpt-4o-mini       (paid fallback)
@@ -107,7 +107,19 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     console.warn('[AI] Some messages have non-text content — may fail on non-vision models')
   }
 
-  // 1. Cerebras — fastest (skip for reasoning tasks)
+  // 1. Groq — free, ultra-fast (first priority)
+  if (GROQ_KEY && !useReasoner) {
+    try {
+      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, groqModel, messages, maxTokens, temperature)
+      if (content) return { content, provider: 'groq', model: groqModel, tokensUsed, latencyMs: Date.now() - start }
+    } catch (e: any) {
+      const isImageError = e.message?.includes?.('image')
+      if (isImageError) console.warn('[AI] Groq rejected image input — skipping')
+      else { errors.push(`Groq: ${e.message}`); console.warn('[AI] Groq:', e.message) }
+    }
+  }
+
+  // 2. Cerebras — fastest (skip for reasoning tasks)
   if (CEREBRAS_KEY && !useReasoner) {
     try {
       const client = new Cerebras({ apiKey: CEREBRAS_KEY })
@@ -125,18 +137,6 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
       const isImageError = e.message?.includes?.('image')
       if (isImageError) console.warn('[AI] Cerebras rejected image input — skipping')
       else { errors.push(`Cerebras: ${e.message}`); console.warn('[AI] Cerebras:', e.message) }
-    }
-  }
-
-  // 2. Groq — free, ultra-fast (moved up — confirmed working)
-  if (GROQ_KEY && !useReasoner) {
-    try {
-      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, groqModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'groq', model: groqModel, tokensUsed, latencyMs: Date.now() - start }
-    } catch (e: any) {
-      const isImageError = e.message?.includes?.('image')
-      if (isImageError) console.warn('[AI] Groq rejected image input — skipping')
-      else { errors.push(`Groq: ${e.message}`); console.warn('[AI] Groq:', e.message) }
     }
   }
 

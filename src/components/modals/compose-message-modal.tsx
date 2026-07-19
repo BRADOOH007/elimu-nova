@@ -42,8 +42,6 @@ export default function ComposeMessageModal({
 
   if (!isOpen) return null
 
-  console.log('🎯 Compose Modal - Recipients:', currentRecipients, 'Count:', currentRecipients.length)
-
   const handleSend = async () => {
     if (!subject.trim() || !content.trim()) {
       alert('Please fill in both subject and message')

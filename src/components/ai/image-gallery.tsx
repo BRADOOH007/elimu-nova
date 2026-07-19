@@ -96,19 +96,15 @@ export default function ImageGallery() {
 
   const loadImages = async () => {
     setLoading(true)
-    console.log('🔍 Loading images...')
     try {
       const params = new URLSearchParams()
       if (searchTopic) params.append('topic', searchTopic)
       if (filterType && filterType !== 'all') params.append('type', filterType)
       params.append('limit', '50')
 
-      console.log('📡 Making API request to:', `/api/ai/images?${params}`)
       const result = await safeApiRequest(`/api/ai/images?${params}`)
-      console.log('📥 API result:', result)
       
       if (result.success && result.data) {
-        console.log('✅ Images loaded:', result.data.images?.length || 0)
         setImages(result.data.images)
       } else {
         console.error('❌ API request failed:', result.error)
@@ -131,13 +127,10 @@ export default function ImageGallery() {
   }
 
   const loadStats = async () => {
-    console.log('📊 Loading stats...')
     try {
       const result = await safeApiRequest('/api/ai/images/stats')
-      console.log('📊 Stats result:', result)
       
       if (result.success && result.data) {
-        console.log('✅ Stats loaded:', result.data)
         setStats(result.data)
       } else {
         console.error('❌ Stats request failed:', result.error)

@@ -10,42 +10,27 @@ export default function DashboardRedirect() {
   const router = useRouter()
 
   useEffect(() => {
-    console.log('📍 Dashboard redirect - Status:', status)
-    console.log('📍 Dashboard redirect - Session:', session)
-    console.log('📍 Dashboard redirect - Role:', session?.user?.role)
-    
-    if (status === 'loading') {
-      console.log('⏳ Still loading session...')
-      return
-    }
+    if (status === 'loading') return
 
     if (!session) {
-      console.log('❌ No session, redirecting to signin')
       router.push('/auth/signin')
       return
     }
 
-    // Redirect based on user role
-    console.log('🔀 Redirecting based on role:', session.user.role)
     switch (session.user.role) {
       case 'SUPER_ADMIN':
-        console.log('➡️ Redirecting to /super-admin/dashboard')
         router.push('/super-admin/dashboard')
         break
       case 'SCHOOL_ADMIN':
-        console.log('➡️ Redirecting to /school-admin/dashboard')
         router.push('/school-admin/dashboard')
         break
       case 'TEACHER':
-        console.log('➡️ Redirecting to /teacher/dashboard')
         router.push('/teacher/dashboard')
         break
       case 'STUDENT':
-        console.log('➡️ Redirecting to /student/dashboard')
         router.push('/student/dashboard')
         break
       default:
-        console.log('⚠️ Unknown role, redirecting to signin')
         router.push('/auth/signin')
     }
   }, [session, status, router])

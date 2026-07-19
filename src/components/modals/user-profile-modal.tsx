@@ -135,8 +135,6 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
           description: "Your profile has been updated successfully!",
         })
         
-        // Log the update for debugging
-        console.log('Profile saved successfully:', updatedProfile)
       } else {
         const errorData = await response.json()
         toast({
