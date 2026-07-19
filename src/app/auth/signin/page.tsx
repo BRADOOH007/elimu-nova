@@ -159,7 +159,7 @@ export default function SignInPage() {
             "Elimu Nova helped my students improve grades within one term."
           </blockquote>
           <div className="text-slate-500 text-xs">
-            — Sarah M., Teacher · Hopewell STEM Academy
+            — Md. Beth Waithera, Teacher · St. Anne's
           </div>
         </div>
       </div>
