@@ -4,10 +4,11 @@ import { PricingPlans } from '@/components/pricing/pricing-plans'
 import { Sparkles } from 'lucide-react'
 
 export default async function PricingPage() {
-  const packages = await prisma.package.findMany({
+  const allPackages = await prisma.package.findMany({
     where: { isActive: true },
     orderBy: { price: 'asc' },
   })
+  const packages = allPackages.slice(0, 3)
 
   return (
     <PublicLayout>
