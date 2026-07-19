@@ -75,12 +75,9 @@ export default function SignInPage() {
           }
           const expectedTab = roleToTab[session.user.role]
           if (expectedTab && expectedTab !== activeRole) {
-            // Wrong tab — sign out and show a clear message
-            await signIn('credentials', { redirect: false }) // clear
             const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
             setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
             setIsLoading(false)
-            // Also force NextAuth signout
             const { signOut } = await import('next-auth/react')
             await signOut({ redirect: false })
             return
