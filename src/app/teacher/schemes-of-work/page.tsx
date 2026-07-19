@@ -302,7 +302,7 @@ export default function SchemesOfWorkPage() {
         return true
       } else {
         const errorData = await response.json()
-        toast({ variant:'destructive', title:'Failed to update' }))
+        toast({ variant:'destructive', title:'Failed to update' })
         return false
       }
     } catch (error) {

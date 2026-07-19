@@ -287,6 +287,8 @@ export default function PlanningPage() {
       // Keep original data if fetch fails
     }
   }
+
+  const generatePptxFromLesson = async (lp: LessonPlan) => {
     setGeneratingPptx(lp.id)
     try {
       const res = await fetch('/api/ai/generate-pptx-from-lesson', {

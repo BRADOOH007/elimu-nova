@@ -118,8 +118,6 @@ export default function SchoolAdminBilling() {
 
       const result = await response.json()
       
-      // In a real implementation, this would open a new page or download files
-      console.log('Available invoices:', result.invoices)
       toast({ title: `Found ${result.invoices.length} invoice(s) ready for download` })
     } catch (error) {
       console.error('Invoice fetch error:', error)
