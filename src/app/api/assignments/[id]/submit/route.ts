@@ -81,13 +81,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const body = await req.json();
     const { content, attachments = [], startedAt, timeSpent } = body;
 
-    // Get student profile
-    const student = await prisma.student.findUnique({
+    // Get or create student profile
+    let student = await prisma.student.findUnique({
       where: { userId: session.user.id }
     });
 
     if (!student) {
-      return NextResponse.json({ error: 'Student profile not found' }, { status: 404 });
+      student = await prisma.student.create({ data: { userId: session.user.id } });
     }
 
     // Check if assignment exists and student has access
