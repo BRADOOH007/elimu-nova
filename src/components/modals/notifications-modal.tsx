@@ -29,9 +29,10 @@ interface NotificationsModalProps {
   isOpen: boolean
   onClose: () => void
   userId: string
+  onUnreadChanged?: () => void
 }
 
-export function NotificationsModal({ isOpen, onClose, userId }: NotificationsModalProps) {
+export function NotificationsModal({ isOpen, onClose, userId, onUnreadChanged }: NotificationsModalProps) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
@@ -68,6 +69,7 @@ export function NotificationsModal({ isOpen, onClose, userId }: NotificationsMod
             notif.id === notificationId ? { ...notif, isRead: true } : notif
           )
         )
+        onUnreadChanged?.()
       }
     } catch (error) {
       console.error('Error marking notification as read:', error)
@@ -85,6 +87,7 @@ export function NotificationsModal({ isOpen, onClose, userId }: NotificationsMod
         setNotifications(prev => 
           prev.map(notif => ({ ...notif, isRead: true }))
         )
+        onUnreadChanged?.()
       }
     } catch (error) {
       console.error('Error marking all notifications as read:', error)

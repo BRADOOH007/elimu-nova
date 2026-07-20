@@ -59,7 +59,7 @@ export function ProfessionalDashboardLayout({
     const key = `splash-shown-${userRole}`
     return !sessionStorage.getItem(key)
   })
-  const { totalUnread } = useUnreadMessages()
+  const { totalUnread, refetch: refetchUnread } = useUnreadMessages()
   const [userProfile, setUserProfile] = useState<{
     firstName: string
     lastName: string
@@ -305,6 +305,7 @@ export function ProfessionalDashboardLayout({
             isOpen={notificationsOpen}
             onClose={() => setNotificationsOpen(false)}
             userId={session.user.id}
+            onUnreadChanged={refetchUnread}
           />
           <SettingsModal
             isOpen={settingsOpen}

@@ -43,7 +43,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
   const [sendNotificationModalOpen, setSendNotificationModalOpen] = useState(false)
   const { data: session } = useSession()
   const router = useRouter()
-  const { totalUnread } = useUnreadMessages()
+  const { totalUnread, refetch: refetchUnread } = useUnreadMessages()
 
   const handleSignOut = async () => {
     await signOut({ callbackUrl: '/' })
@@ -243,6 +243,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
         isOpen={notificationsModalOpen}
         onClose={() => setNotificationsModalOpen(false)}
         userId={session?.user?.id || ''}
+        onUnreadChanged={refetchUnread}
       />
       
       <SendNotificationModal
