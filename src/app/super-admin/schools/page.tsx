@@ -171,7 +171,7 @@ export default function SchoolsPage() {
     setSchools(prev => [schoolData, ...prev])
     fetchSchools(pagination.page, true)
     toast({
-      variant: "success",
+      variant: "default",
       title: "School Created",
       description: "New school has been created successfully!",
     })
@@ -183,7 +183,7 @@ export default function SchoolsPage() {
       school.id === schoolData.id ? schoolData : school
     ))
     toast({
-      variant: "success",
+      variant: "default",
       title: "School Updated",
       description: "School information has been updated successfully!",
     })
@@ -193,7 +193,7 @@ export default function SchoolsPage() {
   const handleSchoolDeleted = (schoolId: string) => {
     setSchools(prev => prev.filter(school => school.id !== schoolId))
     toast({
-      variant: "success",
+      variant: "default",
       title: "School Deleted",
       description: "School has been deleted successfully!",
     })

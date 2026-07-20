@@ -26,7 +26,7 @@ export default function CommunicationServicesPage() {
   const fetchServices = async () => {
     try {
       const res = await fetch('/api/system-settings?category=communication')
-      if (res.ok) setServices((await res.json()).services || [])
+      if (res.ok) setServices((await res.json()).settings || [])
     } catch {} finally { setLoading(false) }
   }
 
