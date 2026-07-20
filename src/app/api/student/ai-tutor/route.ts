@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Get student profile
-    const student = await prisma.student.findUnique({
+    // Get or create student profile
+    let student = await prisma.student.findUnique({
       where: { userId: session.user.id },
       include: {
         user: true,
@@ -46,7 +46,15 @@ export async function POST(request: NextRequest) {
     })
 
     if (!student) {
-      return NextResponse.json({ error: 'Student profile not found' }, { status: 404 })
+      student = await prisma.student.create({
+        data: { userId: session.user.id },
+        include: {
+          user: true,
+          school: true,
+          teacher: { include: { user: true } },
+          analytics: true
+        }
+      })
     }
 
     // Get recent assignments and study sessions for context
@@ -286,7 +294,7 @@ async function generateAIResponse({
       student: {
         name: `${student.user.firstName} ${student.user.lastName}`,
         grade: student.class?.name || 'Grade 8',
-        teacher: `${teacherMaterials?.user.firstName} ${teacherMaterials?.user.lastName}`,
+        teacher: teacherMaterials?.user ? `${teacherMaterials.user.firstName} ${teacherMaterials.user.lastName}` : 'ElimuNova AI Teacher',
         subjects: Array.from(new Set([
           ...(teacherMaterials?.schemesOfWork.map(s => s.subject) || []),
           ...(teacherMaterials?.lessonPlans.map(l => l.subject) || []),
