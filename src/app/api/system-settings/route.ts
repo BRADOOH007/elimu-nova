@@ -96,6 +96,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session || session.user.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const { searchParams } = new URL(request.url)
+    const key = searchParams.get('key')
+    if (!key) return NextResponse.json({ error: 'key param required' }, { status: 400 })
+    await prisma.systemSettings.delete({ where: { key } })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting system setting:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)

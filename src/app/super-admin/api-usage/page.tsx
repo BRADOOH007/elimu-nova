@@ -22,10 +22,12 @@ export default function ApiUsagePage() {
   const fetchStats = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/system-settings?category=api_stats&period=${period}`)
+      const res = await fetch(`/api/system-settings?category=api_usage&period=${period}`)
       if (res.ok) {
         const data = await res.json()
-        if (data.stats) setStats(data.stats)
+        if (data.settings?.length > 0) {
+          try { setStats(JSON.parse(data.settings[0].value)) } catch {}
+        }
       }
     } catch {} finally { setLoading(false) }
   }

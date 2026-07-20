@@ -177,7 +177,7 @@ export default function UsersPage() {
     setUsers(prev => [userData, ...prev])
     fetchUsers(pagination.page, true)
     toast({
-      variant: "success",
+      variant: "default",
       title: "User Created",
       description: "New user has been created successfully!",
     })
@@ -189,7 +189,7 @@ export default function UsersPage() {
       user.id === userData.id ? userData : user
     ))
     toast({
-      variant: "success",
+      variant: "default",
       title: "User Updated",
       description: "User information has been updated successfully!",
     })
@@ -199,7 +199,7 @@ export default function UsersPage() {
   const handleUserDeleted = (userId: string) => {
     setUsers(prev => prev.filter(user => user.id !== userId))
     toast({
-      variant: "success",
+      variant: "default",
       title: "User Deleted",
       description: "User has been deleted successfully!",
     })
@@ -222,7 +222,7 @@ export default function UsersPage() {
           user.id === userId ? updatedUser : user
         ))
         toast({
-          variant: "success",
+          variant: "default",
           title: "Status Updated",
           description: `User has been ${!currentStatus ? 'activated' : 'deactivated'} successfully!`,
         })
@@ -679,7 +679,7 @@ export default function UsersPage() {
                                       toast({
                                         title: "User Deleted Successfully",
                                         description: `${user.firstName} ${user.lastName} has been permanently removed.`,
-                                        variant: "success",
+                                        variant: "default",
                                       })
                                     } else {
                                       const error = await response.json()

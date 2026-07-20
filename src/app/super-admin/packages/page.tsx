@@ -382,7 +382,7 @@ export default function PackagesPage() {
                           e.stopPropagation()
                           // Confirmation removed - using toast notifications only
                           try {
-                            const response = await fetch(`/api/super-admin/packages/${pkg.id}`, {
+                            const response = await fetch(`/api/packages/${pkg.id}`, {
                               method: 'DELETE',
                             })
                             if (response.ok) {
