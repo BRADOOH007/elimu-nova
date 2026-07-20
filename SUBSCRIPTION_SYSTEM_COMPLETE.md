@@ -67,8 +67,8 @@
 
 ### Stripe Keys (Configured) ✅
 ```env
-STRIPE_SECRET_KEY="sk_test_51SVTriCnp0eOHDCgA8wFOWRGyn8IfDhCdbkCNRKzzy1xIfNZoTwTig5pFfNi2wJDqTMLPNzrO0NeZmnggTfmzmJ100L6GBa69G"
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_51SVTriCnp0eOHDCgKhUs5mEufeJZhxz8nfGD6TPh95sI2Vtqu53stta43qq8un4zDjVCOmyGga2R3TAXbjNyX9lu00MxUhgh2u"
+STRIPE_SECRET_KEY="sk_test_YOUR_STRIPE_SECRET_KEY"
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_YOUR_STRIPE_PUBLISHABLE_KEY"
 STRIPE_WEBHOOK_SECRET="whsec_your_webhook_secret_here" # To be configured in Stripe dashboard
 ```
 

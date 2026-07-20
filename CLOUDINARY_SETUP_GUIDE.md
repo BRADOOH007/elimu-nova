@@ -58,14 +58,14 @@ Make sure you also have these in Vercel:
 
 ```bash
 # Core Variables
-OPENAI_API_KEY=REDACTED
-DATABASE_URL=postgresql://neondb_owner:npg_4dCrxETYqoX9@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
+OPENAI_API_KEY=sk-proj-YOUR_OPENAI_API_KEY
+DATABASE_URL=postgresql://neondb_owner:YOUR_NEON_DB_PASSWORD@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
 NEXTAUTH_URL=https://elimunova.vercel.app
-NEXTAUTH_SECRET=0ba9a025a07af88aad2f33092fd51801
+NEXTAUTH_SECRET=YOUR_NEXTAUTH_SECRET
 
 # Stripe
-STRIPE_SECRET_KEY=sk_test_51SVTriCnp0eOHDCgA8wFOWRGyn8IfDhCdbkCNRKzzy1xIfNZoTwTig5pFfNi2wJDqTMLPNzrO0NeZmnggTfmzmJ100L6GBa69G
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_51SVTriCnp0eOHDCgKhUs5mEufeJZhxz8nfGD6TPh95sI2Vtqu53stta43qq8un4zDjVCOmyGga2R3TAXbjNyX9lu00MxUhgh2u
+STRIPE_SECRET_KEY=sk_test_YOUR_STRIPE_SECRET_KEY
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_YOUR_STRIPE_PUBLISHABLE_KEY
 ```
 
 ### **Step 5: Redeploy**

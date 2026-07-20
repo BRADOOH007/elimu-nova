@@ -52,15 +52,15 @@ git push -u origin main
 In Vercel Dashboard → Settings → Environment Variables, add:
 
 ```env
-DATABASE_URL=postgresql://neondb_owner:npg_4dCrxETYqoX9@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://neondb_owner:YOUR_NEON_DB_PASSWORD@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
 
 NEXTAUTH_URL=https://your-app.vercel.app
 
 NEXTAUTH_SECRET=generate_new_secret_here
 
-OPENAI_API_KEY=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
+OPENAI_API_KEY=sk-or-v1-...your-key-here...
 
-OPENAI_DALLE_API_KEY=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
+OPENAI_DALLE_API_KEY=sk-proj-YOUR_DALLE_API_KEY
 
 STABILITY_API_KEY=sk-m8LLcZn82sIMkhpph7bgyV1p1tfij8FRxK4UI44H0oLFZ0pG
 ```
@@ -207,7 +207,7 @@ vercel --prod
 ### Manual Backup
 ```bash
 # Export database
-pg_dump "postgresql://neondb_owner:npg_4dCrxETYqoX9@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require" > backup.sql
+pg_dump "postgresql://neondb_owner:YOUR_NEON_DB_PASSWORD@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require" > backup.sql
 
 # Restore if needed
 psql "your_database_url" < backup.sql

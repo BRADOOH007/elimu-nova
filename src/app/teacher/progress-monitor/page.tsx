@@ -9,7 +9,7 @@ import {
 import Link from 'next/link'
 
 interface StudentProgress {
-  id: string; name: string; email: string; grade: string
+  id: string; name: string; email: string; avatar?: string; grade: string
   weeklyStudyTime: number; monthlyStudyTime: number
   averageGrade: number | null; completedAssignments: number
   pendingAssignments: number; overdueAssignments: number
@@ -202,8 +202,8 @@ export default function ProgressMonitorPage() {
                 onClick={() => setExpanded(expanded === student.id ? null : student.id)}
               >
                 {/* Avatar */}
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
-                  <span className="text-white text-xs font-bold">{student.name.split(' ').map(n => n[0]).join('')}</span>
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0 overflow-hidden">
+                  {student.avatar ? <img src={student.avatar} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-xs font-bold">{student.name.split(' ').map(n => n[0]).join('')}</span>}
                 </div>
 
                 {/* Name */}

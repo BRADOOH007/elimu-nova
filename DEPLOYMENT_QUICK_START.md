@@ -38,7 +38,7 @@
    DATABASE_URL=your_database_connection_string
    NEXTAUTH_URL=https://your-app.vercel.app
    NEXTAUTH_SECRET=run_this_command_to_generate
-   OPENAI_API_KEY=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
+   OPENAI_API_KEY=sk-or-v1-...your-key-here...
    ```
 
    Generate NEXTAUTH_SECRET:

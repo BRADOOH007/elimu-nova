@@ -1,0 +1,195 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ElimuNova AI API",
+    "version": "1.0.0",
+    "description": "API documentation for ElimuNova AI Education Platform",
+    "contact": {
+      "name": "ElimuNova AI Team",
+      "email": "info@infinititechsolutions.org",
+      "url": "https://infinititechsolutions.org"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.elimunova.ai",
+      "description": "Production server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "SessionAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "next-auth.session-token"
+      },
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "code": { "type": "string" },
+          "details": { "type": "object" }
+        }
+      },
+      "Package": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "price": { "type": "number" },
+          "duration": { "type": "integer" },
+          "maxTeachers": { "type": "integer" },
+          "maxStudents": { "type": "integer" },
+          "features": { "type": "array", "items": { "type": "string" } },
+          "isActive": { "type": "boolean" }
+        }
+      },
+      "Subscription": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "userId": { "type": "string", "nullable": true },
+          "schoolId": { "type": "string", "nullable": true },
+          "packageId": { "type": "string" },
+          "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE", "TRIAL", "CANCELLED", "EXPIRED", "PAST_DUE"] },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" },
+          "trialEndsAt": { "type": "string", "format": "date-time", "nullable": true },
+          "amount": { "type": "number" },
+          "isTrial": { "type": "boolean" },
+          "type": { "type": "string" },
+          "paymentMethod": { "type": "string" },
+          "stripeSubscriptionId": { "type": "string", "nullable": true },
+          "package": { "$ref": "#/components/schemas/Package" }
+        }
+      }
+    },
+    "responses": {
+      "Unauthorized": {
+        "description": "Unauthorized - authentication required",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      },
+      "BadRequest": {
+        "description": "Bad request - validation error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" }
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "summary": "Health check endpoint",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "enum": ["ok", "healthy"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/packages": {
+      "get": {
+        "summary": "List all available subscription packages",
+        "responses": {
+          "200": {
+            "description": "List of packages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Package" }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/subscription/status": {
+      "get": {
+        "summary": "Get current user's subscription status",
+        "security": [{ "SessionAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Subscription status",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Subscription" }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/subscription/create-checkout": {
+      "post": {
+        "summary": "Create Stripe checkout session for subscription",
+        "security": [{ "SessionAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["packageId", "successUrl", "cancelUrl"],
+                "properties": {
+                  "packageId": { "type": "string" },
+                  "successUrl": { "type": "string", "format": "uri" },
+                  "cancelUrl": { "type": "string", "format": "uri" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Checkout session created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "checkoutUrl": { "type": "string", "format": "uri" },
+                    "sessionId": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "400": { "$ref": "#/components/responses/BadRequest" }
+        }
+      }
+    }
+  }
+}

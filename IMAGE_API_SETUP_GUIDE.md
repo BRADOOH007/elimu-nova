@@ -165,7 +165,7 @@ NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="edugenius-ai-secret-key-2024"
 
 # AI Text Generation (OpenRouter)
-OPENAI_API_KEY="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"
+OPENAI_API_KEY="sk-or-v1-...your-key-here..."
 
 # Image Generation APIs (Choose at least one)
 OPENAI_DALLE_API_KEY="sk-proj-xxxxxxxxxxxxxxxxxxxxx"

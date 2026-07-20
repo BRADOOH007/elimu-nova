@@ -11,7 +11,7 @@ I have successfully migrated the entire ElimuNova AI project to use **only OpenA
 ### **1. Environment Variables Updated**
 ```env
 # OpenAI API - Used for all AI generations (text, images, presentations, etc.)
-OPENAI_API_KEY="REDACTED"
+OPENAI_API_KEY="sk-proj-YOUR_OPENAI_API_KEY"
 
 # Legacy API keys (deprecated - now using OpenAI for everything)
 # OPENROUTER_API_KEY="deprecated"

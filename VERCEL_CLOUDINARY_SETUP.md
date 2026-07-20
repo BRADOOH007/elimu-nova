@@ -4,8 +4,8 @@
 
 ```bash
 Cloud Name: df2lyfxgq
-API Key: 232983669665276
-API Secret: g0T5AD6L8YplB0y3FGmErTOOKjE
+API Key: YOUR_CLOUDINARY_API_KEY
+API Secret: YOUR_CLOUDINARY_API_SECRET
 ```
 
 ## 📋 **Step-by-Step: Add to Vercel**
@@ -27,14 +27,14 @@ Environments: ✅ Production ✅ Preview ✅ Development
 **Variable 2:**
 ```
 Name: CLOUDINARY_API_KEY
-Value: 232983669665276
+Value: YOUR_CLOUDINARY_API_KEY
 Environments: ✅ Production ✅ Preview ✅ Development
 ```
 
 **Variable 3:**
 ```
 Name: CLOUDINARY_API_SECRET
-Value: g0T5AD6L8YplB0y3FGmErTOOKjE
+Value: YOUR_CLOUDINARY_API_SECRET
 Environments: ✅ Production ✅ Preview ✅ Development
 ```
 
@@ -43,25 +43,25 @@ Environments: ✅ Production ✅ Preview ✅ Development
 **Core Variables:**
 ```
 Name: OPENAI_API_KEY
-Value: REDACTED
+Value: sk-proj-YOUR_OPENAI_API_KEY
 
 Name: DATABASE_URL
-Value: postgresql://neondb_owner:npg_4dCrxETYqoX9@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
+Value: postgresql://neondb_owner:YOUR_NEON_DB_PASSWORD@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require
 
 Name: NEXTAUTH_URL
 Value: https://elimunova.vercel.app
 
 Name: NEXTAUTH_SECRET
-Value: 0ba9a025a07af88aad2f33092fd51801
+Value: YOUR_NEXTAUTH_SECRET
 ```
 
 **Stripe Variables:**
 ```
 Name: STRIPE_SECRET_KEY
-Value: sk_test_51SVTriCnp0eOHDCgA8wFOWRGyn8IfDhCdbkCNRKzzy1xIfNZoTwTig5pFfNi2wJDqTMLPNzrO0NeZmnggTfmzmJ100L6GBa69G
+Value: sk_test_YOUR_STRIPE_SECRET_KEY
 
 Name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-Value: pk_test_51SVTriCnp0eOHDCgKhUs5mEufeJZhxz8nfGD6TPh95sI2Vtqu53stta43qq8un4zDjVCOmyGga2R3TAXbjNyX9lu00MxUhgh2u
+Value: pk_test_YOUR_STRIPE_PUBLISHABLE_KEY
 ```
 
 ### **4. Redeploy Application**

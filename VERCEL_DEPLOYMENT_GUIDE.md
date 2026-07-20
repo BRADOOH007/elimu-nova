@@ -98,7 +98,7 @@ node_modules/
    DATABASE_URL=your_production_database_url
    NEXTAUTH_URL=https://your-app.vercel.app
    NEXTAUTH_SECRET=generate_new_secret_here
-   OPENAI_API_KEY=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
+    OPENAI_API_KEY=sk-or-v1-...your-key-here...
    OPENAI_DALLE_API_KEY=your_openai_key
    STABILITY_API_KEY=your_stability_key
    REPLICATE_API_TOKEN=your_replicate_token
