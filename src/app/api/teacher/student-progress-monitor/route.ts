@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
         id: student.id,
         name: `${student.user.firstName} ${student.user.lastName}`,
         email: student.user.email,
+        avatar: student.user.avatar,
         grade: student.class?.name || 'Grade 8',
         weeklyStudyTime,
         monthlyStudyTime,

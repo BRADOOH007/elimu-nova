@@ -63,8 +63,8 @@ export default function SuperAdminUserDetailPage() {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
-                {user.firstName[0]}{user.lastName[0]}
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold overflow-hidden">
+                {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : `${user.firstName[0]}${user.lastName[0]}`}
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{user.firstName} {user.lastName}</h1>
