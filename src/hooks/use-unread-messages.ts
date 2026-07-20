@@ -39,11 +39,10 @@ export function useUnreadMessages() {
   const fetchNotificationCount = useCallback(async () => {
     if (!session?.user?.id) return
     try {
-      const res = await fetch(`/api/notifications?userId=${session.user.id}&limit=100`)
+      const res = await fetch(`/api/notifications?countOnly=true`)
       if (res.ok) {
-        const notifs = await res.json()
-        const count = Array.isArray(notifs) ? notifs.filter((n: any) => !n.isRead).length : 0
-        setNotificationUnread(count)
+        const d = await res.json()
+        setNotificationUnread(d.count || 0)
       }
     } catch { /* silent */ }
   }, [session])
@@ -73,5 +72,5 @@ export function useUnreadMessages() {
     }
   }, [fetchCount, fetchNotificationCount])
 
-  return { unreadCount, loading, totalUnread: unreadCount + notificationUnread }
+  return { unreadCount, loading, totalUnread: unreadCount + notificationUnread, refetch: fetchNotificationCount }
 }
