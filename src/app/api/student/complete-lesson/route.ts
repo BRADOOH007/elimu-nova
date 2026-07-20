@@ -15,9 +15,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'lessonId is required' }, { status: 400 })
     }
 
-    const student = await prisma.student.findUnique({ where: { userId: session.user.id } })
+    let student = await prisma.student.findUnique({ where: { userId: session.user.id } })
     if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+      student = await prisma.student.create({ data: { userId: session.user.id } })
     }
 
     const now = new Date()

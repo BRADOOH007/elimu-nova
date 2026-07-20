@@ -10,13 +10,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get teacher profile
-    const teacher = await withRetry(() => prisma.teacher.findUnique({
+    // Get or create teacher profile
+    let teacher = await withRetry(() => prisma.teacher.findUnique({
       where: { userId: session.user.id }
     }));
 
     if (!teacher) {
-      return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });
+      teacher = await prisma.teacher.create({ data: { userId: session.user.id } });
     }
 
     // Get lesson plans for this teacher
@@ -56,13 +56,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get teacher profile
-    const teacher = await prisma.teacher.findUnique({
+    // Get or create teacher profile
+    let teacher = await prisma.teacher.findUnique({
       where: { userId: session.user.id }
     });
 
     if (!teacher) {
-      return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });
+      teacher = await prisma.teacher.create({ data: { userId: session.user.id } });
     }
 
     const body = await req.json();

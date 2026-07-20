@@ -47,8 +47,10 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const teacher = await (prisma as any).teacher.findUnique({ where: { userId: session.user.id } })
-    if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
+    let teacher = await (prisma as any).teacher.findUnique({ where: { userId: session.user.id } })
+    if (!teacher) {
+      teacher = await (prisma as any).teacher.create({ data: { userId: session.user.id } })
+    }
 
     const {
       assignmentId, title, subject, grade, term, type, description,

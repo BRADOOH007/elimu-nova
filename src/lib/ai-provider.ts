@@ -198,12 +198,14 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   }
 
   // 5. OpenRouter (or direct OpenAI via same key)
-  if (OPENROUTER_KEY) {
-    const isOR  = OPENROUTER_KEY.startsWith('sk-or-')
+  // Also try OPENAI_KEY if it starts with 'sk-or-' (OpenRouter key stored in OPENAI_API_KEY)
+  const effectiveORKey = OPENROUTER_KEY || (OPENAI_KEY?.startsWith('sk-or-') ? OPENAI_KEY : undefined)
+  if (effectiveORKey) {
+    const isOR  = effectiveORKey.startsWith('sk-or-')
     const url   = isOR ? OPENROUTER_URL : OPENAI_URL
     const model = isOR ? openrouterModel : openaiModel
     try {
-      const { content, tokensUsed } = await callHTTP(url, OPENROUTER_KEY, model, messages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(url, effectiveORKey, model, messages, maxTokens, temperature)
       if (content) return { content, provider: isOR ? 'openrouter' : 'openai', model, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -212,8 +214,8 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     }
   }
 
-  // 6. OpenAI direct (only if different key from OPENROUTER_KEY)
-  if (OPENAI_KEY && OPENAI_KEY !== OPENROUTER_KEY && !OPENAI_KEY.startsWith('sk-or-')) {
+  // 6. OpenAI direct (only if a different, non-OpenRouter key remains)
+  if (OPENAI_KEY && !OPENAI_KEY.startsWith('sk-or-') && OPENAI_KEY !== OPENROUTER_KEY) {
     try {
       const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, openaiModel, messages, maxTokens, temperature)
       if (content) return { content, provider: 'openai', model: openaiModel, tokensUsed, latencyMs: Date.now() - start }
