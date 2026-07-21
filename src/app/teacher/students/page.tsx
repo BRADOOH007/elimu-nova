@@ -45,6 +45,7 @@ interface Student {
   address?: string
   status: string
   joinDate: string
+  subjects?: string[]
   class?: {
     id: string
     name: string
@@ -282,7 +283,7 @@ export default function TeacherStudentsPage() {
         toast({
           title: "Student Deleted Successfully",
           description: "The student has been permanently removed.",
-          variant: "success",
+          variant: "default",
         })
       } else {
         const error = await response.json()
@@ -351,24 +352,24 @@ export default function TeacherStudentsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-blue-50 to-purple-50">
-          <TabsTrigger value="students" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+        <TabsList className="w-full overflow-x-auto flex bg-gradient-to-r from-blue-50 to-purple-50">
+          <TabsTrigger value="students" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
             <Users className="mr-2 h-4 w-4" />
             Students
           </TabsTrigger>
-          <TabsTrigger value="classes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="classes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
             <School className="mr-2 h-4 w-4" />
             Classes
           </TabsTrigger>
-          <TabsTrigger value="attendance" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="attendance" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
             <CheckCircle className="mr-2 h-4 w-4" />
             Attendance
           </TabsTrigger>
-          <TabsTrigger value="progress" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="progress" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
             <Activity className="mr-2 h-4 w-4" />
             Progress
           </TabsTrigger>
-          <TabsTrigger value="parents" className="data-[state=active]:bg-white data-[state=active]:shadow-sm">
+          <TabsTrigger value="parents" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
             <User className="mr-2 h-4 w-4" />
             Parents
           </TabsTrigger>
@@ -458,14 +459,14 @@ export default function TeacherStudentsPage() {
           ) : (
             <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
               <CardContent className="p-0">
-                <div className="overflow-hidden">
-                  <table className="w-full">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
                     <thead>
                       <tr className="">
                         <th className="font-semibold text-gray-900 text-left p-4">Student</th>
                         <th className="font-semibold text-gray-900 text-left p-4">Class</th>
                         <th className="font-semibold text-gray-900 text-left p-4">Status</th>
-                        <th className="font-semibold text-gray-900 text-left p-4">Join Date</th>
+                        <th className="font-semibold text-gray-900 text-left p-4 hidden md:table-cell">Join Date</th>
                         <th className="font-semibold text-gray-900 text-left p-4">Actions</th>
                       </tr>
                     </thead>
@@ -496,6 +497,13 @@ export default function TeacherStudentsPage() {
                             ) : (
                               <span className="text-gray-400">No class assigned</span>
                             )}
+                            {student.subjects && student.subjects.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {student.subjects.map(s => (
+                                  <span key={s} className="inline-block px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[10px] font-medium">{s}</span>
+                                ))}
+                              </div>
+                            )}
                           </td>
                           <td className="p-4">
                             <Badge 
@@ -513,7 +521,7 @@ export default function TeacherStudentsPage() {
                               {student.status}
                             </Badge>
                           </td>
-                          <td className="p-4">
+                          <td className="p-4 hidden md:table-cell">
                             <div className="flex items-center text-sm text-gray-600">
                               <Calendar className="mr-1 h-4 w-4" />
                               {new Date(student.joinDate).toLocaleDateString()}
@@ -815,6 +823,7 @@ export default function TeacherStudentsPage() {
           onClose={() => setShowEditModal(false)}
           onSuccess={handleEditSuccess}
           student={selectedStudent}
+          classes={classes}
         />
       )}
 

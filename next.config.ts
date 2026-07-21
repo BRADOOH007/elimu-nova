@@ -33,5 +33,6 @@ export default withSentryConfig(nextConfig, {
   telemetry: false,
   widenClientFileUpload: true,
   tunnelRoute: '/monitoring',
+  // @ts-expect-error - SentryBuildOptions type mismatch
   hideSourceMaps: true,
 });

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { v2 as cloudinary } from 'cloudinary';
 import { generateAIContent } from '@/lib/openrouter-ai';
+import { PDFParse } from 'pdf-parse';
+import * as mammoth from 'mammoth';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -76,10 +78,30 @@ export async function POST(req: NextRequest) {
       stream.end(buffer);
     });
 
-    // Extract text (for text files)
+    // Extract text from uploaded document
     let extractedText: string | null = null;
     if (file.type === 'text/plain') {
       extractedText = buffer.toString('utf-8');
+    } else if (file.type === 'application/pdf') {
+      try {
+        const pdf = new PDFParse({ data: buffer });
+        const result = await pdf.getText({});
+        extractedText = result.text;
+      } catch (parseErr) {
+        console.warn('PDF text extraction failed:', parseErr);
+      }
+    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.type === 'application/msword') {
+      try {
+        const { value } = await mammoth.extractRawText({ buffer });
+        extractedText = value;
+      } catch (parseErr) {
+        console.warn('Word document extraction failed:', parseErr);
+      }
+    }
+
+    // Truncate extracted text to avoid exceeding token limits
+    if (extractedText && extractedText.length > 4000) {
+      extractedText = extractedText.slice(0, 4000) + '\n... [truncated]';
     }
 
     // Prepare AI prompt to parse exam questions
@@ -89,7 +111,8 @@ Subject: ${subject}
 Grade: ${grade}
 Document: ${file.name}
 
-${extractedText ? `Document Content:\n${extractedText}` : 'Please use the uploaded document to extract questions.'}
+Document Content:
+${extractedText || '[No text could be extracted from this document type]'}
 
 Please extract:
 1. All questions from the exam

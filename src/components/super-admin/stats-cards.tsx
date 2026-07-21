@@ -92,7 +92,7 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
         const data = stats?.[cfg.key]
         const numericValue = data
           ? cfg.key === "revenue"
-            ? parseInt(data.total.replace(/[^0-9]/g, "")) || 0
+            ? parseInt(String(data.total).replace(/[^0-9]/g, "")) || 0
             : data.total
           : 0
         const displayValue = data
@@ -116,7 +116,7 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
             </div>
             <div className="text-2xl md:text-3xl font-bold text-gray-900 mb-1.5 font-mono tracking-tight">
               {showAnimated && data ? (
-                <AnimatedCounter value={numericValue} />
+                <AnimatedCounter value={Number(numericValue)} />
               ) : (
                 displayValue
               )}

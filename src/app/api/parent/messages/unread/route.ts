@@ -11,9 +11,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const parent = await prisma.parent.findUnique({ where: { userId: session.user.id } })
+    if (!parent) {
+      return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
+    }
+
     const unreadCount = await prisma.message.count({
       where: {
-        recipientId: session.user.id,
+        recipientId: parent.id,
         recipientType: 'PARENT',
         isRead: false
       }

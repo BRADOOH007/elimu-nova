@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { BookOpen, Clipboard, Download, FileText, Loader2, Sparkles } from 'lucide-react'
+import { BookOpen, Clipboard, Download, FileText, Loader2, Save, Sparkles, Trash2, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -148,6 +148,44 @@ export default function TeacherLessonNotesPage() {
     URL.revokeObjectURL(url)
   }
 
+  const [savedNotes, setSavedNotes] = useState<Array<{ id: string; title: string; date: string; data: NotesData }>>([])
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('elimunova_saved_notes')
+      if (stored) setSavedNotes(JSON.parse(stored))
+    } catch {}
+  }, [])
+
+  const persistSavedNotes = (updated: typeof savedNotes) => {
+    setSavedNotes(updated)
+    localStorage.setItem('elimunova_saved_notes', JSON.stringify(updated))
+  }
+
+  const saveNotes = () => {
+    if (!notes) return
+    const entry = {
+      id: Date.now().toString(),
+      title: notes.title || selectedLessonPlan?.title || 'Lesson Notes',
+      date: new Date().toLocaleString(),
+      data: notes,
+    }
+    const updated = [entry, ...savedNotes].slice(0, 20)
+    persistSavedNotes(updated)
+    setMessage('Notes saved!')
+  }
+
+  const deleteSavedNote = (id: string) => {
+    persistSavedNotes(savedNotes.filter(n => n.id !== id))
+  }
+
+  const loadSavedNote = (entry: typeof savedNotes[number]) => {
+    setNotes(entry.data)
+    const plan = lessonPlans.find(p => p.title === entry.data.title)
+    if (plan) setSelectedLessonPlanId(plan.id)
+    setMessage('Loaded saved notes.')
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -214,6 +252,10 @@ export default function TeacherLessonNotesPage() {
               <CardDescription>Review, copy, or download the notes before sharing with students.</CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={saveNotes} disabled={!notesText}>
+                <Save className="mr-2 h-4 w-4" />
+                Save
+              </Button>
               <Button variant="outline" onClick={copyNotes} disabled={!notesText}>
                 <Clipboard className="mr-2 h-4 w-4" />
                 Copy
@@ -255,6 +297,33 @@ export default function TeacherLessonNotesPage() {
           )}
         </CardContent>
       </Card>
+
+      {savedNotes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Clock className="h-4 w-4" />
+              Saved Notes ({savedNotes.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {savedNotes.map(entry => (
+                <div key={entry.id} className="group relative border border-slate-200 rounded-xl p-3 hover:border-blue-300 transition-colors">
+                  <button onClick={() => loadSavedNote(entry)} className="text-left w-full">
+                    <p className="text-sm font-medium text-slate-800 line-clamp-1">{entry.title}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{entry.date}</p>
+                  </button>
+                  <button onClick={() => deleteSavedNote(entry.id)}
+                    className="absolute top-2 right-2 p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-50 transition-all">
+                    <Trash2 className="h-3 w-3 text-red-400" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

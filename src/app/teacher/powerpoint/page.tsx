@@ -629,54 +629,53 @@ export default function PowerPointPage() {
       </Tabs>
 
       {/* ── Share Modal ─────────────────────────────────────────────── */}
-      {showShareModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowShareModal(false)}>
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-slate-900 mb-1">Share with Students</h2>
-            <p className="text-sm text-slate-500 mb-4">Students will see this presentation in their Resources tab.</p>
+      <Dialog open={showShareModal} onOpenChange={setShowShareModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share with Students</DialogTitle>
+            <DialogDescription>Students will see this presentation in their Resources tab.</DialogDescription>
+          </DialogHeader>
 
-            {/* Class selector */}
-            <div className="mb-3">
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Share with entire class</label>
-              <select value={selClass} onChange={e => setSelClass(e.target.value)}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="__none__">No class (individual students)</option>
-                {shareClasses.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.name} — {c.grade}</option>
-                ))}
-              </select>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Share with entire class</Label>
+              <Select value={selClass} onValueChange={v => setSelClass(v as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No class (individual students)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">No class (individual students)</SelectItem>
+                  {shareClasses.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name} — {c.grade}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Individual students */}
             {selClass === '__none__' && shareStudents.length > 0 && (
-              <div className="mb-3">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Or select individual students</label>
+              <div className="space-y-2">
+                <Label>Or select individual students</Label>
                 <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl divide-y">
                   {shareStudents.map((s: any) => (
-                    <label key={s.id} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 cursor-pointer">
-                      <input type="checkbox" checked={selStudents.includes(s.id)}
-                        onChange={e => setSelStudents(prev => e.target.checked ? [...prev, s.id] : prev.filter(x => x !== s.id))}
-                        className="rounded" />
-                      <span className="text-sm">{s.name}</span>
-                    </label>
+                    <Label key={s.id} className="flex items-center gap-3 px-3 py-2 hover:bg-slate-50 cursor-pointer text-sm">
+                      <Checkbox checked={selStudents.includes(s.id)}
+                        onCheckedChange={checked => setSelStudents(prev => checked ? [...prev, s.id] : prev.filter(x => x !== s.id))} />
+                      {s.name}
+                    </Label>
                   ))}
                 </div>
               </div>
             )}
-
-            <div className="flex gap-3 mt-5">
-              <button onClick={() => setShowShareModal(false)}
-                className="flex-1 h-10 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50">
-                Cancel
-              </button>
-              <button onClick={shareWithStudents} disabled={isSharing || (selClass === '__none__' && selStudents.length === 0)}
-                className="flex-1 h-10 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2">
-                {isSharing ? <><Loader2 className="h-4 w-4 animate-spin" /> Sharing…</> : <><GraduationCap className="h-4 w-4" /> Share</>}
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+
+          <DialogFooter className="flex gap-3 sm:gap-3">
+            <Button variant="outline" onClick={() => setShowShareModal(false)} className="flex-1">Cancel</Button>
+            <Button onClick={shareWithStudents} disabled={isSharing || (selClass === '__none__' && selStudents.length === 0)} className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600">
+              {isSharing ? <><Loader2 className="h-4 w-4 animate-spin mr-2" /> Sharing…</> : <><GraduationCap className="h-4 w-4 mr-2" /> Share</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

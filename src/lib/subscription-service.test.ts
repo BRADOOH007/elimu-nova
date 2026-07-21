@@ -156,7 +156,7 @@ describe('subscription-service', () => {
         customers: { create: vi.fn().mockResolvedValue({ id: 'cus_1' }) },
         checkout: { sessions: { create: vi.fn().mockResolvedValue({ id: 'cs_1', url: 'https://checkout.stripe.com' }) } },
       }
-      ;(await import('@/lib/stripe')).getStripeAsync.mockResolvedValue(mockStripe)
+      ;((await import('@/lib/stripe')) as any).getStripeAsync.mockResolvedValue(mockStripe)
 
       const result = await createCheckoutSession('pkg-1', 'https://success.com', 'https://cancel.com', 'user-1')
 

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import ComposeMessageModal from '@/components/modals/compose-message-modal'
 import { useSSE } from '@/hooks/use-sse'
+import { ClientDate, ClientDateTime } from '@/components/ui/client-date'
 
 const NotifTab = dynamic(() => import('@/app/teacher/notifications/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 const DiscTab  = dynamic(() => import('@/app/teacher/discussions/page'),   { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
@@ -194,7 +195,7 @@ export default function TeacherMessagesPage() {
                     <div className="flex items-center gap-1 shrink-0">
                       {!msg.read&&!msg.isSent&&<span className="w-2 h-2 bg-blue-500 rounded-full"/>}
                       {msg.isSent&&<Badge className="text-[9px] h-4 bg-green-100 text-green-700 px-1">Sent</Badge>}
-                      <span className="text-[10px] text-slate-400">{new Date(msg.timestamp).toLocaleDateString()}</span>
+                      <ClientDate date={msg.timestamp} className="text-[10px] text-slate-400" />
                     </div>
                   </div>
                   <p className={`text-xs truncate mb-0.5 ${!msg.read&&!msg.isSent?'font-semibold text-slate-800':'text-slate-600'}`}>{msg.subject}</p>
@@ -221,7 +222,7 @@ export default function TeacherMessagesPage() {
                     <div className="flex items-center gap-2 text-xs text-slate-400 shrink-0">
                       {selected.read && <span className="flex items-center gap-1 text-green-600"><CheckCheck className="h-3.5 w-3.5"/>Read</span>}
                       <Clock className="h-3.5 w-3.5"/>
-                      {new Date(selected.timestamp).toLocaleString()}
+                      <ClientDateTime date={selected.timestamp} />
                     </div>
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 mt-3">{selected.subject}</h2>

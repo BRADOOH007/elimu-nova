@@ -10,6 +10,7 @@ import {
   MessageSquare, Send, Search, User, Clock, Loader2, Reply, CheckCheck
 } from 'lucide-react'
 import ComposeMessageModal from '@/components/modals/compose-message-modal'
+import { ClientDate, ClientDateTime } from '@/components/ui/client-date'
 
 interface Message {
   id: string
@@ -167,7 +168,7 @@ export default function StudentMessagesPage() {
                       </span>
                       <div className="flex items-center gap-1 shrink-0">
                         {!msg.read && <span className="w-2 h-2 bg-blue-500 rounded-full" />}
-                        <span className="text-[10px] text-slate-400">{new Date(msg.timestamp).toLocaleDateString()}</span>
+                        <ClientDate date={msg.timestamp} className="text-[10px] text-slate-400" />
                       </div>
                     </div>
                     <p className={`text-xs truncate mb-0.5 ${!msg.read ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>
@@ -196,7 +197,7 @@ export default function StudentMessagesPage() {
                     </div>
                     <div className="flex items-center gap-1 text-xs text-slate-400">
                       <Clock className="h-3.5 w-3.5" />
-                      {new Date(selected.timestamp).toLocaleString()}
+                      <ClientDateTime date={selected.timestamp} />
                     </div>
                   </div>
                   <h2 className="text-lg font-bold text-slate-900 mt-3">{selected.subject}</h2>

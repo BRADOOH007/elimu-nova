@@ -27,6 +27,7 @@ import {
   FileText,
   BookOpen,
   Brain,
+  Eye,
   Loader2,
   ArrowLeft,
   Save,
@@ -371,7 +372,7 @@ export default function ExamWizardPage() {
                           placeholder={`Option ${String.fromCharCode(65 + oi)}`}
                           className="flex-1 h-8 text-sm px-2 border border-slate-200 rounded-lg bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           disabled={q.type === 'true_false'} />
-                        {q.type === 'multiple_choice' && q.options.length > 2 && (
+                        {q.type === 'multiple_choice' && (q.options?.length ?? 0) > 2 && (
                           <button onClick={() => removeOption(q.id, oi)} className="p-0.5 text-red-300 hover:text-red-500">
                             <Trash2 className="h-3 w-3" />
                           </button>

@@ -100,7 +100,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-white font-sans">
+    <div className="min-h-screen bg-white font-sans" suppressHydrationWarning>
       {/* ── NAVBAR ── */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -533,7 +533,7 @@ export default function Home() {
                     "Before Elimu Nova, I spent weekends preparing lessons and marking. Now I finish everything during school hours and actually have time for my students."
                   </p>
                   <footer className="mt-2 text-purple-400 font-semibold text-sm">
-                    — Sarah M., Science Teacher · Hopewell STEM Academy
+                    — Kairu Samuel, Science Teacher · Hopewell STEM Academy
                   </footer>
                 </blockquote>
               </div>
@@ -949,8 +949,8 @@ export default function Home() {
               {
                 title: "Curricula",
                 links: [
-                  { label: "CBC (PP1–Grade 12", to: "/contact" },
-                  { label: "8-4-4 (Form 1–4", to: "/contact" },
+                  { label: "CBC (PP1–Grade 12)", to: "/contact" },
+                  { label: "8-4-4 (Form 1–4)", to: "/contact" },
                   { label: "Cambridge Int'l", to: "/contact" },
                   { label: "TVET & STEM", to: "/contact" },
                 ],

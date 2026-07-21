@@ -17,6 +17,7 @@ export interface RateLimitResult {
   limit: number
   remaining: number
   resetTime: number
+  resetInSec: number
 }
 
 const DEFAULT_CONFIG = {
@@ -38,14 +39,17 @@ export async function checkRateLimit(
     const current = await redis.get(fullKey)
     const count = current ? parseInt(current as string, 10) : 0
 
+    const makeResult = (allowed: boolean, remaining: number, ttl: number): RateLimitResult => ({
+      allowed,
+      limit: finalConfig.maxRequests,
+      remaining,
+      resetTime: now + ttl * 1000,
+      resetInSec: ttl,
+    })
+
     if (count >= finalConfig.maxRequests) {
       const ttl = await redis.ttl(fullKey)
-      return {
-        allowed: false,
-        limit: finalConfig.maxRequests,
-        remaining: 0,
-        resetTime: now + (ttl > 0 ? ttl : windowSec) * 1000,
-      }
+      return makeResult(false, 0, ttl > 0 ? ttl : windowSec)
     }
 
     const newCount = await redis.incr(fullKey)
@@ -54,12 +58,7 @@ export async function checkRateLimit(
     }
 
     const ttl = await redis.ttl(fullKey)
-    return {
-      allowed: true,
-      limit: finalConfig.maxRequests,
-      remaining: finalConfig.maxRequests - newCount,
-      resetTime: now + (ttl > 0 ? ttl : windowSec) * 1000,
-    }
+    return makeResult(true, finalConfig.maxRequests - newCount, ttl > 0 ? ttl : windowSec)
   } catch (error) {
     console.error('Rate limit check failed:', error)
     return {
@@ -67,6 +66,7 @@ export async function checkRateLimit(
       limit: finalConfig.maxRequests,
       remaining: finalConfig.maxRequests - 1,
       resetTime: now + finalConfig.windowMs,
+      resetInSec: Math.ceil(finalConfig.windowMs / 1000),
     }
   }
 }

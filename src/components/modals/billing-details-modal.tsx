@@ -204,7 +204,7 @@ export function BillingDetailsModal({
         onBillingUpdated(updatedBilling)
         setEditing(false)
         toast({
-          variant: "success",
+          variant: "default",
           title: "Billing Updated",
           description: "Billing information has been updated successfully!",
         })
@@ -231,7 +231,7 @@ export function BillingDetailsModal({
   const handleDelete = async () => {
     if (!billingId) return
 
-    // Confirmation removed - using toast notifications only
+    if (!confirm('Delete this billing record? This cannot be undone.')) return
 
     setDeleting(true)
     try {
@@ -243,7 +243,7 @@ export function BillingDetailsModal({
         onBillingDeleted(billingId)
         onClose()
         toast({
-          variant: "success",
+          variant: "default",
           title: "Billing Deleted",
           description: "Billing record has been deleted successfully!",
         })

@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
           where: { userId: session.user.id },
           select: { [templateField]: true },
         })
-        templateText = teacher?.[templateField as keyof typeof teacher] as string | null || null
+        const teacherField = teacher?.[templateField as keyof typeof teacher]
+        templateText = typeof teacherField === 'string' ? teacherField : null
       }
     }
 

@@ -4,11 +4,11 @@ import { useToast } from '@/hooks/use-toast'
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { Radio, MessageSquare, Send, Users, Loader2, Sparkles, Eye } from 'lucide-react'
+import { Radio, MessageSquare, Send, Users, Loader2, Sparkles, Eye, Video } from 'lucide-react'
 
 interface LiveSession {
   id: string; title: string; subject: string; status: string
-  metadata: { boardContent: string; chat: ChatMsg[]; participants: Participant[]; sessionCode: string; startedAt: string }
+  metadata: { boardContent: string; chat: ChatMsg[]; participants: Participant[]; sessionCode: string; startedAt: string; meetingLink?: string }
   teacher?: { user: { firstName: string; lastName: string } }
 }
 interface ChatMsg { userId: string; name: string; message: string; ts: string; isAI?: boolean }
@@ -158,10 +158,18 @@ export default function StudentLiveClass() {
                     <p className="text-xs text-slate-400">{s.subject} · {s.metadata?.participants?.length || 0} joined</p>
                   </div>
                 </div>
-                <button onClick={() => joinSession(s)}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                  Join Now
-                </button>
+                <div className="flex items-center gap-2">
+                  {s.metadata?.meetingLink && (
+                    <a href={s.metadata.meetingLink} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                      <Video className="h-4 w-4" /> Join Video
+                    </a>
+                  )}
+                  <button onClick={() => joinSession(s)}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                    Join Now
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -181,9 +189,17 @@ export default function StudentLiveClass() {
           </span>
           <span className="font-semibold text-slate-800 text-sm">{joinedSession.title}</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <Users className="h-3.5 w-3.5" />
-          {joinedSession.metadata?.participants?.length || 0} students joined
+        <div className="flex items-center gap-2">
+          {joinedSession.metadata?.meetingLink && (
+            <a href={joinedSession.metadata.meetingLink} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
+              <Video className="h-3.5 w-3.5" /> Join Video
+            </a>
+          )}
+          <span className="text-xs text-slate-500 flex items-center gap-1">
+            <Users className="h-3.5 w-3.5" />
+            {joinedSession.metadata?.participants?.length || 0} joined
+          </span>
         </div>
       </div>
 

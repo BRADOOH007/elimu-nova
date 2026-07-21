@@ -316,14 +316,14 @@ export default function HopePage() {
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 overflow-hidden min-h-0">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 overflow-hidden min-h-0">
         {/* Chat Interface */}
-        <div className="lg:col-span-3 overflow-hidden min-h-0">
-          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0 h-full flex flex-col overflow-hidden">
-            <CardHeader className="border-0">
+        <div className="lg:col-span-3 xl:col-span-4 overflow-hidden min-h-0 flex flex-col">
+          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0 flex flex-col flex-1 overflow-hidden min-h-0">
+            <CardHeader className="border-0 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <Bot className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -335,7 +335,7 @@ export default function HopePage() {
                   variant="outline"
                   size="sm"
                   onClick={clearChat}
-                  className="text-gray-500 hover:text-red-600"
+                  className="text-gray-500 hover:text-red-600 flex-shrink-0"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Clear Chat
@@ -354,7 +354,7 @@ export default function HopePage() {
                     key={message.id}
                     className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`flex items-start space-x-3 max-w-[80%] ${
+                    <div className={`flex items-start space-x-3 max-w-[85%] md:max-w-[75%] ${
                       message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
                     }`}>
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -439,7 +439,7 @@ export default function HopePage() {
               )}
 
               {/* Input Area */}
-              <div className="border-0 p-4">
+              <div className="border-0 p-4 flex-shrink-0">
                 <div className="flex items-center space-x-3">
                   <div className="flex-1 relative">
                     <Input
@@ -482,7 +482,7 @@ export default function HopePage() {
                   <Button
                     onClick={handleSendMessage}
                     disabled={!inputMessage.trim() || isLoading}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-6 flex-shrink-0"
                   >
                     <Send className="w-4 h-4" />
                   </Button>
@@ -493,44 +493,40 @@ export default function HopePage() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6 overflow-y-auto min-h-0">
+        <div className="hidden lg:flex lg:col-span-2 xl:col-span-1 flex-col gap-4 overflow-y-auto min-h-0">
           {/* Quick Actions */}
-          <Card className="bg-gradient-to-br from-white via-green-50 to-emerald-50 shadow-lg backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <Sparkles className="w-5 h-5 text-green-600" />
+          <Card className="bg-gradient-to-br from-white via-green-50 to-emerald-50 shadow-lg backdrop-blur-sm border-0 flex-shrink-0">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center space-x-2">
+                <Sparkles className="w-4 h-4 text-green-600" />
                 <span>Quick Actions</span>
               </CardTitle>
-              <CardDescription>Common teaching tasks</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {quickActions.map((action, index) => (
                 <Button
                   key={index}
                   variant="outline"
-                  className="w-full justify-start text-left h-auto p-3 bg-white/70 hover:bg-white/90"
+                  size="sm"
+                  className="w-full justify-start text-left h-auto py-2 px-3 bg-white/70 hover:bg-white/90"
                   onClick={() => setInputMessage(action.prompt)}
                 >
-                  <action.icon className="w-4 h-4 mr-3 text-green-600" />
-                  <div>
-                    <div className="font-medium text-sm">{action.title}</div>
-                    <div className="text-xs text-gray-500 mt-1">Click to use</div>
-                  </div>
+                  <action.icon className="w-3.5 h-3.5 mr-2 text-green-600 flex-shrink-0" />
+                  <span className="text-xs font-medium truncate">{action.title}</span>
                 </Button>
               ))}
             </CardContent>
           </Card>
 
           {/* Chat History */}
-          <Card className="bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-lg backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <History className="w-5 h-5 text-purple-600" />
+          <Card className="bg-gradient-to-br from-white via-purple-50 to-pink-50 shadow-lg backdrop-blur-sm border-0 flex-1 flex flex-col overflow-hidden min-h-0">
+            <CardHeader className="pb-3 flex-shrink-0">
+              <CardTitle className="text-base flex items-center space-x-2">
+                <History className="w-4 h-4 text-purple-600" />
                 <span>Recent Chats</span>
               </CardTitle>
-              <CardDescription>Your conversation history</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-y-auto min-h-0">
               {chatHistory.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-4">
                   No recent conversations
@@ -559,21 +555,21 @@ export default function HopePage() {
           </Card>
 
           {/* AI Capabilities */}
-          <Card className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 shadow-lg backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center space-x-2">
-                <Brain className="w-5 h-5 text-blue-600" />
+          <Card className="bg-gradient-to-br from-white via-blue-50 to-indigo-50 shadow-lg backdrop-blur-sm border-0 flex-shrink-0">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center space-x-2">
+                <Brain className="w-4 h-4 text-blue-600" />
                 <span>AI Capabilities</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="text-sm text-gray-600">
-                <p>• Lesson Planning</p>
-                <p>• Curriculum Design</p>
-                <p>• Assessment Ideas</p>
-                <p>• Student Engagement</p>
-                <p>• Educational Strategies</p>
-                <p>• Content Creation</p>
+            <CardContent className="space-y-1">
+              <div className="text-sm text-gray-600 grid grid-cols-2 gap-x-2">
+                <p className="truncate">• Lesson Planning</p>
+                <p className="truncate">• Curriculum Design</p>
+                <p className="truncate">• Assessment Ideas</p>
+                <p className="truncate">• Student Engagement</p>
+                <p className="truncate">• Educational Strategies</p>
+                <p className="truncate">• Content Creation</p>
               </div>
             </CardContent>
           </Card>

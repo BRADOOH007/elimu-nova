@@ -102,8 +102,10 @@ export default function AcademicsPage() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const [activitiesRes] = await Promise.all([
-        fetch('/api/school-admin/activities')
+      const [activitiesRes, meetingsRes, reportsRes] = await Promise.all([
+        fetch('/api/school-admin/activities'),
+        fetch('/api/school-admin/meetings'),
+        fetch('/api/school-admin/reports')
       ])
 
       if (activitiesRes.ok) {
@@ -111,16 +113,15 @@ export default function AcademicsPage() {
         setActivities(data.activities || [])
       }
 
-      // Mock meetings and reports for now
-      setMeetings([
-        { id: '1', title: 'Parent-Teacher Meeting', date: '2026-06-20', time: '10:00 AM', location: 'Room 101', attendees: '20', status: 'Scheduled' },
-        { id: '2', title: 'Staff Meeting', date: '2026-06-21', time: '02:00 PM', location: 'Main Hall', attendees: '15', status: 'Scheduled' }
-      ])
+      if (meetingsRes.ok) {
+        const data = await meetingsRes.json()
+        setMeetings(data.meetings || [])
+      }
 
-      setReports([
-        { id: '1', title: 'Term 1 Performance Report', type: 'Academic', date: '2026-06-15', status: 'Generated' },
-        { id: '2', title: 'Attendance Report', type: 'Attendance', date: '2026-06-10', status: 'Generated' }
-      ])
+      if (reportsRes.ok) {
+        const data = await reportsRes.json()
+        setReports(data.reports || [])
+      }
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -171,7 +172,7 @@ export default function AcademicsPage() {
     try {
       const response = await fetch(`/api/school-admin/activities/${activityId}`, { method: 'DELETE' })
       if (response.ok) {
-        toast({ title: 'Activity deleted successfully', variant: 'success' })
+        toast({ title: 'Activity deleted successfully' })
         fetchData()
       }
     } catch (error) {

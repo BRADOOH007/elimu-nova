@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, ArrowLeft, Save } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { Loader2, ArrowLeft, Save, Eye, Edit3, BookOpen, GraduationCap, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function EditLessonPlanPage() {
@@ -15,12 +17,14 @@ export default function EditLessonPlanPage() {
   const { toast } = useToast()
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
 
-  const [loading, setLoading]   = useState(true)
-  const [saving,  setSaving]    = useState(false)
-  const [title,   setTitle]     = useState('')
-  const [subject, setSubject]   = useState('')
-  const [grade,   setGrade]     = useState('')
-  const [content, setContent]   = useState('')
+  const [loading, setLoading]     = useState(true)
+  const [saving,  setSaving]      = useState(false)
+  const [title,   setTitle]       = useState('')
+  const [subject, setSubject]     = useState('')
+  const [grade,   setGrade]       = useState('')
+  const [content, setContent]     = useState('')
+  const [mode,    setMode]        = useState<'preview' | 'edit'>('preview')
+  const [hasImageBank, setHasImageBank] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -32,7 +36,8 @@ export default function EditLessonPlanPage() {
         setSubject(lp.subject || '')
         setGrade(lp.grade || '')
         const raw = lp.content
-        setContent(typeof raw === 'string' ? raw : (raw?.generatedContent || raw?.content || JSON.stringify(raw, null, 2)))
+        setContent(typeof raw === 'string' ? raw : (raw?.generatedContent || raw?.content || ''))
+        setHasImageBank(lp.imageBankEnabled || false)
       })
       .catch(() => toast({ variant: 'destructive', title: 'Failed to load lesson plan' }))
       .finally(() => setLoading(false))
@@ -47,8 +52,8 @@ export default function EditLessonPlanPage() {
         body: JSON.stringify({ title, subject, grade, content: { generatedContent: content } }),
       })
       if (!r.ok) { const d = await r.json(); throw new Error(d.error) }
-      toast({ title: '✅ Lesson plan updated!' })
-      router.push('/teacher/lesson-plans')
+      toast({ title: 'Lesson plan saved!' })
+      router.push(`/teacher/lesson-plans/${id}`)
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Save failed', description: e.message })
     } finally {
@@ -66,54 +71,75 @@ export default function EditLessonPlanPage() {
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />Back
-        </Button>
-        <h1 className="text-2xl font-bold text-gray-900">Edit Lesson Plan</h1>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" onClick={() => router.push(`/teacher/lesson-plans/${id}`)}>
+            <ArrowLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+          <h1 className="text-xl font-bold text-gray-900">Edit Lesson Plan</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant={mode === 'preview' ? 'default' : 'outline'} size="sm" onClick={() => setMode('preview')}>
+            <Eye className="h-4 w-4 mr-1" /> Preview
+          </Button>
+          <Button variant={mode === 'edit' ? 'default' : 'outline'} size="sm" onClick={() => setMode('edit')}>
+            <Edit3 className="h-4 w-4 mr-1" /> Edit
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !title.trim()}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 text-white">
+            {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : <><Save className="h-4 w-4 mr-2" /> Save</>}
+          </Button>
+        </div>
       </div>
 
-      <Card className="border-0 shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-lg">Lesson Details</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
+      {/* Meta Card */}
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50">
+        <CardContent className="p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-1">
-              <label className="text-sm font-semibold text-slate-700 mb-1.5 block">Title *</label>
-              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Lesson title" />
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Title</label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} className="bg-white/80 border-slate-200" />
             </div>
             <div>
-              <label className="text-sm font-semibold text-slate-700 mb-1.5 block">Subject</label>
-              <Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Mathematics" />
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Subject</label>
+              <Input value={subject} onChange={e => setSubject(e.target.value)} className="bg-white/80 border-slate-200" />
             </div>
             <div>
-              <label className="text-sm font-semibold text-slate-700 mb-1.5 block">Grade</label>
-              <Input value={grade} onChange={e => setGrade(e.target.value)} placeholder="e.g. Grade 7" />
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 block">Grade</label>
+              <Input value={grade} onChange={e => setGrade(e.target.value)} className="bg-white/80 border-slate-200" />
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div>
-            <label className="text-sm font-semibold text-slate-700 mb-1.5 block">Content</label>
-            <Textarea
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              rows={20}
-              className="font-mono text-sm resize-none"
-              placeholder="Lesson plan content…"
-            />
-          </div>
-
-          <div className="flex gap-3 justify-end pt-2">
-            <Button variant="outline" onClick={() => router.back()} disabled={saving}>Cancel</Button>
-            <Button
-              onClick={handleSave}
-              disabled={saving || !title.trim()}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 text-white"
-            >
-              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving…</> : <><Save className="h-4 w-4 mr-2" />Save Changes</>}
-            </Button>
-          </div>
+      {/* Content */}
+      <Card className="border-0 shadow">
+        <CardContent className="p-6">
+          {mode === 'edit' ? (
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-semibold text-slate-700">Content (Markdown)</label>
+                <Badge variant="outline" className="text-xs">.md</Badge>
+              </div>
+              <textarea
+                value={content}
+                onChange={e => setContent(e.target.value)}
+                rows={28}
+                className="w-full font-mono text-sm border border-slate-200 rounded-xl p-4 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+              />
+            </div>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-sm font-semibold text-slate-700">Lesson Preview</label>
+                <Badge variant="secondary" className="text-xs">Rendered</Badge>
+              </div>
+              <div className="prose max-w-none">
+                <MarkdownRenderer content={content} />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

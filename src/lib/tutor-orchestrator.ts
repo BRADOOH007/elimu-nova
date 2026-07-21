@@ -84,7 +84,7 @@ export class TutorOrchestrator {
     const dayOfWeek = now.getDay()
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
 
-    const scheduleSlot = await prisma.classSchedule.findFirst({
+    let scheduleSlot = await prisma.classSchedule.findFirst({
       where: {
         classId: student.classId,
         dayOfWeek: dayOfWeek,
@@ -93,6 +93,14 @@ export class TutorOrchestrator {
         endTime: { gte: currentTime }
       }
     })
+
+    // If no active slot now, use any today's schedule so the subject is still relevant
+    if (!scheduleSlot) {
+      scheduleSlot = await prisma.classSchedule.findFirst({
+        where: { classId: student.classId, dayOfWeek, isActive: true },
+        orderBy: { startTime: 'asc' }
+      })
+    }
 
     let subject = scheduleSlot?.subject || 'General'
     let topic = 'Introduction'
@@ -341,13 +349,17 @@ export class TutorOrchestrator {
   private async getTeacherContext(task: TutorTask) {
     const context: any = {}
 
+    const safeJson = (raw: string) => {
+      try { return JSON.parse(raw) } catch { return raw }
+    }
+
     // Get lesson plan
     if (task.context.lessonPlanId) {
       const lessonPlan = await prisma.lessonPlan.findUnique({
         where: { id: task.context.lessonPlanId }
       })
       if (lessonPlan) {
-        context.lessonPlan = JSON.parse(lessonPlan.content)
+        context.lessonPlan = safeJson(lessonPlan.content)
       }
     }
 
@@ -357,7 +369,7 @@ export class TutorOrchestrator {
         where: { id: task.context.schemeOfWorkId }
       })
       if (scheme) {
-        context.scheme = JSON.parse(scheme.content)
+        context.scheme = safeJson(scheme.content)
       }
     }
 

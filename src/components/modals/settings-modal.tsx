@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { COUNTRIES, getCurriculaByCountry } from '@/lib/curricula'
 import { 
   Settings, 
   X, 
@@ -26,6 +27,8 @@ interface UserPreferences {
   timezone: string
   emailNotifications: boolean
   pushNotifications: boolean
+  country: string
+  curriculum: string
 }
 
 interface SettingsModalProps {
@@ -42,7 +45,9 @@ export function SettingsModal({ isOpen, onClose, userId, userName, userEmail }: 
     language: 'en',
     timezone: 'UTC',
     emailNotifications: true,
-    pushNotifications: true
+    pushNotifications: true,
+    country: '',
+    curriculum: '',
   })
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -175,6 +180,62 @@ export function SettingsModal({ isOpen, onClose, userId, userName, userEmail }: 
                       </SelectContent>
                     </Select>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Language & Region */}
+              <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Globe className="w-5 h-5 text-orange-600" />
+                    <span>Language & Region</span>
+                  </CardTitle>
+                  <CardDescription>Set your country and curriculum</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="country">Country</Label>
+                    <Select
+                      value={preferences.country}
+                      onValueChange={(value) => {
+                        setPreferences(prev => ({
+                          ...prev,
+                          country: value,
+                          curriculum: '',
+                        }))
+                      }}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder="Select your country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.flag} {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="curriculum">Curriculum</Label>
+                    <Select
+                      value={preferences.curriculum}
+                      onValueChange={(value) => handlePreferenceChange('curriculum', value)}
+                      disabled={!preferences.country}
+                    >
+                      <SelectTrigger className="mt-1">
+                        <SelectValue placeholder={preferences.country ? 'Select curriculum' : 'Select a country first'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getCurriculaByCountry(preferences.country).map((cur) => (
+                          <SelectItem key={cur.id} value={cur.id}>
+                            {cur.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
                     <Label htmlFor="language">Language</Label>
                     <div className="mt-1 p-3 bg-gray-50 rounded-md border">
@@ -229,7 +290,7 @@ export function SettingsModal({ isOpen, onClose, userId, userName, userEmail }: 
                     <Globe className="w-5 h-5 text-orange-600" />
                     <span>System</span>
                   </CardTitle>
-                  <CardDescription>System and timezone settings</CardDescription>
+                  <CardDescription>Timezone preferences</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -246,8 +307,15 @@ export function SettingsModal({ isOpen, onClose, userId, userName, userEmail }: 
                         <SelectItem value="Africa/Nairobi">Nairobi (EAT)</SelectItem>
                         <SelectItem value="Africa/Dar_es_Salaam">Dar es Salaam (EAT)</SelectItem>
                         <SelectItem value="Africa/Kampala">Kampala (EAT)</SelectItem>
+                        <SelectItem value="Africa/Lagos">Lagos (WAT)</SelectItem>
+                        <SelectItem value="Africa/Johannesburg">Johannesburg (SAST)</SelectItem>
                         <SelectItem value="Europe/London">London (GMT)</SelectItem>
+                        <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
                         <SelectItem value="America/New_York">New York (EST)</SelectItem>
+                        <SelectItem value="America/Chicago">Chicago (CST)</SelectItem>
+                        <SelectItem value="America/Los_Angeles">Los Angeles (PST)</SelectItem>
+                        <SelectItem value="Asia/Kolkata">Kolkata (IST)</SelectItem>
+                        <SelectItem value="Asia/Dubai">Dubai (GST)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

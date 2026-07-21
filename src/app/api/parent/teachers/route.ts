@@ -41,7 +41,7 @@ export async function GET() {
         return true
       })
       .map(t => ({
-        id: t.user.id,
+        id: t.id,
         name: `${t.user.firstName} ${t.user.lastName}`,
         email: t.user.email,
       }))

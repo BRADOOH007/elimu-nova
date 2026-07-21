@@ -153,7 +153,7 @@ export function SchoolDetailsModal({
         setSchoolData(updatedSchool)
         setEditing(false)
         toast({
-          variant: "success",
+          variant: "default",
           title: "School Updated",
           description: "School information has been updated successfully!",
         })
@@ -193,7 +193,7 @@ export function SchoolDetailsModal({
         toast({
           title: "School Deleted Successfully",
           description: `${schoolData.name} has been permanently removed from the system.`,
-          variant: "success",
+          variant: "default",
         })
         
         if (onSchoolDeleted) {

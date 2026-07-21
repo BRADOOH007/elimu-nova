@@ -59,6 +59,7 @@ export default function GlobalSettingsPage() {
     defaultTimezone: 'Africa/Nairobi',
     defaultCurrency: 'KES',
     dateFormat: 'DD/MM/YYYY',
+    defaultLanguage: 'en',
     defaultAiModel: 'gpt-4o-mini',
     teacherAiModel: 'gpt-4o',
     maxSchools: '100',
@@ -88,6 +89,7 @@ export default function GlobalSettingsPage() {
     timezone: 'global_timezone',
     currency: 'global_currency',
     dateFormat: 'global_date_format',
+    language: 'global_language',
     defaultAiModel: 'global_default_ai_model',
     teacherAiModel: 'global_teacher_ai_model',
     maxSchools: 'global_max_schools',
@@ -111,6 +113,7 @@ export default function GlobalSettingsPage() {
           defaultTimezone:   map.get('global_timezone')?.value || 'Africa/Nairobi',
           defaultCurrency:   map.get('global_currency')?.value || 'KES',
           dateFormat:        map.get('global_date_format')?.value || 'DD/MM/YYYY',
+          defaultLanguage:   map.get('global_language')?.value || 'en',
           defaultAiModel:    map.get('global_default_ai_model')?.value || 'gpt-4o-mini',
           teacherAiModel:    map.get('global_teacher_ai_model')?.value || 'gpt-4o',
           maxSchools:        map.get('global_max_schools')?.value || '100',
@@ -346,7 +349,7 @@ export default function GlobalSettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2"><Languages className="w-4 h-4" /> Default Language</Label>
-                  <Select defaultValue="en">
+                  <Select value={platform.defaultLanguage} onValueChange={v => setPlatform(p => ({ ...p, defaultLanguage: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="en">English</SelectItem>
@@ -363,6 +366,7 @@ export default function GlobalSettingsPage() {
                   await saveSetting(SETTINGS_KEYS.timezone, platform.defaultTimezone, 'Platform default timezone')
                   await saveSetting(SETTINGS_KEYS.currency, platform.defaultCurrency, 'Platform default currency')
                   await saveSetting(SETTINGS_KEYS.dateFormat, platform.dateFormat, 'Platform default date format')
+                  await saveSetting(SETTINGS_KEYS.language, platform.defaultLanguage, 'Platform default language')
                   toast({ title: 'Regional settings saved' })
                 }} disabled={!!saving} className="edugenius-button">
                   {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}

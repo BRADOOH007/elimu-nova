@@ -10,17 +10,10 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { COUNTRIES, CURRICULA, getCurriculaByCountry, getSubjectsForCurriculum, getGradesForCurriculum } from '@/lib/curricula';
 import { Brain, Wand2, BookOpen, FileText, Zap, Sparkles, Send, Download, Copy, CheckCircle, Loader2 } from 'lucide-react';
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 import { useToast } from '@/hooks/use-toast';
-
-const subjects = [
-  'Mathematics', 'English', 'Kiswahili', 'Science and Technology',
-  'Social Studies', 'Creative Arts', 'Physical Education',
-  'Agriculture and Nutrition', 'Home Science', 'Religious Education'
-];
-
-const gradeLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
 
 interface ExamData {
   examTitle: string;
@@ -38,12 +31,13 @@ interface ExamData {
 }
 
 export function AIExamGenerator() {
+  const [country, setCountry] = useState('KE');
   const [examData, setExamData] = useState<ExamData>({
     examTitle: '',
     description: '',
     subject: '',
     gradeLevel: '',
-    curriculum: 'CBC',
+    curriculum: 'cbc',
     numberOfQuestions: 25,
     difficulty: 'medium',
     totalMarks: 100,
@@ -52,6 +46,9 @@ export function AIExamGenerator() {
     topics: '',
     focusAreas: ''
   });
+
+  const subjects = getSubjectsForCurriculum(examData.curriculum);
+  const gradeLevels = getGradesForCurriculum(examData.curriculum);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedExam, setGeneratedExam] = useState<string | null>(null);
   const [showSchedule, setShowSchedule] = useState(false);
@@ -238,18 +235,31 @@ export function AIExamGenerator() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="curriculum" className="text-purple-900 font-semibold">Curriculum</Label>
-                      <Select 
-                        value={examData.curriculum} 
-                        onValueChange={(v) => setExamData(prev => ({ ...prev, curriculum: v }))}
-                      >
+                      <Label className="text-purple-900 font-semibold">Country</Label>
+                      <Select value={country} onValueChange={(v) => { setCountry(v); setExamData(prev => ({ ...prev, curriculum: '', subject: '', gradeLevel: '' })) }}>
                         <SelectTrigger className="bg-white border-purple-200 focus:ring-2 focus:ring-purple-400">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="CBC">CBC (Kenya)</SelectItem>
-                          <SelectItem value="8-4-4">8-4-4 System</SelectItem>
-                          <SelectItem value="Cambridge">Cambridge International</SelectItem>
+                          {COUNTRIES.map((c) => (
+                            <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="curriculum" className="text-purple-900 font-semibold">Curriculum</Label>
+                      <Select 
+                        value={examData.curriculum} 
+                        onValueChange={(v) => setExamData(prev => ({ ...prev, curriculum: v, subject: '', gradeLevel: '' }))}
+                      >
+                        <SelectTrigger className="bg-white border-purple-200 focus:ring-2 focus:ring-purple-400">
+                          <SelectValue placeholder="Select curriculum" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getCurriculaByCountry(country).map((cur) => (
+                            <SelectItem key={cur.id} value={cur.id}>{cur.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>

@@ -12,12 +12,14 @@ import {
   Zap, UserPlus, Heart,
 } from 'lucide-react'
 
+// ── Static features shown on the left brand panel ──
 const FEATURES = [
   'Personalised AI tutoring 24/7',
   'Multi-curriculum support',
   'Real-time progress insights',
 ]
 
+// Role-specific perks displayed dynamically as the user changes the role selector
 const ROLE_PERKS: Record<string, string[]> = {
   STUDENT:      ['AI-powered personal tutor', 'Track your own progress', 'Curriculum-aligned courses'],
   TEACHER:      ['Generate lesson plans in seconds', 'Auto-mark assignments', 'Monitor student performance'],
@@ -43,16 +45,19 @@ export default function SignUpPage() {
   const [error, setError]                           = useState('')
   const router = useRouter()
 
+  // ── Generic handler for all form input changes ──
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
+  // ── Handle registration form submission ──
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
+    // Client-side validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
       setIsLoading(false)
@@ -66,6 +71,7 @@ export default function SignUpPage() {
     }
 
     try {
+      // POST to the registration API endpoint
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,6 +81,7 @@ export default function SignUpPage() {
       const data = await response.json()
 
       if (response.ok) {
+        // Redirect to signin with success message
         router.push('/auth/signin?message=Account created successfully. Please sign in.')
       } else {
         setError(data.error || 'An error occurred during registration')
@@ -86,14 +93,15 @@ export default function SignUpPage() {
     }
   }
 
+  // Perks to display on the left panel — updates live based on selected role
   const perks = ROLE_PERKS[formData.role] ?? FEATURES
 
   return (
     <div className="min-h-screen flex">
 
-      {/* ── LEFT PANEL ── */}
+      {/* ── LEFT BRAND PANEL ── */}
       <div className="hidden lg:flex lg:w-5/12 xl:w-2/5 flex-col justify-between bg-gradient-to-br from-[#0f172a] via-indigo-950 to-[#0f172a] p-10 relative overflow-hidden">
-        {/* grid texture */}
+        {/* Grid texture overlay */}
         <div
           className="absolute inset-0 opacity-[0.04]"
           style={{
@@ -102,18 +110,18 @@ export default function SignUpPage() {
             backgroundSize: '60px 60px',
           }}
         />
-        {/* glow orbs */}
+        {/* Glow orbs */}
         <div className="absolute top-1/4 right-0 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-blue-500/15 rounded-full blur-3xl" />
 
         <div className="relative z-10">
-          {/* Logo */}
+          {/* Logo + accent line */}
           <div className="mb-14">
             <Logo size="xl" variant="black" />
             <div className="mt-4 h-px w-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" />
           </div>
 
-          {/* Badge */}
+          {/* Platform badge */}
           <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
             <Zap className="w-3 h-3" />
             AI-Powered Cloud School Platform
@@ -130,7 +138,7 @@ export default function SignUpPage() {
             Join thousands of students, teachers and schools already using AI to transform learning.
           </p>
 
-          {/* Dynamic perks based on selected role */}
+          {/* Role-specific perks — dynamically updates based on selected role */}
           <div className="mb-3">
             <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
               {formData.role === 'STUDENT' ? 'For Students' : formData.role === 'TEACHER' ? 'For Teachers' : formData.role === 'PARENT' ? 'For Parents' : 'For Schools'}
@@ -146,7 +154,7 @@ export default function SignUpPage() {
           </div>
         </div>
 
-        {/* Testimonial */}
+        {/* Bottom testimonial */}
         <div className="relative z-10 border-t border-white/10 pt-6">
           <blockquote className="text-slate-300 text-sm italic leading-relaxed mb-3">
             "Setting up our school on Elimu Nova took less than a day. Our teachers love it."
@@ -157,9 +165,9 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      {/* ── RIGHT PANEL ── */}
+      {/* ── RIGHT SIGN-UP FORM PANEL ── */}
       <div className="flex-1 flex flex-col bg-white overflow-y-auto">
-        {/* Top bar */}
+        {/* Top navigation bar */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 shrink-0">
           <Link
             href="/auth/signin"
@@ -182,7 +190,7 @@ export default function SignUpPage() {
             <h2 className="text-3xl font-extrabold text-gray-900 mb-1">Create account</h2>
             <p className="text-gray-500 text-sm mb-8">Fill in your details to get started.</p>
 
-            {/* Error */}
+            {/* Error message banner */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-6">
                 {error}
@@ -191,7 +199,7 @@ export default function SignUpPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5">
 
-              {/* Name row */}
+              {/* ── Name row (first + last) ── */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -223,7 +231,7 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              {/* Email */}
+              {/* ── Email ── */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Email Address
@@ -239,7 +247,7 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              {/* Account type — styled tabs like signin role tabs */}
+              {/* ── Account type selector (styled as tabs) ── */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">Account Type</label>
                 <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
@@ -255,8 +263,8 @@ export default function SignUpPage() {
                       onClick={() => setFormData(prev => ({ ...prev, role: value }))}
                       className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                         formData.role === value
-                          ? 'bg-white text-gray-900 shadow-sm'
-                          : 'text-gray-500 hover:text-gray-700'
+                          ? 'bg-white text-gray-900 shadow-sm'   // active
+                          : 'text-gray-500 hover:text-gray-700'   // inactive
                       }`}
                     >
                       <Icon className="w-4 h-4" />
@@ -266,7 +274,7 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              {/* School info — shown only for SCHOOL_ADMIN */}
+              {/* ── School info (only shown for SCHOOL_ADMIN role) ── */}
               {formData.role === 'SCHOOL_ADMIN' && (
                 <div className="space-y-4 p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
                   <p className="text-sm font-semibold text-indigo-900">School Information</p>
@@ -309,7 +317,7 @@ export default function SignUpPage() {
                 </div>
               )}
 
-              {/* Passwords */}
+              {/* ── Password + Confirm Password ── */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -355,7 +363,7 @@ export default function SignUpPage() {
                 </div>
               </div>
 
-              {/* Submit */}
+              {/* ── Submit button ── */}
               <Button
                 type="submit" disabled={isLoading}
                 className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl"
@@ -373,7 +381,7 @@ export default function SignUpPage() {
                 )}
               </Button>
 
-              {/* Parent note */}
+              {/* Informational note for parent accounts */}
               {formData.role === 'PARENT' && (
                 <p className="text-xs text-gray-500 bg-purple-50 border border-purple-100 rounded-lg px-4 py-3">
                   <span className="font-semibold text-purple-700">Independent parent account.</span> You can link your children and connect to their school from your dashboard after signing up — no school invite needed.
@@ -381,6 +389,7 @@ export default function SignUpPage() {
               )}
             </form>
 
+            {/* Terms acceptance */}
             <p className="text-center text-xs text-gray-400 mt-5">
               By creating an account you agree to our{' '}
               <Link href="/terms" className="underline hover:text-gray-600">Terms of Service</Link>

@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import dynamic from 'next/dynamic'
 
@@ -45,13 +46,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
@@ -186,8 +180,8 @@ export default function PlanningPage() {
     const matchesSearch = lp.title.toLowerCase().includes(lessonPlanSearch.toLowerCase()) ||
                          lp.subject.toLowerCase().includes(lessonPlanSearch.toLowerCase()) ||
                          lp.grade.toLowerCase().includes(lessonPlanSearch.toLowerCase())
-    const matchesSubject = !lessonPlanSubjectFilter || lp.subject === lessonPlanSubjectFilter
-    const matchesGrade = !lessonPlanGradeFilter || lp.grade === lessonPlanGradeFilter
+    const matchesSubject = !lessonPlanSubjectFilter || lessonPlanSubjectFilter === 'all' || lp.subject === lessonPlanSubjectFilter
+    const matchesGrade = !lessonPlanGradeFilter || lessonPlanGradeFilter === 'all' || lp.grade === lessonPlanGradeFilter
     return matchesSearch && matchesSubject && matchesGrade
   })
 
@@ -195,8 +189,8 @@ export default function PlanningPage() {
     const matchesSearch = sw.title.toLowerCase().includes(schemeSearch.toLowerCase()) ||
                          sw.subject.toLowerCase().includes(schemeSearch.toLowerCase()) ||
                          sw.grade.toLowerCase().includes(schemeSearch.toLowerCase())
-    const matchesSubject = !schemeSubjectFilter || sw.subject === schemeSubjectFilter
-    const matchesGrade = !schemeGradeFilter || sw.grade === schemeGradeFilter
+    const matchesSubject = !schemeSubjectFilter || schemeSubjectFilter === 'all' || sw.subject === schemeSubjectFilter
+    const matchesGrade = !schemeGradeFilter || schemeGradeFilter === 'all' || sw.grade === schemeGradeFilter
     return matchesSearch && matchesSubject && matchesGrade
   })
 
@@ -508,22 +502,24 @@ export default function PlanningPage() {
                     className="pl-10 bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm"
                   />
                 </div>
-                <select
-                  value={lessonPlanSubjectFilter}
-                  onChange={(e) => setLessonPlanSubjectFilter(e.target.value)}
-                  className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-blue-50 to-purple-50 px-3 py-2 text-sm"
-                >
-                  <option value="">All Subjects</option>
-                  {lessonSubjects.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <select
-                  value={lessonPlanGradeFilter}
-                  onChange={(e) => setLessonPlanGradeFilter(e.target.value)}
-                  className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-blue-50 to-purple-50 px-3 py-2 text-sm"
-                >
-                  <option value="">All Grades</option>
-                  {lessonGrades.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
+                <Select value={lessonPlanSubjectFilter} onValueChange={setLessonPlanSubjectFilter}>
+                  <SelectTrigger className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm">
+                    <SelectValue placeholder="All Subjects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Subjects</SelectItem>
+                    {lessonSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={lessonPlanGradeFilter} onValueChange={setLessonPlanGradeFilter}>
+                  <SelectTrigger className="bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm">
+                    <SelectValue placeholder="All Grades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Grades</SelectItem>
+                    {lessonGrades.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="outline"
                   onClick={() => { setLessonPlanSearch(''); setLessonPlanSubjectFilter(''); setLessonPlanGradeFilter('') }}
@@ -667,22 +663,24 @@ export default function PlanningPage() {
                     className="pl-10 bg-gradient-to-r from-white via-green-50 to-blue-50 border-0 shadow-sm"
                   />
                 </div>
-                <select
-                  value={schemeSubjectFilter}
-                  onChange={(e) => setSchemeSubjectFilter(e.target.value)}
-                  className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-green-50 to-blue-50 px-3 py-2 text-sm"
-                >
-                  <option value="">All Subjects</option>
-                  {schemeSubjects.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <select
-                  value={schemeGradeFilter}
-                  onChange={(e) => setSchemeGradeFilter(e.target.value)}
-                  className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-green-50 to-blue-50 px-3 py-2 text-sm"
-                >
-                  <option value="">All Grades</option>
-                  {schemeGrades.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
+                <Select value={schemeSubjectFilter} onValueChange={setSchemeSubjectFilter}>
+                  <SelectTrigger className="bg-gradient-to-r from-white via-green-50 to-blue-50 border-0 shadow-sm">
+                    <SelectValue placeholder="All Subjects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Subjects</SelectItem>
+                    {schemeSubjects.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={schemeGradeFilter} onValueChange={setSchemeGradeFilter}>
+                  <SelectTrigger className="bg-gradient-to-r from-white via-green-50 to-blue-50 border-0 shadow-sm">
+                    <SelectValue placeholder="All Grades" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Grades</SelectItem>
+                    {schemeGrades.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="outline"
                   onClick={() => { setSchemeSearch(''); setSchemeSubjectFilter(''); setSchemeGradeFilter('') }}

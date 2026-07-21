@@ -144,7 +144,7 @@ export function CreateAdminUserModal({ isOpen, onClose, onUserCreated }: CreateA
       if (response.ok) {
         const newUser = await response.json()
         toast({
-          variant: "success",
+          variant: "default",
           title: "User Created",
           description: `${formData.role} user has been created successfully!`,
         })

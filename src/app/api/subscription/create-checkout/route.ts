@@ -22,10 +22,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get package details
-    const packageInfo = await prisma.package.findUnique({
+    // Get package details - try by ID first, then by name
+    let packageInfo = await prisma.package.findUnique({
       where: { id: packageId }
     })
+
+    if (!packageInfo) {
+      // Try matching by name (supporting hardcoded plan IDs)
+      const nameMap: Record<string, string> = {
+        starter: 'Starter School Plan',
+        growth: 'Growth Plan',
+        excellence: 'Excellence Plan',
+      }
+      const planName = nameMap[packageId]
+      if (planName) {
+        packageInfo = await prisma.package.findFirst({
+          where: { name: planName, isActive: true },
+        })
+      }
+    }
 
     if (!packageInfo) {
       return NextResponse.json({ error: 'Package not found' }, { status: 404 })

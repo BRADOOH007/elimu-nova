@@ -7,6 +7,7 @@ import { AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/ui/logo'
 
+// ── Maps NextAuth error codes to human-readable messages ──
 function ErrorContent() {
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
@@ -28,8 +29,9 @@ function ErrorContent() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel — same as signin/signup */}
+      {/* ── LEFT BRAND PANEL ── */}
       <div className="hidden lg:flex lg:w-5/12 xl:w-2/5 flex-col justify-between bg-gradient-to-br from-[#0f172a] via-indigo-950 to-[#0f172a] p-10 relative overflow-hidden">
+        {/* Grid texture overlay */}
         <div
           className="absolute inset-0 opacity-[0.04]"
           style={{
@@ -37,10 +39,12 @@ function ErrorContent() {
             backgroundSize: '60px 60px',
           }}
         />
+        {/* Glow orbs */}
         <div className="absolute top-1/4 right-0 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl" />
         <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-blue-500/15 rounded-full blur-3xl" />
 
         <div className="relative z-10">
+          {/* Logo */}
           <div className="mb-14">
             <Logo size="xl" variant="black" />
             <div className="mt-4 h-px w-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" />
@@ -56,13 +60,15 @@ function ErrorContent() {
           </p>
         </div>
 
+        {/* Contact info */}
         <div className="relative z-10 border-t border-white/10 pt-6">
           <p className="text-slate-500 text-xs">Need help? Contact us at support@elimunova.app</p>
         </div>
       </div>
 
-      {/* Right panel */}
+      {/* ── RIGHT ERROR DETAIL PANEL ── */}
       <div className="flex-1 flex flex-col bg-white">
+        {/* Top navigation bar */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
           <Link href="/" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -70,8 +76,10 @@ function ErrorContent() {
           </Link>
         </div>
 
+        {/* Error content */}
         <div className="flex-1 flex items-center justify-center px-8 py-12">
           <div className="w-full max-w-md text-center">
+            {/* Error icon */}
             <div className="mx-auto w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mb-6">
               <AlertCircle className="w-8 h-8 text-red-500" />
             </div>
@@ -79,6 +87,7 @@ function ErrorContent() {
             <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Authentication Error</h2>
             <p className="text-gray-500 text-sm mb-8">{getErrorMessage(error)}</p>
 
+            {/* Helpful tip box */}
             <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-8 text-left">
               <p className="text-sm text-amber-800">
                 <strong>Tip:</strong> Use the email and password you registered with. 
@@ -86,6 +95,7 @@ function ErrorContent() {
               </p>
             </div>
 
+            {/* Action buttons */}
             <div className="space-y-3">
               <Link href="/auth/signin">
                 <Button className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl">
@@ -99,6 +109,7 @@ function ErrorContent() {
               </Link>
             </div>
 
+            {/* Display raw error code for debugging */}
             {error && (
               <p className="text-xs text-gray-400 mt-6">Error code: {error}</p>
             )}
@@ -109,6 +120,7 @@ function ErrorContent() {
   )
 }
 
+// ── Parent component: wraps ErrorContent in Suspense because it uses useSearchParams() ──
 export default function AuthErrorPage() {
   return (
     <Suspense fallback={

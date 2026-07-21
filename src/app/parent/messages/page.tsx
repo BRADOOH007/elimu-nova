@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { MessageSquare, Send, RefreshCw, Inbox, Mail } from 'lucide-react'
+import { ClientDate } from '@/components/ui/client-date'
 
 interface Message {
   id: string
@@ -24,6 +25,7 @@ interface Child { id: string; name: string }
 export default function ParentMessages() {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
+  const [parentId, setParentId] = useState<string | null>(null)
   const [children, setChildren] = useState<Child[]>([])
   const [teachers, setTeachers] = useState<{ id: string; name: string; email: string }[]>([])
   const [loading, setLoading] = useState(true)
@@ -45,8 +47,9 @@ export default function ParentMessages() {
         fetch('/api/parent/teachers'),
       ])
       if (msgRes.ok) {
-        const { messages: raw } = await msgRes.json()
+        const { messages: raw, parentId: pid } = await msgRes.json()
         setMessages(raw || [])
+        setParentId(pid || null)
       }
       if (childRes.ok) {
         const { children: raw } = await childRes.json()
@@ -117,12 +120,10 @@ export default function ParentMessages() {
     } finally { setSending(false) }
   }
 
-  const inbox = messages.filter(m => m.recipientId === session?.user?.id && m.recipientType === 'PARENT')
-  const sent  = messages.filter(m => m.senderId === session?.user?.id && m.senderType === 'PARENT')
+  const inbox = messages.filter(m => m.recipientId === parentId && m.recipientType === 'PARENT')
+  const sent  = messages.filter(m => m.senderId === parentId && m.senderType === 'PARENT')
   const displayed = tab === 'inbox' ? inbox : sent
   const unread = inbox.filter(m => !m.isRead).length
-
-  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -188,7 +189,7 @@ export default function ParentMessages() {
                       <span className="w-2 h-2 bg-blue-500 rounded-full shrink-0 mt-1.5" />
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">{fmtDate(msg.createdAt)}</p>
+                  <ClientDate date={msg.createdAt} className="text-xs text-slate-400 mt-0.5" />
                   <p className="text-[10px] text-slate-400 mt-0.5">
                     {tab === 'inbox' ? (msg.senderName || msg.senderType) : (msg.recipientName || msg.recipientType)}
                   </p>
@@ -258,7 +259,7 @@ export default function ParentMessages() {
                 <h2 className="text-lg font-bold text-slate-900">{selected.subject}</h2>
                 <div className="flex items-center gap-4 text-xs text-slate-400 mt-1">
                   <span>From: {selected.senderName || selected.senderType}</span>
-                  <span>{fmtDate(selected.createdAt)}</span>
+                  <ClientDate date={selected.createdAt} />
                 </div>
               </div>
               <p className="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">{selected.content}</p>

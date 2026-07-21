@@ -27,16 +27,16 @@ export default function BulkUploadStudentsPage() {
     setUploading(true)
     setResults(null)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
+      const csvText = await file.text()
       const res = await fetch('/api/teacher/bulk-upload-students', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csvText }),
       })
       const data = await res.json()
       if (res.ok) {
         setResults(data.results || [])
-        toast({ title: `Uploaded ${data.results?.filter((r: UploadResult) => r.success).length || 0} students` })
+        toast({ title: `Uploaded ${data.created || 0} students` })
       } else {
         toast({ title: 'Upload failed', description: data.error, variant: 'destructive' })
       }

@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { COUNTRIES, getCurriculaByCountry } from '@/lib/curricula'
 import { 
   Brain, 
   X, 
@@ -48,7 +49,9 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
     objectives: '',
     requirements: '',
     difficulty: 'medium',
-    format: 'detailed'
+    format: 'detailed',
+    country: 'KE',
+    curriculum: 'cbc',
   })
 
   const handleGenerate = async () => {
@@ -592,19 +595,28 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="country" className="text-sm font-medium text-gray-700">
-                      Curriculum
-                    </Label>
-                    <Select
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, format: value }))}
-                    >
+                    <Label className="text-sm font-medium text-gray-700">Country</Label>
+                    <Select value={formData.country} onValueChange={(v) => setFormData(prev => ({ ...prev, country: v, curriculum: '' }))}>
+                      <SelectTrigger className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500">
+                        <SelectValue placeholder="Select country" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRIES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="curriculum" className="text-sm font-medium text-gray-700">Curriculum</Label>
+                    <Select value={formData.curriculum} onValueChange={(v) => setFormData(prev => ({ ...prev, curriculum: v }))}>
                       <SelectTrigger className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500">
                         <SelectValue placeholder="Select curriculum" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="cbc">Kenya CBC</SelectItem>
-                        <SelectItem value="commoncore">US Common Core</SelectItem>
-                        <SelectItem value="general">General</SelectItem>
+                        {getCurriculaByCountry(formData.country).map((cur) => (
+                          <SelectItem key={cur.id} value={cur.id}>{cur.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

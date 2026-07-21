@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import { ErrorCatcher } from "@/components/error-catcher";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -60,12 +61,14 @@ export default function RootLayout({
         <meta name="msapplication-TileImage" content="/favicon.png" />
         <meta name="msapplication-TileColor" content="#667eea" />
         <link rel="manifest" href="/manifest.json" />
+        <script dangerouslySetInnerHTML={{__html:'(function(){var n=new MutationObserver(function(m){for(var i=0;i<m.length;i++){if(m[i].type==="attributes"){m[i].target.removeAttribute("rtrvr-ls");m[i].target.removeAttribute("rtrvr-hk")}}});n.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:["rtrvr-ls","rtrvr-hk"]})})()'}} />
       </head>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
+          <ErrorCatcher />
           {children}
         </Providers>
       </body>

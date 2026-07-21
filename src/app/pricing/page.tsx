@@ -1,15 +1,8 @@
 import { PublicLayout } from '@/components/ui/public-layout'
-import { prisma } from '@/lib/prisma'
 import { PricingPlans } from '@/components/pricing/pricing-plans'
 import { Sparkles } from 'lucide-react'
 
-export default async function PricingPage() {
-  const allPackages = await prisma.package.findMany({
-    where: { isActive: true },
-    orderBy: { price: 'asc' },
-  })
-  const packages = allPackages.slice(0, 3)
-
+export default function PricingPage() {
   return (
     <PublicLayout>
       {/* Hero */}
@@ -31,7 +24,7 @@ export default async function PricingPage() {
 
       {/* Plans */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-        <PricingPlans packages={packages} />
+        <PricingPlans />
       </section>
     </PublicLayout>
   )

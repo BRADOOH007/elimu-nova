@@ -12,11 +12,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const parent = await prisma.parent.findUnique({ where: { userId: session.user.id } })
+    if (!parent) {
+      return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
+    }
+
     const messages = await prismaClient.message.findMany({
       where: {
         OR: [
-          { senderId: session.user.id, senderType: 'PARENT' },
-          { recipientId: session.user.id, recipientType: 'PARENT' },
+          { senderId: parent.id, senderType: 'PARENT' },
+          { recipientId: parent.id, recipientType: 'PARENT' },
         ],
       },
       orderBy: { createdAt: 'desc' },
@@ -24,25 +29,38 @@ export async function GET(request: NextRequest) {
     })
 
     // Resolve sender/recipient names
-    const userIds = new Set<string>()
-    messages.forEach((m: any) => { userIds.add(m.senderId); userIds.add(m.recipientId) })
-    const users = await prismaClient.user.findMany({
-      where: { id: { in: Array.from(userIds) } },
-      select: { id: true, firstName: true, lastName: true, role: true },
+    const teacherIds = new Set<string>()
+    messages.forEach((m: any) => {
+      if (m.senderType === 'TEACHER') teacherIds.add(m.senderId)
+      if (m.recipientType === 'TEACHER') teacherIds.add(m.recipientId)
     })
-    const userMap = Object.fromEntries(users.map((u: any) => [u.id, u]))
+
+    const teacherNameMap = new Map<string, string>()
+    if (teacherIds.size > 0) {
+      const teachers = await prismaClient.teacher.findMany({
+        where: { id: { in: Array.from(teacherIds) } },
+        include: { user: { select: { firstName: true, lastName: true } } },
+      })
+      for (const t of teachers) {
+        teacherNameMap.set(t.id, `${t.user.firstName} ${t.user.lastName}`)
+      }
+    }
 
     const enriched = messages.map((m: any) => {
-      const sender = userMap[m.senderId]
-      const recipient = userMap[m.recipientId]
+      let senderName = m.senderType
+      let recipientName = m.recipientType
+      if (m.senderType === 'TEACHER') senderName = teacherNameMap.get(m.senderId) || 'Teacher'
+      if (m.recipientType === 'TEACHER') recipientName = teacherNameMap.get(m.recipientId) || 'Teacher'
+      if (m.senderType === 'PARENT' && m.senderId === parent.id) senderName = 'You'
+      if (m.recipientType === 'PARENT' && m.recipientId === parent.id) recipientName = 'You'
       return {
         ...m,
-        senderName: sender ? `${sender.firstName} ${sender.lastName}` : m.senderType,
-        recipientName: recipient ? `${recipient.firstName} ${recipient.lastName}` : m.recipientType,
+        senderName,
+        recipientName,
       }
     })
 
-    return NextResponse.json({ messages: enriched })
+    return NextResponse.json({ messages: enriched, parentId: parent.id })
   } catch (error) {
     console.error('[GET_PARENT_MESSAGES]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -56,6 +74,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const parent = await prisma.parent.findUnique({ where: { userId: session.user.id } })
+    if (!parent) {
+      return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
+    }
+
     const { subject, content, recipientId, recipientType, parentId } = await request.json()
     if (!subject || !content || !recipientId || !recipientType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -65,7 +88,7 @@ export async function POST(request: NextRequest) {
       data: {
         subject,
         content,
-        senderId: session.user.id,
+        senderId: parent.id,
         senderType: 'PARENT',
         recipientId,
         recipientType,

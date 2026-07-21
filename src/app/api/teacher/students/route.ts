@@ -172,7 +172,8 @@ export async function GET(req: NextRequest) {
         classId: student.classId,
         class: student.class,
         status: student.user.isActive ? 'Active' : 'Inactive',
-        joinDate: student.user.createdAt.toISOString()
+        joinDate: student.user.createdAt.toISOString(),
+        subjects: student.subjects
       }))
     });
 

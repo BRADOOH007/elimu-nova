@@ -14,8 +14,9 @@ import { useToast } from "@/hooks/use-toast"
 interface ClassRecord {
   id: string; name: string; subject: string; grade: string
   description?: string; isActive: boolean
-  teacher?: { id: string; user: { firstName: string; lastName: string } }
-  _count?: { students: number }
+  studentCount: number
+  teacherName: string
+  teacherId: string | null
   createdAt: string
 }
 
@@ -62,7 +63,7 @@ export default function SchoolAdminClassesPage() {
 
   const openEdit = (c: ClassRecord) => {
     setEditing(c); setName(c.name); setSubject(c.subject); setGrade(c.grade)
-    setTeacherId(c.teacher?.id || '')
+    setTeacherId(c.teacherId || '')
     setShowDialog(true)
   }
 
@@ -142,8 +143,8 @@ export default function SchoolAdminClassesPage() {
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span className="flex items-center"><Users className="w-4 h-4 mr-1" />{c._count?.students || 0} students</span>
-                  <span>{c.teacher ? c.teacher.user.firstName + ' ' + c.teacher.user.lastName : 'No teacher'}</span>
+                  <span className="flex items-center"><Users className="w-4 h-4 mr-1" />{c.studentCount} students</span>
+                  <span>{c.teacherName || 'No teacher'}</span>
                 </div>
               </CardContent>
             </Card>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { checkRateLimit, authRateLimit, apiRateLimit } from '@/lib/rate-limit'
+import { checkRateLimit, rateLimitAuth, rateLimitAPI } from '@/lib/rate-limit'
 import { Redis } from '@upstash/redis'
 
 vi.mock('@upstash/redis', () => ({
@@ -25,53 +25,52 @@ describe('rate-limit', () => {
       mockRedis.get.mockResolvedValue(null)
       mockRedis.set.mockResolvedValue('OK')
 
-      const { allowed, info } = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
+      const result = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
 
-      expect(allowed).toBe(true)
-      expect(info.remaining).toBe(4)
-      expect(info.limit).toBe(5)
+      expect(result.allowed).toBe(true)
+      expect(result.remaining).toBe(5)
+      expect(result.limit).toBe(5)
     })
 
     it('allows requests under limit', async () => {
       mockRedis.get.mockResolvedValue(2)
       mockRedis.incr.mockResolvedValue(3)
 
-      const { allowed, info } = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
+      const result = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
 
-      expect(allowed).toBe(true)
-      expect(info.remaining).toBe(2)
+      expect(result.allowed).toBe(true)
+      expect(result.remaining).toBe(2)
     })
 
     it('blocks requests over limit', async () => {
       mockRedis.get.mockResolvedValue(5)
       mockRedis.ttl.mockResolvedValue(30)
 
-      const { allowed, info } = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
+      const result = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
 
-      expect(allowed).toBe(false)
-      expect(info.remaining).toBe(0)
+      expect(result.allowed).toBe(false)
+      expect(result.remaining).toBe(0)
     })
 
     it('allows request on Redis failure', async () => {
       mockRedis.get.mockRejectedValue(new Error('Redis down'))
 
-      const { allowed, info } = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
+      const result = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
 
-      expect(allowed).toBe(true)
-      expect(info.remaining).toBe(4)
+      expect(result.allowed).toBe(true)
+      expect(result.remaining).toBe(4)
     })
   })
 
-  describe('authRateLimit', () => {
+  describe('rateLimitAuth', () => {
     it('has stricter limits for auth endpoints', () => {
-      expect(authRateLimit).toBeDefined()
-      // Rate limit config is applied in middleware
+      expect(rateLimitAuth).toBeDefined()
     })
   })
 
-  describe('apiRateLimit', () => {
+  describe('rateLimitAPI', () => {
     it('has standard limits for API endpoints', () => {
-      expect(apiRateLimit).toBeDefined()
+      expect(rateLimitAPI).toBeDefined()
     })
   })
 })

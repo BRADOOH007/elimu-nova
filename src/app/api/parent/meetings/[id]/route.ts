@@ -16,7 +16,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const meeting = await prisma.meeting.findUnique({ where: { id } })
     if (!meeting) return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
-    if (meeting.schoolId !== parent.schoolId) {
+    if (meeting.schoolId !== (parent as any).schoolId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

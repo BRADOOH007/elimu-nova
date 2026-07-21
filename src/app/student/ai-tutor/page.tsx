@@ -126,8 +126,9 @@ export function AutonomousAITutorPage() {
       }
 
       const data = await response.json()
+      if (!data.task) throw new Error('No task returned')
       setCurrentTask(data.task)
-      
+
       // Add welcome message
       setMessages([{
         role: 'assistant',
@@ -190,16 +191,12 @@ export function AutonomousAITutorPage() {
 
       // Update stats if provided
       if (data.xpEarned) {
-        setStats(prev => ({
-          ...prev,
-          xp: prev.xp + data.xpEarned
-        }))
-        // Show celebration every 100 XP milestone
         setStats(prev => {
-          if ((prev.xp + data.xpEarned) % 100 < data.xpEarned) {
+          const newXp = prev.xp + data.xpEarned
+          if (newXp % 100 < data.xpEarned) {
             setShowCelebration(true)
           }
-          return prev
+          return { ...prev, xp: newXp }
         })
       }
 
@@ -507,10 +504,10 @@ export function AutonomousAITutorPage() {
 export default function AIGrowthPage() {
   return (
     <Tabs defaultValue="tutor" className="space-y-4 p-4">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="tutor"><Brain className="w-4 h-4 mr-2"/>AI Tutor</TabsTrigger>
-        <TabsTrigger value="coding"><Code2 className="w-4 h-4 mr-2"/>Coding Studio</TabsTrigger>
-        <TabsTrigger value="career"><Compass className="w-4 h-4 mr-2"/>Career Pathways</TabsTrigger>
+      <TabsList className="w-full overflow-x-auto flex">
+        <TabsTrigger value="tutor" className="shrink-0"><Brain className="w-4 h-4 mr-2"/>AI Tutor</TabsTrigger>
+        <TabsTrigger value="coding" className="shrink-0"><Code2 className="w-4 h-4 mr-2"/>Coding Studio</TabsTrigger>
+        <TabsTrigger value="career" className="shrink-0"><Compass className="w-4 h-4 mr-2"/>Career Pathways</TabsTrigger>
       </TabsList>
       <TabsContent value="tutor"><AutonomousAITutorPage /></TabsContent>
       <TabsContent value="coding"><CodingTab /></TabsContent>

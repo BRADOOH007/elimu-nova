@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn, getSession } from 'next-auth/react'
+import { signIn, getSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,7 @@ import {
   Zap,
 } from 'lucide-react'
 
+// ── Role tabs shown on the sign-in form ──
 type Role = 'STUDENT' | 'TEACHER' | 'PARENT'
 
 const ROLE_TABS: { id: Role; label: string; icon: React.ComponentType<any> }[] = [
@@ -27,6 +28,7 @@ const ROLE_TABS: { id: Role; label: string; icon: React.ComponentType<any> }[] =
   { id: 'PARENT',  label: 'Parent',  icon: Users },
 ]
 
+// Features displayed on the left brand panel
 const FEATURES = [
   'Personalised AI tutoring 24/7',
   'Multi-curriculum support',
@@ -42,16 +44,18 @@ export default function SignInPage() {
   const [activeRole, setActiveRole]     = useState<Role>('STUDENT')
   const router = useRouter()
 
+  // ── Handle sign-in form submission ──
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
     try {
+      // Authenticate via next-auth credentials provider
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,
+        redirect: false,  // handle routing ourselves
       })
 
       if (result?.error) {
@@ -61,28 +65,31 @@ export default function SignInPage() {
       }
 
       if (result?.ok) {
+        // Small delay so the session token propagates
         await new Promise(resolve => setTimeout(resolve, 500))
         const session = await getSession()
 
         if (session?.user?.role) {
-          // Role tab enforcement — make sure user is on the right tab
+          // Verify the user's role matches the active role tab
           const roleToTab: Record<string, Role | null> = {
             STUDENT:      'STUDENT',
             TEACHER:      'TEACHER',
             PARENT:       'PARENT',
-            SCHOOL_ADMIN: null,  // uses admin login
-            SUPER_ADMIN:  null,  // uses admin login
+            SCHOOL_ADMIN: null,  // SCHOOL_ADMIN / SUPER_ADMIN must use admin-signin page
+            SUPER_ADMIN:  null,
           }
           const expectedTab = roleToTab[session.user.role]
+
           if (expectedTab && expectedTab !== activeRole) {
+            // Role mismatch — tell the user to select the correct tab
             const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
             setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
             setIsLoading(false)
-            const { signOut } = await import('next-auth/react')
             await signOut({ redirect: false })
             return
           }
 
+          // Route to the correct dashboard based on role
           const dashboardRoutes: Record<string, string> = {
             SUPER_ADMIN:  '/super-admin/dashboard',
             SCHOOL_ADMIN: '/school-admin/dashboard',
@@ -103,9 +110,9 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* ── LEFT PANEL ── */}
-      <div className="hidden lg:flex lg:w-5/12 xl:w-2/5 flex-col justify-between bg-gradient-to-br from-[#0f172a] via-indigo-950 to-[#0f172a] p-10 relative overflow-hidden">
-        {/* grid texture — same as landing hero */}
+      {/* ── LEFT BRAND PANEL ── */}
+      <div className="hidden lg:flex lg:w-5/12 xl:w-2/5 flex-col justify-between bg-gradient-to-br from-[#0f172a] via-indigo-950 to-[#0f172a] p-10 relative overflow-hidden animate-gradient-slow">
+        {/* Subtle grid overlay for texture */}
         <div
           className="absolute inset-0 opacity-[0.04]"
           style={{
@@ -114,38 +121,43 @@ export default function SignInPage() {
             backgroundSize: '60px 60px',
           }}
         />
-        {/* glow orbs — same as landing hero */}
-        <div className="absolute top-1/4 right-0 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-blue-500/15 rounded-full blur-3xl" />
+        {/* Shimmer sweep line */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.03]">
+          <div className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white to-transparent animate-shimmer-sweep skew-x-12" />
+        </div>
+        {/* Floating glow orbs */}
+        <div className="absolute top-1/4 right-0 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl animate-orb-drift" />
+        <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl animate-orb-drift-slow" />
+        <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl animate-orb-drift" style={{ animationDuration: '18s', animationDelay: '-5s' }} />
 
         <div className="relative z-10">
-          {/* Logo */}
-          <div className="mb-14">
+          {/* Logo + accent divider */}
+          <div className="mb-14 animate-fade-in-up signin-stagger-1">
             <Logo size="xl" variant="black" />
             <div className="mt-4 h-px w-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" />
           </div>
 
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
+          {/* Platform badge */}
+          <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 animate-fade-in-up signin-stagger-2">
             <Zap className="w-3 h-3" />
             AI-Powered Cloud School Platform
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">
+          <h1 className="text-4xl font-extrabold text-white leading-tight mb-4 animate-fade-in-up signin-stagger-3">
             Welcome back to{' '}
             <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Elimu Nova.
             </span>
           </h1>
-          <p className="text-slate-400 text-base leading-relaxed mb-8">
+          <p className="text-slate-400 text-base leading-relaxed mb-8 animate-fade-in-up signin-stagger-4">
             Your AI-powered school platform. Learn, teach, and manage — all in one place.
           </p>
 
-          {/* Feature list */}
+          {/* Feature checklist */}
           <ul className="space-y-3 mb-12">
-            {FEATURES.map(f => (
-              <li key={f} className="flex items-center gap-3 text-slate-300 text-sm">
+            {FEATURES.map((f, i) => (
+              <li key={f} className={`flex items-center gap-3 text-slate-300 text-sm animate-fade-in-up signin-stagger-${i + 3}`}>
                 <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
                 {f}
               </li>
@@ -153,20 +165,20 @@ export default function SignInPage() {
           </ul>
         </div>
 
-        {/* Testimonial */}
-        <div className="relative z-10 border-t border-white/10 pt-6">
+        {/* Bottom testimonial */}
+        <div className="relative z-10 border-t border-white/10 pt-6 animate-fade-in-up signin-stagger-5">
           <blockquote className="text-slate-300 text-sm italic leading-relaxed mb-3">
             "Elimu Nova helped my students improve grades within one term."
           </blockquote>
           <div className="text-slate-500 text-xs">
-            — Md. Beth Waithera, Teacher · St. Anne's
+            — Md. Beth Waithera, Teacher · Hopewell STEM Academy
           </div>
         </div>
       </div>
 
-      {/* ── RIGHT PANEL ── */}
+      {/* ── RIGHT SIGN-IN FORM PANEL ── */}
       <div className="flex-1 flex flex-col bg-white">
-        {/* Top bar */}
+        {/* Top navigation bar */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100">
           <Link
             href="/"
@@ -189,7 +201,7 @@ export default function SignInPage() {
             <h2 className="text-3xl font-extrabold text-gray-900 mb-1">Sign in</h2>
             <p className="text-gray-500 text-sm mb-8">Choose your role to continue.</p>
 
-            {/* Role tabs */}
+            {/* Role selection tabs — determines which account type can sign in */}
             <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-8">
               {ROLE_TABS.map(({ id, label, icon: Icon }) => (
                 <button
@@ -198,8 +210,8 @@ export default function SignInPage() {
                   onClick={() => setActiveRole(id)}
                   className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                     activeRole === id
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700'
+                      ? 'bg-white text-gray-900 shadow-sm'   // active tab
+                      : 'text-gray-500 hover:text-gray-700'   // inactive tab
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -208,15 +220,16 @@ export default function SignInPage() {
               ))}
             </div>
 
-            {/* Error */}
+            {/* Error message banner */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
                 {error}
               </div>
             )}
 
-            {/* Form */}
+            {/* Credentials form */}
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Email / Username field */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Email or Username
@@ -233,6 +246,7 @@ export default function SignInPage() {
                 />
               </div>
 
+              {/* Password field with show/hide toggle */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
                   Password
@@ -257,6 +271,7 @@ export default function SignInPage() {
                 </div>
               </div>
 
+              {/* Submit button */}
               <Button
                 type="submit"
                 disabled={isLoading}
@@ -276,7 +291,7 @@ export default function SignInPage() {
               </Button>
             </form>
 
-            {/* Footer hint */}
+            {/* Footer help text */}
             <p className="text-center text-xs text-gray-400 mt-5">
               Your account is created by your school. Contact your teacher if you need help.
             </p>

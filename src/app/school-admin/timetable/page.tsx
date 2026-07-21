@@ -256,12 +256,12 @@ export default function TimetablePage() {
               <p className="text-slate-400 text-sm mt-1">Click "Generate AI Timetable" to create one automatically</p>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
               <div className="p-4 border-b border-slate-100 flex items-center justify-between">
                 <p className="font-semibold text-slate-800">{schedules.length} lessons scheduled</p>
                 <p className="text-xs text-slate-400">Current week</p>
               </div>
-              <div className="grid grid-cols-5 divide-x divide-slate-100">
+              <div className="grid grid-cols-5 divide-x divide-slate-100 min-w-[700px]">
                 {DAYS.map(day => (
                   <div key={day}>
                     <div className="bg-slate-50 px-3 py-2 text-center">

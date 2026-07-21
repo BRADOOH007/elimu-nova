@@ -8,23 +8,66 @@ import { useSubscription } from '@/hooks/use-subscription'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 
-interface Package {
-  id: string
-  name: string
-  description: string | null
-  price: number
-  duration: number
-  maxTeachers: number
-  maxStudents: number
-  features: string[]
-  isActive: boolean
-}
+const plans = [
+  {
+    id: 'starter',
+    name: 'Starter School Plan',
+    description: 'Perfect for small schools starting with AI learning.',
+    price: 10,
+    maxTeachers: 5,
+    maxStudents: 100,
+    features: [
+      'Basic AI tutoring (All subjects)',
+      'AI-generated notes',
+      'Progress tracking',
+      'Weekly student reports',
+      'Email support',
+    ],
+    popular: false,
+  },
+  {
+    id: 'growth',
+    name: 'Growth Plan',
+    description: 'Great for developing schools that need more automation and content.',
+    price: 25,
+    maxTeachers: 20,
+    maxStudents: 500,
+    features: [
+      'All Starter features',
+      'Advanced AI tutoring',
+      'Limited AI assignments (up to 20 per month)',
+      'Real-time analytics dashboard',
+      'AI-generated lesson plans',
+      'AI-generated schemes of work',
+      'AI assignments (unlimited)',
+      'AI notes generator (enhanced)',
+      'Basic AI presentations',
+      'Homework help assistant',
+    ],
+    popular: true,
+  },
+  {
+    id: 'excellence',
+    name: 'Excellence Plan',
+    description: 'A powerful package designed for full school automation.',
+    price: 50,
+    maxTeachers: 50,
+    maxStudents: 2000,
+    features: [
+      'All Growth Plan features',
+      'AI-generated professional presentations (PPT style)',
+      'AI exam paper generation',
+      'AI rubric creator for marking',
+      'AI grading assistant with analytics',
+      'Voice learning mode',
+      'Teacher training & AI teaching tools',
+      'Student performance predictions',
+    ],
+    popular: false,
+  },
+]
 
-interface PricingPlansProps {
-  packages: Package[]
-}
-
-export function PricingPlans({ packages }: PricingPlansProps) {
+export function PricingPlans() {
   const { data: session } = useSession()
   const { subscription, hasAccess, isTrialEligible, startTrial, createCheckout } = useSubscription()
   const [loading, setLoading] = useState<string | null>(null)
@@ -38,9 +81,6 @@ export function PricingPlans({ packages }: PricingPlansProps) {
     { card: "from-blue-500/10 via-purple-500/5 to-transparent", border: "from-blue-500 to-purple-600", icon: "from-blue-500 to-purple-600", btn: "from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700", accent: "text-blue-400" },
     { card: "from-purple-500/10 via-pink-500/5 to-transparent", border: "from-purple-500 to-pink-600", icon: "from-purple-500 to-pink-600", btn: "from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700", accent: "text-purple-400" },
     { card: "from-pink-500/10 via-rose-500/5 to-transparent", border: "from-pink-500 to-rose-600", icon: "from-pink-500 to-rose-600", btn: "from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700", accent: "text-pink-400" },
-    { card: "from-green-500/10 via-emerald-500/5 to-transparent", border: "from-green-500 to-emerald-600", icon: "from-green-500 to-emerald-600", btn: "from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700", accent: "text-green-400" },
-    { card: "from-orange-500/10 via-red-500/5 to-transparent", border: "from-orange-500 to-red-600", icon: "from-orange-500 to-red-600", btn: "from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700", accent: "text-orange-400" },
-    { card: "from-indigo-500/10 via-blue-500/5 to-transparent", border: "from-indigo-500 to-blue-600", icon: "from-indigo-500 to-blue-600", btn: "from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700", accent: "text-indigo-400" },
   ] as const
 
   const handleStartTrial = async () => {
@@ -59,14 +99,14 @@ export function PricingPlans({ packages }: PricingPlansProps) {
     }
   }
 
-  const handleUpgrade = async (packageId: string) => {
+  const handleUpgrade = async (planId: string) => {
     if (!session) {
       window.location.href = '/auth/signin'
       return
     }
-    setLoading(packageId)
+    setLoading(planId)
     try {
-      await createCheckout(packageId)
+      await createCheckout(planId)
     } catch (error) {
       console.error('Failed to create checkout:', error)
     } finally {
@@ -74,24 +114,7 @@ export function PricingPlans({ packages }: PricingPlansProps) {
     }
   }
 
-  const getButtonText = (pkg: Package) => {
-    if (!session) return 'Get Started'
-    if (subscription?.packageName === pkg.name && hasAccess) return 'Current Plan'
-    if (isTrialEligible) return 'Start Free Trial'
-    return 'Upgrade Now'
-  }
-
-  const getButtonAction = (pkg: Package) => {
-    if (!session) return () => window.location.href = '/auth/signin'
-    if (subscription?.packageName === pkg.name && hasAccess) return () => {}
-    if (isTrialEligible) return handleStartTrial
-    return () => handleUpgrade(pkg.id)
-  }
-
-  const isCurrentPlan = (pkg: Package) => subscription?.packageName === pkg.name && hasAccess
-
-  const isPopular = (_pkg: Package, index: number) =>
-    packages.length >= 3 && index === Math.floor(packages.length / 2)
+  const currentPlanName = subscription?.packageName || ''
 
   return (
     <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -135,27 +158,19 @@ export function PricingPlans({ packages }: PricingPlansProps) {
 
       {/* Pricing Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16 items-start">
-        {packages.map((pkg, index) => {
-          const g = gradients[index % gradients.length]
-          const popular = isPopular(pkg, index)
-          const current = isCurrentPlan(pkg)
-          const tier = packages.length === 3 ? index : 0
-
+        {plans.map((plan, index) => {
+          const g = gradients[index]
+          const current = currentPlanName.toLowerCase().includes(plan.id)
+          const popular = plan.popular
           return (
-            <div
-              key={pkg.id}
-              className={`relative group ${popular ? 'lg:-mt-4 lg:mb-4' : ''}`}
-            >
-              {/* Card */}
+            <div key={plan.id} className="relative group">
               <div
                 className={`relative h-full rounded-2xl border backdrop-blur-sm transition-all duration-500 flex flex-col opacity-0 animate-card-fade-in card-stagger-${(index % 6) + 1} ${
                   current
                     ? 'border-purple-500/60 bg-slate-800/90 shadow-xl shadow-purple-500/15'
                     : popular
                     ? 'border-purple-500/40 bg-slate-800/80 shadow-xl shadow-purple-500/10 hover:shadow-2xl hover:shadow-purple-500/15 hover:-translate-y-1'
-                    : tier === 0
-                    ? 'border-slate-700/40 bg-slate-800/50 shadow-md hover:shadow-lg hover:-translate-y-0.5'
-                    : 'border-slate-700/70 bg-slate-800/70 shadow-lg hover:shadow-xl hover:-translate-y-0.5'
+                    : 'border-slate-700/40 bg-slate-800/50 shadow-md hover:shadow-lg hover:-translate-y-0.5'
                 } hover:border-slate-500/80`}
               >
                 {/* Gradient overlay */}
@@ -188,10 +203,8 @@ export function PricingPlans({ packages }: PricingPlansProps) {
                     <div className={`w-14 h-14 mx-auto mb-4 rounded-xl bg-gradient-to-br ${g.icon} flex items-center justify-center shadow-lg animate-icon-glow ${popular ? 'scale-110' : ''}`}>
                       <Crown className="w-7 h-7 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-1">{pkg.name}</h3>
-                    {pkg.description && (
-                      <p className="text-sm text-slate-400 leading-relaxed">{pkg.description}</p>
-                    )}
+                    <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">{plan.description}</p>
                   </div>
 
                   {/* Price */}
@@ -202,9 +215,9 @@ export function PricingPlans({ packages }: PricingPlansProps) {
                           ? 'text-5xl bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent'
                           : 'text-4xl text-white'
                       }`}>
-                        {usd(pkg.price)}
+                        {usd(plan.price)}
                       </span>
-                      <span className={`${popular ? 'text-slate-400' : 'text-slate-500'} text-sm`}>/mo</span>
+                      <span className={`${popular ? 'text-slate-400' : 'text-slate-500'} text-sm`}>/month</span>
                     </div>
                     {popular && (
                       <p className="text-xs text-purple-300/70 mt-1">best value</p>
@@ -219,7 +232,7 @@ export function PricingPlans({ packages }: PricingPlansProps) {
                         : 'bg-slate-900/60 border border-slate-700/50'
                     }`}>
                       <Users className={`w-4 h-4 mx-auto mb-1.5 ${g.accent}`} />
-                      <div className="text-lg font-bold text-white">{pkg.maxTeachers}</div>
+                      <div className="text-lg font-bold text-white">{plan.maxTeachers}</div>
                       <div className="text-xs text-slate-400">Teachers</div>
                     </div>
                     <div className={`rounded-xl p-3.5 text-center ${
@@ -228,7 +241,7 @@ export function PricingPlans({ packages }: PricingPlansProps) {
                         : 'bg-slate-900/60 border border-slate-700/50'
                     }`}>
                       <GraduationCap className={`w-4 h-4 mx-auto mb-1.5 ${g.accent}`} />
-                      <div className="text-lg font-bold text-white">{pkg.maxStudents}</div>
+                      <div className="text-lg font-bold text-white">{plan.maxStudents}</div>
                       <div className="text-xs text-slate-400">Students</div>
                     </div>
                   </div>
@@ -236,10 +249,10 @@ export function PricingPlans({ packages }: PricingPlansProps) {
                   {/* Features */}
                   <div className="mb-8 flex-1">
                     <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                      Everything included
+                      Features included:
                     </h4>
                     <ul className="space-y-3">
-                      {pkg.features.map((feature, featureIndex) => (
+                      {plan.features.map((feature, featureIndex) => (
                         <li key={featureIndex} className="flex items-start gap-3">
                           <Check className={`w-4 h-4 mt-0.5 shrink-0 ${g.accent}`} />
                           <span className="text-sm text-slate-300 leading-relaxed">{feature}</span>
@@ -250,8 +263,8 @@ export function PricingPlans({ packages }: PricingPlansProps) {
 
                   {/* Button */}
                   <Button
-                    onClick={getButtonAction(pkg)}
-                    disabled={loading === pkg.id || loading === 'trial' || current}
+                    onClick={current ? () => {} : !session ? () => window.location.href = '/auth/signin' : isTrialEligible ? handleStartTrial : () => handleUpgrade(plan.id)}
+                    disabled={loading === plan.id || loading === 'trial' || current}
                     className={`w-full py-3 text-sm font-semibold transition-all duration-300 rounded-xl ${
                       current
                         ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed border border-slate-600/50'
@@ -260,18 +273,28 @@ export function PricingPlans({ packages }: PricingPlansProps) {
                         : `bg-gradient-to-r ${g.btn} text-white shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20 hover:-translate-y-0.5`
                     }`}
                   >
-                    {loading === pkg.id || loading === 'trial' ? (
+                    {loading === plan.id || loading === 'trial' ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Processing...
                       </>
                     ) : (
                       <span className="flex items-center justify-center gap-2">
-                        {getButtonText(pkg)}
+                        {current ? 'Current Plan' : !session ? 'Get Started' : isTrialEligible ? 'Start Free Trial' : popular ? 'Upgrade Now' : 'Upgrade Now'}
                         {!current && <ArrowRight className="w-3.5 h-3.5" />}
                       </span>
                     )}
                   </Button>
+
+                  {/* Popular badge below button instead of above */}
+                  {popular && !current && (
+                    <div className="mt-3 text-center">
+                      <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-1.5 text-xs font-bold shadow-lg shadow-purple-500/20 border-0">
+                        <Star className="w-3 h-3 mr-1.5 fill-current" />
+                        Most Popular
+                      </Badge>
+                    </div>
+                  )}
 
                   {/* Trial Info */}
                   {isTrialEligible && !session && (

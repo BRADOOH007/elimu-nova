@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
+import { COUNTRIES, getCurriculaByCountry } from '@/lib/curricula'
 import { Loader2, Download, Image as ImageIcon, Sparkles, BookOpen, Microscope, Globe, Atom, Calculator } from 'lucide-react'
 import EducationalDiagramService from '@/lib/educational-diagram-service'
 import CanvasUtils from '@/lib/canvas-utils'
@@ -20,10 +21,11 @@ interface DiagramGeneratorProps {
 export default function DiagramGenerator({ onDiagramGenerated }: DiagramGeneratorProps) {
   const [loading, setLoading] = useState(false)
   const [generatedDiagram, setGeneratedDiagram] = useState<any>(null)
+  const [country, setCountry] = useState('KE')
   const [formData, setFormData] = useState({
     topic: '',
     grade: '',
-    curriculum: 'CBC',
+    curriculum: 'cbc',
     type: 'biology',
     size: '1024x1024', // Default to standard size
     quality: 'standard'
@@ -176,17 +178,30 @@ export default function DiagramGenerator({ onDiagramGenerated }: DiagramGenerato
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="curriculum">Curriculum</Label>
-              <Select value={formData.curriculum} onValueChange={(value) => handleInputChange('curriculum', value)}>
+              <Label>Country</Label>
+              <Select value={country} onValueChange={(v) => { setCountry(v); handleInputChange('curriculum', '') }}>
                 <SelectTrigger className="edugenius-glass">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="CBC">🇰🇪 CBC (Kenya)</SelectItem>
-                  <SelectItem value="IGCSE">🌍 IGCSE (International)</SelectItem>
-                  <SelectItem value="KCSE">🎓 KCSE (Kenya)</SelectItem>
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="curriculum">Curriculum</Label>
+              <Select value={formData.curriculum} onValueChange={(value) => handleInputChange('curriculum', value)}>
+                <SelectTrigger className="edugenius-glass">
+                  <SelectValue placeholder="Select curriculum" />
+                </SelectTrigger>
+                <SelectContent>
+                  {getCurriculaByCountry(country).map((cur) => (
+                    <SelectItem key={cur.id} value={cur.id}>{cur.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

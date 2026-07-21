@@ -7,27 +7,30 @@ import { prisma } from '@/lib/prisma'
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Please log in' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized - Please log in' }, { status: 401 })
     }
 
-    // Allow teachers and super admins to generate lesson plans
     const userRole = session.user.role
     if (userRole !== 'TEACHER' && userRole !== 'SUPER_ADMIN') {
-      return NextResponse.json(
-        { error: 'Access denied - Teachers only' },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: 'Access denied - Teachers only' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { subject, grade, topic, duration, objectives, prerequisites, documentContext } = body
+    const { mode = 'single', subject, grade, topic, duration, objectives, prerequisites, documentContext, term, weeksCount, lessonsPerWeek, topics: requestTopics } = body
 
-    // Fetch teacher's saved template if no explicit documentContext provided
+    if (!subject || !grade) {
+      return NextResponse.json({ error: 'Subject and grade are required' }, { status: 400 })
+    }
+
+    if (mode === 'single' && !topic) {
+      return NextResponse.json({ error: 'Topic is required for single lesson mode' }, { status: 400 })
+    }
+
+    if (mode === 'term' && (!requestTopics || requestTopics.length === 0)) {
+      return NextResponse.json({ error: 'At least one topic is required for term mode' }, { status: 400 })
+    }
+
     let templateText = documentContext
     if (!templateText && userRole === 'TEACHER') {
       const teacher = await prisma.teacher.findUnique({
@@ -37,129 +40,161 @@ export async function POST(request: NextRequest) {
       templateText = teacher?.lessonPlanTemplate || null
     }
 
-    // Validate required fields
-    if (!subject || !grade || !topic || !duration || !objectives) {
-      return NextResponse.json(
-        { error: 'Missing required fields: subject, grade, topic, duration, and objectives are required' },
-        { status: 400 }
-      )
-    }
-
-    // Filter out empty objectives and prerequisites
-    const filteredObjectives = Array.isArray(objectives) 
+    const filteredObjectives = Array.isArray(objectives)
       ? objectives.filter((obj: string) => obj && obj.trim() !== '')
       : []
-    const filteredPrerequisites = Array.isArray(prerequisites) 
-      ? prerequisites.filter((prereq: string) => prereq && prereq.trim() !== '') 
+    const filteredPrerequisites = Array.isArray(prerequisites)
+      ? prerequisites.filter((prereq: string) => prereq && prereq.trim() !== '')
       : []
 
-    if (filteredObjectives.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one learning objective is required' },
-        { status: 400 }
-      )
-    }
-
-    // Language Logic: Only use Swahili for Kiswahili subject, everything else in English
     const isKiswahili = subject.toLowerCase() === 'kiswahili'
-    const languageInstruction = isKiswahili 
-      ? 'IMPORTANT: Generate this lesson plan entirely in Swahili language. All content, instructions, and explanations should be in Swahili.'
-      : 'IMPORTANT: Generate this lesson plan entirely in English language. All content, instructions, and explanations should be in English.'
+    const languageInstruction = isKiswahili
+      ? 'IMPORTANT: Generate this lesson plan entirely in Swahili language.'
+      : 'IMPORTANT: Generate this lesson plan entirely in English language.'
 
-    const documentContextBlock = templateText
-      ? `\n\n## Reference Document Context\nThis document was uploaded as a format reference. Extract the lesson structure, sections, and style from it, then generate the new lesson plan in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
+    const templateBlock = templateText
+      ? `\n\nA reference lesson plan document was uploaded. Study its structure, sections, and style, then generate in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
       : ''
 
-    const prompt = `Create a detailed lesson plan for:
+    const systemPrompt = `You are a Kenyan CBC curriculum expert creating detailed lesson plans.${templateBlock}
+Return a JSON object with these fields:
+{
+  "title": string,
+  "duration": number (minutes),
+  "strand": string,
+  "subStrand": string,
+  "specificLearningOutcomes": string,
+  "keyInquiryQuestions": string[],
+  "introduction": { "duration": number, "activity": string, "teacherActions": string, "studentActions": string },
+  "mainActivity": { "duration": number, "activity": string, "teacherActions": string, "studentActions": string, "coreCompetencies": string[] },
+  "practiceActivity": { "duration": number, "activity": string },
+  "conclusion": { "duration": number, "activity": string, "assessment": string },
+  "learningResources": string[],
+  "assessment": string,
+  "differentiation": { "support": string, "extension": string },
+  "homework": string,
+  "teacherReflection": string
+}
+Return ONLY valid JSON. No markdown or explanation.`
+
+    if (mode === 'single') {
+      if (!topic || !duration || filteredObjectives.length === 0) {
+        return NextResponse.json({ error: 'Topic, duration, and at least one objective required' }, { status: 400 })
+      }
+
+      const userPrompt = `Create a detailed ${duration}-minute lesson plan for:
+
 Subject: ${subject}
 Grade: ${grade}
 Topic: ${topic}
-Duration: ${duration} minutes
+${languageInstruction}
+
 Learning Objectives: ${filteredObjectives.join(', ')}
 Prerequisites: ${filteredPrerequisites.length > 0 ? filteredPrerequisites.join(', ') : 'None specified'}
 
-${languageInstruction}${documentContextBlock}
+Make this lesson plan practical, engaging, and specifically tailored for Kenyan ${grade} students.
+Use local examples. Each activity should have clear timing and instructions.`
 
-Please create a comprehensive lesson plan that includes:
+      const raw = await OpenAIService.generateLongContent(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        { maxTokens: 2000, temperature: 0.5 }
+      )
 
-## Lesson Plan Structure:
-
-### 1. Lesson Information
-- Subject: ${subject}
-- Grade: ${grade}
-- Topic: ${topic}
-- Duration: ${duration} minutes
-
-### 2. Learning Objectives
-List the specific learning objectives for this lesson.
-
-### 3. Materials Needed
-List all materials, resources, and equipment needed for the lesson.
-
-### 4. Lesson Activities (with timing)
-Break down the lesson into phases:
-- **Introduction (X minutes):** Opening activities and review
-- **Main Activity (X minutes):** Core learning activities
-- **Practice (X minutes):** Guided and independent practice
-- **Conclusion (X minutes):** Summary and wrap-up
-
-### 5. Assessment Strategies
-- Formative assessment methods
-- Summative assessment methods
-
-### 6. Homework/Extension Activities
-Assignments or activities for students to complete outside class.
-
-### 7. Teacher Notes
-Additional notes and tips for effective lesson delivery.
-
-Format the response clearly with proper headings and bullet points for easy reading.`
-
-    const messages = [
-      {
-        role: 'system' as const,
-        content: isKiswahili 
-          ? "You are an expert educational consultant specializing in creating detailed, practical lesson plans in Swahili language. You have deep knowledge of Kiswahili curriculum, Swahili teaching methods, and East African education systems. Focus on student engagement, clear learning objectives, and effective teaching strategies. CRITICAL: Always respond entirely in Swahili language for Kiswahili subjects."
-          : "You are an expert educational consultant specializing in creating detailed, practical lesson plans. Focus on student engagement, clear learning objectives, and effective teaching strategies. Create well-structured, practical lesson plans that teachers can easily follow. CRITICAL: Always respond entirely in English language for all subjects except Kiswahili."
-      },
-      {
-        role: 'user' as const,
-        content: prompt
+      let lessonData: any = {}
+      try {
+        const start = raw.indexOf('{')
+        const end = raw.lastIndexOf('}')
+        if (start === -1 || end === -1 || end <= start) throw new Error('No JSON found')
+        lessonData = JSON.parse(raw.slice(start, end + 1))
+      } catch {
+        return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })
       }
-    ]
 
-    console.log('Generating lesson plan for:', { subject, grade, topic, duration })
+      return NextResponse.json({
+        success: true,
+        mode: 'single',
+        lesson: lessonData,
+        metadata: { subject, grade, topic, duration, language: isKiswahili ? 'swahili' : 'english' },
+      })
+    }
 
-    // Generate lesson plan using full AI waterfall
-    const content = await OpenAIService.generateLongContent(messages, {
-      maxTokens: 2000,
-      temperature: 0.7
-    })
+    // ── Term mode: generate multiple lessons across weeks ──
+    const finalWeeks = weeksCount || 13
+    const finalLessonsPerWeek = lessonsPerWeek || 5
+    const topicsList: string[] = requestTopics || (topic ? [topic] : [])
 
-    console.log('Lesson plan generated successfully, length:', content.length)
+    const termPrompt = `Create a comprehensive set of lesson plans covering an entire term.
+
+Subject: ${subject}
+Grade: ${grade}
+Term: ${term || 'Term'}
+Duration: ${finalWeeks} weeks, ${finalLessonsPerWeek} lessons per week
+Topics to cover: ${topicsList.join(', ')}
+${languageInstruction}
+
+You must generate lesson plans for ALL ${finalWeeks * finalLessonsPerWeek} lessons across ${finalWeeks} weeks.
+Cover ALL topics: ${topicsList.join(', ')}
+Distribute topics evenly across the weeks.
+
+Return a JSON object with this structure:
+{
+  "title": "${subject} - ${grade} - Term Plan",
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "theme": string,
+      "lessons": [
+        {
+          "lessonNumber": 1,
+          "topic": string,
+          "duration": 40,
+          "specificLearningOutcomes": string,
+          "keyInquiryQuestions": string[],
+          "introduction": { "duration": number, "activity": string, "teacherActions": string, "studentActions": string },
+          "mainActivity": { "duration": number, "activity": string, "teacherActions": string, "studentActions": string, "coreCompetencies": string[] },
+          "practiceActivity": { "duration": number, "activity": string },
+          "conclusion": { "duration": number, "activity": string, "assessment": string },
+          "learningResources": string[],
+          "assessment": string,
+          "homework": string
+        }
+      ]
+    }
+  ]
+}
+Return ONLY valid JSON. No markdown or explanation.`
+
+    const raw = await OpenAIService.generateLongContent(
+      [
+        { role: 'system', content: systemPrompt.replace('Return ONLY valid JSON.', 'Return the full term plan as valid JSON.') },
+        { role: 'user', content: termPrompt },
+      ],
+      { maxTokens: 4000, temperature: 0.5 }
+    )
+
+    let termData: any = {}
+    try {
+      const start = raw.indexOf('{')
+      const end = raw.lastIndexOf('}')
+      if (start === -1 || end === -1 || end <= start) throw new Error('No JSON found')
+      termData = JSON.parse(raw.slice(start, end + 1))
+    } catch {
+      return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })
+    }
 
     return NextResponse.json({
       success: true,
-      content: content,
-      metadata: {
-        generatedAt: new Date().toISOString(),
-        model: 'gpt-4o-mini',
-        subject,
-        grade,
-        topic,
-        duration,
-        objectives: filteredObjectives,
-        prerequisites: filteredPrerequisites,
-        language: isKiswahili ? 'swahili' : 'english'
-      }
+      mode: 'term',
+      termPlan: termData,
+      metadata: { subject, grade, weeks: finalWeeks, lessonsPerWeek: finalLessonsPerWeek, topics: topicsList, language: isKiswahili ? 'swahili' : 'english' },
     })
   } catch (error) {
     console.error('Error generating lesson plan:', error)
     return NextResponse.json(
-      { 
-        error: 'Failed to generate lesson plan', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
-      },
+      { error: 'Failed to generate lesson plan', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

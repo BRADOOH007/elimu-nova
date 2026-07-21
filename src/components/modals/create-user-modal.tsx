@@ -84,7 +84,7 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
           isActive: true
         })
         toast({
-          variant: "success",
+          variant: "default",
           title: "User Created",
           description: "New user has been created successfully!",
         })

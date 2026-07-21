@@ -66,7 +66,8 @@ export async function GET(
         address: student.user.address,
         status: student.user.isActive ? 'Active' : 'Inactive',
         joinDate: student.user.createdAt.toISOString(),
-        class: student.class
+        class: student.class,
+        subjects: student.subjects
       }
     })
   } catch (error) {
@@ -98,7 +99,7 @@ export async function PUT(
     }
 
     const body = await request.json()
-    const { firstName, lastName, email, phone, address, classId, isActive } = body
+    const { firstName, lastName, email, phone, address, classId, isActive, subjects } = body
 
     // Get the student to verify it belongs to this teacher's school
     const student = await prisma.student.findUnique({
@@ -133,7 +134,8 @@ export async function PUT(
       await tx.student.update({
         where: { id: (await params).id },
         data: {
-          classId: classId || null
+          classId: classId || null,
+          ...(subjects !== undefined ? { subjects } : {})
         }
       })
     })

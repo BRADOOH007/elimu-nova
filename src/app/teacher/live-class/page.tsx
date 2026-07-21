@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import {
   Radio, Square, Send, Users, MessageSquare, Pen, Eraser,
   Minus, Circle, Loader2, ChevronRight, Copy, CheckCircle,
-  Sparkles, BookOpen, RotateCcw, Download, Plus
+  Sparkles, BookOpen, RotateCcw, Download, Plus, Video, Link
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -16,7 +16,7 @@ interface LiveSession {
   id: string; title: string; subject: string; status: string
   metadata: {
     boardContent: string; chat: ChatMsg[]; participants: Participant[]
-    startedAt: string; sessionCode: string
+    startedAt: string; sessionCode: string; meetingLink?: string
   }
   class?: { name: string; grade: string }
 }
@@ -33,6 +33,7 @@ export default function LiveClassPage() {
   const [selectedClass, setSelectedClass] = useState('')
   const [title, setTitle] = useState('Live Class')
   const [subject, setSubject] = useState('')
+  const [meetingLink, setMeetingLink] = useState('')
   const [liveSession, setLiveSession] = useState<LiveSession | null>(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -87,7 +88,7 @@ export default function LiveClassPage() {
       const res  = await fetch('/api/live-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, classId: selectedClass, subject }),
+        body: JSON.stringify({ title, classId: selectedClass, subject, meetingLink }),
       })
       const data = await res.json()
       setLiveSession(data.session)
@@ -235,6 +236,18 @@ export default function LiveClassPage() {
             className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+            <Video className="h-3.5 w-3.5 text-blue-500" /> Meeting Link <span className="text-slate-400 font-normal">(optional)</span>
+          </label>
+          <div className="relative">
+            <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input value={meetingLink} onChange={e => setMeetingLink(e.target.value)}
+              placeholder="https://zoom.us/j/... or https://meet.google.com/..."
+              className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <p className="text-xs text-slate-400 mt-1">Paste a Zoom, Google Meet, or Teams link — students will see a <strong>Join Video</strong> button</p>
+        </div>
+        <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Class</label>
           <select value={selectedClass} onChange={e => setSelectedClass(e.target.value)}
             className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -253,6 +266,7 @@ export default function LiveClassPage() {
         <p className="text-sm font-semibold text-blue-800 mb-1">How it works</p>
         <ul className="space-y-1 text-xs text-blue-700">
           <li>• A session code is generated — students enter it at <strong>/student/schedule</strong> to join</li>
+          <li>• Add a Zoom/Meet/Teams link and students get a <strong>Join Video</strong> button</li>
           <li>• Draw on the whiteboard — students see it live (3-second refresh)</li>
           <li>• Ask Hope AI questions mid-lesson and broadcast answers to students</li>
           <li>• Chat messages are visible to all participants</li>
@@ -277,6 +291,12 @@ export default function LiveClassPage() {
           {liveSession?.class && <span className="text-xs text-slate-400">{liveSession.class.name}</span>}
         </div>
         <div className="flex items-center gap-3">
+          {liveSession?.metadata?.meetingLink && (
+            <a href={liveSession.metadata.meetingLink} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
+              <Video className="h-3 w-3" /> Join Video
+            </a>
+          )}
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
             <span className="text-xs text-slate-500">Code:</span>
             <span className="text-sm font-bold text-slate-800 font-mono tracking-widest">{liveSession?.metadata?.sessionCode}</span>

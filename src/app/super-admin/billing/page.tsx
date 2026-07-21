@@ -583,6 +583,22 @@ export default function BillingPage() {
   }
 
   // Handle sort change
+  const handleDeletePaymentMethod = async (id: string) => {
+    if (!confirm('Delete this payment method? It cannot be undone.')) return
+    try {
+      const res = await fetch(`/api/payment-methods/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast({ title: 'Payment method deleted' })
+        fetchPaymentMethods(paymentMethodsPagination.page)
+      } else {
+        const err = await res.json()
+        toast({ title: 'Error', description: err.error, variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Error', description: 'Failed to delete', variant: 'destructive' })
+    }
+  }
+
   const handleSortChange = (field: string) => {
     setSortBy(field)
   }
@@ -713,20 +729,20 @@ export default function BillingPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="subscriptions" className="flex items-center space-x-2">
+        <TabsList className="w-full overflow-x-auto flex">
+          <TabsTrigger value="subscriptions" className="flex items-center space-x-2 shrink-0">
             <CreditCard className="w-4 h-4" />
             <span>Subscriptions</span>
           </TabsTrigger>
-          <TabsTrigger value="payment-methods" className="flex items-center space-x-2">
+          <TabsTrigger value="payment-methods" className="flex items-center space-x-2 shrink-0">
             <Settings className="w-4 h-4" />
             <span>Payment Methods</span>
           </TabsTrigger>
-          <TabsTrigger value="invoices" className="flex items-center space-x-2">
+          <TabsTrigger value="invoices" className="flex items-center space-x-2 shrink-0">
             <Receipt className="w-4 h-4" />
             <span>Invoices</span>
           </TabsTrigger>
-          <TabsTrigger value="stripe-config" className="flex items-center space-x-2">
+          <TabsTrigger value="stripe-config" className="flex items-center space-x-2 shrink-0">
             <CreditCard className="w-4 h-4 text-purple-600" />
             <span>Stripe Setup</span>
           </TabsTrigger>
@@ -953,10 +969,10 @@ export default function BillingPage() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => toast({ title: 'Edit', description: 'Edit feature coming soon' })}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="ghost" size="sm">
+                        <Button variant="ghost" size="sm" onClick={() => handleDeletePaymentMethod(method.id)}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>

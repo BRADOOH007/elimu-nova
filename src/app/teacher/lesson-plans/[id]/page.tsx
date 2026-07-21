@@ -10,6 +10,7 @@ import { Loader2, ArrowLeft, BookOpen, Calendar, GraduationCap, FileText, Edit, 
 import { PrintExportButton } from '@/components/print-export-button'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { useToast } from "@/hooks/use-toast"
+import ImageBankDisplay from '@/components/ai/image-bank-display'
 
 interface LessonPlanDetail {
   id: string; title: string; subject: string; grade: string
@@ -110,6 +111,12 @@ export default function TeacherLessonPlanDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <ImageBankDisplay contextType="lesson_plan" contextId={id} />
+
+      {typeof plan.content === 'object' && plan.content !== null && (
+        <ImageBankDisplay contextType="lesson_plan" contextId={id} compact />
+      )}
     </div>
   )
 }

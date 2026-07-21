@@ -183,7 +183,7 @@ export function UserDetailsModal({
         onUserUpdated(updatedUser)
         setEditing(false)
         toast({
-          variant: "success",
+          variant: "default",
           title: "User Updated",
           description: "User information has been updated successfully!",
         })
@@ -221,7 +221,7 @@ export function UserDetailsModal({
         toast({
           title: "User Deleted Successfully",
           description: `${user.firstName} ${user.lastName} has been permanently removed from the system.`,
-          variant: "success",
+          variant: "default",
         })
       } else {
         const error = await response.json()

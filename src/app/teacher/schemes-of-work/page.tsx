@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import { 
   FileText, 
@@ -42,13 +43,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import SchemeOfWorkModal from '@/components/modals/scheme-of-work-modal'
 
@@ -322,7 +316,7 @@ export default function SchemesOfWorkPage() {
         toast({
           title: "Scheme Deleted Successfully",
           description: "The scheme of work has been permanently removed.",
-          variant: "success",
+          variant: "default",
         })
       } else {
         const error = await response.json()
@@ -455,7 +449,7 @@ export default function SchemesOfWorkPage() {
         toast({
           title: "Scheme Shared Successfully",
           description: `Scheme of work shared with ${data.sharedCount} students!`,
-          variant: "success",
+          variant: "default",
         })
         setIsShareModalOpen(false)
         setSelectedStudents([])
@@ -485,8 +479,8 @@ export default function SchemesOfWorkPage() {
     const matchesSearch = sw.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sw.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          sw.grade.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSubject = !subjectFilter || sw.subject === subjectFilter
-    const matchesGrade = !gradeFilter || sw.grade === gradeFilter
+    const matchesSubject = !subjectFilter || subjectFilter === 'all' || sw.subject === subjectFilter
+    const matchesGrade = !gradeFilter || gradeFilter === 'all' || sw.grade === gradeFilter
     return matchesSearch && matchesSubject && matchesGrade
   })
 
@@ -526,27 +520,29 @@ export default function SchemesOfWorkPage() {
                 />
               </div>
 
-              <select
-                value={subjectFilter}
-                onChange={(e) => setSubjectFilter(e.target.value)}
-                className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-green-50 to-blue-50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:shadow-md transition-all duration-300"
-              >
-                <option value="">All Subjects</option>
-                {subjects.map(subject => (
-                  <option key={subject} value={subject}>{subject}</option>
-                ))}
-              </select>
+              <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                <SelectTrigger className="bg-gradient-to-r from-white via-green-50 to-blue-50 border-0 shadow-sm hover:shadow-md transition-all">
+                  <SelectValue placeholder="All Subjects" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Subjects</SelectItem>
+                  {subjects.map(subject => (
+                    <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              <select
-                value={gradeFilter}
-                onChange={(e) => setGradeFilter(e.target.value)}
-                className="flex h-10 items-center justify-between rounded-md border-0 bg-gradient-to-r from-white via-green-50 to-blue-50 px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:shadow-md transition-all duration-300"
-              >
-                <option value="">All Grades</option>
-                {grades.map(grade => (
-                  <option key={grade} value={grade}>{grade}</option>
-                ))}
-              </select>
+              <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                <SelectTrigger className="bg-gradient-to-r from-white via-green-50 to-blue-50 border-0 shadow-sm hover:shadow-md transition-all">
+                  <SelectValue placeholder="All Grades" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Grades</SelectItem>
+                  {grades.map(grade => (
+                    <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               <Button
                 variant="outline"

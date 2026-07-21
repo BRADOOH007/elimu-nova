@@ -18,7 +18,8 @@ import {
   Edit,
   Trash2,
   UserCheck,
-  UserX
+  UserX,
+  BookOpen
 } from 'lucide-react'
 import GeneratePasswordModal from './generate-password-modal'
 
@@ -82,7 +83,9 @@ export default function ViewStudentModal({ isOpen, onClose, student, onEdit, onD
   }
 
   const handleDelete = () => {
-    // Confirmation removed - using toast notifications only
+    if (!student || !confirm(`Delete "${student.firstName} ${student.lastName}"? This cannot be undone.`)) return
+    onDelete(student.id)
+    handleClose()
   }
 
   const handleToggleStatus = async () => {
@@ -230,6 +233,23 @@ export default function ViewStudentModal({ isOpen, onClose, student, onEdit, onD
                       {(studentData?.class || student.class)?.subject} • {(studentData?.class || student.class)?.grade}
                     </p>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Learning Areas / Subjects */}
+            {(studentData?.subjects && studentData.subjects.length > 0) && (
+              <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
+                <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-amber-600" />
+                  Learning Areas / Subjects
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {studentData.subjects.map((s: string) => (
+                    <span key={s} className="px-3 py-1.5 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                      {s}
+                    </span>
+                  ))}
                 </div>
               </div>
             )}

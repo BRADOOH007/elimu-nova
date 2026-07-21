@@ -307,8 +307,8 @@ export default function AIConfigPage() {
         <h2 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
           <Settings className="h-4 w-4 text-slate-500" /> Available Models
         </h2>
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-x-auto">
+          <table className="w-full text-sm min-w-[500px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="text-left px-4 py-2.5 text-xs font-bold text-slate-500 uppercase tracking-wide">Model</th>
