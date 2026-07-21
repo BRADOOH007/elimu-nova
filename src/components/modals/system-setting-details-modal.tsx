@@ -123,8 +123,7 @@ export default function SystemSettingDetailsModal({
 
   const handleDelete = async () => {
     if (!setting) return
-
-    // Confirmation removed - using toast notifications only
+    if (!confirm(`Delete setting "${setting.key}"? This cannot be undone.`)) return
 
     setLoading(true)
     try {

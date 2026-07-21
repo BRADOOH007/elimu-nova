@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import {
-  Code2, Globe, Gamepad2, Brain, Send, Loader2, ExternalLink,
+  Code2, Globe, Gamepad2, Brain, Terminal, Send, Loader2, ExternalLink,
   ArrowLeft, Sparkles, Lightbulb, RefreshCw, CheckCircle,
   BookOpen, Target, Zap, ChevronRight, X
 } from 'lucide-react'
@@ -12,7 +12,7 @@ import { CodePlayground } from '@/components/coding/code-playground'
 import { ScratchEmbed } from '@/components/coding/scratch-embed'
 
 /* ─────────────────────────── Types ─────────────────────────── */
-type Track = 'scratch' | 'web' | 'ai-kids'
+type Track = 'scratch' | 'web' | 'ai-kids' | 'advanced'
 
 interface Message { role: 'user' | 'assistant'; content: string }
 
@@ -63,6 +63,22 @@ const AI_LESSONS: Lesson[] = [
   { id: 6, title: 'Build an AI Project', description: 'Create with AI tools', difficulty: 'Advanced', content: 'Use Teachable Machine, MIT App Inventor, or Scratch AI extensions to build a real project — a sign-language translator, a plant identifier, or an AI storyteller.' },
 ]
 
+// ── Advanced Programming (Python, DSA, APIs) ──
+const ADVANCED_LESSONS: Lesson[] = [
+  { id: 1, title: 'Python Basics', description: 'Variables, data types & input/output', difficulty: 'Beginner',
+    content: '```python\n# Variables hold data\nname = "Alice"\nage = 12\nheight = 1.45\n\n# Print to console\nprint(f"{name} is {age} years old")\n\n# Get user input\nname = input("What\\\'s your name? ")\nprint(f"Hello, {name}!")\n```\nPython uses `print()` to output text and `input()` to get user input. Variables don\'t need a type declaration.' },
+  { id: 2, title: 'Conditionals & Loops', description: 'If/else logic and for/while loops', difficulty: 'Beginner',
+    content: '```python\n# Conditional statements\nscore = 85\nif score >= 80:\n    grade = "A"\nelif score >= 60:\n    grade = "B"\nelse:\n    grade = "C"\n\n# For loop — repeat for each item\nfor i in range(1, 6):\n    print(f"Step {i}")\n\n# While loop — repeat until condition\ncount = 5\nwhile count > 0:\n    print(f"{count}...")\n    count -= 1\nprint("Go!")\n```' },
+  { id: 3, title: 'Lists & Dictionaries', description: 'Store collections of data', difficulty: 'Intermediate',
+    content: '```python\n# Lists — ordered collections\nfruits = ["apple", "banana", "cherry"]\nfruits.append("orange")\nfor fruit in fruits:\n    print(fruit)\n\n# Dictionaries — key-value pairs\nstudent = {\n    "name": "Alice",\n    "age": 12,\n    "subjects": ["Math", "Science"]\n}\nprint(student["name"])\nprint(student["subjects"][0])\n\n# List comprehension — concise loops\nsquares = [x**2 for x in range(10)]\nprint(squares)\n```\nLists use `[]`, dictionaries use `{}` with key:value pairs. Both are mutable.' },
+  { id: 4, title: 'Functions & Modules', description: 'Reusable code and imports', difficulty: 'Intermediate',
+    content: '```python\n# Define a function\ndef greet(name):\n    """Return a greeting message"""\n    return f"Hello, {name}!"\n\n# Call the function\nmessage = greet("Alice")\nprint(message)\n\n# Function with default parameter\ndef power(base, exp=2):\n    return base ** exp\n\nprint(power(5))    # 25\nprint(power(5, 3)) # 125\n\n# Import modules\nimport math\nprint(math.sqrt(16))    # 4.0\nprint(math.pi)          # 3.14159...\n\nfrom random import randint\nprint(randint(1, 10))   # Random number 1-10\n```\nFunctions let you reuse code. Modules add extra functionality.' },
+  { id: 5, title: 'Data Structures', description: 'Stacks, queues, sorting & searching', difficulty: 'Advanced',
+    content: '```python\n# Stack (LIFO) using a list\nstack = []\nstack.append("A")   # push\nstack.append("B")\nstack.append("C")\ntop = stack.pop()   # -> "C"\nprint(f"Stack: {stack}, Popped: {top}")\n\n# Queue (FIFO) using collections\nfrom collections import deque\nqueue = deque(["A", "B", "C"])\nfirst = queue.popleft()  # -> "A"\nprint(f"Queue: {queue}, Removed: {first}")\n\n# Bubble sort\ndef bubble_sort(arr):\n    n = len(arr)\n    for i in range(n):\n        for j in range(0, n-i-1):\n            if arr[j] > arr[j+1]:\n                arr[j], arr[j+1] = arr[j+1], arr[j]\n    return arr\n\nprint(bubble_sort([64, 34, 25, 12, 22, 11, 90]))\n\n# Binary search\ndef binary_search(arr, target):\n    left, right = 0, len(arr) - 1\n    while left <= right:\n        mid = (left + right) // 2\n        if arr[mid] == target: return mid\n        elif arr[mid] < target: left = mid + 1\n        else: right = mid - 1\n    return -1\n\nprint(binary_search([1, 3, 5, 7, 9, 11], 7))  # -> 3\n```' },
+  { id: 6, title: 'APIs & Real-World Projects', description: 'Fetch data, build a calculator with file I/O', difficulty: 'Advanced',
+    content: '```python\n# Fetch data from an API\nimport requests\n\nresponse = requests.get("https://api.example.com/data")\nif response.status_code == 200:\n    data = response.json()\n    print(data)\n\n# Build a simple calculator\ndef calculator():\n    ops = {"+": lambda a,b: a+b, "-": lambda a,b: a-b,\n           "*": lambda a,b: a*b, "/": lambda a,b: a/b}\n    \n    a = float(input("Enter first number: "))\n    op = input("Enter operator (+,-,*,/): ")\n    b = float(input("Enter second number: "))\n    \n    if op in ops:\n        print(f"Result: {ops[op](a, b)}")\n    else:\n        print("Invalid operator")\n\ncalculator()\n\n# File I/O\nwith open("notes.txt", "w") as f:\n    f.write("Hello from Python!\\n")\n\nwith open("notes.txt", "r") as f:\n    content = f.read()\n    print(content)\n```\nAPIs let your code talk to other services. File I/O persists data between runs.' },
+]
+
 const TRACKS = [
   {
     id: 'scratch' as Track,
@@ -93,6 +109,16 @@ const TRACKS = [
     grad: 'from-purple-600 to-pink-600',
     bg:   'bg-purple-50',
     lessons: AI_LESSONS,
+  },
+  {
+    id: 'advanced' as Track,
+    title: 'Advanced Programming',
+    subtitle: 'Python · Data Structures · APIs',
+    desc: 'Level up with real programming languages, algorithms, and real-world projects.',
+    icon: Terminal,
+    grad: 'from-cyan-600 to-teal-600',
+    bg:   'bg-cyan-50',
+    lessons: ADVANCED_LESSONS,
   },
 ]
 
@@ -407,7 +433,7 @@ export default function CodingStudioPage() {
       </div>
 
       {/* Track cards */}
-      <div className="grid md:grid-cols-3 gap-5">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {TRACKS.map(track => {
           const Icon = track.icon
           return (

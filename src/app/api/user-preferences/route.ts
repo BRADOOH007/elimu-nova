@@ -17,7 +17,6 @@ export async function GET(request: NextRequest) {
       where: { userId }
     })
 
-    // Create default preferences if none exist
     if (!preferences) {
       preferences = await prisma.userPreference.create({
         data: {
@@ -26,7 +25,9 @@ export async function GET(request: NextRequest) {
           language: 'en',
           timezone: 'UTC',
           emailNotifications: true,
-          pushNotifications: true
+          pushNotifications: true,
+          country: '',
+          curriculum: '',
         }
       })
     }
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { userId, theme, language, timezone, emailNotifications, pushNotifications } = body
+    const { userId, theme, language, timezone, emailNotifications, pushNotifications, country, curriculum } = body
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
@@ -59,7 +60,9 @@ export async function POST(request: NextRequest) {
         language,
         timezone,
         emailNotifications,
-        pushNotifications
+        pushNotifications,
+        country,
+        curriculum,
       },
       create: {
         userId,
@@ -67,7 +70,9 @@ export async function POST(request: NextRequest) {
         language: language || 'en',
         timezone: timezone || 'UTC',
         emailNotifications: emailNotifications !== undefined ? emailNotifications : true,
-        pushNotifications: pushNotifications !== undefined ? pushNotifications : true
+        pushNotifications: pushNotifications !== undefined ? pushNotifications : true,
+        country: country || '',
+        curriculum: curriculum || '',
       }
     })
 

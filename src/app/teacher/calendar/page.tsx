@@ -165,11 +165,11 @@ export default function TeacherCalendarPage() {
     <div className="p-4">
       <h1 className="text-2xl font-bold text-slate-900 mb-4">Calendar</h1>
       <Tabs defaultValue="calendar">
-        <TabsList className="grid w-full grid-cols-4 mb-4">
-          <TabsTrigger value="calendar"><Calendar className="w-4 h-4 mr-2" />Calendar</TabsTrigger>
-          <TabsTrigger value="schedule"><Clock className="w-4 h-4 mr-2" />Schedule</TabsTrigger>
-          <TabsTrigger value="timetable"><Calendar className="w-4 h-4 mr-2" />Timetable</TabsTrigger>
-          <TabsTrigger value="meetings"><Users className="w-4 h-4 mr-2" />Meetings</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex mb-4">
+          <TabsTrigger value="calendar" className="shrink-0"><Calendar className="w-4 h-4 mr-2" />Calendar</TabsTrigger>
+          <TabsTrigger value="schedule" className="shrink-0"><Clock className="w-4 h-4 mr-2" />Schedule</TabsTrigger>
+          <TabsTrigger value="timetable" className="shrink-0"><Calendar className="w-4 h-4 mr-2" />Timetable</TabsTrigger>
+          <TabsTrigger value="meetings" className="shrink-0"><Users className="w-4 h-4 mr-2" />Meetings</TabsTrigger>
         </TabsList>
         <TabsContent value="calendar"><CalendarView /></TabsContent>
         <TabsContent value="schedule"><ScheduleTab /></TabsContent>

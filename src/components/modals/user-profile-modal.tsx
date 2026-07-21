@@ -130,7 +130,7 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
         }
         // Show success message
         toast({
-          variant: "success",
+          variant: "default",
           title: "Profile Updated",
           description: "Your profile has been updated successfully!",
         })
@@ -199,24 +199,29 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
 
     try {
       setUploadingAvatar(true)
-      
-      // Create preview
-      const reader = new FileReader()
-      reader.onload = (e) => {
+
+      // Show local preview immediately
+      const previewReader = new FileReader()
+      previewReader.onload = (e) => {
         setPreviewAvatar(e.target?.result as string)
       }
-      reader.readAsDataURL(file)
+      previewReader.readAsDataURL(file)
 
-      // Convert to base64 for storage (in a real app, you'd upload to a file service)
-      const base64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.readAsDataURL(file)
+      // Upload to Cloudinary via the API
+      const uploadFormData = new FormData()
+      uploadFormData.append('file', file)
+      const res = await fetch('/api/upload-avatar', {
+        method: 'POST',
+        body: uploadFormData,
       })
 
-      // Update form data with new avatar
-      setFormData(prev => ({ ...prev, avatar: base64 }))
-      
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Upload failed')
+      }
+
+      const { url } = await res.json()
+      setFormData(prev => ({ ...prev, avatar: url }))
     } catch (error) {
       console.error('Error uploading avatar:', error)
       toast({
@@ -224,6 +229,7 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
         title: "Upload Failed",
         description: "Failed to upload avatar. Please try again.",
       })
+      setPreviewAvatar(null)
     } finally {
       setUploadingAvatar(false)
     }

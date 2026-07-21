@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { ImageGenerationService } from '@/lib/image-generation'
-import CloudinaryStorage from '@/lib/cloudinary-storage'
+import { ImageBank } from '@/lib/image-bank'
 
 export async function POST(request: NextRequest) {
-  // Parse body once at the top so catch block can use it
   let parsedBody: any = {}
   try {
     parsedBody = await request.json()
@@ -15,126 +14,152 @@ export async function POST(request: NextRequest) {
 
   try {
     const session = await getServerSession(authOptions)
-
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { prompt, style = 'natural', size = '1024x1024', quality = 'standard' } = parsedBody
+    const {
+      prompt,
+      style = 'natural',
+      size = '1024x1024',
+      quality = 'standard',
+      provider = 'auto',
+      subject,
+      grade,
+      topic,
+      contextType,
+      contextId,
+    } = parsedBody
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
     }
 
-    console.log('Generating image, prompt:', prompt)
+    const displayTopic = topic || prompt.substring(0, 100)
+    const schoolId = session.user.schoolAdminId || undefined
 
-    // Generate image using the ImageGenerationService
+    const cached = await ImageBank.findMatching({
+      prompt,
+      subject,
+      grade,
+      topic: displayTopic,
+      schoolId,
+    })
+
+    if (cached) {
+      if (contextType && contextId) {
+        await ImageBank.trackUsage({
+          imageId: cached.id,
+          contextType: contextType as any,
+          contextId,
+          userId: session.user.id,
+        })
+      }
+
+      return NextResponse.json({
+        imageUrl: cached.url,
+        success: true,
+        source: cached.subject ? 'image-bank' : 'image-bank',
+        fromBank: true,
+        bankEntry: cached,
+        revisedPrompt: cached.prompt,
+        message: 'Found matching image in shared bank — no AI call needed.',
+      })
+    }
+
     const imageService = new ImageGenerationService()
     const result = await imageService.generateImage({
       prompt,
       style: style === 'educational' ? 'natural' : style,
       size,
       quality,
+      provider,
     })
 
-    // Save the image to Cloudinary storage
-    const sizeMapping = {
-      '512x512': 'SMALL_512',
-      '1024x1024': 'MEDIUM_1024',
-      '1536x1024': 'LARGE_1536',
-      '1024x1536': 'PORTRAIT_1024'
-    } as const
+    const isPlaceholder = result.provider === 'placeholder'
+    let savedEntry = null
 
-    const imageType = style === 'educational' || style === 'diagram' ? 'DIAGRAM' : 'GENERAL'
-
-    const savedImage = await CloudinaryStorage.saveAIImage({
-      imageUrl: result.url,
-      topic: prompt.substring(0, 100),
-      prompt,
-      type: imageType,
-      size: sizeMapping[size as keyof typeof sizeMapping] || 'MEDIUM_1024',
-      quality,
-      userId: session.user.id,
-      studentId: session.user.role === 'STUDENT' ? session.user.studentId : undefined,
-      teacherId: session.user.role === 'TEACHER' ? session.user.teacherId : undefined,
-      schoolId: session.user.schoolAdminId ? session.user.schoolAdminId : undefined,
-      metadata: {
-        style,
-        revisedPrompt: result.revisedPrompt,
+    if (!isPlaceholder) {
+      savedEntry = await ImageBank.save({
+        imageUrl: result.url,
+        prompt,
+        topic: displayTopic,
+        subject,
+        grade,
+        type: style === 'educational' || style === 'diagram' ? 'DIAGRAM' : 'GENERAL',
+        size: sizeToDbSize(size),
+        quality,
+        userId: session.user.id,
+        teacherId: session.user.role === 'TEACHER' ? session.user.teacherId : undefined,
+        schoolId,
         provider: result.provider,
-        generatedAt: new Date().toISOString(),
-        originalMetadata: result.metadata
+      })
+
+      if (contextType && contextId && savedEntry) {
+        await ImageBank.trackUsage({
+          imageId: savedEntry.id,
+          contextType: contextType as any,
+          contextId,
+          userId: session.user.id,
+        })
       }
-    })
+    }
 
     return NextResponse.json({
-      imageUrl: savedImage.storedUrl,
+      imageUrl: isPlaceholder ? result.url : savedEntry?.url || result.url,
       success: true,
-      source: 'openai-dalle-3',
+      source: result.provider,
+      fromBank: false,
+      bankEntry: savedEntry,
       revisedPrompt: result.revisedPrompt,
       metadata: result.metadata,
-      saved_image: {
-        id: savedImage.id,
-        filename: savedImage.filename,
-        fileSize: savedImage.fileSize,
-        dimensions: savedImage.dimensions
-      }
     })
 
   } catch (error) {
-    console.error('OpenAI image generation error:', error)
-
-    // Return a placeholder image on error — use already-parsed body
+    console.error('Image generation error:', error)
     const placeholderImageUrl = generatePlaceholderImage(
       parsedBody.prompt || 'Educational Content',
       'educational'
     )
-
     return NextResponse.json({
       imageUrl: placeholderImageUrl,
       success: true,
       source: 'placeholder',
+      fromBank: false,
       message: 'Image generation temporarily unavailable. Using placeholder image.',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     })
   }
 }
 
-// Generate a placeholder image using SVG
+function sizeToDbSize(size: string): string {
+  const map: Record<string, string> = {
+    '512x512': 'SMALL_512',
+    '1024x1024': 'MEDIUM_1024',
+    '1536x1024': 'LARGE_1536',
+    '1024x1536': 'PORTRAIT_1024',
+    '1792x1024': 'LARGE_1536',
+    '1024x1792': 'PORTRAIT_1024',
+  }
+  return map[size] || 'MEDIUM_1024'
+}
+
 function generatePlaceholderImage(prompt: string, style: string): string {
   const width = 400
   const height = 300
-  
-  // Clean the prompt for display
   const displayText = prompt.substring(0, 50) + (prompt.length > 50 ? '...' : '')
-  
-  // Choose colors based on style
-  const colors = {
+  const colors: Record<string, { bg: string; border: string; text: string }> = {
     educational: { bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e' },
     professional: { bg: '#f8fafc', border: '#64748b', text: '#334155' },
     creative: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' },
-    default: { bg: '#f3f4f6', border: '#6b7280', text: '#374151' }
+    default: { bg: '#f3f4f6', border: '#6b7280', text: '#374151' },
   }
-  
-  const colorScheme = colors[style as keyof typeof colors] || colors.default
-  
-  const svg = `
-    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="${colorScheme.bg}" stroke="${colorScheme.border}" stroke-width="2" rx="8"/>
-      <circle cx="${width/2}" cy="${height/2 - 20}" r="30" fill="${colorScheme.border}" opacity="0.3"/>
-      <text x="${width/2}" y="${height/2 + 20}" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="${colorScheme.text}" font-weight="bold">
-        🎨 ElimuNova AI Image
-      </text>
-      <text x="${width/2}" y="${height/2 + 40}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="${colorScheme.text}" opacity="0.7">
-        ${displayText}
-      </text>
-      <text x="${width/2}" y="${height - 20}" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="${colorScheme.text}" opacity="0.5">
-        Powered by OpenAI DALL-E 3
-      </text>
-    </svg>
-  `
-  
-  // Convert SVG to data URL
-  const encodedSvg = encodeURIComponent(svg)
-  return `data:image/svg+xml,${encodedSvg}`
+  const colorScheme = colors[style] || colors.default
+  const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100%" height="100%" fill="${colorScheme.bg}" stroke="${colorScheme.border}" stroke-width="2" rx="8"/>
+    <circle cx="${width / 2}" cy="${height / 2 - 20}" r="30" fill="${colorScheme.border}" opacity="0.3"/>
+    <text x="${width / 2}" y="${height / 2 + 20}" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="${colorScheme.text}" font-weight="bold">ElimuNova AI Image</text>
+    <text x="${width / 2}" y="${height / 2 + 40}" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="${colorScheme.text}" opacity="0.7">${displayText}</text>
+  </svg>`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }

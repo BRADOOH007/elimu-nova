@@ -32,6 +32,7 @@ function getSubjectGradient(name: string) {
   if (n.includes("english") || n.includes("language")) return "from-emerald-600 via-green-500 to-teal-400"
   if (n.includes("science") || n.includes("environment")) return "from-purple-600 via-violet-500 to-indigo-400"
   if (n.includes("social") || n.includes("studies")) return "from-orange-600 via-amber-500 to-yellow-400"
+  if (n.includes("coding") || n.includes("computer") || n.includes("programming") || n.includes("ict") || n.includes("technology")) return "from-cyan-600 via-teal-500 to-emerald-400"
   return "from-primary via-primary/80 to-primary/60"
 }
 

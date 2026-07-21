@@ -89,6 +89,7 @@ export default function StudentStudySessionsPage() {
   }
 
   const deleteSession = async (id: string) => {
+    if (!confirm('Delete this study session?')) return
     try {
       await fetch(`/api/student/study-sessions?id=${id}`, { method: 'DELETE' })
       fetchSessions()

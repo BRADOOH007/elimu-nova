@@ -31,23 +31,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
     }
 
-    if (!student.classId) {
-      return NextResponse.json({
-        error: 'No class assigned',
-        message: 'Please contact your teacher to be assigned to a class'
-      }, { status: 400 })
+    let task
+    if (student.classId) {
+      const orchestrator = new TutorOrchestrator(student.id, student.classId)
+      task = await orchestrator.getNextTask()
+    } else {
+      task = {
+        subject: 'General',
+        topic: 'General Learning',
+        mode: 'teach' as const,
+        objective: 'Learn something new! Ask me anything you want to study.',
+        estimatedMinutes: 10,
+        difficulty: 'easy' as const,
+        context: {}
+      }
     }
-
-    // Create orchestrator
-    const orchestrator = new TutorOrchestrator(student.id, student.classId)
-
-    // Get next task
-    const task = await orchestrator.getNextTask()
 
     return NextResponse.json({
       success: true,
       task,
-      message: `Ready to ${task.mode} ${task.topic}!`
+      message: task.mode === 'teach' && task.topic === 'General Learning'
+        ? 'Ready to learn something new! What would you like to study today?'
+        : `Ready to ${task.mode} ${task.topic}!`
     })
   } catch (error) {
     console.error('Error getting next tutor task:', error)

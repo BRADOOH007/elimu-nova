@@ -95,6 +95,7 @@ export default function PeoplePage() {
   const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false)
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([])
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
@@ -105,9 +106,10 @@ export default function PeoplePage() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const [teachersRes, studentsRes] = await Promise.all([
+      const [teachersRes, studentsRes, classesRes] = await Promise.all([
         fetch('/api/school-admin/teachers'),
-        fetch('/api/school-admin/students')
+        fetch('/api/school-admin/students'),
+        fetch('/api/school-admin/classes?limit=100')
       ])
       
       if (teachersRes.ok) {
@@ -118,6 +120,11 @@ export default function PeoplePage() {
       if (studentsRes.ok) {
         const data = await studentsRes.json()
         setStudents(data.students || [])
+      }
+
+      if (classesRes.ok) {
+        const data = await classesRes.json()
+        setClasses((data.classes || []).map((c: any) => ({ id: c.id, name: c.name })))
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -709,7 +716,7 @@ export default function PeoplePage() {
         isOpen={isEnrollStudentModalOpen}
         onClose={() => setIsEnrollStudentModalOpen(false)}
         onSuccess={handleEnrollStudentSuccess}
-        classes={[]}
+        classes={classes as Array<{ id: string; name: string; subject: string; grade: string }>}
       />
 
       <EditStudentModal
@@ -720,7 +727,7 @@ export default function PeoplePage() {
         }}
         onSuccess={handleEditStudentSuccess}
         student={selectedStudent}
-        classes={[]}
+        classes={classes as Array<{ id: string; name: string; subject: string; grade: string }>}
       />
 
       <BulkStudentUploadModal

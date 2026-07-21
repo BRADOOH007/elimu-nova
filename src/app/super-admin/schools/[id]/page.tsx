@@ -30,17 +30,13 @@ export default function SuperAdminSchoolDetailPage() {
     if (!schoolId) return
     const load = async () => {
       try {
-        const [schoolRes, teachersRes, subsRes] = await Promise.all([
-          fetch(`/api/super-admin/schools/${schoolId}`),
-          fetch(`/api/super-admin/schools/${schoolId}/teachers`),
-          fetch(`/api/super-admin/schools/${schoolId}/subscriptions`)
-        ])
-        if (schoolRes.ok) {
-          const data = await schoolRes.json()
+        const res = await fetch(`/api/super-admin/schools/${schoolId}`)
+        if (res.ok) {
+          const data = await res.json()
           setSchool(data.school || data)
-        }
-        if (teachersRes.ok) setTeachers((await teachersRes.json()).teachers || [])
-        if (subsRes.ok) setSubscriptions((await subsRes.json()).subscriptions || [])
+          setTeachers(data.teachers || [])
+          setSubscriptions(data.subscriptions || [])
+        } else setError('Failed to load school')
       } catch { setError('Failed to load school') }
       finally { setLoading(false) }
     }

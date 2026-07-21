@@ -187,7 +187,7 @@ export default function SchedulePage() {
   }
 
   const handleDeleteEvent = async (eventId: string) => {
-    // Confirmation removed - using toast notifications only
+    if (!confirm('Delete this schedule item? This cannot be undone.')) return
 
     try {
       const response = await fetch(`/api/teacher/schedules/${eventId}`, {

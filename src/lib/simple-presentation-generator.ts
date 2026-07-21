@@ -12,6 +12,7 @@
 import PptxGenJS from 'pptxgenjs'
 import { OpenAIService } from './openai-service'
 import { prisma } from './prisma'
+import { ImageBank } from './image-bank'
 
 export interface SimplePresentationSlide {
   id:           string
@@ -298,6 +299,17 @@ export class SimplePresentationGenerator {
     await Promise.allSettled(
       targets.map(async (slide) => {
         try {
+          const bankMatch = await ImageBank.findMatching({
+            prompt: slide.imagePrompt || slide.title,
+            topic: slide.title,
+          })
+
+          if (bankMatch) {
+            imageMap.set(slide.id, bankMatch.url)
+            console.log(`✅ Image reused from bank for "${slide.title}" (${bankMatch.usageCount} previous uses)`)
+            return
+          }
+
           const enhanced = `Educational diagram or illustration for ${slide.imagePrompt}. Clean, textbook-quality, high-contrast, suitable for Kenyan classroom projection. No watermarks, no text overlays.`
           const result = await OpenAIService.generateImage({
             prompt:  enhanced,
@@ -336,20 +348,16 @@ export class SimplePresentationGenerator {
 
   private async saveImageToDatabase(url: string, title: string, prompt: string, userId?: string, teacherId?: string) {
     try {
-      await prisma.aIGeneratedImage.create({
-        data: {
-          filename:    `pptx_${Date.now()}_${title.replace(/[^a-z0-9]/gi, '_').slice(0, 40)}.png`,
-          originalUrl: url,
-          storedUrl:   url,
-          topic:       title,
-          prompt,
-          type:        'ILLUSTRATION',
-          size:        'MEDIUM_1024',
-          quality:     'standard',
-          userId:      userId || '',
-          teacherId:   teacherId || null,
-          metadata:    JSON.stringify({ source: 'presentation_generator' }),
-        },
+      await ImageBank.save({
+        imageUrl:   url,
+        prompt,
+        topic:      title,
+        type:       'ILLUSTRATION',
+        size:       'MEDIUM_1024',
+        quality:    'standard',
+        userId:     userId || '',
+        teacherId:  teacherId || null,
+        provider:   'openai-dalle-3',
       })
     } catch { /* non-fatal */ }
   }

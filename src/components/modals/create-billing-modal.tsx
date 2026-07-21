@@ -147,7 +147,7 @@ export function CreateBillingModal({ isOpen, onClose, onBillingCreated }: Create
           notes: ''
         })
         toast({
-          variant: "success",
+          variant: "default",
           title: "Billing Created",
           description: "New billing record has been created successfully!",
         })

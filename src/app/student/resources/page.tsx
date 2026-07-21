@@ -174,6 +174,7 @@ export default function ResourcesPage() {
   }
 
   const handleDeleteResource = async (resourceId: string) => {
+    if (!confirm('Delete this resource? This cannot be undone.')) return
     try {
       const response = await fetch(`/api/student/resources/${resourceId}`, {
         method: 'DELETE'

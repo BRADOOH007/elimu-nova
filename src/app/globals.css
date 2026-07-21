@@ -339,3 +339,45 @@ button, a {
 .animate-fade-in-up {
   animation: fade-in-up 0.5s ease-out forwards;
 }
+
+/* ── Sign-in page animations ── */
+@keyframes orb-drift {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(30px, -40px); }
+  50% { transform: translate(-20px, -80px); }
+  75% { transform: translate(-40px, -20px); }
+}
+@keyframes orb-drift-slow {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(-25px, 35px); }
+  66% { transform: translate(35px, 15px); }
+}
+@keyframes gradient-slow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.animate-orb-drift {
+  animation: orb-drift 20s ease-in-out infinite;
+}
+.animate-orb-drift-slow {
+  animation: orb-drift-slow 25s ease-in-out infinite;
+}
+.animate-gradient-slow {
+  background-size: 200% 200%;
+  animation: gradient-slow 15s ease infinite;
+}
+.animate-shimmer-sweep {
+  animation: shimmer-sweep 8s ease-in-out infinite;
+}
+
+.signin-stagger-1 { animation-delay: 0.1s; }
+.signin-stagger-2 { animation-delay: 0.25s; }
+.signin-stagger-3 { animation-delay: 0.4s; }
+.signin-stagger-4 { animation-delay: 0.55s; }
+.signin-stagger-5 { animation-delay: 0.7s; }

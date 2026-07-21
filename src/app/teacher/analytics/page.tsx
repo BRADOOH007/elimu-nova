@@ -349,11 +349,11 @@ export default function AnalyticsPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="students">Student Progress</TabsTrigger>
-            <TabsTrigger value="assignments">Assignments</TabsTrigger>
-            <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-            <TabsTrigger value="insights">AI Insights</TabsTrigger>
+          <TabsList className="w-full overflow-x-auto flex">
+            <TabsTrigger value="students" className="shrink-0">Student Progress</TabsTrigger>
+            <TabsTrigger value="assignments" className="shrink-0">Assignments</TabsTrigger>
+            <TabsTrigger value="activity" className="shrink-0">Recent Activity</TabsTrigger>
+            <TabsTrigger value="insights" className="shrink-0">AI Insights</TabsTrigger>
           </TabsList>
 
           <TabsContent value="students">

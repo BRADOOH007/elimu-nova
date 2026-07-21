@@ -1,12 +1,9 @@
-/**
- * Image Generation Service - Using OpenAI DALL-E 3 exclusively
- */
-
 export interface ImageGenerationRequest {
   prompt: string
   style?: 'natural' | 'vivid'
   size?: '1024x1024' | '1792x1024' | '1024x1792'
   quality?: 'standard' | 'hd'
+  provider?: 'auto' | 'dalle' | 'stability'
 }
 
 export interface ImageGenerationResponse {
@@ -17,17 +14,30 @@ export interface ImageGenerationResponse {
 }
 
 export class ImageGenerationService {
-  /**
-   * Generate an image using OpenAI DALL-E 3.
-   * Falls back to an SVG placeholder on any failure — never throws.
-   */
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
-    const apiKey = process.env.OPENAI_DALLE_API_KEY || process.env.OPENAI_API_KEY || ''
+    const provider = request.provider || 'auto'
 
-    if (!apiKey || apiKey.startsWith('sk-or-')) {
-      console.warn('[ImageGen] No DALL-E key configured — using placeholder')
-      return this.placeholder(request.prompt)
+    if (provider === 'stability') {
+      const result = await this.generateStability(request)
+      if (result.provider !== 'placeholder') return result
     }
+
+    if (provider !== 'stability') {
+      const result = await this.generateDalle(request)
+      if (result.provider !== 'placeholder') return result
+    }
+
+    if (provider === 'auto') {
+      const result = await this.generateStability(request)
+      if (result.provider !== 'placeholder') return result
+    }
+
+    return this.placeholder(request.prompt)
+  }
+
+  private async generateDalle(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
+    const apiKey = process.env.OPENAI_DALLE_API_KEY || ''
+    if (!apiKey || apiKey.startsWith('sk-or-')) return this.placeholder(request.prompt)
 
     try {
       const { OpenAI } = await import('openai')
@@ -51,16 +61,70 @@ export class ImageGenerationService {
         provider:      'openai-dalle-3',
         revisedPrompt: response.data?.[0]?.revised_prompt,
         metadata: {
-          model:          'dall-e-3',
-          size:           request.size || '1024x1024',
-          quality:        request.quality || 'standard',
-          style:          request.style || 'natural',
+          model: 'dall-e-3',
+          size:  request.size || '1024x1024',
+          quality: request.quality || 'standard',
+          style: request.style || 'natural',
           originalPrompt: request.prompt,
           enhancedPrompt,
         },
       }
     } catch (error) {
-      console.error('[ImageGen] DALL-E failed, using placeholder:', error instanceof Error ? error.message : error)
+      console.error('[ImageGen] DALL-E failed:', error instanceof Error ? error.message : error)
+      return this.placeholder(request.prompt)
+    }
+  }
+
+  private async generateStability(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
+    const apiKey = process.env.STABILITY_API_KEY
+    if (!apiKey) {
+      console.warn('[ImageGen] No Stability AI key configured')
+      return this.placeholder(request.prompt)
+    }
+
+    try {
+      const aspectRatioMap: Record<string, string> = {
+        '1024x1024': '1:1',
+        '1792x1024': '16:9',
+        '1024x1792': '9:16',
+      }
+      const aspectRatio = aspectRatioMap[request.size || '1024x1024'] || '1:1'
+      const enhancedPrompt = this.enhancePromptForEducation(request.prompt, request.style)
+
+      const formData = new FormData()
+      formData.append('prompt', enhancedPrompt)
+      formData.append('aspect_ratio', aspectRatio)
+      formData.append('output_format', 'png')
+      formData.append('mode', 'text-to-image')
+
+      const response = await fetch('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const errText = await response.text()
+        throw new Error(`Stability AI error ${response.status}: ${errText}`)
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer())
+      const base64 = buffer.toString('base64')
+      const url = `data:image/png;base64,${base64}`
+
+      return {
+        url,
+        provider: 'stability-ai',
+        revisedPrompt: enhancedPrompt,
+        metadata: {
+          model: 'sd3',
+          aspectRatio,
+          originalPrompt: request.prompt,
+          enhancedPrompt,
+        },
+      }
+    } catch (error) {
+      console.error('[ImageGen] Stability AI failed:', error instanceof Error ? error.message : error)
       return this.placeholder(request.prompt)
     }
   }

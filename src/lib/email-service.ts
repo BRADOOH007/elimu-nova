@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
+// @ts-expect-error - handlebars types not installed
 import Handlebars from 'handlebars'
 import nodemailer from 'nodemailer'
 import { prisma } from './prisma'
@@ -45,7 +46,7 @@ async function getSmtpConfig(): Promise<SmtpConfig> {
 }
 
 class EmailService {
-  private templates: Map<string, HandlebarsTemplateDelegate> = new Map()
+  private templates: Map<string, Handlebars.TemplateDelegate> = new Map()
 
   constructor() {
     this.loadTemplates()

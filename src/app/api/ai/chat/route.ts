@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { rateLimitAI, getIP } from '@/lib/rate-limit'
+import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
 import { OpenAIService } from '@/lib/openai-service'
 import { stripLatex } from '@/lib/clean-ai-text'
 
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const identifier = session?.user?.id || getIP(request)
-    const rl = await rateLimitAI(identifier)
+    const rl = await checkRateLimit(identifier, rateLimitAI)
     if (!rl.allowed) {
       return NextResponse.json(
         { error: `Rate limit reached. Try again in ${rl.resetInSec}s.` },

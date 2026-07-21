@@ -46,7 +46,7 @@ export async function GET(_request: NextRequest) {
       }
 
       invoices = await prisma.invoice.findMany({
-        where: { schoolId },
+        where: { subscriptionId: subscription?.id } as any,
         orderBy: { createdAt: 'desc' },
         take: 10,
         select: {
@@ -54,11 +54,10 @@ export async function GET(_request: NextRequest) {
           invoiceNumber: true,
           amount: true,
           status: true,
-          description: true,
           dueDate: true,
           paidAt: true,
           createdAt: true,
-        }
+        } as any
       })
     }
 

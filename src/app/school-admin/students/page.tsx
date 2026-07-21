@@ -62,6 +62,7 @@ export default function StudentsPage() {
   const router = useRouter()
   const [students, setStudents] = useState<Student[]>([])
   const [teachers, setTeachers] = useState<Array<{ id: string; name: string }>>([])
+  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -72,6 +73,7 @@ export default function StudentsPage() {
   useEffect(() => {
     fetchStudents()
     fetchTeachers()
+    fetchClasses()
   }, [])
 
   const fetchStudents = async () => {
@@ -98,6 +100,16 @@ export default function StudentsPage() {
           id:   t.id,
           name: t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim(),
         })))
+      }
+    } catch {}
+  }
+
+  const fetchClasses = async () => {
+    try {
+      const res = await fetch('/api/school-admin/classes?limit=100')
+      if (res.ok) {
+        const data = await res.json()
+        setClasses((data.classes || []).map((c: any) => ({ id: c.id, name: c.name })))
       }
     } catch {}
   }
@@ -386,9 +398,9 @@ export default function StudentsPage() {
         isOpen={isEnrollModalOpen}
         onClose={() => setIsEnrollModalOpen(false)}
         onSuccess={handleEnrollSuccess}
-        classes={[]}
         role="school-admin"
         teachers={teachers}
+        classes={classes as Array<{ id: string; name: string; subject: string; grade: string }>}
       />
 
       <EditStudentModal
@@ -399,7 +411,7 @@ export default function StudentsPage() {
         }}
         onSuccess={handleEditSuccess}
         student={selectedStudent}
-        classes={[]}
+        classes={classes as Array<{ id: string; name: string; subject: string; grade: string }>}
       />
     </div>
   )

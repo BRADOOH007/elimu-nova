@@ -14,6 +14,7 @@ import {
   ChevronLeft, ChevronRight, Award, Star, Zap, Paperclip, Eye, Download
 } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { ClientDate } from '@/components/ui/client-date'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface Assignment {
@@ -32,7 +33,8 @@ interface ChatMsg { role: 'user' | 'ai'; content: string }
 const SUBJECTS = [
   'Mathematics','English','Kiswahili','Science','Social Studies',
   'CRE','Physics','Chemistry','Biology','History','Geography',
-  'Agriculture','Business Studies','Computer Studies'
+  'Agriculture','Business Studies','Computer Studies',
+  'Coding','Programming','Web Development','Python'
 ]
 
 export default function LearnPage() {
@@ -50,6 +52,7 @@ export default function LearnPage() {
   // ── QUIZ state ───────────────────────────────────────────────────────
   const [quizSubject,   setQuizSubject]   = useState('Mathematics')
   const [quizTopic,     setQuizTopic]     = useState('')
+  const [quizGrade,     setQuizGrade]     = useState('Grade 4')
   const [quizType,      setQuizType]      = useState<'checkpoint'|'blooms'>('blooms')
   const [genQuiz,       setGenQuiz]       = useState(false)
   const [questions,     setQuestions]     = useState<QuizQ[]>([])
@@ -138,7 +141,7 @@ export default function LearnPage() {
       const endpoint = quizType === 'blooms' ? '/api/ai/bloom-quiz' : '/api/ai/checkpoint-quiz'
       const r = await fetch(endpoint, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ subject:quizSubject, grade:'Grade 8', topic:quizTopic, subStrand:quizTopic })
+        body: JSON.stringify({ subject:quizSubject, grade:quizGrade, topic:quizTopic })
       })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error)
@@ -229,16 +232,16 @@ export default function LearnPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="study"><BookOpen className="w-4 h-4 mr-1.5"/>Study</TabsTrigger>
-          <TabsTrigger value="quiz"><Target className="w-4 h-4 mr-1.5"/>Quiz</TabsTrigger>
-          <TabsTrigger value="assignments"><ClipboardList className="w-4 h-4 mr-1.5"/>
+        <TabsList className="w-full overflow-x-auto flex">
+          <TabsTrigger value="study" className="shrink-0"><BookOpen className="w-4 h-4 mr-1.5"/>Study</TabsTrigger>
+          <TabsTrigger value="quiz" className="shrink-0"><Target className="w-4 h-4 mr-1.5"/>Quiz</TabsTrigger>
+          <TabsTrigger value="assignments" className="shrink-0"><ClipboardList className="w-4 h-4 mr-1.5"/>
             Assignments{assignments.filter(a=>a.status==='PENDING'||a.status==='OVERDUE').length > 0 &&
               <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5">
                 {assignments.filter(a=>a.status==='PENDING'||a.status==='OVERDUE').length}
               </span>}
           </TabsTrigger>
-          <TabsTrigger value="tutor"><Brain className="w-4 h-4 mr-1.5"/>AI Tutor</TabsTrigger>
+          <TabsTrigger value="tutor" className="shrink-0"><Brain className="w-4 h-4 mr-1.5"/>AI Tutor</TabsTrigger>
         </TabsList>
 
         {/* ── STUDY TAB ───────────────────────────────────────────── */}
@@ -325,16 +328,45 @@ export default function LearnPage() {
 
         {/* ── QUIZ TAB ────────────────────────────────────────────── */}
         <TabsContent value="quiz" className="space-y-4 mt-4">
-          {questions.length === 0 ? (
+          {genQuiz && questions.length === 0 ? (
+            <Card>
+              <CardContent className="p-8">
+                <div className="flex flex-col items-center gap-4 py-8">
+                  <div className="relative">
+                    <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <Zap className="h-4 w-4 text-purple-400" />
+                    </span>
+                  </div>
+                  <div className="text-center space-y-2">
+                    <p className="font-semibold text-slate-700">Generating your quiz…</p>
+                    <p className="text-xs text-slate-400">Creating {quizType === 'blooms' ? '6 Bloom\'s taxonomy' : '5 checkpoint'} questions for {quizSubject} — {quizTopic}</p>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className={`h-2 w-8 rounded-full bg-purple-200 animate-pulse`} style={{ animationDelay: `${i*0.15}s` }} />
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : questions.length === 0 ? (
             <Card>
               <CardHeader><CardTitle className="text-base flex items-center gap-2"><Target className="h-4 w-4 text-purple-600"/>Generate Quiz</CardTitle></CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-slate-600 mb-1 block">Subject</label>
                     <select value={quizSubject} onChange={e=>setQuizSubject(e.target.value)}
                       className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-500">
                       {SUBJECTS.map(s=><option key={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-600 mb-1 block">Grade</label>
+                    <select value={quizGrade} onChange={e=>setQuizGrade(e.target.value)}
+                      className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                      {['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4'].map(g=><option key={g}>{g}</option>)}
                     </select>
                   </div>
                   <div>
@@ -493,7 +525,7 @@ export default function LearnPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-base">{selAssn.title}</CardTitle>
-                      <p className="text-xs text-slate-500 mt-1">{selAssn.subject} · Due {new Date(selAssn.dueDate).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-500 mt-1">{selAssn.subject} · Due <ClientDate date={selAssn.dueDate} /></p>
                     </div>
                     <Badge className={statusColor(selAssn.status)}>{selAssn.status}</Badge>
                   </div>
@@ -570,7 +602,7 @@ export default function LearnPage() {
                     className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-blue-300 hover:shadow-md cursor-pointer transition-all group">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-800 truncate group-hover:text-blue-700">{a.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{a.subject} · Due {new Date(a.dueDate).toLocaleDateString()}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{a.subject} · Due <ClientDate date={a.dueDate} /></p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-3">
                       {a.grade!=null && <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{Math.round(a.grade)}%</span>}

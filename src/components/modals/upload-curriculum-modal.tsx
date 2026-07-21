@@ -179,7 +179,7 @@ export function UploadCurriculumModal({ isOpen, onClose, onCurriculumUploaded }:
       await new Promise(resolve => setTimeout(resolve, 2000))
       
       toast({
-        variant: "success",
+        variant: "default",
         title: "Curriculum Uploaded",
         description: "Curriculum has been uploaded and processed successfully!",
       })

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import { Loader2 as _L2 } from 'lucide-react'
 
 const MarksTab   = dynamic(() => import('@/app/teacher/marks/page'),    { ssr: false, loading: () => <div className="flex justify-center py-12"><_L2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
@@ -94,6 +95,7 @@ interface Exam {
 }
 
 export default function AssessmentsPage() {
+  const router = useRouter()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState('assignments')
   const [assignments, setAssignments] = useState<Assignment[]>([])
@@ -247,7 +249,7 @@ export default function AssessmentsPage() {
         toast({
           title: "Assessment Deleted Successfully",
           description: "The assessment has been permanently removed.",
-          variant: "success",
+          variant: "default",
         })
       } else {
         const error = await response.json()

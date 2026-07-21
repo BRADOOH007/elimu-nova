@@ -1,24 +1,26 @@
-/**
- * POST /api/ai/checkpoint-quiz
- * Lesson Checkpoint Quiz — 5 quick questions generated at end of lesson
- */
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { OpenAIService } from '@/lib/openai-service'
+import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { lessonTitle, subject, grade, learningOutcomes, content } = await request.json()
+    const ip = getIP(request)
+    const { success } = await checkRateLimit(rateLimitAI, ip)
+    if (!success) return NextResponse.json({ error: 'Too many requests. Try again shortly.' }, { status: 429 })
+
+    const { lessonTitle, subject, grade, learningOutcomes, content, topic, subStrand } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
     const prompt = `Generate 5 quick checkpoint quiz questions for end of lesson.
 
-Lesson: ${lessonTitle || subject}
+Lesson: ${lessonTitle || topic || subject}
 Subject: ${subject} | Grade: ${grade}
+Topic: ${subStrand || topic || lessonTitle || subject}
 Learning Outcomes: ${learningOutcomes || content?.slice(0, 300) || 'Key concepts'}
 
 Return ONLY a JSON array of 5 objects:
@@ -38,10 +40,10 @@ Mix question types:
 - Q4: true_false (type="true_false", options=["True","False"], correct=0 or 1)
 - Q5: short_answer (type="short_answer", model_answer="expected answer")
 
-Keep language simple and appropriate for ${grade}. Use Kenyan examples.`
+Keep language simple and appropriate for ${grade}.`
 
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC quiz creator. Return ONLY valid JSON array. No LaTeX, no TeX commands.' },
+      { role: 'system', content: 'You are a quiz creator. Return ONLY valid JSON array. No LaTeX, no TeX commands.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 1200, temperature: 0.6 })
 

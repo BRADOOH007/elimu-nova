@@ -450,36 +450,36 @@ export default function UsersPage() {
       <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-6">
-              <TabsTrigger value="all" className="flex items-center space-x-2">
+            <TabsList className="w-full overflow-x-auto flex mb-6">
+              <TabsTrigger value="all" className="flex items-center space-x-2 shrink-0">
                 <Users className="w-4 h-4" />
                 <span>All Users</span>
                 <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
                   {totalUsers}
                 </span>
               </TabsTrigger>
-              <TabsTrigger value="STUDENT" className="flex items-center space-x-2">
+              <TabsTrigger value="STUDENT" className="flex items-center space-x-2 shrink-0">
                 <User className="w-4 h-4" />
                 <span>Students</span>
                 <span className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded-full">
                   {students}
                 </span>
               </TabsTrigger>
-              <TabsTrigger value="TEACHER" className="flex items-center space-x-2">
+              <TabsTrigger value="TEACHER" className="flex items-center space-x-2 shrink-0">
                 <GraduationCap className="w-4 h-4" />
                 <span>Teachers</span>
                 <span className="ml-2 px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
                   {teachers}
                 </span>
               </TabsTrigger>
-              <TabsTrigger value="SCHOOL_ADMIN" className="flex items-center space-x-2">
+              <TabsTrigger value="SCHOOL_ADMIN" className="flex items-center space-x-2 shrink-0">
                 <School className="w-4 h-4" />
                 <span>School Admins</span>
                 <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
                   {schoolAdmins}
                 </span>
               </TabsTrigger>
-              <TabsTrigger value="SUPER_ADMIN" className="flex items-center space-x-2">
+              <TabsTrigger value="SUPER_ADMIN" className="flex items-center space-x-2 shrink-0">
                 <Shield className="w-4 h-4" />
                 <span>Super Admins</span>
                 <span className="ml-2 px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full">

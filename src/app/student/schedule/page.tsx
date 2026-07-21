@@ -416,10 +416,10 @@ export function StudentSchedulePage() {
 export default function StudentClassesPage() {
   return (
     <Tabs defaultValue="schedule" className="space-y-4 p-4">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="schedule"><Calendar className="w-4 h-4 mr-2"/>Schedule</TabsTrigger>
-        <TabsTrigger value="live"><Radio className="w-4 h-4 mr-2"/>Live Class</TabsTrigger>
-        <TabsTrigger value="discussions"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
+      <TabsList className="w-full overflow-x-auto flex">
+        <TabsTrigger value="schedule" className="shrink-0"><Calendar className="w-4 h-4 mr-2"/>Schedule</TabsTrigger>
+        <TabsTrigger value="live" className="shrink-0"><Radio className="w-4 h-4 mr-2"/>Live Class</TabsTrigger>
+        <TabsTrigger value="discussions" className="shrink-0"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
       </TabsList>
       <TabsContent value="schedule"><StudentSchedulePage /></TabsContent>
       <TabsContent value="live"><LiveClassTab /></TabsContent>

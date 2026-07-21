@@ -7,7 +7,7 @@ import { ArrowRight } from 'lucide-react'
 
 const team = [
   { name: 'Dr. Mary Mwangi',      role: 'CEO & Founder',                   description: 'Engineering and technology instructor.',                       image: '/team/mary-mwangi.jpg'           },
-  { name: 'InfinitiTech Solutions', role: 'Technology & Innovation Partner', description: 'Driving cutting-edge AI solutions and platform innovation.',     image: ''                                },
+  { name: 'InfinitiTech Solutions', role: 'Technology & Innovation Partner', description: 'Driving cutting-edge AI solutions and platform innovation.',     image: '/infinititech.png'               },
   { name: 'Ezekiel Manyara',      role: 'School Director & Co-Founder',    description: 'Technology specialist and school administrator.',              image: '/team/ezekiel-manyara.jpg'       },
 ]
 

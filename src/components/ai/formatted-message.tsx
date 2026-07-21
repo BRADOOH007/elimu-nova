@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Bot } from 'lucide-react'
 import { cleanAIText } from '@/lib/clean-ai-text'
+import { ClientTime } from '@/components/ui/client-date'
 
 interface FormattedMessageProps {
   content: string
@@ -17,9 +18,7 @@ export function FormattedMessage({ content, role, timestamp }: FormattedMessageP
       <div className="flex justify-end">
         <div className="max-w-[80%] rounded-2xl px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md">
           <p className="whitespace-pre-wrap">{content}</p>
-          <p className="text-xs opacity-80 mt-1">
-            {timestamp.toLocaleTimeString()}
-          </p>
+          <ClientTime date={timestamp} className="text-xs opacity-80 mt-1" />
         </div>
       </div>
     )
@@ -98,9 +97,7 @@ export function FormattedMessage({ content, role, timestamp }: FormattedMessageP
           </ReactMarkdown>
         </div>
         
-        <p className="text-xs text-gray-500 mt-2">
-          {timestamp.toLocaleTimeString()}
-        </p>
+        <ClientTime date={timestamp} className="text-xs text-gray-500 mt-2" />
       </div>
     </div>
   )

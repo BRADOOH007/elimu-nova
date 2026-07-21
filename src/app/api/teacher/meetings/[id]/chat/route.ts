@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sseBus } from '@/lib/sse-events'
 import { addMessage, getMessages } from '@/lib/meeting-chat-store'
+import type { ChatMessage } from '@/lib/meeting-chat-store'
 
 export async function GET(
   request: NextRequest,
@@ -36,18 +37,18 @@ export async function POST(
     minute: '2-digit',
   })
 
-  const senderType = session.user.role === 'TEACHER' ? 'teacher' : 'student'
+  const senderType: 'teacher' | 'student' = session.user.role === 'TEACHER' ? 'teacher' : 'student'
 
   const message = {
     id: crypto.randomUUID(),
     senderId: session.user.id,
-    senderName: session.user.firstName
-      ? `${session.user.firstName} ${session.user.lastName || ''}`.trim()
+    senderName: (session.user as any).firstName
+      ? `${(session.user as any).firstName} ${(session.user as any).lastName || ''}`.trim()
       : 'You',
     senderType,
     content: content.trim(),
     timestamp,
-  }
+  } as ChatMessage
 
   addMessage(id, message)
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Send, User, Mail, MessageSquare, Loader2 } from 'lucide-react'
+import { X, Send, User, Mail, MessageSquare, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -34,6 +34,7 @@ export default function ComposeMessageModal({
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
   const [sending, setSending] = useState(false)
+  const [feedback, setFeedback] = useState<{ type: 'error' | 'success'; message: string } | null>(null)
 
   // Get current recipients based on selected type
   const currentRecipients = showRecipientTypeSelector
@@ -43,13 +44,14 @@ export default function ComposeMessageModal({
   if (!isOpen) return null
 
   const handleSend = async () => {
+    setFeedback(null)
     if (!subject.trim() || !content.trim()) {
-      alert('Please fill in both subject and message')
+      setFeedback({ type: 'error', message: 'Please fill in both subject and message' })
       return
     }
 
     if (currentRecipients.length > 0 && !recipientId) {
-      alert('Please select a recipient')
+      setFeedback({ type: 'error', message: 'Please select a recipient' })
       return
     }
 
@@ -61,16 +63,15 @@ export default function ComposeMessageModal({
         content,
         recipientType: showRecipientTypeSelector ? selectedRecipientType : recipientType
       })
-      
+
       // Reset form
       setRecipientId(defaultRecipient || '')
       setSubject('')
       setContent('')
       onClose()
-      alert('Message sent successfully!')
     } catch (error) {
       console.error('Error sending message:', error)
-      alert('Failed to send message. Please try again.')
+      setFeedback({ type: 'error', message: 'Failed to send message. Please try again.' })
     } finally {
       setSending(false)
     }
@@ -112,6 +113,14 @@ export default function ComposeMessageModal({
             </button>
           </div>
         </div>
+
+        {/* Feedback banner */}
+        {feedback && (
+          <div className={`flex items-center gap-2 px-6 py-3 text-sm font-medium ${feedback.type === 'error' ? 'bg-red-50 text-red-700 border-b border-red-200' : 'bg-green-50 text-green-700 border-b border-green-200'}`}>
+            {feedback.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle className="w-4 h-4 shrink-0" />}
+            {feedback.message}
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
@@ -205,7 +214,7 @@ export default function ComposeMessageModal({
             </Button>
             <Button
               onClick={handleSend}
-              disabled={sending || !subject.trim() || !content.trim() || (recipients.length > 0 && !recipientId)}
+              disabled={sending || !subject.trim() || !content.trim() || (currentRecipients.length > 0 && !recipientId)}
               className="px-6 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-lg disabled:opacity-50"
             >
               {sending ? (

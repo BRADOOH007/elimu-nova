@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,7 +14,10 @@ import {
   Phone,
   MapPin,
   School,
-  AlertCircle
+  BookOpen,
+  AlertCircle,
+  Plus,
+  XCircle
 } from 'lucide-react'
 
 interface EditStudentModalProps {
@@ -39,9 +42,18 @@ export default function EditStudentModal({ isOpen, onClose, onSuccess, student, 
     phone: '',
     address: '',
     classId: '',
-    isActive: true
+    isActive: true,
+    subjects: [] as string[]
   })
+  const [customSubject, setCustomSubject] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // Derive available subjects from the teacher's classes
+  const availableSubjects = useMemo(() => {
+    const subjects = new Set<string>()
+    classes.forEach(cls => { if (cls.subject) subjects.add(cls.subject) })
+    return Array.from(subjects).sort()
+  }, [classes])
 
   // Initialize form data when student changes
   useEffect(() => {
@@ -53,8 +65,10 @@ export default function EditStudentModal({ isOpen, onClose, onSuccess, student, 
         phone: student.phone || '',
         address: student.address || '',
         classId: student.class?.id || '',
-        isActive: student.status === 'Active'
+        isActive: student.status === 'Active',
+        subjects: student.subjects || []
       })
+      setCustomSubject('')
     }
   }, [student, isOpen])
 
@@ -98,7 +112,8 @@ export default function EditStudentModal({ isOpen, onClose, onSuccess, student, 
           phone: formData.phone || null,
           address: formData.address || null,
           classId: formData.classId === 'no-class' || formData.classId === 'no-classes' ? null : formData.classId,
-          isActive: formData.isActive
+          isActive: formData.isActive,
+          subjects: formData.subjects
         })
       })
 
@@ -309,6 +324,83 @@ export default function EditStudentModal({ isOpen, onClose, onSuccess, student, 
           </div>
           </div>
 
+          {/* Learning Areas / Subjects */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-amber-600" />
+              Learning Areas / Subjects
+            </h3>
+            <p className="text-sm text-gray-500">Select the subjects this student is enrolled in.</p>
+            <div className="flex flex-wrap gap-2">
+              {availableSubjects.map(subject => {
+                const selected = formData.subjects.includes(subject)
+                return (
+                  <button
+                    key={subject}
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      subjects: selected
+                        ? prev.subjects.filter(s => s !== subject)
+                        : [...prev.subjects, subject]
+                    }))}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+                      selected
+                        ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300'
+                    }`}
+                  >
+                    {subject}
+                  </button>
+                )
+              })}
+            </div>
+            {/* Custom subject input */}
+            <div className="flex items-center gap-2">
+              <Input
+                value={customSubject}
+                onChange={e => setCustomSubject(e.target.value)}
+                placeholder="Add custom subject…"
+                className="max-w-xs bg-white border-gray-200 text-sm"
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && customSubject.trim()) {
+                    e.preventDefault()
+                    if (!formData.subjects.includes(customSubject.trim())) {
+                      setFormData(prev => ({ ...prev, subjects: [...prev.subjects, customSubject.trim()] }))
+                    }
+                    setCustomSubject('')
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!customSubject.trim()}
+                onClick={() => {
+                  if (customSubject.trim() && !formData.subjects.includes(customSubject.trim())) {
+                    setFormData(prev => ({ ...prev, subjects: [...prev.subjects, customSubject.trim()] }))
+                  }
+                  setCustomSubject('')
+                }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            {formData.subjects.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {formData.subjects.map(s => (
+                  <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
+                    {s}
+                    <button type="button" onClick={() => setFormData(prev => ({ ...prev, subjects: prev.subjects.filter(x => x !== s) }))}>
+                      <XCircle className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Student Preview */}
           <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-200">
             <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -325,6 +417,7 @@ export default function EditStudentModal({ isOpen, onClose, onSuccess, student, 
                   ? classes.find(c => c.id === formData.classId)?.name || 'Selected class'
                   : 'No class assigned'
               }</p>
+              <p><strong>Subjects:</strong> {formData.subjects.length > 0 ? formData.subjects.join(', ') : 'None assigned'}</p>
               <p><strong>Status:</strong> {formData.isActive ? 'Active' : 'Inactive'}</p>
             </div>
           </div>

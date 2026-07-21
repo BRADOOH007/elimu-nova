@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { v2 as cloudinary } from 'cloudinary'
 import { prisma } from '@/lib/prisma'
 import { PDFParse } from 'pdf-parse'
+import * as mammoth from 'mammoth'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,10 +89,19 @@ export async function POST(req: NextRequest) {
       extractedText = buffer.toString('utf-8').slice(0, 8000)
     } else if (file.type === 'application/pdf') {
       try {
-        const pdfData = await PDFParse(buffer)
-        extractedText = pdfData.text.slice(0, 8000)
+        const pdf = new PDFParse({ data: buffer })
+        const result = await pdf.getText({})
+        extractedText = result.text.slice(0, 8000)
       } catch (parseErr) {
         console.warn('PDF text extraction failed:', parseErr)
+        extractedText = null
+      }
+    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.type === 'application/msword') {
+      try {
+        const { value } = await mammoth.extractRawText({ buffer })
+        extractedText = value.slice(0, 8000)
+      } catch (parseErr) {
+        console.warn('Word document extraction failed:', parseErr)
         extractedText = null
       }
     }
@@ -123,7 +133,7 @@ export async function POST(req: NextRequest) {
       name: file.name,
       type: file.type,
       docType,
-      extractedText: extractedText ? extractedText.slice(0, 500) + '...' : null,
+      extractedText,
       message: `${docType === 'lesson-plan' ? 'Lesson plan' : docType === 'scheme-of-work' ? 'Scheme of work' : 'Document'} uploaded. AI will use this as context when generating content.`
     })
 

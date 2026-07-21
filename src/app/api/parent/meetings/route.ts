@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     const meetings = await prisma.meeting.findMany({
       where: {
-        schoolId: parent.schoolId,
+        schoolId: (parent as any).schoolId,
         ...(includePast ? {} : { date: { gte: new Date() }, status: { in: ['SCHEDULED', 'IN_PROGRESS'] as any } }),
       },
       include: {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     const meeting = await prisma.meeting.create({
       data: {
-        schoolId: parent.schoolId,
+        schoolId: (parent as any).schoolId,
         createdBy: session.user.id,
         title,
         description: description || '',

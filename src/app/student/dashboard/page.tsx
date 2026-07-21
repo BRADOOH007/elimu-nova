@@ -3,7 +3,6 @@
 import { useSchoolInfo } from "@/hooks/use-school-info"
 import { IndependentUserWelcome } from "@/components/onboarding/independent-user-welcome"
 import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
-import { DashboardSplash } from "@/components/ui/dashboard-splash"
 import AssignmentsList from "@/components/student/assignments-list"
 import UpcomingLessons from "@/components/student/upcoming-lessons"
 import StudyStreak from "@/components/student/study-streak"
@@ -15,8 +14,12 @@ import StudentSummaryStats from "@/components/student/summary-stats"
 import CurriculumAccordion from "@/components/student/curriculum-accordion"
 import LearningStats from "@/components/student/learning-stats"
 import AIChatDialog from "@/components/student/ai-chat-dialog"
+import { CardSkeleton, StatsCardSkeleton } from "@/components/ui/skeleton"
+import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus"
 import { useSession } from "next-auth/react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
+import Link from "next/link"
+import { Code2, ChevronRight } from "lucide-react"
 import { grades1to9CurriculumByTerm, type GradeLevel, type LearningAreaData } from "@/data/grades1-9CurriculumByTerm"
 
 interface DashboardData {
@@ -49,10 +52,6 @@ export default function StudentDashboard() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [displayName, setDisplayName] = useState("")
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === "undefined") return false
-    return !sessionStorage.getItem("student-splash-shown")
-  })
   const [showAIChat, setShowAIChat] = useState(false)
   const [aiMessage, setAiMessage] = useState("")
   const [isAITyping, setIsAITyping] = useState(false)
@@ -72,15 +71,49 @@ export default function StudentDashboard() {
   const termCurriculum = grades1to9CurriculumByTerm.find(t => t.term === currentTerm && t.grade === studentGrade)
   const learningAreas: LearningAreaData[] = termCurriculum?.learningAreas || []
 
-  useEffect(() => {
-    if (!loading) {
-      const timer = setTimeout(() => {
-        setShowSplash(false)
-        sessionStorage.setItem("student-splash-shown", "1")
-      }, 1500)
-      return () => clearTimeout(timer)
-    }
-  }, [loading])
+  // Inject "Coding & Programming" as a learning area available to all grades
+  const codingLearningArea: LearningAreaData = {
+    name: "Coding & Programming",
+    strands: [
+      {
+        name: "COMPUTATIONAL THINKING",
+        subStrands: [
+          { name: "Algorithms & Flowcharts" },
+          { name: "Pattern Recognition" },
+          { name: "Decomposition" },
+          { name: "Debugging Strategies" },
+        ]
+      },
+      {
+        name: "PROGRAMMING FUNDAMENTALS",
+        subStrands: [
+          { name: "Variables & Data Types" },
+          { name: "Conditionals & Logic" },
+          { name: "Loops & Iteration" },
+          { name: "Functions & Reusability" },
+        ]
+      },
+      {
+        name: "WEB DEVELOPMENT",
+        subStrands: [
+          { name: "HTML Structure & Semantics" },
+          { name: "CSS Styling & Layouts" },
+          { name: "JavaScript Interactivity" },
+          { name: "Responsive Design" },
+        ]
+      },
+      {
+        name: "ADVANCED TOPICS",
+        subStrands: [
+          { name: "Python Programming" },
+          { name: "Data Structures & Algorithms" },
+          { name: "APIs & Databases" },
+          { name: "AI & Machine Learning Basics" },
+        ]
+      },
+    ]
+  }
+  const allLearningAreas = [...learningAreas, codingLearningArea]
 
   useEffect(() => {
     fetchDashboardData()
@@ -98,7 +131,7 @@ export default function StudentDashboard() {
     }
   }, [isIndependent, schoolInfoLoading])
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/student/dashboard")
@@ -112,7 +145,9 @@ export default function StudentDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [session?.user?.id])
+
+  useRefreshOnFocus(fetchDashboardData, !loading)
 
   const sendAIMessage = async (message: string) => {
     if (!message.trim()) return
@@ -145,38 +180,69 @@ export default function StudentDashboard() {
 
   return (
     <>
-      <DashboardSplash role="STUDENT" userName={displayName || session?.user?.name || "Student"} visible={showSplash} />
-      {!showSplash && (
-        <div className="max-w-full overflow-x-hidden">
-          <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6 md:space-y-8">
-            <SubscriptionAlert />
-            <StudentGreeting
-              displayName={displayName || dashboardData?.student.name || session?.user?.name || "Student"}
-              onChatClick={() => setShowAIChat(true)}
-              onRefreshInsights={() => {}}
-            />
-            <StudentSummaryStats learningAreasCount={learningAreas.length} currentTerm={currentTerm} gradeLevel={dashboardData?.student.class || "Not Set"} />
-            <CurriculumAccordion learningAreas={learningAreas} currentTerm={currentTerm} />
-            <LearningStats
-              studyTime={dashboardData?.stats.studyTime || 0}
-              completedAssignments={dashboardData?.stats.completedAssignments || 0}
-              averageGrade={dashboardData?.stats.averageGrade}
-              activeAssignments={dashboardData?.stats.activeAssignments || 0}
-            />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <AssignmentsList assignments={dashboardData?.assignments || []} />
-              <UpcomingLessons lessons={dashboardData?.upcomingLessons || []} />
+      <div className="max-w-full overflow-x-auto">
+        <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6 md:space-y-8">
+          <SubscriptionAlert />
+          {loading ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => <StatsCardSkeleton key={i} />)}
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <CardSkeleton />
+                <CardSkeleton />
+              </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <RecentStudySessions sessions={dashboardData?.studySessions || []} />
-              <AITutorHistory sessions={dashboardData?.aiTutorSessions || []} />
-            </div>
-            {dashboardData?.analytics && (
-              <StudyStreak analytics={dashboardData.analytics} studyTimeThisWeek={dashboardData.stats.studyTime} />
-            )}
-          </div>
+          ) : (
+            <>
+              <StudentGreeting
+                displayName={displayName || dashboardData?.student.name || session?.user?.name || "Student"}
+                onChatClick={() => setShowAIChat(true)}
+                onRefreshInsights={() => {}}
+              />
+              <StudentSummaryStats learningAreasCount={allLearningAreas.length} currentTerm={currentTerm} gradeLevel={dashboardData?.student.class || "Not Set"} />
+              <CurriculumAccordion learningAreas={allLearningAreas} currentTerm={currentTerm} />
+              <Link
+                href="/student/coding"
+                className="block group bg-gradient-to-r from-cyan-600 via-teal-500 to-emerald-500 rounded-2xl p-5 hover:shadow-xl transition-all hover:-translate-y-0.5"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur">
+                      <Code2 className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white text-lg">AI Coding Studio</h3>
+                      <p className="text-white/80 text-sm">Learn Scratch, Web Dev, Python, AI & more</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 text-white/80 group-hover:text-white group-hover:translate-x-1 transition-all">
+                    <span className="text-sm font-semibold">Start Coding</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
+                </div>
+              </Link>
+              <LearningStats
+                studyTime={dashboardData?.stats.studyTime || 0}
+                completedAssignments={dashboardData?.stats.completedAssignments || 0}
+                averageGrade={dashboardData?.stats.averageGrade ?? null}
+                activeAssignments={dashboardData?.stats.activeAssignments || 0}
+              />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <AssignmentsList assignments={dashboardData?.assignments || []} />
+                <UpcomingLessons lessons={dashboardData?.upcomingLessons || []} />
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <RecentStudySessions sessions={dashboardData?.studySessions || []} />
+                <AITutorHistory sessions={dashboardData?.aiTutorSessions || []} />
+              </div>
+              {dashboardData?.analytics && (
+                <StudyStreak analytics={dashboardData.analytics} studyTimeThisWeek={dashboardData.stats.studyTime} />
+              )}
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       <AIChatDialog
         open={showAIChat}

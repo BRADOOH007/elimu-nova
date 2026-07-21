@@ -92,7 +92,7 @@ export default function SchoolAdminDashboard() {
   }
 
   return (
-    <div className="max-w-full overflow-x-hidden">
+    <div className="max-w-full overflow-x-auto">
       <div className="max-w-7xl mx-auto p-4 md:p-6">
         <SubscriptionAlert />
 
@@ -123,10 +123,12 @@ export default function SchoolAdminDashboard() {
           onEditTeacher={(t) => { setSelectedTeacher(t); setEditTeacherOpen(true) }}
           onEditStudent={(s) => { setSelectedStudent(s); setEditStudentOpen(true) }}
           onDeleteTeacher={async (id) => {
+            if (!confirm('Delete this teacher?')) return
             try { await fetch(`/api/school-admin/teachers/${id}`, { method: "DELETE" }); setRecentTeachers(prev => prev.filter(t => t.id !== id)) }
             catch (e) { console.error("Error deleting teacher:", e) }
           }}
           onDeleteStudent={async (id) => {
+            if (!confirm('Delete this student?')) return
             try { await fetch(`/api/school-admin/students/${id}`, { method: "DELETE" }); setRecentStudents(prev => prev.filter(s => s.id !== id)) }
             catch (e) { console.error("Error deleting student:", e) }
           }}
@@ -149,7 +151,7 @@ export default function SchoolAdminDashboard() {
         <CreateClassModal isOpen={createClassOpen} onClose={() => setCreateClassOpen(false)} onSuccess={handleModalSuccess} />
         <ScheduleMeetingModal isOpen={scheduleMeetingOpen} onClose={() => setScheduleMeetingOpen(false)} onSuccess={handleModalSuccess} />
         <EditTeacherModal isOpen={editTeacherOpen} onClose={() => { setEditTeacherOpen(false); setSelectedTeacher(null) }} onSuccess={handleModalSuccess} teacher={selectedTeacher} />
-        <EditStudentModal isOpen={editStudentOpen} onClose={() => { setEditStudentOpen(false); setSelectedStudent(null) }} onSuccess={handleModalSuccess} student={selectedStudent} classes={[]} />
+        <EditStudentModal isOpen={editStudentOpen} onClose={() => { setEditStudentOpen(false); setSelectedStudent(null) }} onSuccess={handleModalSuccess} student={selectedStudent} classes={availableClasses} />
       </div>
     </div>
   )

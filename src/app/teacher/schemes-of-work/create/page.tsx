@@ -4,6 +4,11 @@ import { useToast } from '@/hooks/use-toast'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { COUNTRIES, getCurriculaByCountry, getSubjectsForCurriculum, getGradesForCurriculum } from '@/lib/curricula'
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import {
   BookOpen, ChevronRight, ChevronLeft, CheckCircle, Loader2,
@@ -13,13 +18,6 @@ import {
 
 // Import CBC curriculum data
 import { grades1to9CurriculumByTerm } from '@/data/grades1-9CurriculumByTerm'
-
-const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE',
-  'Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies',
-  'Computer Studies','Music','Art & Craft','Physical Education','Home Science','Pre-Technical Studies']
-
-const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6',
-  'Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
 
 const TERMS = ['Term 1','Term 2','Term 3']
 
@@ -36,6 +34,11 @@ export default function CreateSchemePage() {
   const { toast } = useToast()
   const router = useRouter()
   const [step, setStep] = useState(1) // 1=Setup, 2=Topics, 3=Generate, 4=View
+  const [schemeCountry, setSchemeCountry] = useState('KE')
+  const [schemeCurriculum, setSchemeCurriculum] = useState('cbc')
+
+  const SUBJECTS = getSubjectsForCurriculum(schemeCurriculum)
+  const GRADES = getGradesForCurriculum(schemeCurriculum)
 
   // Step 1 — Setup
   const [subject, setSubject]         = useState('')
@@ -270,9 +273,9 @@ export default function CreateSchemePage() {
     <div className="p-6 max-w-6xl mx-auto space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-          <ChevronLeft className="h-5 w-5 text-slate-500" />
-        </button>
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Create Scheme of Work</h1>
           <p className="text-slate-500 text-sm">CBC-aligned KICD format with AI-powered lesson generation</p>
@@ -301,57 +304,81 @@ export default function CreateSchemePage() {
         <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
           <h2 className="font-bold text-slate-800 flex items-center gap-2"><Settings className="h-4 w-4" /> Scheme Details</h2>
           <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Subject *</label>
-              <select value={subject} onChange={e => setSubject(e.target.value)}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Select subject</option>
-                {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+            <div className="space-y-1.5">
+              <Label>Country</Label>
+              <Select value={schemeCountry} onValueChange={(v) => { setSchemeCountry(v); setSchemeCurriculum(''); setSubject(''); setGrade('') }}>
+                <SelectTrigger><SelectValue placeholder="Select country" /></SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map(c => <SelectItem key={c.code} value={c.code}>{c.flag} {c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Grade *</label>
-              <select value={grade} onChange={e => setGrade(e.target.value)}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Select grade</option>
-                {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+            <div className="space-y-1.5">
+              <Label>Curriculum</Label>
+              <Select value={schemeCurriculum} onValueChange={(v) => { setSchemeCurriculum(v); setSubject(''); setGrade('') }}>
+                <SelectTrigger><SelectValue placeholder="Select curriculum" /></SelectTrigger>
+                <SelectContent>
+                  {getCurriculaByCountry(schemeCountry).map(cur => <SelectItem key={cur.id} value={cur.id}>{cur.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Term</label>
-              <select value={term} onChange={e => setTerm(e.target.value)}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+            <div className="space-y-1.5">
+              <Label>Subject *</Label>
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
+                <SelectContent>
+                  {SUBJECTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Weeks in Term</label>
-              <select value={weeksCount} onChange={e => setWeeksCount(Number(e.target.value))}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                {[10,11,12,13,14].map(n => <option key={n} value={n}>{n} weeks</option>)}
-              </select>
+            <div className="space-y-1.5">
+              <Label>Grade *</Label>
+              <Select value={grade} onValueChange={setGrade}>
+                <SelectTrigger><SelectValue placeholder="Select grade" /></SelectTrigger>
+                <SelectContent>
+                  {GRADES.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Lessons Per Week</label>
-              <select value={lessonsPerWeek} onChange={e => setLessonsPerWeek(Number(e.target.value))}
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                {[3,4,5,6].map(n => <option key={n} value={n}>{n} lessons/week</option>)}
-              </select>
+            <div className="space-y-1.5">
+              <Label>Term</Label>
+              <Select value={term} onValueChange={setTerm}>
+                <SelectTrigger><SelectValue placeholder="Term 1" /></SelectTrigger>
+                <SelectContent>
+                  {TERMS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Scheme Title</label>
-              <input value={title} onChange={e => setTitle(e.target.value)}
-                placeholder="Auto-generated from selections"
-                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div className="space-y-1.5">
+              <Label>Weeks in Term</Label>
+              <Select value={String(weeksCount)} onValueChange={v => setWeeksCount(Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[10,11,12,13,14].map(n => <SelectItem key={n} value={String(n)}>{n} weeks</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Lessons Per Week</Label>
+              <Select value={String(lessonsPerWeek)} onValueChange={v => setLessonsPerWeek(Number(v))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[3,4,5,6].map(n => <SelectItem key={n} value={String(n)}>{n} lessons/week</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Scheme Title</Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Auto-generated from selections" />
             </div>
           </div>
           <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-800">
             <strong>{totalLessons} lessons</strong> will be generated across {weeksCount} weeks
           </div>
-          <button onClick={() => setStep(2)} disabled={!subject || !grade}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl disabled:opacity-50 transition-all">
-            Next: Select Topics <ChevronRight className="h-4 w-4" />
-          </button>
+          <Button onClick={() => setStep(2)} disabled={!subject || !grade}
+            className="bg-gradient-to-r from-blue-600 to-purple-600">
+            Next: Select Topics <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
         </div>
       )}
 
@@ -397,13 +424,12 @@ export default function CreateSchemePage() {
           )}
 
           <div className="flex gap-3 pt-2">
-            <button onClick={() => setStep(1)} className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">
-              <ChevronLeft className="h-4 w-4" /> Back
-            </button>
-            <button onClick={() => setStep(3)}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl transition-all">
-              Next: Generate <ChevronRight className="h-4 w-4" />
-            </button>
+            <Button variant="outline" onClick={() => setStep(1)}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Back
+            </Button>
+            <Button onClick={() => setStep(3)} className="bg-gradient-to-r from-blue-600 to-purple-600">
+              Next: Generate <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
           </div>
         </div>
       )}
@@ -444,13 +470,12 @@ export default function CreateSchemePage() {
           </div>
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
           <div className="flex gap-3 justify-center">
-            <button onClick={() => setStep(2)} className="flex items-center gap-2 px-4 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">
-              <ChevronLeft className="h-4 w-4" /> Back
-            </button>
-            <button onClick={generate} disabled={generating}
-              className="flex items-center gap-2 px-8 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl disabled:opacity-60 transition-all">
-              {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> Generating...</> : <><Zap className="h-4 w-4" /> Generate Scheme</>}
-            </button>
+            <Button variant="outline" onClick={() => setStep(2)}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Back
+            </Button>
+            <Button onClick={generate} disabled={generating} className="bg-gradient-to-r from-blue-600 to-purple-600">
+              {generating ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Generating...</> : <><Zap className="h-4 w-4 mr-1" /> Generate Scheme</>}
+            </Button>
           </div>
         </div>
       )}
@@ -468,19 +493,16 @@ export default function CreateSchemePage() {
                   {batchProgress.done}/{batchProgress.total} lesson plans
                 </span>
               )}
-              <button onClick={generateAllLessons} disabled={generatingAll}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors">
-                {generatingAll ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+              <Button onClick={generateAllLessons} disabled={generatingAll} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                {generatingAll ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <FileText className="h-4 w-4 mr-1" />}
                 {generatingAll ? 'Generating...' : 'Generate All Plans'}
-              </button>
-              <button onClick={downloadScheme}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                <Download className="h-4 w-4" /> Download Scheme (HTML/PDF)
-              </button>
-              <button onClick={() => router.push('/teacher/schemes-of-work')}
-                className="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">
+              </Button>
+              <Button onClick={downloadScheme} className="bg-green-600 hover:bg-green-700 text-white">
+                <Download className="h-4 w-4 mr-1" /> Download Scheme (HTML/PDF)
+              </Button>
+              <Button variant="outline" onClick={() => router.push('/teacher/schemes-of-work')}>
                 View All Schemes
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -522,40 +544,43 @@ export default function CreateSchemePage() {
                       <td className="px-3 py-2">
                         <div className="flex flex-col gap-1">
                           {/* 1. Generate Lesson Plan */}
-                          <button
+                          <Button
                             onClick={() => generateLesson(row, i)}
                             disabled={generatingLesson === i}
                             title="Generate Lesson Plan"
-                            className={`flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg transition-colors ${
+                            size="sm"
+                            className={`text-[10px] h-6 px-2 ${
                               lessonPlanIds[i]
                                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                 : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                            } disabled:opacity-50`}>
-                            {generatingLesson === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileText className="h-3 w-3" />}
+                            } shadow-none`}>
+                            {generatingLesson === i ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <FileText className="h-3 w-3 mr-1" />}
                             {lessonPlanIds[i] ? '✓ Plan' : 'Plan'}
-                          </button>
+                          </Button>
                           {/* 2. Generate PowerPoint */}
-                          <button
+                          <Button
                             onClick={() => generatePptx(row, i)}
                             disabled={generatingPptx === i || !lessonPlanIds[i]}
                             title={lessonPlanIds[i] ? 'Generate PowerPoint' : 'Generate lesson plan first'}
-                            className="flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 disabled:opacity-40 transition-colors">
-                            {generatingPptx === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <Presentation className="h-3 w-3" />}
+                            size="sm"
+                            className="text-[10px] h-6 px-2 bg-purple-100 text-purple-700 hover:bg-purple-200 shadow-none">
+                            {generatingPptx === i ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Presentation className="h-3 w-3 mr-1" />}
                             PPTX
-                          </button>
+                          </Button>
                           {/* 3. Generate Student Notes */}
-                          <button
+                          <Button
                             onClick={() => generateNotes(row, i)}
                             disabled={generatingNotes === i || !lessonPlanIds[i]}
                             title={lessonPlanIds[i] ? 'Generate Student Notes' : 'Generate lesson plan first'}
-                            className={`flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded-lg transition-colors ${
+                            size="sm"
+                            className={`text-[10px] h-6 px-2 ${
                               notesReady[i]
                                 ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                 : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                            } disabled:opacity-40`}>
-                            {generatingNotes === i ? <Loader2 className="h-3 w-3 animate-spin" /> : <NotebookPen className="h-3 w-3" />}
+                            } shadow-none`}>
+                            {generatingNotes === i ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <NotebookPen className="h-3 w-3 mr-1" />}
                             {notesReady[i] ? '✓ Notes' : 'Notes'}
-                          </button>
+                          </Button>
                         </div>
                       </td>
                     </tr>

@@ -9,7 +9,7 @@ const actions = [
   { title: "Create Lesson Plan", description: "Generate AI-powered lesson plans", icon: BookOpen, href: "/teacher/lesson-plans/create", color: "from-blue-500 to-blue-600" },
   { title: "AI Tools", description: "Generate images & presentations", icon: Brain, href: "/teacher/ai-tools", color: "from-indigo-500 to-purple-600" },
   { title: "Generate Scheme of Work", description: "Create comprehensive schemes", icon: ClipboardList, href: "/teacher/schemes-of-work", color: "from-purple-500 to-purple-600" },
-  { title: "Ask Hope AI", description: "Get instant teaching support", icon: Sparkles, href: "/teacher/alexa", color: "from-pink-500 to-pink-600" },
+  { title: "Ask Hope AI", description: "Get instant teaching support", icon: Sparkles, href: "/teacher/hope-ai", color: "from-pink-500 to-pink-600" },
 ]
 
 export default function QuickActionsGrid() {

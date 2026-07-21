@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-    const { title, classId, subject, description } = await request.json()
+    const { title, classId, subject, description, meetingLink } = await request.json()
 
     const now = new Date()
     const end = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour default
@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
           participants: [],    // [{ userId, name, joinedAt }]
           startedAt: now.toISOString(),
           sessionCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+          meetingLink: meetingLink || '',
         },
       },
       include: { class: true },

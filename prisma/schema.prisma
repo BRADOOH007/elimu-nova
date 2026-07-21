@@ -238,6 +238,9 @@ model Student {
   teacher   Teacher? @relation(fields: [teacherId], references: [id])
   class     Class?   @relation(fields: [classId], references: [id])
 
+  // Learning areas / subjects assigned to this student (multi-subject support)
+  subjects String[] @default([])
+
   // Relationships
   assignments       Assignment[]
   studentProgress   StudentProgress[]
@@ -921,6 +924,8 @@ model UserPreference {
   theme              String   @default("light") // 'light', 'dark', 'auto'
   language           String   @default("en")
   timezone           String   @default("UTC")
+  country            String   @default("")
+  curriculum         String   @default("")
   emailNotifications Boolean  @default(true)
   pushNotifications  Boolean  @default(true)
   createdAt          DateTime @default(now())

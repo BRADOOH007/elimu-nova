@@ -32,12 +32,11 @@ interface PersonListProps {
   onViewStudents: () => void
 }
 
-function PersonCard({ person, subtitle, stat, statLabel, onEdit, onDelete, onToggle }: {
+function PersonCard({ person, subtitle, stat, statLabel, onEdit, onDelete, onToggle, iconGradient, icon: Icon }: {
   person: Person; subtitle: string; stat: string; statLabel: string
   iconGradient: string; icon: any
   onEdit: () => void; onDelete: () => void; onToggle: () => void
 }) {
-  const Icon = person.constructor === Object ? null : null // unused but keeping pattern
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gradient-to-r from-white/70 to-blue-50/70 rounded-lg hover:from-white/90 hover:to-blue-50/90 transition-all shadow-sm hover:shadow-md">
       <div className="flex items-center space-x-3 min-w-0 flex-1">

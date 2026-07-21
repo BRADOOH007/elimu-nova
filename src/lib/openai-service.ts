@@ -178,7 +178,31 @@ Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1
       }
     }
 
-    // Fallback: generate an SVG educational diagram using text AI (Cerebras/Groq — same as TutorBot)
+    // Fallback: try Stability AI
+    try {
+      const stabilityKey = process.env.STABILITY_API_KEY
+      if (stabilityKey) {
+        const formData = new FormData()
+        formData.append('prompt', options.prompt)
+        formData.append('aspect_ratio', '1:1')
+        formData.append('output_format', 'png')
+        formData.append('mode', 'text-to-image')
+        const resp = await fetch('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${stabilityKey}` },
+          body: formData,
+        })
+        if (resp.ok) {
+          const buf = Buffer.from(await resp.arrayBuffer())
+          const url = `data:image/png;base64,${buf.toString('base64')}`
+          return { url, provider: 'stability-ai', revisedPrompt: options.prompt }
+        }
+      }
+    } catch (e: any) {
+      console.warn('[AI] Stability AI failed:', e.message)
+    }
+
+    // Fallback: generate an SVG educational diagram using text AI
     try {
       const svgContent = await this.generateText([
         {

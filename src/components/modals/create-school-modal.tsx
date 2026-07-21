@@ -58,7 +58,7 @@ export function CreateSchoolModal({ isOpen, onClose, onSchoolCreated }: CreateSc
       if (response.ok) {
         const newSchool = await response.json()
         toast({
-          variant: "success",
+          variant: "default",
           title: "School Created",
           description: "New school has been created successfully!",
         })

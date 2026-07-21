@@ -123,9 +123,11 @@ export default function StudentCodingDetailPage() {
         <TabsContent value="playground">
           {lesson.starterCode ? (
             <CodePlayground
-              initialHtml={lesson.starterCode.html || ''}
-              initialCss={lesson.starterCode.css || ''}
-              initialJs={lesson.starterCode.js || ''}
+              files={[
+                { name: 'index.html', language: 'html', content: lesson.starterCode.html || '' },
+                { name: 'style.css', language: 'css', content: lesson.starterCode.css || '' },
+                { name: 'script.js', language: 'javascript', content: lesson.starterCode.js || '' },
+              ]}
             />
           ) : (
             <Card><CardContent className="p-8 text-center text-gray-500">No interactive playground for this lesson</CardContent></Card>

@@ -22,6 +22,9 @@ import { UserProfileModal } from "@/components/modals/user-profile-modal"
 import { Toaster } from "@/components/ui/toaster"
 import { DashboardSplash } from "@/components/ui/dashboard-splash"
 import { IdleLogoutWarning } from "@/components/ui/idle-logout-warning"
+import { ErrorBoundary } from "@/components/ui/error-boundary"
+import { OfflineBanner } from "@/components/ui/offline-banner"
+import { SkipToContent } from "@/components/ui/skip-to-content"
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
 
 interface DashboardLayoutProps {
@@ -51,6 +54,19 @@ export function ProfessionalDashboardLayout({
 
   const [sidebarOpen,    setSidebarOpen]    = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // Close mobile sidebar on Escape
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && sidebarOpen) setSidebarOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sidebarOpen])
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    document.body.style.overflow = sidebarOpen ? 'hidden' : ''
+    return () => { document.body.style.overflow = '' }
+  }, [sidebarOpen])
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [settingsOpen,   setSettingsOpen]   = useState(false)
   const [profileOpen,    setProfileOpen]    = useState(false)
@@ -59,7 +75,7 @@ export function ProfessionalDashboardLayout({
     const key = `splash-shown-${userRole}`
     return !sessionStorage.getItem(key)
   })
-  const { totalUnread, refetch: refetchUnread } = useUnreadMessages()
+  const { unreadCount, refetch: refetchUnread } = useUnreadMessages()
   const [userProfile, setUserProfile] = useState<{
     firstName: string
     lastName: string
@@ -69,11 +85,11 @@ export function ProfessionalDashboardLayout({
   /* ── Splash min-timer — only runs if splash is showing ── */
   useEffect(() => {
     if (!showSplash) return
-    // Hard cap: dismiss splash after 3s no matter what
+    // Elegant splash: dismiss after 5s
     const t = setTimeout(() => {
       setShowSplash(false)
       sessionStorage.setItem(`splash-shown-${userRole}`, '1')
-    }, 3000)
+    }, 5000)
     return () => clearTimeout(t)
   }, [])
 
@@ -126,6 +142,10 @@ export function ProfessionalDashboardLayout({
         visible={showSplash}
       />
 
+      {/* ── ACCESSIBILITY / INFRA ── */}
+      <SkipToContent />
+      <OfflineBanner />
+
       {/* ── IDLE LOGOUT WARNING ── */}
       <IdleLogoutWarning />
 
@@ -151,7 +171,7 @@ export function ProfessionalDashboardLayout({
                 ? <PanelLeftOpen className="w-5 h-5 text-slate-600" />
                 : <PanelLeftClose className="w-5 h-5 text-slate-600" />}
             </button>
-            <Link href="/" className="shrink-0"><Logo size="sm" variant="black" /></Link>
+            <Link href="/" className="shrink-0"><Logo size="md" variant="white" /></Link>
           </div>
 
           {/* Spacer */}
@@ -165,9 +185,9 @@ export function ProfessionalDashboardLayout({
               aria-label="Notifications"
             >
               <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
-              {totalUnread > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                  {totalUnread > 99 ? '99+' : totalUnread}
+                  {unreadCount > 99 ? '99+' : unreadCount}
                 </span>
               )}
             </button>
@@ -292,9 +312,14 @@ export function ProfessionalDashboardLayout({
       )}
 
       {/* ── MAIN CONTENT ── */}
-      <main className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'} pt-14 sm:pt-16`}>
-        <div className="p-3 sm:p-4 md:p-6 max-w-full overflow-x-hidden">
-          {children}
+      <main
+        id="main-content"
+        className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'} pt-14 sm:pt-16`}
+      >
+        <div className="p-3 sm:p-4 md:p-6 max-w-full overflow-x-auto">
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </div>
       </main>
 

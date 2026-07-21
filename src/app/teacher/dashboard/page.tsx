@@ -167,6 +167,7 @@ export default function TeacherDashboard() {
   }
 
   const deleteActivity = async (activityId: string) => {
+    if (!confirm('Delete this activity?')) return
     try {
       const response = await fetch(`/api/activities/${activityId}`, { method: "DELETE" })
       if (response.ok) setRecentActivities(prev => prev.filter(a => a.id !== activityId))
@@ -188,7 +189,7 @@ export default function TeacherDashboard() {
       <SubscriptionAlert />
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Welcome back, {(displayName || session?.user?.name || "Teacher").split(" ")[0]}!
+          Welcome back, Mwalimu {(displayName || session?.user?.name || "Teacher").split(" ")[0]}!
         </h1>
         <p className="text-gray-600">
           {isIndependent

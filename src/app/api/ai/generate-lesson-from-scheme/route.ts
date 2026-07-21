@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         where: { userId: session.user.id },
         select: { lessonPlanTemplate: true },
       })
-      templateText = t?.lessonPlanTemplate || null
+      templateText = t?.lessonPlanTemplate ?? undefined
     }
     const templateBlock = templateText
       ? `\n\nA reference lesson plan document was uploaded as a format template. Study its structure, sections, and style, then generate the lesson plan in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
