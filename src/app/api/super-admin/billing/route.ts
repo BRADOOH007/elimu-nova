@@ -1,20 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-async function requireSuperAdmin() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id || session.user.role !== 'SUPER_ADMIN') return null
-  return session
-}
-
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const page  = parseInt(searchParams.get('page')  || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
 
@@ -51,4 +41,4 @@ export async function GET(request: NextRequest) {
     console.error('[GET_SUPER_BILLING]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

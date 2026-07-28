@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Sparkles, User, BookOpen, TrendingUp, Zap } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 export function AICareerConsultant() {
   const [formData, setFormData] = useState({
@@ -20,10 +21,11 @@ export function AICareerConsultant() {
   })
   const [isGenerating, setIsGenerating] = useState(false)
   const [results, setResults] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const handleGenerate = async () => {
     if (!formData.grade || !formData.interests) {
-      alert('Please fill in grade and interests at minimum!')
+      toast({ title: 'Please fill in grade and interests at minimum!' })
       return
     }
 
@@ -60,7 +62,7 @@ export function AICareerConsultant() {
       setResults(advice)
     } catch (error) {
       console.error('Error generating career advice:', error)
-      alert('Failed to generate career advice')
+      toast({ title: 'Failed to generate career advice', variant: 'destructive' })
     } finally {
       setIsGenerating(false)
     }

@@ -1,23 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !['STUDENT', 'TEACHER', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: `Rate limit reached. Try again in ${rl.resetInSec}s.` },
-        { status: 429, headers: { 'Retry-After': String(rl.resetInSec) } }
-      )
-    }
+export const POST = route({ auth: ['STUDENT', 'TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
 
     const { lessonPlan, assessmentType, questionCount } = await request.json()
     if (!lessonPlan) {
@@ -59,11 +44,4 @@ Content: ${(lessonPlan.content?.generatedContent || lessonPlan.content || '').to
     }
 
     return NextResponse.json({ assessment: assessmentData })
-  } catch (error) {
-    console.error('Assessment generation error:', error)
-    return NextResponse.json({
-      error:   'Failed to generate assessment',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 })
-  }
-}
+})

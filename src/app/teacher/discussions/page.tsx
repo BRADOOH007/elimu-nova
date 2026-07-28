@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   MessageSquare, CheckCircle, XCircle, Clock, AlertTriangle,
   Users, RefreshCw, Send, Loader2, Filter
@@ -22,17 +23,20 @@ export default function TeacherDiscussions() {
   const [acting, setActing]           = useState<string | null>(null)
   const [reply, setReply]             = useState<Record<string, string>>({})
   const [sending, setSending]         = useState<string | null>(null)
+  const [discussionPage, setDiscussionPage] = useState(1)
+  const [discussionTotalPages, setDiscussionTotalPages] = useState(1)
 
   const load = async (status: Tab = tab) => {
     setLoading(true)
     try {
-      const res  = await fetch(`/api/discussions?status=${status}`)
+      const res  = await fetch(`/api/discussions?status=${status}&page=${discussionPage}&limit=25`)
       const data = await res.json()
       setDiscussions(data.discussions || [])
+      setDiscussionTotalPages(data.pagination?.totalPages ?? 1)
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load(tab) }, [tab])
+  useEffect(() => { load(tab) }, [tab, discussionPage])
 
   const act = async (id: string, action: 'approve' | 'reject') => {
     setActing(id)
@@ -97,7 +101,7 @@ export default function TeacherDiscussions() {
           ['approved', 'Approved', CheckCircle],
           ['all',      'All',      MessageSquare],
         ] as const).map(([key, label, Icon]) => (
-          <button key={key} onClick={() => setTab(key as Tab)}
+          <button key={key} onClick={() => { setTab(key as Tab); setDiscussionPage(1) }}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
             <Icon className="h-3.5 w-3.5" /> {label}
           </button>
@@ -120,89 +124,110 @@ export default function TeacherDiscussions() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {filtered.map(d => (
-            <div key={d.id} className={`bg-white border rounded-2xl overflow-hidden transition-all ${
-              d.status === 'pending' ? 'border-amber-200' : 'border-slate-200'
-            }`}>
-              {/* Top bar */}
-              <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-white text-xs font-bold">
-                      {d.senderName.split(' ').map(n => n[0]).join('')}
-                    </span>
+        <>
+          <div className="space-y-4">
+            {filtered.map(d => (
+              <div key={d.id} className={`bg-white border rounded-2xl overflow-hidden transition-all ${
+                d.status === 'pending' ? 'border-amber-200' : 'border-slate-200'
+              }`}>
+                {/* Top bar */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <span className="text-white text-xs font-bold">
+                        {d.senderName.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{d.senderName}</p>
+                      <p className="text-xs text-slate-400">{d.senderRole} · {fmtDate(d.createdAt)}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{d.senderName}</p>
-                    <p className="text-xs text-slate-400">{d.senderRole} · {fmtDate(d.createdAt)}</p>
+                  <div className="flex items-center gap-2">
+                    {d.status === 'pending' && (
+                      <span className="text-xs font-medium px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full flex items-center gap-1">
+                        <Clock className="h-3 w-3" /> Pending review
+                      </span>
+                    )}
+                    {d.status === 'approved' && (
+                      <span className="text-xs font-medium px-2.5 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" /> Approved
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {d.status === 'pending' && (
-                    <span className="text-xs font-medium px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full flex items-center gap-1">
-                      <Clock className="h-3 w-3" /> Pending review
-                    </span>
-                  )}
-                  {d.status === 'approved' && (
-                    <span className="text-xs font-medium px-2.5 py-1 bg-green-100 text-green-700 rounded-full flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" /> Approved
-                    </span>
-                  )}
+
+                {/* Message */}
+                <div className="px-5 py-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">{d.topic}</p>
+                  <p className="text-slate-700 leading-relaxed">{d.message}</p>
                 </div>
+
+                {/* Actions for pending */}
+                {d.status === 'pending' && (
+                  <div className="px-5 pb-4 flex items-center gap-3 flex-wrap">
+                    <button
+                      onClick={() => act(d.id, 'approve')}
+                      disabled={acting === d.id}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl disabled:opacity-60 transition-colors"
+                    >
+                      {acting === d.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => act(d.id, 'reject')}
+                      disabled={acting === d.id}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-sm font-semibold rounded-xl disabled:opacity-60 transition-colors"
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> Reject
+                    </button>
+                  </div>
+                )}
+
+                {/* Reply box for approved */}
+                {d.status === 'approved' && (
+                  <div className="px-5 pb-4 flex gap-2 border-t border-slate-100 pt-3">
+                    <input
+                      value={reply[d.id] || ''}
+                      onChange={e => setReply(prev => ({ ...prev, [d.id]: e.target.value }))}
+                      onKeyDown={e => e.key === 'Enter' && sendReply(d)}
+                      placeholder="Reply to this discussion..."
+                      className="flex-1 h-9 px-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={() => sendReply(d)}
+                      disabled={!reply[d.id]?.trim() || sending === d.id}
+                      className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center disabled:opacity-40 transition-opacity"
+                    >
+                      {sending === d.id
+                        ? <Loader2 className="h-4 w-4 text-white animate-spin" />
+                        : <Send className="h-4 w-4 text-white" />}
+                    </button>
+                  </div>
+                )}
               </div>
-
-              {/* Message */}
-              <div className="px-5 py-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">{d.topic}</p>
-                <p className="text-slate-700 leading-relaxed">{d.message}</p>
-              </div>
-
-              {/* Actions for pending */}
-              {d.status === 'pending' && (
-                <div className="px-5 pb-4 flex items-center gap-3 flex-wrap">
-                  <button
-                    onClick={() => act(d.id, 'approve')}
-                    disabled={acting === d.id}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl disabled:opacity-60 transition-colors"
-                  >
-                    {acting === d.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => act(d.id, 'reject')}
-                    disabled={acting === d.id}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-sm font-semibold rounded-xl disabled:opacity-60 transition-colors"
-                  >
-                    <XCircle className="h-3.5 w-3.5" /> Reject
-                  </button>
-                </div>
-              )}
-
-              {/* Reply box for approved */}
-              {d.status === 'approved' && (
-                <div className="px-5 pb-4 flex gap-2 border-t border-slate-100 pt-3">
-                  <input
-                    value={reply[d.id] || ''}
-                    onChange={e => setReply(prev => ({ ...prev, [d.id]: e.target.value }))}
-                    onKeyDown={e => e.key === 'Enter' && sendReply(d)}
-                    placeholder="Reply to this discussion..."
-                    className="flex-1 h-9 px-3 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button
-                    onClick={() => sendReply(d)}
-                    disabled={!reply[d.id]?.trim() || sending === d.id}
-                    className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center disabled:opacity-40 transition-opacity"
-                  >
-                    {sending === d.id
-                      ? <Loader2 className="h-4 w-4 text-white animate-spin" />
-                      : <Send className="h-4 w-4 text-white" />}
-                  </button>
-                </div>
-              )}
+            ))}
+          </div>
+          {discussionTotalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <Button
+                onClick={() => setDiscussionPage(p => Math.max(1, p - 1))}
+                disabled={discussionPage <= 1}
+              >
+                Previous
+              </Button>
+              <span className="text-sm text-slate-500">
+                Page {discussionPage} of {discussionTotalPages}
+              </span>
+              <Button
+                onClick={() => setDiscussionPage(p => Math.min(discussionTotalPages, p + 1))}
+                disabled={discussionPage >= discussionTotalPages}
+              >
+                Next
+              </Button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   )

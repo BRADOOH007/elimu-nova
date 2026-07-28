@@ -10,13 +10,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { useDeleteConfirmation } from "@/components/ui/delete-confirmation-dialog"
-import { 
-  Loader2, 
-  User, 
-  School, 
-  GraduationCap, 
-  Mail, 
-  Phone, 
+import {
+  Loader2,
+  User,
+  School,
+  GraduationCap,
+  Mail,
+  Phone,
   Calendar,
   Edit,
   Trash2,
@@ -24,7 +24,13 @@ import {
   X,
   Shield,
   Clock,
-  MapPin
+  MapPin,
+  Key,
+  Eye,
+  EyeOff,
+  Copy,
+  RefreshCw,
+  Check,
 } from "lucide-react"
 
 interface School {
@@ -34,6 +40,7 @@ interface School {
 
 interface User {
   id: string
+  username: string
   firstName: string
   lastName: string
   email: string
@@ -104,6 +111,56 @@ export function UserDetailsModal({
     isActive: true
   })
 
+  // Password
+  const [passwordData, setPasswordData] = useState<{ password: string | null; hasStoredPassword: boolean } | null>(null)
+  const [pwLoading, setPwLoading] = useState(false)
+  const [pwRevealed, setPwRevealed] = useState(false)
+  const [pwCopied, setPwCopied] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+
+  const fetchPassword = async () => {
+    if (!userId) return
+    setPwLoading(true)
+    setPasswordData(null)
+    setPwRevealed(false)
+    try {
+      const res = await fetch(`/api/users/${userId}/password`)
+      if (res.ok) {
+        setPasswordData(await res.json())
+      } else {
+        setPasswordData({ password: null, hasStoredPassword: false })
+      }
+    } catch {
+      setPasswordData({ password: null, hasStoredPassword: false })
+    } finally { setPwLoading(false) }
+  }
+
+  const handleCopyPassword = async () => {
+    if (!passwordData?.password) return
+    await navigator.clipboard.writeText(passwordData.password)
+    setPwCopied(true)
+    setTimeout(() => setPwCopied(false), 2000)
+  }
+
+  const handleRegenerate = async () => {
+    if (!userId) return
+    setRegenerating(true)
+    try {
+      const res = await fetch(`/api/users/${userId}/regenerate-password`, { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setPasswordData({ password: data.password, hasStoredPassword: true })
+        setPwRevealed(true)
+        toast({ title: 'Password regenerated' })
+      } else {
+        const err = await res.json()
+        toast({ variant: 'destructive', title: 'Error', description: err.error })
+      }
+    } catch {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to regenerate password' })
+    } finally { setRegenerating(false) }
+  }
+
   // Fetch user data
   const fetchUser = async () => {
     if (!userId) return
@@ -161,11 +218,23 @@ export function UserDetailsModal({
     if (isOpen && userId) {
       fetchUser()
       fetchSchools()
+      fetchPassword()
     }
   }, [isOpen, userId])
 
   const handleSave = async () => {
     if (!userId) return
+
+    // Validate school selection for school-based roles
+    const schoolRoles = ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT']
+    if (schoolRoles.includes(formData.role) && !formData.schoolId) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Please select a school for this role.",
+      })
+      return
+    }
 
     setSaving(true)
     try {
@@ -297,6 +366,7 @@ export function UserDetailsModal({
   }
 
   const requiresSchool = ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT'].includes(formData.role)
+  const showRoleSchoolField = editing && requiresSchool
 
   if (loading) {
     return (
@@ -340,7 +410,7 @@ export function UserDetailsModal({
                       size="sm"
                       onClick={() => setEditing(false)}
                       disabled={saving}
-                      className="edugenius-glass"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
                     >
                       <X className="w-4 h-4 mr-1" />
                       Cancel
@@ -349,7 +419,7 @@ export function UserDetailsModal({
                       size="sm"
                       onClick={handleSave}
                       disabled={saving}
-                      className="edugenius-button"
+                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                     >
                       {saving ? (
                         <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -362,10 +432,9 @@ export function UserDetailsModal({
                 ) : (
                   <>
                     <Button
-                      variant="outline"
                       size="sm"
                       onClick={() => setEditing(true)}
-                      className="edugenius-glass"
+                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                     >
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
@@ -374,7 +443,7 @@ export function UserDetailsModal({
                       variant="outline"
                       size="sm"
                       onClick={handleDeleteClick}
-                      className="edugenius-glass text-red-600 hover:text-red-700"
+                      className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
                     >
                       <Trash2 className="w-4 h-4 mr-1" />
                       Delete
@@ -445,6 +514,14 @@ export function UserDetailsModal({
               </div>
 
               <div className="space-y-2">
+                <Label>Username</Label>
+                <div className="flex items-center text-sm text-gray-900">
+                  <span className="text-gray-400 mr-2">@</span>
+                  {user.username}
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="phone">Phone Number</Label>
                 {editing ? (
                   <Input
@@ -473,6 +550,7 @@ export function UserDetailsModal({
                       <SelectItem value="SCHOOL_ADMIN">School Admin</SelectItem>
                       <SelectItem value="TEACHER">Teacher</SelectItem>
                       <SelectItem value="STUDENT">Student</SelectItem>
+                      <SelectItem value="PARENT">Parent</SelectItem>
                     </SelectContent>
                   </Select>
                 ) : (
@@ -485,9 +563,9 @@ export function UserDetailsModal({
                 )}
               </div>
 
-              {editing && requiresSchool && (
+              {showRoleSchoolField && (
                 <div className="space-y-2">
-                  <Label htmlFor="school">School</Label>
+                  <Label htmlFor="school" className="flex items-center gap-1">School <span className="text-red-500">*</span></Label>
                   <Select value={formData.schoolId} onValueChange={(value) => handleInputChange('schoolId', value)}>
                     <SelectTrigger className="edugenius-glass">
                       <SelectValue placeholder="Select school" />
@@ -511,8 +589,9 @@ export function UserDetailsModal({
                       id="isActive"
                       checked={formData.isActive}
                       onCheckedChange={(checked) => handleInputChange('isActive', checked)}
+                      className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-gray-300"
                     />
-                    <Label htmlFor="isActive">
+                    <Label htmlFor="isActive" className={`text-sm font-medium ${formData.isActive ? 'text-green-700' : 'text-gray-500'}`}>
                       {formData.isActive ? 'Active' : 'Inactive'}
                     </Label>
                   </div>
@@ -562,6 +641,74 @@ export function UserDetailsModal({
               </CardContent>
             </Card>
           )}
+
+          {/* Password / Username */}
+          <Card className="bg-gradient-to-br from-white/70 to-amber-50/70 backdrop-blur-sm border-0">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="flex items-center text-amber-700">
+                <Key className="w-5 h-5 mr-2" />
+                Login Credentials
+              </CardTitle>
+              {passwordData?.hasStoredPassword && (
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => setPwRevealed(v => !v)}
+                    className="h-8 text-xs text-gray-500 hover:text-gray-700">
+                    {pwRevealed ? <EyeOff className="w-3.5 h-3.5 mr-1" /> : <Eye className="w-3.5 h-3.5 mr-1" />}
+                    {pwRevealed ? 'Hide' : 'Show'}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleRegenerate}
+                    disabled={regenerating} className="h-8 text-xs">
+                    <RefreshCw className={`w-3.5 h-3.5 mr-1 ${regenerating ? 'animate-spin' : ''}`} />
+                    Regenerate
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Username */}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-gray-500 font-medium min-w-[80px]">Username</span>
+                <span className="text-gray-900 font-mono">@{user.username}</span>
+              </div>
+
+              {/* Password */}
+              {pwLoading ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Loading...
+                </div>
+              ) : !passwordData ? (
+                <p className="text-sm text-gray-500">Could not load password.</p>
+              ) : !passwordData.hasStoredPassword ? (
+                <div>
+                  <p className="text-sm text-gray-500 mb-3">No stored password found. Generate one for this user.</p>
+                  <Button variant="outline" size="sm" onClick={handleRegenerate}
+                    disabled={regenerating} className="text-xs">
+                    <RefreshCw className={`w-3.5 h-3.5 mr-1 ${regenerating ? 'animate-spin' : ''}`} />
+                    Generate Password
+                  </Button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2 text-sm mb-2">
+                    <span className="text-gray-500 font-medium min-w-[80px]">Password</span>
+                    <div className="flex items-center gap-2 flex-1">
+                      <code className={`flex-1 px-3 py-2 rounded-lg bg-white/80 border text-sm font-mono transition-all ${
+                        pwRevealed ? 'text-gray-900 border-amber-200' : 'text-gray-400 border-gray-200 select-none'
+                      }`}>
+                        {pwRevealed ? passwordData.password : '••••••••••••'}
+                      </code>
+                      {pwRevealed && (
+                        <button onClick={handleCopyPassword}
+                          className="shrink-0 p-2 rounded-lg hover:bg-white/80 text-gray-500 hover:text-gray-700 transition-colors" title="Copy">
+                          {pwCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Account Information */}
           <Card className="bg-gradient-to-br from-white/70 to-purple-50/70 backdrop-blur-sm border-0">

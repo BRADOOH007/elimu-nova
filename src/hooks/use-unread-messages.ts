@@ -32,7 +32,7 @@ export function useUnreadMessages() {
         prevCountRef.current = count
         setUnreadCount(count)
       }
-    } catch { /* silent */ }
+    } catch (e) { console.warn('[UnreadMessages] fetchCount failed:', e) }
     finally { setLoading(false) }
   }, [session, play])
 
@@ -44,7 +44,7 @@ export function useUnreadMessages() {
         const d = await res.json()
         setNotificationUnread(d.count || 0)
       }
-    } catch { /* silent */ }
+    } catch (e) { console.warn('[UnreadMessages] fetchNotificationCount failed:', e) }
   }, [session])
 
   useEffect(() => {

@@ -1,177 +1,161 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get student data
-    const student = await prisma.student.findUnique({
-      where: { userId: session.user.id },
-      include: {
-        user: true,
-        teacher: {
-          include: {
-            user: true
+export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
+  // Get student data
+  const student = await prisma.student.findUnique({
+    where: { userId: user.id },
+    include: {
+      user: true,
+      teacher: {
+        include: {
+          user: true
+        }
+      },
+      class: true,
+      school: true,
+      analytics: true,
+      studySessions: {
+        orderBy: { startTime: 'desc' },
+        take: 50
+      },
+      submissions: {
+        include: {
+          assignment: {
+            include: {
+              lessonPlan: true
+            }
           }
         },
-        class: true,
-        school: true,
-        analytics: true,
-        studySessions: {
-          orderBy: { startTime: 'desc' },
-          take: 50
+        orderBy: { submittedAt: 'desc' },
+        take: 50
+      },
+      assignments: {
+        include: {
+          lessonPlan: true
         },
-        submissions: {
-          include: {
-            assignment: {
-              include: {
-                lessonPlan: true
-              }
-            }
-          },
-          orderBy: { submittedAt: 'desc' },
-          take: 50
-        },
-        assignments: {
-          include: {
-            lessonPlan: true
-          },
-          orderBy: { dueDate: 'desc' }
-        },
-        aiTutorSessions: {
-          orderBy: { createdAt: 'desc' },
-          take: 20
-        }
-      }
-    })
-
-    if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
-    }
-
-    // Calculate progress metrics
-    const now = new Date()
-    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()))
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-    const startOfYear = new Date(now.getFullYear(), 0, 1)
-
-    // Study time calculations
-    const weeklyStudyTime = student.studySessions
-      .filter(session => new Date(session.startTime) >= startOfWeek)
-      .reduce((total, session) => total + session.duration, 0)
-
-    const monthlyStudyTime = student.studySessions
-      .filter(session => new Date(session.startTime) >= startOfMonth)
-      .reduce((total, session) => total + session.duration, 0)
-
-    const totalStudyTime = student.studySessions
-      .reduce((total, session) => total + session.duration, 0)
-
-    // Assignment calculations
-    const completedAssignments = student.submissions.filter(s => (s as any).status === 'SUBMITTED').length
-    const pendingAssignments = student.assignments.filter(a => 
-      a.dueDate > new Date() && 
-      !student.submissions.some(s => (s as any).assignmentId === a.id && (s as any).status === 'SUBMITTED')
-    ).length
-    const overdueAssignments = student.assignments.filter(a => 
-      a.dueDate < new Date() && 
-      !student.submissions.some(s => (s as any).assignmentId === a.id && (s as any).status === 'SUBMITTED')
-    ).length
-
-    // Grade calculations
-    const gradedSubmissions = student.submissions.filter(s => s.grade !== null)
-    const averageGrade = gradedSubmissions.length > 0 
-      ? gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length
-      : null
-
-    // Study streak calculation
-    const studyStreak = calculateStudyStreak(student.studySessions)
-
-    // AI Tutor activity
-    const recentAISessions = student.aiTutorSessions.slice(0, 5)
-    const aiHelpRequests = student.aiTutorSessions.length
-
-    // Subject performance
-    const subjectPerformance = calculateSubjectPerformance(student.submissions)
-
-    // Learning patterns
-    const learningPatterns = analyzeLearningPatterns(student.studySessions, student.submissions)
-
-    // Generate AI insights
-    const aiInsights = await generateAIProgressInsights({
-      student,
-      weeklyStudyTime,
-      monthlyStudyTime,
-      totalStudyTime,
-      completedAssignments,
-      pendingAssignments,
-      overdueAssignments,
-      averageGrade,
-      studyStreak,
-      subjectPerformance,
-      learningPatterns,
-      recentAISessions
-    })
-
-    const progressData = {
-      // Basic metrics
-      totalStudyTime,
-      weeklyStudyTime,
-      monthlyStudyTime,
-      averageGrade,
-      completedAssignments,
-      pendingAssignments,
-      overdueAssignments,
-      studyStreak,
-      aiHelpRequests,
-
-      // Goals
-      weeklyGoal: 300, // 5 hours per week
-      monthlyGoal: 1200, // 20 hours per month
-      yearlyGoal: 14400, // 240 hours per year
-
-      // Detailed data
-      subjectPerformance,
-      learningPatterns,
-      recentAISessions,
-      recentSubmissions: student.submissions.slice(0, 10),
-      recentStudySessions: student.studySessions.slice(0, 10),
-
-      // AI Insights
-      aiInsights,
-
-      // Teacher info
-      teacher: student.teacher ? {
-        name: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`,
-        email: student.teacher.user.email
-      } : { name: 'Unknown', email: '' },
-
-      // Student info
-      student: {
-        name: `${student.user.firstName} ${student.user.lastName}`,
-        grade: student.class?.name || 'Grade 8',
-        school: student.school?.name || ''
+        orderBy: { dueDate: 'desc' }
+      },
+      aiTutorSessions: {
+        orderBy: { createdAt: 'desc' },
+        take: 20
       }
     }
+  })
 
-    return NextResponse.json(progressData)
-
-  } catch (error) {
-    console.error('Error fetching student progress:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch progress data' },
-      { status: 500 }
-    )
+  if (!student) {
+    return NextResponse.json({ error: 'Student not found' }, { status: 404 })
   }
-}
+
+  // Calculate progress metrics
+  const now = new Date()
+  const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()))
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+  const startOfYear = new Date(now.getFullYear(), 0, 1)
+
+  // Study time calculations
+  const weeklyStudyTime = student.studySessions
+    .filter(session => new Date(session.startTime) >= startOfWeek)
+    .reduce((total, session) => total + session.duration, 0)
+
+  const monthlyStudyTime = student.studySessions
+    .filter(session => new Date(session.startTime) >= startOfMonth)
+    .reduce((total, session) => total + session.duration, 0)
+
+  const totalStudyTime = student.studySessions
+    .reduce((total, session) => total + session.duration, 0)
+
+  // Assignment calculations
+  const completedAssignments = student.submissions.filter(s => (s as any).status === 'SUBMITTED').length
+  const pendingAssignments = student.assignments.filter(a => 
+    a.dueDate > new Date() && 
+    !student.submissions.some(s => (s as any).assignmentId === a.id && (s as any).status === 'SUBMITTED')
+  ).length
+  const overdueAssignments = student.assignments.filter(a => 
+    a.dueDate < new Date() && 
+    !student.submissions.some(s => (s as any).assignmentId === a.id && (s as any).status === 'SUBMITTED')
+  ).length
+
+  // Grade calculations
+  const gradedSubmissions = student.submissions.filter(s => s.grade !== null)
+  const averageGrade = gradedSubmissions.length > 0 
+    ? gradedSubmissions.reduce((sum, s) => sum + (s.grade || 0), 0) / gradedSubmissions.length
+    : null
+
+  // Study streak calculation
+  const studyStreak = calculateStudyStreak(student.studySessions)
+
+  // AI Tutor activity
+  const recentAISessions = student.aiTutorSessions.slice(0, 5)
+  const aiHelpRequests = student.aiTutorSessions.length
+
+  // Subject performance
+  const subjectPerformance = calculateSubjectPerformance(student.submissions)
+
+  // Learning patterns
+  const learningPatterns = analyzeLearningPatterns(student.studySessions, student.submissions)
+
+  // Generate AI insights
+  const aiInsights = await generateAIProgressInsights({
+    student,
+    weeklyStudyTime,
+    monthlyStudyTime,
+    totalStudyTime,
+    completedAssignments,
+    pendingAssignments,
+    overdueAssignments,
+    averageGrade,
+    studyStreak,
+    subjectPerformance,
+    learningPatterns,
+    recentAISessions
+  })
+
+  const progressData = {
+    // Basic metrics
+    totalStudyTime,
+    weeklyStudyTime,
+    monthlyStudyTime,
+    averageGrade,
+    completedAssignments,
+    pendingAssignments,
+    overdueAssignments,
+    studyStreak,
+    aiHelpRequests,
+
+    // Goals
+    weeklyGoal: 300, // 5 hours per week
+    monthlyGoal: 1200, // 20 hours per month
+    yearlyGoal: 14400, // 240 hours per year
+
+    // Detailed data
+    subjectPerformance,
+    learningPatterns,
+    recentAISessions,
+    recentSubmissions: student.submissions.slice(0, 10),
+    recentStudySessions: student.studySessions.slice(0, 10),
+
+    // AI Insights
+    aiInsights,
+
+    // Teacher info
+    teacher: student.teacher ? {
+      name: `${student.teacher.user.firstName} ${student.teacher.user.lastName}`,
+      email: student.teacher.user.email
+    } : { name: 'Unknown', email: '' },
+
+    // Student info
+    student: {
+      name: `${student.user.firstName} ${student.user.lastName}`,
+      grade: student.class?.name || 'Grade 8',
+      school: student.school?.name || ''
+    }
+  }
+
+  return NextResponse.json(progressData)
+})
 
 function calculateStudyStreak(studySessions: any[]): number {
   if (studySessions.length === 0) return 0
@@ -182,7 +166,7 @@ function calculateStudyStreak(studySessions: any[]): number {
 
   let streak = 0
   let currentDate = new Date()
-  
+
   for (let i = 0; i < 365; i++) { // Check up to a year
     const dateString = currentDate.toDateString()
     if (sortedSessions.includes(dateString)) {
@@ -213,11 +197,11 @@ function calculateSubjectPerformance(submissions: any[]): any[] {
 
     const data = subjectMap.get(subject)
     data.totalAssignments++
-    
+
     if (submission.status === 'submitted') {
       data.completedAssignments++
     }
-    
+
     if (submission.grade !== null) {
       data.totalGrade += submission.grade
     }

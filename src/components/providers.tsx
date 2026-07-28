@@ -31,7 +31,7 @@ class ClientErrorBoundary extends React.Component<
           componentStack: info.componentStack,
         }),
       })
-    } catch {}
+      } catch (e) { console.warn('[Providers] Failed to report client error:', e) }
   }
 
   render() {
@@ -71,7 +71,7 @@ export function Providers({ children }: ProvidersProps) {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(data),
         })
-      } catch {}
+      } catch (e) { console.warn('[Providers] Failed to report client error:', e) }
     }
 
     const onError = (event: ErrorEvent) => {
@@ -109,7 +109,28 @@ export function Providers({ children }: ProvidersProps) {
       refetchOnWindowFocus={false}    // don't refetch on tab switch — prevents the loading flash
     >
       <ClientErrorBoundary>{children}</ClientErrorBoundary>
-      <Toaster position="top-right" richColors />
+      <Toaster
+        position="top-right"
+        richColors
+        closeButton
+        visibleToasts={1}
+        duration={4000}
+        style={{ width: '380px', maxWidth: '90vw' }}
+        toastOptions={{
+          classNames: {
+            toast: 'group toast shadow-lg border-0',
+            title: 'text-sm font-semibold',
+            description: 'text-xs opacity-80',
+            actionButton: 'bg-white/20 hover:bg-white/30 text-white text-xs px-3 py-1.5 rounded-lg backdrop-blur-sm',
+            cancelButton: 'text-white/70 hover:text-white text-xs',
+            closeButton: 'text-white/50 hover:text-white',
+            success: 'bg-emerald-600 text-white border-emerald-700',
+            error: 'bg-red-600 text-white border-red-700',
+            info: 'bg-blue-600 text-white border-blue-700',
+            warning: 'bg-amber-500 text-white border-amber-600',
+          },
+        }}
+      />
       <SWRegister />
     </SessionProvider>
   )

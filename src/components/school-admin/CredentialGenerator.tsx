@@ -31,6 +31,7 @@ import {
   Phone,
   RefreshCw
 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 type Role = 'TEACHER' | 'STUDENT' | 'PARENT'
 
@@ -46,6 +47,7 @@ interface Credential {
 }
 
 export default function CredentialGenerator() {
+  const { toast } = useToast()
   const [role, setRole] = useState<Role>('STUDENT')
   const [count, setCount] = useState(5)
   const [showPrintMode, setShowPrintMode] = useState(false)
@@ -116,7 +118,7 @@ export default function CredentialGenerator() {
       )
       .join('\n')
     await navigator.clipboard.writeText(text)
-    alert('All credentials copied to clipboard')
+    toast({ title: 'All credentials copied to clipboard' })
   }
 
   const copySingle = async (index: number) => {
@@ -135,13 +137,13 @@ export default function CredentialGenerator() {
   const sendViaEmail = async (index: number) => {
     const c = credentials[index]
     if (!c.email) {
-      alert('Please enter an email address first!')
+      toast({ title: 'Please enter an email address first!' })
       return
     }
     setSendingIndex(index)
     // Simulate sending email
     setTimeout(() => {
-      alert(`Credentials sent to ${c.email}!`)
+      toast({ title: `Credentials sent to ${c.email}!` })
       setSendingIndex(null)
     }, 1500)
   }
@@ -149,13 +151,13 @@ export default function CredentialGenerator() {
   const sendViaPhone = async (index: number) => {
     const c = credentials[index]
     if (!c.phone) {
-      alert('Please enter a phone number first!')
+      toast({ title: 'Please enter a phone number first!' })
       return
     }
     setSendingIndex(index)
     // Simulate sending SMS
     setTimeout(() => {
-      alert(`Credentials sent to ${c.phone}!`)
+      toast({ title: `Credentials sent to ${c.phone}!` })
       setSendingIndex(null)
     }, 1500)
   }

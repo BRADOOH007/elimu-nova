@@ -19,7 +19,7 @@ describe('api-errors', () => {
       const error = new AppError('Test error')
       expect(error.message).toBe('Test error')
       expect(error.statusCode).toBe(500)
-      expect(error.code).toBeUndefined()
+      expect(error.code).toBe('INTERNAL_ERROR')
     })
 
     it('creates error with custom status and code', () => {

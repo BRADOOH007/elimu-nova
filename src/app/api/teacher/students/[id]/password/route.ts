@@ -1,28 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { route } from '@/lib/api-middleware';
 import { extractEncryptedPassword } from '@/lib/password-encryption';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { id } = params;
 
-    const { id } = await params;
-
-    // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     });
 
     if (!teacher) {
       return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });
     }
 
-    // Get student and verify they belong to this teacher
     const student = await prisma.student.findUnique({
       where: { 
         id: id,
@@ -46,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Student not found or access denied' }, { status: 404 });
     }
 
-    const storedPassword = extractEncryptedPassword(student.user.address);
+    const plainPassword = extractEncryptedPassword(student.user.address);
 
     return NextResponse.json({
       success: true,
@@ -55,17 +47,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         email: student.user.email,
         name: `${student.user.firstName} ${student.user.lastName}`,
         hasPassword: !!student.user.password,
-        passwordSet: !!student.user.password,
-        // Return stored plain password if available
-        plainPassword: storedPassword
+        plainPassword: plainPassword
       }
     });
 
   } catch (error) {
     console.error('Error fetching student password info:', error);
     return NextResponse.json({ 
-      error: 'Failed to fetch student password info', 
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: 'Failed to fetch student password info'
     }, { status: 500 });
   }
-}
+});

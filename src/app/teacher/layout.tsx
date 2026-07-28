@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
+import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
 import {
   BarChart3, Users, BookOpen, ClipboardList,
-  Wand2, Radio, Mail, CreditCard, Calendar, Brain
+  Wand2, Radio, Mail, CreditCard, Calendar, Brain, Activity
 } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
@@ -25,11 +26,13 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
   const isSchoolTeacher = !!session?.user?.schoolId
 
   const sidebarItems = [
-    { icon: BarChart3,     label: 'Dashboard',      href: '/teacher/dashboard'    },
-    { icon: Users,         label: 'My Students',    href: '/teacher/students'     },
-    { icon: BookOpen,      label: 'Planning',       href: '/teacher/lesson-plans' },
-    { icon: ClipboardList, label: 'Assessments',    href: '/teacher/assignments'  },
+    { icon: BarChart3,     label: 'Dashboard',      href: '/teacher/dashboard',    tourId: 'teacher-dashboard'    },
+    { icon: Users,         label: 'My Students',    href: '/teacher/students',     tourId: 'teacher-students'     },
+    { icon: BookOpen,      label: 'Planning',       href: '/teacher/lesson-plans', tourId: 'teacher-schedule'     },
+    { icon: ClipboardList, label: 'Assignments',    href: '/teacher/assignments',  tourId: 'teacher-assignments'  },
+    { icon: BarChart3,     label: 'Gradebook',      href: '/teacher/gradebook'    },
     { icon: BarChart3,     label: 'Analytics',      href: '/teacher/analytics'    },
+    { icon: Activity,      label: 'Activity Log',   href: '/teacher/activity-log' },
     { icon: Wand2,         label: 'AI Tools',       href: '/teacher/ai-tools'     },
     { icon: Radio,         label: 'Live Teaching',  href: '/teacher/live-class'   },
     { icon: Calendar,      label: 'Calendar',       href: '/teacher/calendar'     },
@@ -40,7 +43,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       badge: unreadCount > 0 ? unreadCount : undefined,
     },
     ...(!isSchoolTeacher
-      ? [{ icon: CreditCard, label: 'Billing', href: '/teacher/billing' as const }]
+      ? [{ icon: CreditCard, label: 'Billing', href: '/teacher/billing' as const, tourId: 'teacher-billing' }]
       : []),
   ]
 
@@ -57,7 +60,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       schoolName={schoolInfo?.school?.name || 'Loading...'}
       sidebarItems={sidebarItems}
     >
-      {children}
+      <SubscriptionGuard>{children}</SubscriptionGuard>
     </ProfessionalDashboardLayout>
   )
 }

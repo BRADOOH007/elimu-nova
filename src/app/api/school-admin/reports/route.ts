@@ -1,26 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      select: { schoolId: true }
-    })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    select: { schoolId: true }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const sortBy = searchParams.get('sortBy') || 'createdAt'
@@ -83,33 +75,19 @@ export async function GET(request: NextRequest) {
         totalPages
       }
     })
-  } catch (error) {
-    console.error('Error fetching school admin reports:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch reports' },
-      { status: 500 }
-    )
-  }
-}
+})
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      select: { schoolId: true }
-    })
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    select: { schoolId: true }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const {
       title,
       description,
@@ -226,7 +204,7 @@ export async function POST(request: NextRequest) {
         scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         schoolId: schoolAdmin.schoolId,
-        generatedBy: session.user.id,
+        generatedBy: user.id,
         status: 'COMPLETED'
       },
       include: {
@@ -242,11 +220,4 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(report, { status: 201 })
-  } catch (error) {
-    console.error('Error creating school admin report:', error)
-    return NextResponse.json(
-      { error: 'Failed to create report' },
-      { status: 500 }
-    )
-  }
-}
+})

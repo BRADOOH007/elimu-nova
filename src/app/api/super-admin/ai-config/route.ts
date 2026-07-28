@@ -1,22 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-async function requireSuperAdmin() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id || session.user.role !== 'SUPER_ADMIN') return null
-  return session
-}
-
-// AI config stored in system_settings table
-// Keys: ai_provider_gemini_key, ai_provider_groq_key, ai_provider_openrouter_key,
-//       ai_model_default, ai_model_teacher, ai_model_student, ai_provider_active
 const AI_CONFIG_KEYS = [
+  'ai_provider_cerebras_key',
+  'ai_provider_deepseek_key',
   'ai_provider_gemini_key',
   'ai_provider_groq_key',
   'ai_provider_openrouter_key',
   'ai_provider_openai_key',
+  'ai_provider_dalle_key',
+  'ai_provider_stability_key',
+  'ai_premium_enabled',
+  'ai_premium_openai_model',
+  'ai_premium_gemini_model',
   'ai_model_default',
   'ai_model_teacher',
   'ai_model_student',
@@ -25,11 +22,8 @@ const AI_CONFIG_KEYS = [
   'ai_provider_active',
 ]
 
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     // Fetch all AI settings
     const settings = await (prisma as any).systemSettings.findMany({
       where: { key: { in: AI_CONFIG_KEYS } },
@@ -67,14 +61,11 @@ export async function GET(request: NextRequest) {
     console.error('[GET_AI_CONFIG]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const updates: Record<string, string> = await request.json()
+    const updates: Record<string, string> = await req.json()
 
     for (const [key, value] of Object.entries(updates)) {
       if (!AI_CONFIG_KEYS.includes(key)) continue
@@ -82,14 +73,14 @@ export async function POST(request: NextRequest) {
 
       await (prisma as any).systemSettings.upsert({
         where:  { key },
-        update: { value, updatedBy: session.user.id },
+        update: { value, updatedBy: user.id },
         create: {
           key,
           value,
           type:        'string',
           category:    'ai',
           description: `AI configuration: ${key}`,
-          updatedBy:   session.user.id,
+          updatedBy:   user.id,
         },
       })
     }
@@ -99,14 +90,14 @@ export async function POST(request: NextRequest) {
     console.error('[POST_AI_CONFIG]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 // Test each provider with a minimal request
 async function testProviders() {
   const results: Record<string, { ok: boolean; latencyMs?: number; error?: string }> = {}
 
   const dbKeys = await (prisma as any).systemSettings.findMany({
-    where: { key: { in: ['ai_provider_gemini_key','ai_provider_groq_key','ai_provider_openrouter_key','ai_provider_openai_key','ai_provider_cerebras_key','ai_provider_deepseek_key'] } },
+    where: { key: { in: ['ai_provider_gemini_key','ai_provider_groq_key','ai_provider_openrouter_key','ai_provider_openai_key','ai_provider_cerebras_key','ai_provider_deepseek_key','ai_provider_dalle_key','ai_provider_stability_key'] } },
   })
   const dbMap = new Map(dbKeys.map((s: any) => [s.key.replace('ai_provider_', '').replace('_key', ''), s.value]))
 
@@ -116,6 +107,8 @@ async function testProviders() {
   const OPENAI_KEY     = process.env.OPENAI_API_KEY     || dbMap.get('openai')
   const CEREBRAS_KEY   = process.env.CEREBRAS_API_KEY   || dbMap.get('cerebras')
   const DEEPSEEK_KEY   = process.env.DEEPSEEK_API_KEY   || dbMap.get('deepseek')
+  const DALLE_KEY      = process.env.OPENAI_DALLE_API_KEY || dbMap.get('dalle')
+  const STABILITY_KEY  = process.env.STABILITY_API_KEY    || dbMap.get('stability')
 
   const testMsg = [{ role: 'user', content: 'Say "ok" in one word.' }]
 
@@ -174,6 +167,14 @@ async function testProviders() {
   if (OPENAI_KEY) {
     results.openai = { ok: true, latencyMs: 0 }
   } else { results.openai = { ok: false, error: 'No key set' } }
+
+  if (DALLE_KEY && typeof DALLE_KEY === 'string' && !DALLE_KEY.startsWith('sk-or-')) {
+    results.dalle = { ok: true, latencyMs: 0 }
+  } else { results.dalle = { ok: false, error: 'No key set' } }
+
+  if (STABILITY_KEY) {
+    results.stability = { ok: true, latencyMs: 0 }
+  } else { results.stability = { ok: false, error: 'No key set' } }
 
   return results
 }

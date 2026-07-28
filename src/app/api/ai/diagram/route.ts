@@ -1,16 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import EducationalDiagramService from '@/lib/educational-diagram-service'
 import ImageStorageService from '@/lib/image-storage-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+export const POST = route({}, async (request, { user }) => {
     const body = await request.json()
     const { topic, grade, curriculum, type, size, quality } = body
 
@@ -82,10 +75,10 @@ export async function POST(request: NextRequest) {
       type: 'DIAGRAM',
       size: sizeMapping[size as keyof typeof sizeMapping] || 'MEDIUM_1024',
       quality: quality || 'standard',
-      userId: session.user.id,
-      studentId: session.user.role === 'STUDENT' ? session.user.studentId : undefined,
-      teacherId: session.user.role === 'TEACHER' ? session.user.teacherId : undefined,
-      schoolId: session.user.schoolAdminId ? session.user.schoolAdminId : undefined,
+      userId: user.id,
+      studentId: user.role === 'STUDENT' ? user.studentId : undefined,
+      teacherId: user.role === 'TEACHER' ? user.teacherId : undefined,
+      schoolId: user.schoolAdminId ? user.schoolAdminId : undefined,
       classId: body.classId,
       metadata: {
         labels: diagram.labels,
@@ -99,7 +92,7 @@ export async function POST(request: NextRequest) {
     // Track usage
     await ImageStorageService.trackImageUsage(
       savedImage.id,
-      session.user.id,
+      user.id,
       'generation',
       'diagram_generator'
     )
@@ -116,14 +109,4 @@ export async function POST(request: NextRequest) {
       }
     })
 
-  } catch (error) {
-    console.error('Educational diagram generation error:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to generate educational diagram',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
-  }
-}
+})

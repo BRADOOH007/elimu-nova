@@ -8,21 +8,15 @@
  * Also saves the lesson plan linked to the scheme in the DB.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { buildKICDLessonPrompt } from '@/lib/cbc-context'
 import type { KICDRow } from '@/app/api/ai/generate-scheme-structured/route'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const teacher = await prisma.teacher.findUnique({ where: { userId: session.user.id } })
+export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
+    const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
     const {
@@ -49,7 +43,7 @@ export async function POST(request: NextRequest) {
     let templateText = documentContext
     if (!templateText) {
       const t = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { lessonPlanTemplate: true },
       })
       templateText = t?.lessonPlanTemplate ?? undefined
@@ -58,25 +52,45 @@ export async function POST(request: NextRequest) {
       ? `\n\nA reference lesson plan document was uploaded as a format template. Study its structure, sections, and style, then generate the lesson plan in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
       : ''
 
-    const systemPrompt = `You are a Kenyan CBC curriculum expert creating detailed lesson plans.${templateBlock}
+    const kicdContext = buildKICDLessonPrompt(grade, subject)
+    const systemPrompt = `You are a Kenyan CBC/CBE curriculum expert creating detailed lesson plans in the official KICD format.${templateBlock}
+${kicdContext}
 The lesson plan must match exactly what is in the scheme of work row provided.
-Return a JSON object with these fields:
+
+Return a JSON object EXACTLY matching this KICD 11-section structure:
 {
   "title": string,
   "duration": number (minutes),
-  "strand": string,
-  "subStrand": string,
-  "specificLearningOutcomes": string,
-  "keyInquiryQuestions": string[],
-  "introduction": { "duration": number, "activity": string, "teacherActions": string, "studentActions": string },
-  "mainActivity": { "duration": number, "activity": string, "teacherActions": string, "studentActions": string, "coreCompetencies": string[] },
-  "practiceActivity": { "duration": number, "activity": string },
-  "conclusion": { "duration": number, "activity": string, "assessment": string },
-  "learningResources": string[],
-  "assessment": string,
-  "differentiation": { "support": string, "extension": string },
-  "homework": string,
-  "teacherReflection": string
+  "lessonHeader": {
+    "school": "string",
+    "teacher": "string",
+    "learningArea": "${subject}",
+    "grade": "${grade}",
+    "term": "string",
+    "week": number,
+    "lesson": number,
+    "date": "string",
+    "duration": number,
+    "enrolment": number
+  },
+  "strand": "string (exact from KICD curriculum design)",
+  "subStrand": "string (exact from KICD curriculum design)",
+  "specificLearningOutcomes": ["SLO1 - knowledge", "SLO2 - skill", "SLO3 - attitude"],
+  "keyInquiryQuestions": ["open-ended question"],
+  "coreCompetencies": ["pick 2-3 from the 7 CBC competencies"],
+  "values": ["pick 1-2 from KICD values list"],
+  "pcis": ["pick 1-2 Pertinent and Contemporary Issues"],
+  "learningResources": ["resource with page numbers"],
+  "organisationOfLearning": {
+    "introduction": { "duration": 5, "teacherActivity": "string", "learnerActivity": "string" },
+    "step1": { "duration": number, "teacherActivity": "string", "learnerActivity": "string" },
+    "step2": { "duration": number, "teacherActivity": "string", "learnerActivity": "string" },
+    "step3": { "duration": number, "teacherActivity": "string", "learnerActivity": "string" },
+    "conclusion": { "duration": number, "teacherActivity": "string", "learnerActivity": "string" }
+  },
+  "assessment": "string",
+  "extendedActivities": "string",
+  "reflection": "string"
 }
 Return ONLY valid JSON. No markdown or explanation.`
 
@@ -156,8 +170,4 @@ Use local examples. Each activity should have clear timing and instructions.`
         content: lessonData,
       },
     })
-  } catch (error: any) {
-    console.error('[GENERATE_LESSON_FROM_SCHEME]', error)
-    return NextResponse.json({ error: error.message || 'Failed to generate lesson plan' }, { status: 500 })
-  }
-}
+})

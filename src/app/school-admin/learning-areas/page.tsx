@@ -70,7 +70,7 @@ export default function LearningAreasPage() {
       if (res.ok) {
         setAllTeachers((data.teachers || []).map((t: any) => ({ id: t.id, name: t.name || `${t.user?.firstName || ''} ${t.user?.lastName || ''}`.trim() })))
       }
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminLearningAreas] fetchTeachers error:', e) }
   }
 
   const fetchStudents = async () => {
@@ -78,9 +78,9 @@ export default function LearningAreasPage() {
       const res = await fetch('/api/school-admin/students?limit=500')
       const data = await res.json()
       if (res.ok) {
-        setAllStudents((data.students || []).map((s: any) => ({ id: s.id, name: s.name || `${s.user?.firstName || ''} ${s.user?.lastName || ''}`.trim() })))
+        setAllStudents((data.data || []).map((s: any) => ({ id: s.id, name: s.name || `${s.user?.firstName || ''} ${s.user?.lastName || ''}`.trim() })))
       }
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminLearningAreas] fetchStudents error:', e) }
   }
 
   useEffect(() => {
@@ -178,7 +178,7 @@ export default function LearningAreasPage() {
       })
       setRemoveConfirm(null)
       await fetchAreas()
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminLearningAreas] handleRemove error:', e) }
   }
 
   const availablePeople = assignTarget

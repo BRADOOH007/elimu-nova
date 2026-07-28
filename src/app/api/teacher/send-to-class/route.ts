@@ -4,19 +4,13 @@
  * Creates an assignment from any content (lesson plan, exam, scheme, free text)
  * and assigns it to ALL students in a class (or specific student IDs).
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const teacher = await prisma.teacher.findFirst({ where: { userId: session.user.id } })
+    const teacher = await prisma.teacher.findFirst({ where: { userId: user.id } })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
     const {
@@ -32,7 +26,7 @@ export async function POST(request: NextRequest) {
       type = 'ASSIGNMENT',   // 'ASSIGNMENT' | 'EXAM' | 'HOMEWORK' | 'CLASSWORK'
       isTimed = false,
       timeLimit,
-    } = await request.json()
+    } = await req.json()
 
     if (!title || !dueDate) {
       return NextResponse.json({ error: 'title and dueDate are required' }, { status: 400 })
@@ -95,6 +89,6 @@ export async function POST(request: NextRequest) {
     }, { status: 201 })
   } catch (error: any) {
     console.error('[SEND_TO_CLASS]', error)
-    return NextResponse.json({ error: error.message || 'Failed to send work' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to send work' }, { status: 500 })
   }
-}
+})

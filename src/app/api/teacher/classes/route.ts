@@ -1,124 +1,55 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
+import { CreateClassSchema } from '@/lib/validators'
+import { parsePagination, paginate } from '@/lib/pagination'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
+  const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
+  if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    })
+  const { searchParams } = new URL(req.url)
+  const pg = parsePagination(searchParams)
 
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
-    }
-
-    const classes = await prisma.class.findMany({
+  const [classes, total] = await Promise.all([
+    prisma.class.findMany({
       where: { teacherId: teacher.id },
-      include: {
-        _count: { select: { students: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
+      include: { _count: { select: { students: true } } },
+      orderBy: { createdAt: 'desc' },
+      skip: (pg.page - 1) * pg.pageSize,
+      take: pg.pageSize,
+    }),
+    prisma.class.count({ where: { teacherId: teacher.id } }),
+  ])
 
-    return NextResponse.json({
-      classes: classes.map(c => ({
-        id:           c.id,
-        name:         c.name,
-        subject:      c.subject,
-        grade:        c.grade,
-        description:  c.description,
-        isActive:     c.isActive,
-        createdAt:    c.createdAt,
-        studentCount: c._count.students,
-      }))
-    })
-  } catch (error) {
-    console.error('Error fetching classes:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch classes' },
-      { status: 500 }
-    )
+  return NextResponse.json(paginate(
+    classes.map(c => ({ id: c.id, name: c.name, subject: c.subject, grade: c.grade, description: c.description, isActive: c.isActive, createdAt: c.createdAt, studentCount: c._count.students })),
+    total,
+    pg,
+  ))
+})
+
+export const POST = route({ auth: 'TEACHER', schema: CreateClassSchema }, async (req, { user, body }) => {
+  const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
+  if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
+
+  const { name, subject: rawSubject, grade, description } = body!
+  const subject = rawSubject || ''
+
+  const existing = await prisma.class.findFirst({
+    where: { teacherId: teacher.id, name: { equals: name.trim(), mode: 'insensitive' } }
+  })
+  if (existing) {
+    return NextResponse.json({ error: `A class named "${existing.name}" already exists.` }, { status: 409 })
   }
-}
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const newClass = await prisma.class.create({
+    data: { name: name.trim(), description: description || '', subject, grade, schoolId: teacher.schoolId, teacherId: teacher.id, isActive: true },
+    include: { _count: { select: { students: true } } },
+  })
 
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    })
-
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
-    }
-
-    const body = await request.json()
-    const { name, description, subject, grade } = body
-
-    if (!name || !subject || !grade) {
-      return NextResponse.json(
-        { error: 'Missing required fields: name, subject, grade' },
-        { status: 400 }
-      )
-    }
-
-    // Prevent duplicate class names for the same teacher
-    const existing = await prisma.class.findFirst({
-      where: {
-        teacherId: teacher.id,
-        name: { equals: name.trim(), mode: 'insensitive' },
-      }
-    })
-    if (existing) {
-      return NextResponse.json(
-        { error: `A class named "${existing.name}" already exists. Please use a different name.` },
-        { status: 409 }
-      )
-    }
-
-    const newClass = await prisma.class.create({
-      data: {
-        name:        name.trim(),
-        description: description || '',
-        subject,
-        grade,
-        schoolId:  teacher.schoolId,
-        teacherId: teacher.id,
-        isActive:  true
-      },
-      include: { _count: { select: { students: true } } }
-    })
-
-    return NextResponse.json({
-      success: true,
-      class: {
-        id:           newClass.id,
-        name:         newClass.name,
-        subject:      newClass.subject,
-        grade:        newClass.grade,
-        description:  newClass.description,
-        isActive:     newClass.isActive,
-        createdAt:    newClass.createdAt,
-        studentCount: newClass._count.students,
-      }
-    })
-  } catch (error) {
-    console.error('Error creating class:', error)
-    return NextResponse.json(
-      { error: 'Failed to create class' },
-      { status: 500 }
-    )
-  }
-}
+  return NextResponse.json({
+    success: true,
+    class: { id: newClass.id, name: newClass.name, subject: newClass.subject, grade: newClass.grade, description: newClass.description, isActive: newClass.isActive, createdAt: newClass.createdAt, studentCount: newClass._count.students },
+  })
+})

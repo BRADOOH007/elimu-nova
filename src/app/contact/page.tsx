@@ -1,9 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { PublicLayout } from '@/components/ui/public-layout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Mail, Phone, MapPin, Clock, Send, MessageCircle, Calendar, Sparkles } from 'lucide-react'
+import { Mail, Phone, MapPin, Clock, Send, MessageCircle, Calendar, Sparkles, Loader2, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
 const INFO = [
@@ -18,8 +19,8 @@ const INFO = [
     title: 'Phone / WhatsApp',
     content: (
       <div className="space-y-1">
-        <a href="tel:+254791269918" className="block text-blue-400 hover:text-blue-300 transition-colors">+254 791 269 918</a>
-        <button onClick={() => window.open('https://wa.me/254791269918?text=Hello! I need help with ElimuNova AI platform.', '_blank')} className="text-green-400 hover:text-green-300 text-sm transition-colors">Chat on WhatsApp</button>
+        <a href="tel:+254706719388" className="block text-blue-400 hover:text-blue-300 transition-colors">+254 706 719 388</a>
+        <button onClick={() => window.open('https://wa.me/254706719388?text=Hello! I need help with ElimuNova AI platform.', '_blank')} className="text-green-400 hover:text-green-300 text-sm transition-colors">Chat on WhatsApp</button>
       </div>
     ),
     grad: 'from-purple-600 to-pink-600',
@@ -45,6 +46,41 @@ const INFO = [
 ]
 
 export default function ContactPage() {
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', subject: '', message: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      if (res.ok) setSent(true)
+    } finally { setSubmitting(false) }
+  }
+
+  if (sent) return (
+    <PublicLayout>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24">
+        <div className="max-w-md mx-auto text-center">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="w-8 h-8 text-emerald-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Message Sent!</h2>
+          <p className="text-slate-400 mb-8">We'll get back to you within 24 hours.</p>
+          <Button onClick={() => { setSent(false); setForm({ firstName: '', lastName: '', email: '', subject: '', message: '' }) }}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl px-8">
+            Send Another Message
+          </Button>
+        </div>
+      </section>
+    </PublicLayout>
+  )
+
   return (
     <PublicLayout>
       {/* Hero */}
@@ -71,31 +107,32 @@ export default function ContactPage() {
           <div className="bg-slate-800/50 border border-slate-700/60 rounded-2xl p-8">
             <h2 className="text-xl font-bold text-white mb-1">Send us a Message</h2>
             <p className="text-slate-400 text-sm mb-6">Fill out the form and we'll get back to you within 24 hours.</p>
-            <form className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">First Name</label>
-                  <Input type="text" placeholder="First name" className="h-11 bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500" required />
+                  <Input type="text" placeholder="First name" value={form.firstName} onChange={e => setForm(p => ({ ...p, firstName: e.target.value }))} className="h-11 bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-300 mb-1.5">Last Name</label>
-                  <Input type="text" placeholder="Last name" className="h-11 bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500" required />
+                  <Input type="text" placeholder="Last name" value={form.lastName} onChange={e => setForm(p => ({ ...p, lastName: e.target.value }))} className="h-11 bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500" required />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Email Address</label>
-                <Input type="email" placeholder="email@example.com" className="h-11 bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500" required />
+                <Input type="email" placeholder="email@example.com" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} className="h-11 bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Subject</label>
-                <Input type="text" placeholder="What's this about?" className="h-11 bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500" required />
+                <Input type="text" placeholder="What's this about?" value={form.subject} onChange={e => setForm(p => ({ ...p, subject: e.target.value }))} className="h-11 bg-slate-900/60 border-slate-600 text-white placeholder:text-slate-500 focus:border-purple-500" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Message</label>
-                <textarea rows={5} placeholder="Tell us how we can help..." className="w-full px-3 py-2.5 bg-slate-900/60 border border-slate-600 text-white placeholder:text-slate-500 rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none" required />
+                <textarea rows={5} placeholder="Tell us how we can help..." value={form.message} onChange={e => setForm(p => ({ ...p, message: e.target.value }))} className="w-full px-3 py-2.5 bg-slate-900/60 border border-slate-600 text-white placeholder:text-slate-500 rounded-lg text-sm focus:outline-none focus:border-purple-500 resize-none" required />
               </div>
-              <Button type="submit" className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl">
-                <Send className="mr-2 h-4 w-4" /> Send Message
+              <Button type="submit" disabled={submitting} className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl disabled:opacity-60">
+                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                {submitting ? 'Sending...' : 'Send Message'}
               </Button>
             </form>
           </div>
@@ -129,7 +166,7 @@ export default function ContactPage() {
                     </div>
                   </div>
                 </Link>
-                <button onClick={() => window.open('https://wa.me/254791269918?text=Hello! I need help with ElimuNova AI platform.', '_blank')} className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-900/50 hover:bg-slate-700/50 transition-colors">
+                <button onClick={() => window.open('https://wa.me/254706719388?text=Hello! I need help with ElimuNova AI platform.', '_blank')} className="w-full flex items-center gap-3 p-3 rounded-xl bg-slate-900/50 hover:bg-slate-700/50 transition-colors">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-600 to-emerald-600 flex items-center justify-center shrink-0">
                     <MessageCircle className="h-4 w-4 text-white" />
                   </div>

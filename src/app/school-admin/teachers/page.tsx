@@ -54,6 +54,7 @@ import EnrollStudentModal from "@/components/modals/enroll-student-modal"
 import EditStudentModal from "@/components/modals/edit-student-modal"
 import BulkStudentUploadModal from "@/components/modals/bulk-student-upload-modal"
 import { useRouter } from 'next/navigation'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface Teacher {
   id: string
@@ -119,7 +120,7 @@ export default function PeoplePage() {
       
       if (studentsRes.ok) {
         const data = await studentsRes.json()
-        setStudents(data.students || [])
+        setStudents(data.data || [])
       }
 
       if (classesRes.ok) {
@@ -151,7 +152,7 @@ export default function PeoplePage() {
   }
 
   const handleDeleteTeacher = async (teacherId: string) => {
-    if (!confirm('Are you sure you want to delete this teacher?')) return
+    if (!(await confirmToast({ title: 'Are you sure you want to delete this teacher?' }))) return
 
     try {
       const response = await fetch(`/api/school-admin/teachers/${teacherId}`, {
@@ -223,7 +224,7 @@ export default function PeoplePage() {
   }
 
   const handleDeleteStudent = async (studentId: string) => {
-    if (!confirm('Are you sure you want to delete this student?')) return
+    if (!(await confirmToast({ title: 'Are you sure you want to delete this student?' }))) return
 
     try {
       const response = await fetch(`/api/school-admin/students/${studentId}`, {
@@ -279,10 +280,33 @@ export default function PeoplePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading people...</p>
+      <div className="max-w-6xl mx-auto p-6 space-y-6 animate-pulse">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="h-8 w-8 bg-slate-200 rounded-lg" />
+          <div className="space-y-2">
+            <div className="h-6 w-48 bg-slate-200 rounded" />
+            <div className="h-4 w-72 bg-slate-200 rounded" />
+          </div>
+        </div>
+        <div className="flex gap-2 mb-4">
+          <div className="h-10 w-28 bg-slate-200 rounded-lg" />
+          <div className="h-10 w-28 bg-slate-200 rounded-lg" />
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+          <div className="flex gap-4 pb-2 border-b border-slate-200">
+            <div className="h-4 w-1/4 bg-slate-200 rounded" />
+            <div className="h-4 w-1/4 bg-slate-200 rounded" />
+            <div className="h-4 w-1/6 bg-slate-200 rounded" />
+            <div className="h-4 w-1/6 bg-slate-200 rounded" />
+          </div>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex gap-4 py-2">
+              <div className="h-4 w-1/4 bg-slate-200 rounded" />
+              <div className="h-4 w-1/4 bg-slate-200 rounded" />
+              <div className="h-4 w-1/6 bg-slate-200 rounded" />
+              <div className="h-4 w-1/6 bg-slate-200 rounded" />
+            </div>
+          ))}
         </div>
       </div>
     )

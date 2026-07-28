@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { cache } from '@/lib/redis'
 
 export interface SubscriptionInfo {
   isActive: boolean
@@ -10,6 +11,8 @@ export interface SubscriptionInfo {
   trialEndsAt?: Date
   endDate?: Date
 }
+
+const TRIAL_DAYS = 10
 
 export async function getSubscriptionStatus(userId?: string, schoolId?: string): Promise<SubscriptionInfo> {
   if (!userId && !schoolId) {
@@ -27,30 +30,6 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
     })
 
     if (!subscription) {
-      // Check if user/school is eligible for trial
-      const user = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null
-      const school = schoolId ? await prisma.school.findUnique({ where: { id: schoolId } }) : null
-      
-      const createdAt = user?.createdAt || school?.createdAt
-      if (createdAt) {
-        const daysSinceCreation = Math.floor((Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24))
-        
-        if (daysSinceCreation <= 7) {
-          // Still eligible for trial
-          const trialEndDate = new Date(createdAt.getTime() + (7 * 24 * 60 * 60 * 1000))
-          return {
-            isActive: true,
-            isTrial: true,
-            isExpired: false,
-            daysRemaining: 7 - daysSinceCreation,
-            status: 'TRIAL_ELIGIBLE',
-            packageName: 'Trial Available',
-            trialEndsAt: trialEndDate,
-            endDate: trialEndDate
-          }
-        }
-      }
-
       return {
         isActive: false,
         isTrial: false,
@@ -64,9 +43,18 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
     const now = new Date()
     const daysRemaining = Math.max(0, Math.ceil((subscription.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
     const isExpired = subscription.endDate < now
-    
-    // Safe status checking with fallback
+
     const subscriptionStatus = subscription.status as string
+
+    // Auto-update DB status when expiry is detected
+    if (isExpired && (subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'TRIAL')) {
+      const newStatus = subscriptionStatus === 'TRIAL' ? 'TRIAL_EXPIRED' : 'EXPIRED'
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { status: newStatus as any },
+      }).catch(() => {})
+    }
+
     const isActive = (subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'TRIAL') && !isExpired
 
     return {
@@ -81,12 +69,6 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
     }
   } catch (error) {
     console.error('Error in getSubscriptionStatus:', error)
-    console.error('Error details:', {
-      userId,
-      schoolId,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      errorStack: error instanceof Error ? error.stack : undefined
-    })
     return {
       isActive: false,
       isTrial: false,
@@ -96,6 +78,55 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
       packageName: 'Error'
     }
   }
+}
+
+export async function autoCreateTrial(userId?: string, schoolId?: string): Promise<void> {
+  if (!userId && !schoolId) return
+
+  const existing = await prisma.subscription.findFirst({
+    where: {
+      ...(userId && { userId }),
+      ...(schoolId && { schoolId })
+    }
+  })
+  if (existing) return
+
+  let basicPackage = await prisma.package.findFirst({
+    where: { name: 'Basic' },
+    orderBy: { price: 'asc' }
+  })
+  if (!basicPackage) {
+    basicPackage = await prisma.package.create({
+      data: {
+        name: 'Basic',
+        price: 0,
+        duration: 30,
+        maxTeachers: 1,
+        maxStudents: 30,
+        features: ['AI tutoring', 'Progress tracking', 'Basic reports'],
+        isActive: true,
+      }
+    })
+  }
+
+  const startDate = new Date()
+  const trialEndDate = new Date(startDate.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000))
+
+  await prisma.subscription.create({
+    data: {
+      userId,
+      schoolId,
+      packageId: basicPackage.id,
+      status: 'TRIAL' as any,
+      startDate,
+      endDate: trialEndDate,
+      trialEndsAt: trialEndDate,
+      amount: 0,
+      isTrial: true,
+      type: 'TRIAL',
+      paymentMethod: 'FREE_TRIAL'
+    }
+  })
 }
 
 export async function startFreeTrial(userId?: string, schoolId?: string): Promise<void> {
@@ -124,7 +155,7 @@ export async function startFreeTrial(userId?: string, schoolId?: string): Promis
   }
 
   const startDate = new Date()
-  const trialEndDate = new Date(startDate.getTime() + (7 * 24 * 60 * 60 * 1000))
+  const trialEndDate = new Date(startDate.getTime() + (TRIAL_DAYS * 24 * 60 * 60 * 1000))
 
   await prisma.subscription.create({
     data: {
@@ -144,18 +175,24 @@ export async function startFreeTrial(userId?: string, schoolId?: string): Promis
 }
 
 export async function hasAccess(userId?: string, schoolId?: string): Promise<boolean> {
+  const cacheKey = `sub:access:${userId || 'u'}:${schoolId || 's'}`
   try {
+    const cached = await cache.get(cacheKey)
+    if (cached !== null) return cached === 'true'
+
     const subscriptionInfo = await getSubscriptionStatus(userId, schoolId)
-    return subscriptionInfo.isActive
+    const allowed = subscriptionInfo.isActive
+    await cache.set(cacheKey, allowed ? 'true' : 'false', 60)
+    return allowed
   } catch (error) {
     console.error('Error in hasAccess:', error)
     return false
   }
 }
-// Create Stripe customer
+
 export async function createStripeCustomer(email: string, name: string, userId?: string, schoolId?: string) {
   const { stripe } = await import('@/lib/stripe')
-  
+
   const customer = await stripe.customers.create({
     email,
     name,
@@ -169,7 +206,6 @@ export async function createStripeCustomer(email: string, name: string, userId?:
   return customer
 }
 
-// Create checkout session for subscription
 export async function createCheckoutSession(
   packageId: string,
   successUrl: string,
@@ -178,8 +214,7 @@ export async function createCheckoutSession(
   schoolId?: string
 ) {
   const { stripe } = await import('@/lib/stripe')
-  
-  // Get package details
+
   const packageInfo = await prisma.package.findUnique({
     where: { id: packageId }
   })
@@ -188,8 +223,7 @@ export async function createCheckoutSession(
     throw new Error('Package not found')
   }
 
-  // Create or get customer
-  const customerEmail = userId ? 
+  const customerEmail = userId ?
     (await prisma.user.findUnique({ where: { id: userId } }))?.email :
     (await prisma.school.findUnique({ where: { id: schoolId! } }))?.email
 
@@ -204,7 +238,40 @@ export async function createCheckoutSession(
     schoolId
   )
 
-  // Create checkout session
+  // Create or update the local subscription record so we can link Stripe to it
+  const existingSub = await prisma.subscription.findFirst({
+    where: {
+      ...(userId && { userId }),
+      ...(schoolId && { schoolId }),
+      stripeSubscriptionId: null
+    },
+    orderBy: { createdAt: 'desc' }
+  })
+
+  let localSubId: string
+  if (existingSub) {
+    localSubId = existingSub.id
+  } else {
+    const startDate = new Date()
+    const durationMs = packageInfo.duration * 30 * 24 * 60 * 60 * 1000
+    const endDate = new Date(startDate.getTime() + durationMs)
+    const created = await prisma.subscription.create({
+      data: {
+        userId,
+        schoolId,
+        packageId: packageInfo.id,
+        status: 'ACTIVE' as any,
+        startDate,
+        endDate,
+        amount: packageInfo.price,
+        isTrial: false,
+        type: 'SUBSCRIPTION',
+        paymentMethod: 'STRIPE',
+      }
+    })
+    localSubId = created.id
+  }
+
   const session = await stripe.checkout.sessions.create({
     customer: customer.id,
     payment_method_types: ['card'],
@@ -216,7 +283,7 @@ export async function createCheckoutSession(
             name: packageInfo.name,
             description: packageInfo.description || undefined,
           },
-          unit_amount: Math.round(packageInfo.price * 100), // Convert to cents
+          unit_amount: Math.round(packageInfo.price * 100),
           recurring: {
             interval: 'month',
             interval_count: Math.ceil(packageInfo.duration / 30),
@@ -231,7 +298,8 @@ export async function createCheckoutSession(
     metadata: {
       packageId,
       userId: userId || '',
-      schoolId: schoolId || ''
+      schoolId: schoolId || '',
+      localSubscriptionId: localSubId
     }
   })
 

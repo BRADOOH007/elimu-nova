@@ -1,25 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !['TEACHER', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: `Rate limit reached. Try again in ${rl.resetInSec}s.` },
-        { status: 429, headers: { 'Retry-After': String(rl.resetInSec) } }
-      )
-    }
-
+export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const examData = await request.json()
     const { documentContext } = examData
     if (!examData.examTitle || !examData.subject || !examData.gradeLevel) {
@@ -28,9 +12,9 @@ export async function POST(request: NextRequest) {
 
     // Fetch teacher's saved exam template if no explicit context provided
     let templateText = documentContext
-    if (!templateText && session.user.role === 'TEACHER') {
+    if (!templateText && user.role === 'TEACHER') {
       const teacher = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { examTemplate: true },
       })
       templateText = teacher?.examTemplate || null
@@ -74,11 +58,4 @@ Format the exam as Markdown for easy reading and printing.`
     const cleanContent = stripLatex(examContent)
 
     return NextResponse.json({ examContent: cleanContent })
-  } catch (error) {
-    console.error('Exam generation error:', error)
-    return NextResponse.json({
-      error:   'Failed to generate exam',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 })
-  }
-}
+})

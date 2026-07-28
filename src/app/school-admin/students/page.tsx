@@ -44,6 +44,7 @@ import {
 import EnrollStudentModal from "@/components/modals/enroll-student-modal"
 import EditStudentModal from "@/components/modals/edit-student-modal"
 import { useRouter } from 'next/navigation'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface Student {
   id: string
@@ -82,7 +83,7 @@ export default function StudentsPage() {
       const response = await fetch('/api/school-admin/students')
       if (response.ok) {
         const data = await response.json()
-        setStudents(data.students || [])
+        setStudents(data.data || [])
       }
     } catch (error) {
       console.error('Error fetching students:', error)
@@ -101,7 +102,7 @@ export default function StudentsPage() {
           name: t.name || `${t.firstName || ''} ${t.lastName || ''}`.trim(),
         })))
       }
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminStudents] fetchTeachers error:', e) }
   }
 
   const fetchClasses = async () => {
@@ -111,7 +112,7 @@ export default function StudentsPage() {
         const data = await res.json()
         setClasses((data.classes || []).map((c: any) => ({ id: c.id, name: c.name })))
       }
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminStudents] fetchClasses error:', e) }
   }
 
   const handleEnrollSuccess = () => {
@@ -131,7 +132,7 @@ export default function StudentsPage() {
   }
 
   const handleDeleteStudent = async (studentId: string) => {
-    if (!confirm('Are you sure you want to delete this student?')) return
+    if (!(await confirmToast({ title: 'Are you sure you want to delete this student?' }))) return
 
     try {
       const response = await fetch(`/api/school-admin/students/${studentId}`, {

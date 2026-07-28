@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Package, Edit, Save, X, Plus, Trash2, Users, DollarSign, Calendar, CheckCircle, XCircle } from 'lucide-react'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface PackageDetailsModalProps {
   isOpen: boolean
@@ -199,7 +200,7 @@ export default function PackageDetailsModal({
   }
 
   const handleDelete = async () => {
-    if (!confirm(`Delete "${packageData?.name || 'this package'}"? This cannot be undone.`)) return
+    if (!(await confirmToast({ title: `Delete "${packageData?.name || 'this package'}"? This cannot be undone.`, variant: 'destructive' }))) return
 
     try {
       const response = await fetch(`/api/packages/${packageId}`, {

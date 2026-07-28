@@ -1,23 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !['STUDENT', 'TEACHER', 'SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: `Rate limit reached. Try again in ${rl.resetInSec}s.` },
-        { status: 429, headers: { 'Retry-After': String(rl.resetInSec) } }
-      )
-    }
+export const POST = route({ auth: ['STUDENT', 'TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
 
     const { lessonPlan, noteType } = await request.json()
 
@@ -100,8 +85,8 @@ ${contentStr || 'Generate appropriate notes for this subject and grade level.'}`
       } else {
         throw new Error('No JSON object in response')
       }
-    } catch {
-      // Return raw text as fallback — UI handles rawResponse field
+    } catch (e) {
+      console.warn('[LessonNotes] AI returned invalid JSON:', e, 'Raw:', raw.slice(0, 200))
       notesData = {
         title:          `Notes for ${lessonPlan.title || 'Lesson'}`,
         subject:        lessonPlan.subject || '',
@@ -117,11 +102,4 @@ ${contentStr || 'Generate appropriate notes for this subject and grade level.'}`
     }
 
     return NextResponse.json({ notes: notesData })
-  } catch (error) {
-    console.error('Lesson notes generation error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate lesson notes', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    )
-  }
-}
+})

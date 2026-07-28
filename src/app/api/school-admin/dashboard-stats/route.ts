@@ -1,30 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { cache } from '@/lib/redis'
 import { CacheKeys, TTL } from '@/lib/cache-helpers'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const cacheKey = CacheKeys.dashboardStats(session.user.id)
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const cacheKey = CacheKeys.dashboardStats(user.id)
     try {
       const cached = await cache.get(cacheKey)
       if (cached) return NextResponse.json(JSON.parse(cached))
     } catch { /* cache miss */ }
 
     const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: { school: { select: { id: true, name: true, address: true, phone: true, email: true, isActive: true } } }
     })
 
@@ -164,8 +152,4 @@ export async function GET(request: NextRequest) {
     try { await cache.set(cacheKey, JSON.stringify(responseData), TTL.MEDIUM) } catch { /* non-fatal */ }
 
     return NextResponse.json(responseData)
-  } catch (error) {
-    console.error('Error fetching school admin dashboard stats:', error)
-    return NextResponse.json({ error: 'Failed to fetch dashboard statistics' }, { status: 500 })
-  }
-}
+})

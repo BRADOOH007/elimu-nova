@@ -43,7 +43,7 @@ export default function SchoolAdminIntegrationsPage() {
         const data = await svcRes.json()
         setServices(data.settings?.map((s: any) => { try { return { id: s.id, ...JSON.parse(s.value) } } catch { return { id: s.id, name: s.key } } }) || [])
       }
-    } catch {} finally { setLoading(false) }
+    } catch (e) { console.warn('[SchoolAdminIntegrations] fetchAll error:', e) } finally { setLoading(false) }
   }
 
   const handleAddDatabase = async () => {
@@ -80,7 +80,7 @@ export default function SchoolAdminIntegrationsPage() {
     try {
       const res = await fetch(`/api/school-admin/settings/${id}`, { method: 'DELETE' })
       if (res.ok) { toast({ title: 'Deleted' }); fetchAll() }
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminIntegrations] handleDelete error:', e) }
   }
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin" /></div>

@@ -1,59 +1,67 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { v2 as cloudinary } from 'cloudinary'
+import { NextResponse } from 'next/server'
+import { route } from '@/lib/api-middleware'
+import { supabaseAdmin, BUCKETS } from '@/lib/supabase'
+import { prisma } from '@/lib/prisma'
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
+export const POST = route({}, async (req, { user }) => {
+  const formData = await req.formData()
+  const file = formData.get('file') as File | null
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
-
-    if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-    }
-
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json({ error: 'File must be an image' }, { status: 400 })
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: 'File must be less than 5MB' }, { status: 400 })
-    }
-
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
-    const uploadResult = await new Promise<any>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: `elimunova/avatars`,
-          resource_type: 'image',
-          public_id: `avatar_${session.user.id}`,
-          overwrite: true,
-          transformation: { width: 256, height: 256, crop: 'fill', quality: 'auto' },
-        },
-        (error, result) => {
-          if (error) reject(error)
-          else resolve(result)
-        }
-      )
-      stream.end(buffer)
-    })
-
-    return NextResponse.json({ url: uploadResult.secure_url })
-  } catch (error) {
-    console.error('Avatar upload error:', error)
-    return NextResponse.json({ error: 'Failed to upload avatar' }, { status: 500 })
+  if (!file) {
+    return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
-}
+
+  if (!file.type.startsWith('image/')) {
+    return NextResponse.json({ error: 'File must be an image' }, { status: 400 })
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return NextResponse.json({ error: 'File must be less than 5MB' }, { status: 400 })
+  }
+
+  if (!supabaseAdmin) {
+    return NextResponse.json({ error: 'Storage service not configured' }, { status: 500 })
+  }
+
+  const bucket = BUCKETS.AVATARS
+
+  // Ensure the bucket exists
+  const { data: buckets } = await supabaseAdmin.storage.listBuckets()
+  const bucketExists = buckets?.some((b: any) => b.name === bucket)
+  if (!bucketExists) {
+    const { error: createError } = await supabaseAdmin.storage.createBucket(bucket, {
+      public: true,
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+      fileSizeLimit: 5 * 1024 * 1024,
+    })
+    if (createError) {
+      console.error('Bucket creation error:', createError)
+      return NextResponse.json({ error: `Storage setup failed: ${createError.message}` }, { status: 500 })
+    }
+  }
+
+  const ext = file.name.split('.').pop() || 'png'
+  const path = `${user.id}_${Date.now()}.${ext}`
+  const bytes = await file.arrayBuffer()
+  const buffer = Buffer.from(bytes)
+
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from(bucket)
+    .upload(path, buffer, { contentType: file.type, upsert: true })
+
+  if (uploadError) {
+    console.error('Supabase upload error:', uploadError)
+    return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
+  }
+
+  const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(path)
+  const publicUrl = urlData.publicUrl
+
+  // Save avatar URL to user profile immediately
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { avatar: publicUrl },
+  })
+
+  return NextResponse.json({ url: publicUrl })
+})

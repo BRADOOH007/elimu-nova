@@ -43,6 +43,7 @@ import {
 } from "lucide-react"
 import { ScheduleMeetingModal } from "@/components/modals/schedule-meeting-modal"
 import { useRouter } from 'next/navigation'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface Meeting {
   id: string
@@ -105,7 +106,7 @@ export default function MeetingsPage() {
   }
 
   const handleDeleteMeeting = async (meetingId: string) => {
-    if (!confirm('Are you sure you want to delete this meeting?')) return
+    if (!(await confirmToast({ title: 'Are you sure you want to delete this meeting?' }))) return
 
     try {
       const response = await fetch(`/api/school-admin/meetings/${meetingId}`, {

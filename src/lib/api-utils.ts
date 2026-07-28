@@ -34,7 +34,7 @@ export async function getErrorMessage(response: Response, defaultMessage: string
       return errorData.error || errorData.details || errorData.message || defaultMessage
     }
   } catch (error) {
-    // Ignore parsing errors
+    console.warn('[APIUtils] Failed to parse error response:', error)
   }
   
   // Fallback to HTTP status

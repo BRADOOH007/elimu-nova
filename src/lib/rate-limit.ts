@@ -1,10 +1,11 @@
-import { Redis } from '@upstash/redis'
-import { NextRequest, NextResponse } from 'next/server'
+// ──────────────────────────────────────────────────────────────
+// Distributed rate limiting — backed by Redis (Upstash) with
+// in-memory fallback. Used by api-middleware.ts route() wrapper
+// and standalone for auth/AI/upload endpoints.
+// ──────────────────────────────────────────────────────────────
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-})
+import { cache } from './redis'
+import { NextRequest, NextResponse } from 'next/server'
 
 export interface RateLimitConfig {
   maxRequests: number
@@ -26,6 +27,8 @@ const DEFAULT_CONFIG = {
   keyPrefix: 'ratelimit',
 }
 
+// Sliding-window rate limit: incr on every request, expire after window
+// On overflow: returns { allowed: false } with Retry-After header value
 export async function checkRateLimit(
   key: string,
   config: Partial<typeof DEFAULT_CONFIG> = {}
@@ -36,7 +39,7 @@ export async function checkRateLimit(
   const windowSec = Math.ceil(finalConfig.windowMs / 1000)
 
   try {
-    const current = await redis.get(fullKey)
+    const current = await cache.get(fullKey)
     const count = current ? parseInt(current as string, 10) : 0
 
     const makeResult = (allowed: boolean, remaining: number, ttl: number): RateLimitResult => ({
@@ -48,18 +51,19 @@ export async function checkRateLimit(
     })
 
     if (count >= finalConfig.maxRequests) {
-      const ttl = await redis.ttl(fullKey)
+      const ttl = await cache.ttl(fullKey)
       return makeResult(false, 0, ttl > 0 ? ttl : windowSec)
     }
 
-    const newCount = await redis.incr(fullKey)
+    const newCount = await cache.incr(fullKey)
     if (newCount === 1) {
-      await redis.expire(fullKey, windowSec)
+      await cache.expire(fullKey, windowSec)
     }
 
-    const ttl = await redis.ttl(fullKey)
+    const ttl = await cache.ttl(fullKey)
     return makeResult(true, finalConfig.maxRequests - newCount, ttl > 0 ? ttl : windowSec)
   } catch (error) {
+    // Fail open — never block requests due to cache failure
     console.error('Rate limit check failed:', error)
     return {
       allowed: true,
@@ -71,15 +75,23 @@ export async function checkRateLimit(
   }
 }
 
+// Resolve client IP from headers (works behind Vercel/proxies)
 export function getClientIdentifier(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for')
-  const ip = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown'
+  const ip = forwarded ? (forwarded.split(',')[0] || '').trim() : request.headers.get('x-real-ip') || 'unknown'
   return ip
 }
 
 export function getIP(request: NextRequest): string {
   return getClientIdentifier(request)
 }
+
+// ── Pre-configured rate limit profiles ───────────────────────────
+// Applied by route() wrapper automatically based on endpoint type
+// rateLimitAI:   20 req/min  — AI generation (expensive)
+// rateLimitAuth: 10 req/15m  — login/register (brute-force protection)
+// rateLimitUpload: 10 req/min — file uploads
+// rateLimitAPI:  100 req/min — default for all other routes
 
 export const rateLimitAI = {
   maxRequests: 20,

@@ -1,12 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { getStripeAsync, getWebhookSecret } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 import { logger } from '@/lib/logger'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  const body      = await request.text()
-  const signature = request.headers.get('stripe-signature')!
+export const POST = route({ auth: 'none' }, async (req) => {
+  const body      = await req.text()
+  const signature = req.headers.get('stripe-signature')!
 
   let event: Stripe.Event
   let stripe: Stripe
@@ -20,102 +21,128 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  try {
-    switch (event.type) {
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
-        if (!invoice.subscription) {
-          logger.info('No subscription associated with this invoice')
-          break
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object as Stripe.Checkout.Session
+      const localSubId = session.metadata?.localSubscriptionId
+      const stripeSubId = session.subscription as string | undefined
+
+      if (!localSubId) {
+        logger.warn('checkout.session.completed — no localSubscriptionId in metadata')
+        break
+      }
+
+      const updateData: any = { status: 'ACTIVE' }
+      if (stripeSubId) updateData.stripeSubscriptionId = stripeSubId
+
+      if (stripeSubId) {
+        try {
+          const stripeSub = await stripe.subscriptions.retrieve(stripeSubId) as any
+          if (stripeSub.current_period_end) {
+            updateData.endDate = new Date(stripeSub.current_period_end * 1000)
+          }
+        } catch (err) {
+          logger.warn('Could not retrieve Stripe subscription for endDate', err instanceof Error ? { error: err.message } : {})
         }
-        const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
-        
-        const { userId, schoolId } = subscription.metadata
-        
-        // Update subscription status to active
-        await prisma.subscription.updateMany({
-          where: {
-            stripeSubscriptionId: subscription.id
-          },
-          data: {
-            status: 'ACTIVE'
-          }
-        })
-        
-        logger.info('Payment succeeded for subscription', { subscriptionId: subscription.id })
-        break
       }
 
-      case 'invoice.payment_failed': {
-        const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
-        if (!invoice.subscription) {
-          logger.info('No subscription associated with this invoice')
-          break
-        }
-        const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
-        
-        // Update subscription status to inactive
-        await prisma.subscription.updateMany({
-          where: {
-            stripeSubscriptionId: subscription.id
-          },
-          data: {
-            status: 'INACTIVE'
-          }
-        })
-        
-        logger.info('Payment failed for subscription', { subscriptionId: subscription.id })
-        break
-      }
+      await prisma.subscription.update({
+        where: { id: localSubId },
+        data: updateData,
+      })
 
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription
-        
-        // Cancel subscription in database
-        await prisma.subscription.updateMany({
-          where: {
-            stripeSubscriptionId: subscription.id
-          },
-          data: {
-            status: 'CANCELLED'
-          }
-        })
-        
-        logger.info('Subscription cancelled', { subscriptionId: subscription.id })
-        break
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription
-        
-        let status: 'ACTIVE' | 'INACTIVE' | 'CANCELLED' = 'ACTIVE'
-        
-        if (subscription.status === 'canceled') {
-          status = 'CANCELLED'
-        } else if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
-          status = 'INACTIVE'
-        }
-        
-        await prisma.subscription.updateMany({
-          where: {
-            stripeSubscriptionId: subscription.id
-          },
-          data: {
-            status
-          }
-        })
-        
-        logger.info('Subscription updated', { subscriptionId: subscription.id, status })
-        break
-      }
-
-      default:
-        logger.warn('Unhandled event type', { eventType: event.type })
+      logger.info('Checkout completed — subscription activated', {
+        localSubId,
+        stripeSubId,
+      })
+      break
     }
 
-    return NextResponse.json({ received: true })
-  } catch (error) {
-    logger.error('Error processing webhook', error)
-    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
+      if (!invoice.subscription) {
+        logger.info('No subscription associated with this invoice')
+        break
+      }
+      const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
+
+      await prisma.subscription.updateMany({
+        where: {
+          stripeSubscriptionId: subscription.id
+        },
+        data: {
+          status: 'ACTIVE'
+        }
+      })
+
+      logger.info('Payment succeeded for subscription', { subscriptionId: subscription.id })
+      break
+    }
+
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
+      if (!invoice.subscription) {
+        logger.info('No subscription associated with this invoice')
+        break
+      }
+      const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
+
+      await prisma.subscription.updateMany({
+        where: {
+          stripeSubscriptionId: subscription.id
+        },
+        data: {
+          status: 'INACTIVE'
+        }
+      })
+
+      logger.info('Payment failed for subscription', { subscriptionId: subscription.id })
+      break
+    }
+
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object as Stripe.Subscription
+
+      await prisma.subscription.updateMany({
+        where: {
+          stripeSubscriptionId: subscription.id
+        },
+        data: {
+          status: 'CANCELLED'
+        }
+      })
+
+      logger.info('Subscription cancelled', { subscriptionId: subscription.id })
+      break
+    }
+
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object as Stripe.Subscription
+
+      let status: 'ACTIVE' | 'INACTIVE' | 'CANCELLED' = 'ACTIVE'
+
+      if (subscription.status === 'canceled') {
+        status = 'CANCELLED'
+      } else if (subscription.status === 'past_due' || subscription.status === 'unpaid') {
+        status = 'INACTIVE'
+      }
+
+      await prisma.subscription.updateMany({
+        where: {
+          stripeSubscriptionId: subscription.id
+        },
+        data: {
+          status
+        }
+      })
+
+      logger.info('Subscription updated', { subscriptionId: subscription.id, status })
+      break
+    }
+
+    default:
+      logger.warn('Unhandled event type', { eventType: event.type })
   }
-}
+
+  return NextResponse.json({ received: true })
+})

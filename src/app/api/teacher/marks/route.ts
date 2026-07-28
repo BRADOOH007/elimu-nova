@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 import { OpenAIService } from '@/lib/openai-service'
 
 const CBC_LEVELS_LOWER = [
@@ -28,13 +27,10 @@ function getCBCGrade(score: number, isUpper = false): string {
   return 'BE2'
 }
 
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         classes: {
           include: {
@@ -84,14 +80,19 @@ export async function GET(request: NextRequest) {
     console.error('[GET_MARKS]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const body = await req.json()
+    const { assignmentId, marks, gradeSystem = 'percentage', analyseWithAI = false } = body
 
-    const { assignmentId, marks, gradeSystem = 'percentage', analyseWithAI = false } = await request.json()
+    // Verify the assignment belongs to this teacher
+    const teacher = await prisma.teacher.findUnique({ where: { userId: user.id }, select: { id: true } })
+    if (!teacher) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    const assignment = await prisma.assignment.findUnique({ where: { id: assignmentId }, select: { teacherId: true } })
+    if (!assignment) return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
+    if (assignment.teacherId !== teacher.id) return NextResponse.json({ error: 'Access denied' }, { status: 403 })
 
     const updates = await Promise.all(
       marks.map(async (m: any) => {
@@ -158,4 +159,4 @@ Return: { "summary": "2-sentence summary", "strengths": ["s1","s2"], "concerns":
     console.error('[POST_MARKS]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

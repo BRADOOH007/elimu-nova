@@ -1,72 +1,47 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 import { generateSimplePresentation } from '@/lib/simple-presentation-generator'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
+export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+  const teacher = await prisma.teacher.findUnique({
+    where: { userId: user.id }
+  })
 
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    })
-
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
-    }
-
-    const presentation = await prisma.aIGeneratedContent.findFirst({
-      where: {
-        id: (await params).id,
-        teacherId: teacher.id,
-        type: 'POWERPOINT'
-      }
-    })
-
-    if (!presentation) {
-      return NextResponse.json({ error: 'Presentation not found' }, { status: 404 })
-    }
-
-    // Parse the presentation data
-    const presentationData = JSON.parse(presentation.content)
-
-    console.log('Generating PowerPoint for presentation:', presentation.title)
-    console.log('Slides count:', presentationData.slides?.length || 0)
-
-    // Generate PowerPoint using the simple presentation generator
-    const pptxBuffer = await generateSimplePresentation({
-      title: presentation.title,
-      slides: presentationData.slides || [],
-      includeImages: true,
-    })
-
-    // Return the PowerPoint file
-    const uint8 = new Uint8Array(pptxBuffer.buffer, pptxBuffer.byteOffset, pptxBuffer.byteLength)
-    return new NextResponse(uint8 as any, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'Content-Disposition': `attachment; filename="${presentation.title.replace(/[^a-z0-9]/gi, '_')}.pptx"`,
-        'Content-Length': pptxBuffer.length.toString()
-      }
-    })
-
-  } catch (error) {
-    console.error('Error generating PowerPoint:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to generate PowerPoint',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
+  if (!teacher) {
+    return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
   }
-}
+
+  const presentation = await prisma.aIGeneratedContent.findFirst({
+    where: {
+      id: params.id,
+      teacherId: teacher.id,
+      type: 'POWERPOINT'
+    }
+  })
+
+  if (!presentation) {
+    return NextResponse.json({ error: 'Presentation not found' }, { status: 404 })
+  }
+
+  const presentationData = JSON.parse(presentation.content)
+
+  console.log('Generating PowerPoint for presentation:', presentation.title)
+  console.log('Slides count:', presentationData.slides?.length || 0)
+
+  const pptxBuffer = await generateSimplePresentation({
+    title: presentation.title,
+    slides: presentationData.slides || [],
+    includeImages: true,
+  })
+
+  const uint8 = new Uint8Array(pptxBuffer.buffer, pptxBuffer.byteOffset, pptxBuffer.byteLength)
+  return new NextResponse(uint8 as any, {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'Content-Disposition': `attachment; filename="${presentation.title.replace(/[^a-z0-9]/gi, '_')}.pptx"`,
+      'Content-Length': pptxBuffer.length.toString()
+    }
+  })
+})

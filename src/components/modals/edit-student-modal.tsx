@@ -48,10 +48,17 @@ export default function EditStudentModal({ isOpen, onClose, onSuccess, student, 
   const [customSubject, setCustomSubject] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Derive available subjects from the teacher's classes
+  const DEFAULT_SUBJECTS = [
+    'Mathematics', 'English', 'Kiswahili', 'Science & Technology',
+    'Social Studies', 'CRE', 'Physical Education', 'Creative Arts',
+    'Agriculture', 'Life Skills', 'Home Science', 'Computer Studies'
+  ]
+
+  // Derive available subjects from the teacher's classes, fallback to defaults
   const availableSubjects = useMemo(() => {
     const subjects = new Set<string>()
     classes.forEach(cls => { if (cls.subject) subjects.add(cls.subject) })
+    if (subjects.size === 0) DEFAULT_SUBJECTS.forEach(s => subjects.add(s))
     return Array.from(subjects).sort()
   }, [classes])
 

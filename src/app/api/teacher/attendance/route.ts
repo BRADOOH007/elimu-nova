@@ -1,16 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma, withRetry } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 // GET — fetch attendance records for a class/week
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
     const teacher = await withRetry(() => prisma.teacher.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         classes: { include: { students: { include: { user: true } } } },
         students: { include: { user: true, class: true } },
@@ -18,7 +14,7 @@ export async function GET(request: NextRequest) {
     }))
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const classId  = searchParams.get('classId')
     const weekDate = searchParams.get('weekDate') // ISO string for Monday of the week
 
@@ -62,18 +58,15 @@ export async function GET(request: NextRequest) {
     console.error('[GET_ATTENDANCE]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 // POST — save/update attendance for a week
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const teacher = await prisma.teacher.findUnique({ where: { userId: session.user.id } })
+    const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-    const { classId, weekDate, attendance } = await request.json()
+    const { classId, weekDate, attendance } = await req.json()
 
     const weekStart = new Date(weekDate)
     const weekEnd   = new Date(weekDate)
@@ -122,4 +115,4 @@ export async function POST(request: NextRequest) {
     console.error('[POST_ATTENDANCE]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -71,6 +71,8 @@ export default function TeacherMeetingsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [timeFilter, setTimeFilter] = useState('all')
+  const [meetingPage, setMeetingPage] = useState(1)
+  const [meetingTotalPages, setMeetingTotalPages] = useState(1)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [newMeeting, setNewMeeting] = useState({
     title: '',
@@ -84,7 +86,7 @@ export default function TeacherMeetingsPage() {
 
   useEffect(() => {
     fetchMeetings()
-  }, [])
+  }, [meetingPage])
 
   useEffect(() => {
     filterMeetings()
@@ -93,11 +95,14 @@ export default function TeacherMeetingsPage() {
   const fetchMeetings = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/teacher/meetings?includePast=true&limit=50')
+      const response = await fetch(`/api/teacher/meetings?includePast=true&limit=20&page=${meetingPage}`)
       
       if (response.ok) {
         const data = await response.json()
         setMeetings(data.meetings || [])
+        if (data.pagination) {
+          setMeetingTotalPages(data.pagination.totalPages || 1)
+        }
       } else {
         console.error('Failed to fetch meetings')
       }
@@ -562,6 +567,29 @@ export default function TeacherMeetingsPage() {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {!loading && meetings.length > 0 && meetingTotalPages > 1 && (
+        <div className="flex items-center justify-center gap-4 pt-4">
+          <Button
+            variant="outline"
+            disabled={meetingPage <= 1}
+            onClick={() => setMeetingPage(p => Math.max(1, p - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-gray-600">
+            Page {meetingPage} of {meetingTotalPages}
+          </span>
+          <Button
+            variant="outline"
+            disabled={meetingPage >= meetingTotalPages}
+            onClick={() => setMeetingPage(p => Math.min(meetingTotalPages, p + 1))}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

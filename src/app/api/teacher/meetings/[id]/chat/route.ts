@@ -1,32 +1,54 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
 import { sseBus } from '@/lib/sse-events'
+import { route } from '@/lib/api-middleware'
 import { addMessage, getMessages } from '@/lib/meeting-chat-store'
 import type { ChatMessage } from '@/lib/meeting-chat-store'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+async function canAccessMeeting(userId: string, role: string, meetingId: string): Promise<boolean> {
+  const meeting = await prisma.meeting.findUnique({ where: { id: meetingId }, select: { schoolId: true, createdBy: true } })
+  if (!meeting) return false
+  if (meeting.createdBy === userId) return true
+
+  if (role === 'TEACHER') {
+    const teacher = await prisma.teacher.findUnique({ where: { userId }, select: { schoolId: true } })
+    return teacher !== null && meeting.schoolId === teacher.schoolId
   }
-  const { id } = await params
-  return NextResponse.json({ messages: getMessages(id) })
+  if (role === 'PARENT') {
+    const parent = await prisma.parent.findUnique({
+      where: { userId },
+      include: { students: { include: { student: { select: { schoolId: true } } } } },
+    })
+    if (!parent) return false
+    return parent.students.some(ps => ps.student.schoolId === meeting.schoolId)
+  }
+  if (role === 'SCHOOL_ADMIN') {
+    const admin = await prisma.schoolAdmin.findUnique({ where: { userId }, select: { schoolId: true } })
+    return admin !== null && meeting.schoolId === admin.schoolId
+  }
+  return false
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+  const { id } = params
+
+  const allowed = await canAccessMeeting(user.id, user.role, id)
+  if (!allowed) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
   }
-  const { id } = await params
-  const body = await request.json()
+
+  return NextResponse.json({ messages: getMessages(id) })
+})
+
+export const POST = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+  const { id } = params
+
+  const allowed = await canAccessMeeting(user.id, user.role, id)
+  if (!allowed) {
+    return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+  }
+
+  const body = await req.json()
   const { content } = body
   if (!content?.trim()) {
     return NextResponse.json({ error: 'Content is required' }, { status: 400 })
@@ -37,13 +59,13 @@ export async function POST(
     minute: '2-digit',
   })
 
-  const senderType: 'teacher' | 'student' = session.user.role === 'TEACHER' ? 'teacher' : 'student'
+  const senderType: 'teacher' | 'student' = user.role === 'TEACHER' ? 'teacher' : 'student'
 
   const message = {
     id: crypto.randomUUID(),
-    senderId: session.user.id,
-    senderName: (session.user as any).firstName
-      ? `${(session.user as any).firstName} ${(session.user as any).lastName || ''}`.trim()
+    senderId: user.id,
+    senderName: (user as any).firstName
+      ? `${(user as any).firstName} ${(user as any).lastName || ''}`.trim()
       : 'You',
     senderType,
     content: content.trim(),
@@ -55,4 +77,4 @@ export async function POST(
   sseBus.publish(`meeting:${id}`, 'chat-message', message)
 
   return NextResponse.json({ success: true, message })
-}
+})

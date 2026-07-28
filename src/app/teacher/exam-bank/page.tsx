@@ -1,4 +1,5 @@
 'use client'
+import { confirmToast } from '@/lib/confirm-toast'
 import { useRouter } from 'next/navigation'
 
 import { useEffect, useState } from 'react'
@@ -58,7 +59,7 @@ export default function ExamBankPage() {
   }
 
   const remove = async (id: string) => {
-    if (!confirm('Remove from exam bank?')) return
+    if (!(await confirmToast({ title: 'Remove from exam bank?' }))) return
     await fetch('/api/exam-bank', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
     setExams(prev => prev.filter(e => e.id !== id))
   }

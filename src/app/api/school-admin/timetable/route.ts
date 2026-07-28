@@ -1,48 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 // GET — fetch existing timetable schedules
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await (prisma as any).schoolAdmin.findUnique({
+    where: { userId: user.id },
+  })
+  if (!admin) return NextResponse.json({ error: 'Not a school admin' }, { status: 403 })
 
-    const admin = await (prisma as any).schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-    })
-    if (!admin) return NextResponse.json({ error: 'Not a school admin' }, { status: 403 })
+  const schedules = await prisma.schedule.findMany({
+    where: { schoolId: admin.schoolId },
+    include: {
+      teacher: { include: { user: true } },
+      class: true,
+    },
+    orderBy: [{ startTime: 'asc' }],
+  })
 
-    const schedules = await prisma.schedule.findMany({
-      where: { schoolId: admin.schoolId },
-      include: {
-        teacher: { include: { user: true } },
-        class: true,
-      },
-      orderBy: [{ startTime: 'asc' }],
-    })
-
-    return NextResponse.json({ schedules })
-  } catch (error) {
-    console.error('[GET_TIMETABLE]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+  return NextResponse.json({ schedules })
+})
 
 // POST — AI auto-generate timetable
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await (prisma as any).schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true },
+  })
+  if (!admin) return NextResponse.json({ error: 'Not a school admin' }, { status: 403 })
 
-    const admin = await (prisma as any).schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      include: { school: true },
-    })
-    if (!admin) return NextResponse.json({ error: 'Not a school admin' }, { status: 403 })
-
-    const { weekStartDate, periodsPerDay = 8, startHour = 8, clearExisting = false } = await request.json()
+    const { weekStartDate, periodsPerDay = 8, startHour = 8, clearExisting = false } = await req.json()
 
     // Fetch teachers and classes
     const teachers = await prisma.teacher.findMany({
@@ -159,27 +146,16 @@ dayOfWeek: 1=Monday…5=Friday. period: 1-${periodsPerDay}.`
       count: created.length,
       schedules: created,
     })
-  } catch (error) {
-    console.error('[POST_TIMETABLE]', error)
-    return NextResponse.json({ error: 'Failed to generate timetable' }, { status: 500 })
-  }
-}
+})
 
 // DELETE — clear entire timetable
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await (prisma as any).schoolAdmin.findUnique({ where: { userId: user.id } })
+  if (!admin) return NextResponse.json({ error: 'Not a school admin' }, { status: 403 })
 
-    const admin = await (prisma as any).schoolAdmin.findUnique({ where: { userId: session.user.id } })
-    if (!admin) return NextResponse.json({ error: 'Not a school admin' }, { status: 403 })
-
-    await prisma.schedule.deleteMany({ where: { schoolId: admin.schoolId } })
-    return NextResponse.json({ message: 'Timetable cleared' })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+  await prisma.schedule.deleteMany({ where: { schoolId: admin.schoolId } })
+  return NextResponse.json({ message: 'Timetable cleared' })
+})
 
 function getNextMonday(): Date {
   const d = new Date()

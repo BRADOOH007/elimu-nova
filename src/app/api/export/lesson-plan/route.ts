@@ -10,80 +10,66 @@
  *   - title, subject, grade, topic, duration
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
+export const POST = route({}, async (req, { user }) => {
+  const body = await req.json()
+  let { content, title, subject, grade, topic, duration, lessonPlanId } = body
+
+  if (lessonPlanId && !content) {
+    const plan = await prisma.lessonPlan.findUnique({ where: { id: lessonPlanId } })
+    if (plan) {
+      title   = plan.title
+      subject = plan.subject
+      grade   = plan.grade
+      try {
+        content = typeof plan.content === 'string' ? JSON.parse(plan.content) : plan.content
+      } catch (e) {
+        console.warn('[ExportLessonPlan] JSON parse failed:', e)
+        content = { generatedContent: plan.content }
+      }
+    }
+  }
+
+  let teacherName = user.name || 'Teacher'
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const teacher = await prisma.teacher.findUnique({
+      where: { userId: user.id },
+      include: { user: true },
+    })
+    if (teacher?.user) {
+      teacherName = `${teacher.user.firstName || ''} ${teacher.user.lastName || ''}`.trim() || teacherName
     }
+  } catch { /* non-fatal */ }
 
-    const body = await request.json()
-    let { content, title, subject, grade, topic, duration, lessonPlanId } = body
+  const html = buildLessonPlanHTML(content, title, subject, grade, topic, duration, teacherName)
+  const safeName = (title || topic || 'LessonPlan').replace(/[^a-z0-9]/gi, '_').toLowerCase()
 
-    // Load from DB if ID provided
-    if (lessonPlanId && !content) {
-      const plan = await prisma.lessonPlan.findUnique({ where: { id: lessonPlanId } })
-      if (plan) {
-        title   = plan.title
-        subject = plan.subject
-        grade   = plan.grade
-        try {
-          content = typeof plan.content === 'string' ? JSON.parse(plan.content) : plan.content
-        } catch {
-          content = { generatedContent: plan.content }
-        }
-      }
-    }
+  const format = body.format || 'pdf'
 
-    // Get teacher name
-    let teacherName = session.user.name || 'Teacher'
-    try {
-      const teacher = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
-        include: { user: true },
-      })
-      if (teacher?.user) {
-        teacherName = `${teacher.user.firstName || ''} ${teacher.user.lastName || ''}`.trim() || teacherName
-      }
-    } catch { /* non-fatal */ }
-
-    const html = buildLessonPlanHTML(content, title, subject, grade, topic, duration, teacherName)
-    const safeName = (title || topic || 'LessonPlan').replace(/[^a-z0-9]/gi, '_').toLowerCase()
-
-    const format = body.format || 'pdf' // 'pdf' opens in browser for print-to-PDF, 'word' downloads as .doc
-
-    if (format === 'word') {
-      // Word-compatible HTML — opens directly in Microsoft Word
-      const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+  if (format === 'word') {
+    const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="UTF-8"><title>${safeName}</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>body{font-family:Arial,sans-serif;font-size:10pt;}table{border-collapse:collapse;width:100%;}td,th{border:1px solid #999;padding:4px 8px;}</style>
 </head><body>${html.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*<\/head>|<body>|<\/body>|<!DOCTYPE[^>]*>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '')}</body></html>`
-      return new NextResponse(Buffer.from(wordHtml, 'utf-8'), {
-        headers: {
-          'Content-Type':        'application/msword; charset=utf-8',
-          'Content-Disposition': `attachment; filename="${safeName}.doc"`,
-        },
-      })
-    }
-
-    // Default: return HTML that opens in browser → teacher uses Ctrl+P → Save as PDF
-    return new NextResponse(Buffer.from(html, 'utf-8'), {
+    return new NextResponse(Buffer.from(wordHtml, 'utf-8'), {
       headers: {
-        'Content-Type':        'text/html; charset=utf-8',
-        'Content-Disposition': `inline; filename="${safeName}.html"`, // inline = opens in browser tab
+        'Content-Type':        'application/msword; charset=utf-8',
+        'Content-Disposition': `attachment; filename="${safeName}.doc"`,
       },
     })
-  } catch (error) {
-    console.error('[EXPORT_LESSON_PLAN]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+
+  return new NextResponse(Buffer.from(html, 'utf-8'), {
+    headers: {
+      'Content-Type':        'text/html; charset=utf-8',
+      'Content-Disposition': `inline; filename="${safeName}.html"`,
+    },
+  })
+})
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 function esc(s: any): string {

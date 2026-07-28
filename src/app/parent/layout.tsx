@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
+import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
 import {
   BarChart3, Users, ClipboardList, BookOpen,
   MessageSquare, Settings, CreditCard
@@ -24,10 +25,10 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
   const isSchoolParent = !!session?.user?.schoolId
 
   const sidebarItems = [
-    { icon: BarChart3,     label: 'Overview',    href: '/parent/dashboard'  },
-    { icon: Users,         label: 'My Children', href: '/parent/children'   },
-    { icon: ClipboardList, label: 'School Life', href: '/parent/schedule'   },
-    { icon: BookOpen,      label: 'Progress',    href: '/parent/progress'   },
+    { icon: BarChart3,     label: 'Overview',    href: '/parent/dashboard', tourId: 'parent-dashboard' },
+    { icon: Users,         label: 'My Children', href: '/parent/children',  tourId: 'parent-children'  },
+    { icon: ClipboardList, label: 'School Life', href: '/parent/schedule',  tourId: 'parent-schedule'  },
+    { icon: BookOpen,      label: 'Progress',    href: '/parent/progress',  tourId: 'parent-progress'  },
     {
       icon: MessageSquare,
       label: 'Messages',
@@ -35,7 +36,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       badge: unreadCount > 0 ? unreadCount : undefined,
     },
     ...(!isSchoolParent
-      ? [{ icon: CreditCard, label: 'Billing', href: '/parent/billing' as const }]
+      ? [{ icon: CreditCard, label: 'Billing', href: '/parent/billing' as const, tourId: 'parent-billing' }]
       : []),
     { icon: Settings, label: 'Settings', href: '/parent/settings' },
   ]
@@ -51,7 +52,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       schoolName={schoolInfo?.school?.name || 'Loading...'}
       sidebarItems={sidebarItems}
     >
-      {children}
+      <SubscriptionGuard>{children}</SubscriptionGuard>
     </ProfessionalDashboardLayout>
   )
 }

@@ -1,25 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { id } = await params
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      select: { schoolId: true }
-    })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    select: { schoolId: true }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -47,32 +35,14 @@ export async function GET(
     }
 
     return NextResponse.json(report)
-  } catch (error) {
-    console.error('Error fetching school admin report:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch report' },
-      { status: 500 }
-    )
-  }
-}
+})
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { id } = await params
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      select: { schoolId: true }
-    })
+export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    select: { schoolId: true }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -90,7 +60,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Report not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const {
       title,
       description,
@@ -128,32 +98,14 @@ export async function PUT(
     })
 
     return NextResponse.json(report)
-  } catch (error) {
-    console.error('Error updating school admin report:', error)
-    return NextResponse.json(
-      { error: 'Failed to update report' },
-      { status: 500 }
-    )
-  }
-}
+})
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { id } = await params
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      select: { schoolId: true }
-    })
+export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    select: { schoolId: true }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -177,11 +129,4 @@ export async function DELETE(
     })
 
     return NextResponse.json({ message: 'Report deleted successfully' })
-  } catch (error) {
-    console.error('Error deleting school admin report:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete report' },
-      { status: 500 }
-    )
-  }
-}
+})

@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { confirmToast } from '@/lib/confirm-toast'
 import {
   Calendar,
   Clock,
@@ -76,13 +77,15 @@ export default function ParentMeetingsPage() {
     duration: 30,
     location: '',
   })
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
 
   useEffect(() => {
     const load = async () => {
       try {
         const [teachersRes, meetingsRes] = await Promise.all([
           fetch('/api/parent/teachers'),
-          fetch('/api/parent/meetings?includePast=true'),
+          fetch(`/api/parent/meetings?includePast=true&page=${page}&limit=10`),
         ])
         if (teachersRes.ok) {
           const d = await teachersRes.json()
@@ -91,13 +94,14 @@ export default function ParentMeetingsPage() {
         if (meetingsRes.ok) {
           const d = await meetingsRes.json()
           setMeetings(d.meetings || [])
+          setTotalPages(d.pagination?.totalPages || 1)
         }
-      } catch {} finally {
+      } catch (e) { console.warn('[ParentMeetings] fetch meetings error:', e) } finally {
         setLoading(false)
       }
     }
     load()
-  }, [])
+  }, [page])
 
   const requestMeeting = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -111,8 +115,7 @@ export default function ParentMeetingsPage() {
       if (res.ok) {
         setShowRequest(false)
         setForm({ teacherId: '', title: '', description: '', date: '', time: '', duration: 30, location: '' })
-        const d = await (await fetch('/api/parent/meetings?includePast=true')).json()
-        setMeetings(d.meetings || [])
+        setPage(1)
       } else {
         const err = await res.json()
         toast({ variant: 'destructive', title: 'Request failed', description: err.error || 'Unknown error' })
@@ -125,7 +128,7 @@ export default function ParentMeetingsPage() {
   }
 
   const cancelMeeting = async (id: string) => {
-    if (!window.confirm('Cancel this meeting request?')) return
+    if (!(await confirmToast({ title: 'Cancel this meeting request?' }))) return
     try {
       await fetch(`/api/parent/meetings/${id}`, {
         method: 'PATCH',
@@ -133,7 +136,7 @@ export default function ParentMeetingsPage() {
         body: JSON.stringify({ status: 'CANCELLED' }),
       })
       setMeetings(prev => prev.map(m => m.id === id ? { ...m, status: 'CANCELLED' } : m))
-    } catch {}
+    } catch (e) { console.warn('[ParentMeetings] cancelMeeting error:', e) }
   }
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
@@ -155,7 +158,33 @@ export default function ParentMeetingsPage() {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-7 w-48 bg-slate-200 rounded" />
+            <div className="h-4 w-64 bg-slate-200 rounded" />
+          </div>
+          <div className="h-10 w-40 bg-slate-200 rounded-lg" />
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+          <div className="h-5 w-32 bg-slate-200 rounded" />
+          <div className="h-3 w-56 bg-slate-200 rounded" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-4 p-3 rounded-lg bg-slate-50">
+              <div className="w-10 h-10 bg-slate-200 rounded-lg shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-2/5 bg-slate-200 rounded" />
+                  <div className="h-5 w-20 bg-slate-200 rounded-full" />
+                </div>
+                <div className="h-3 w-3/4 bg-slate-200 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -280,6 +309,17 @@ export default function ParentMeetingsPage() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+          {!loading && totalPages > 1 && (
+            <div className="flex items-center justify-between pt-4">
+              <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+                Previous
+              </Button>
+              <span className="text-sm text-slate-500">Page {page} of {totalPages}</span>
+              <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>
+                Next
+              </Button>
             </div>
           )}
         </CardContent>

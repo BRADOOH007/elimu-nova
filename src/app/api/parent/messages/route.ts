@@ -1,18 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 const prismaClient = prisma as any
 
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'PARENT' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const parent = await prisma.parent.findUnique({ where: { userId: session.user.id } })
+    const parent = await prisma.parent.findUnique({ where: { userId: user.id } })
     if (!parent) {
       return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
     }
@@ -65,21 +59,16 @@ export async function GET(request: NextRequest) {
     console.error('[GET_PARENT_MESSAGES]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'PARENT' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const parent = await prisma.parent.findUnique({ where: { userId: session.user.id } })
+    const parent = await prisma.parent.findUnique({ where: { userId: user.id } })
     if (!parent) {
       return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
     }
 
-    const { subject, content, recipientId, recipientType, parentId } = await request.json()
+    const { subject, content, recipientId, recipientType, parentId } = await req.json()
     if (!subject || !content || !recipientId || !recipientType) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
@@ -101,16 +90,11 @@ export async function POST(request: NextRequest) {
     console.error('[POST_PARENT_MESSAGES]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = route({ auth: 'PARENT' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { messageId } = await request.json()
+    const { messageId } = await req.json()
     const message = await prismaClient.message.update({
       where: { id: messageId },
       data: { isRead: true, readAt: new Date() },
@@ -121,4 +105,4 @@ export async function PATCH(request: NextRequest) {
     console.error('[PATCH_PARENT_MESSAGES]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

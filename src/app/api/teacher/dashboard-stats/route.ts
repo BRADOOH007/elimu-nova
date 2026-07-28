@@ -1,30 +1,23 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma, withRetry } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 import { cache } from '@/lib/redis'
 import { CacheKeys, TTL } from '@/lib/cache-helpers'
 
-export async function GET() {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Check cache first
-    const cacheKey = CacheKeys.dashboardStats(session.user.id)
+    const cacheKey = CacheKeys.dashboardStats(user.id)
     try {
       const cached = await cache.get(cacheKey)
       if (cached) return NextResponse.json(JSON.parse(cached))
     } catch { /* cache miss — continue */ }
 
-    console.log('🔍 Looking for teacher with userId:', session.user.id)
+    console.log('🔍 Looking for teacher with userId:', user.id)
     
     // Get teacher profile
     let teacher = await withRetry(() => prisma.teacher.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         user: true,
         school: true,
@@ -38,9 +31,9 @@ export async function GET() {
 
     // If no teacher profile exists, create one for independent teaching
     if (!teacher) {
-      console.log('🆕 Creating independent teacher profile for userId:', session.user.id)
+      console.log('🆕 Creating independent teacher profile for userId:', user.id)
       teacher = await withRetry(() => prisma.teacher.create({
-        data: { userId: session.user.id },
+        data: { userId: user.id },
         include: {
           user: true,
           school: true,
@@ -132,4 +125,4 @@ export async function GET() {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
-}
+})

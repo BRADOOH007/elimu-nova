@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 const STRIPE_KEYS = [
   'stripe_secret_key',
@@ -10,16 +9,8 @@ const STRIPE_KEYS = [
   'stripe_mode', // 'test' | 'live'
 ]
 
-async function requireSuperAdmin() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id || session.user.role !== 'SUPER_ADMIN') return null
-  return session
-}
-
-export async function GET() {
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const settings = await (prisma as any).systemSettings.findMany({
       where: { key: { in: STRIPE_KEYS } },
@@ -47,14 +38,11 @@ export async function GET() {
     console.error('[GET_STRIPE_CONFIG]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { stripe_secret_key, stripe_publishable_key, stripe_webhook_secret, stripe_mode } = await request.json()
+    const { stripe_secret_key, stripe_publishable_key, stripe_webhook_secret, stripe_mode } = await req.json()
 
     const updates: Record<string, string> = {}
     if (stripe_secret_key     && !stripe_secret_key.includes('•'))     updates.stripe_secret_key     = stripe_secret_key
@@ -65,7 +53,7 @@ export async function POST(request: NextRequest) {
     for (const [key, value] of Object.entries(updates)) {
       await (prisma as any).systemSettings.upsert({
         where:  { key },
-        update: { value, updatedBy: session.user.id },
+        update: { value, updatedBy: user.id },
         create: {
           key,
           value,
@@ -73,7 +61,7 @@ export async function POST(request: NextRequest) {
           category:    'payment',
           description: `Stripe configuration: ${key}`,
           isPublic:    key === 'stripe_publishable_key',
-          updatedBy:   session.user.id,
+      updatedBy: user.id,
         },
       })
     }
@@ -87,13 +75,11 @@ export async function POST(request: NextRequest) {
     console.error('[POST_STRIPE_CONFIG]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 // Test the Stripe connection with stored keys
-export async function PUT() {
+export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { getStripe } = await import('@/lib/stripe')
     const stripe = getStripe()
@@ -106,6 +92,6 @@ export async function PUT() {
       message: `Connected successfully in ${balance.livemode ? 'LIVE' : 'TEST'} mode`,
     })
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 })
+    return NextResponse.json({ success: false, error: 'Failed to connect Stripe' }, { status: 400 })
   }
-}
+})

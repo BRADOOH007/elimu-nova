@@ -3,20 +3,11 @@
  * Bloom's Taxonomy Quiz Generator — CBC aligned
  * Generates 6 questions across all Bloom's levels from lesson/scheme context
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) return NextResponse.json({ error: `Rate limit. Retry in ${rl.resetInSec}s` }, { status: 429 })
-
+export const POST = route({}, async (request, { user }) => {
     const { subject, grade, strand, subStrand, topic, concepts = [] } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
@@ -105,13 +96,19 @@ Rules:
     const start = raw.indexOf('['); const end = raw.lastIndexOf(']')
     if (start === -1 || end <= start) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
 
-    // Strip any LaTeX from all string fields in the questions
+    // Strip markdown code fences before parsing
+    let jsonStr = raw.slice(start, end + 1).trim()
+    if (jsonStr.startsWith('```')) jsonStr = jsonStr.replace(/```(?:json)?\n?/g, '').trim()
+    if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3).trim()
+
+    const questions = JSON.parse(jsonStr)
+
+    // Strip LaTeX from all string fields only after parsing
     const { stripLatex } = await import('@/lib/clean-ai-text')
-    const cleanJson = stripLatex(raw.slice(start, end + 1))
-    const questions = JSON.parse(cleanJson)
+    for (const q of questions) {
+      for (const key of Object.keys(q)) {
+        if (typeof q[key] === 'string') q[key] = stripLatex(q[key])
+      }
+    }
     return NextResponse.json({ questions, subject, grade, strand, subStrand, topic })
-  } catch (e: any) {
-    console.error('[BLOOM_QUIZ]', e)
-    return NextResponse.json({ error: e.message || 'Failed to generate quiz' }, { status: 500 })
-  }
-}
+})

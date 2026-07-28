@@ -1,112 +1,81 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-// Exam bank uses the Assignment model with a special metadata flag
-// We store exam bank entries as assignments with metadata.isExamBank = true
+export const GET = route({}, async (req, { user }) => {
+  const { searchParams } = new URL(req.url)
+  const subject = searchParams.get('subject') || ''
+  const grade   = searchParams.get('grade')   || ''
+  const term    = searchParams.get('term')    || ''
+  const type    = searchParams.get('type')    || ''
+  const search  = searchParams.get('search')  || ''
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
 
-    const { searchParams } = new URL(request.url)
-    const subject = searchParams.get('subject') || ''
-    const grade   = searchParams.get('grade')   || ''
-    const term    = searchParams.get('term')    || ''
-    const type    = searchParams.get('type')    || ''
-    const search  = searchParams.get('search')  || ''
-
-    const teacher = await (prisma as any).teacher.findUnique({ where: { userId: session.user.id } })
-
-    const where: any = {
-      metadata: { path: ['isExamBank'], equals: true },
-    }
-    if (subject) where.subject = { contains: subject, mode: 'insensitive' }
-    if (grade)   where.grade   = { contains: grade,   mode: 'insensitive' }
-    if (search)  where.title   = { contains: search,  mode: 'insensitive' }
-
-    const exams = await prisma.assignment.findMany({
-      where,
-      include: { teacher: { include: { user: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
-    })
-
-    return NextResponse.json({ exams })
-  } catch (error) {
-    console.error('[GET_EXAM_BANK]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  const where: any = {
+    metadata: { path: ['isExamBank'], equals: true },
   }
-}
+  if (subject) where.subject = { contains: subject, mode: 'insensitive' }
+  if (grade)   where.grade   = { contains: grade,   mode: 'insensitive' }
+  if (search)  where.title   = { contains: search,  mode: 'insensitive' }
 
-// POST — save an assignment to the exam bank
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const exams = await prisma.assignment.findMany({
+    where,
+    include: { teacher: { include: { user: true } } },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  })
 
-    let teacher = await (prisma as any).teacher.findUnique({ where: { userId: session.user.id } })
-    if (!teacher) {
-      teacher = await (prisma as any).teacher.create({ data: { userId: session.user.id } })
-    }
+  return NextResponse.json({ exams })
+})
 
-    const {
-      assignmentId, title, subject, grade, term, type, description,
-      questions, content, answerKey, isTimed, timeLimit, startTime, totalMarks, metadata,
-    } = await request.json()
-
-    if (assignmentId) {
-      // Save existing assignment to bank
-      const updated = await prisma.assignment.update({
-        where: { id: assignmentId },
-        data: { metadata: { isExamBank: true, savedAt: new Date().toISOString(), term, type } } as any,
-      })
-      return NextResponse.json({ exam: updated })
-    }
-
-    // Create new exam bank entry directly
-    const bankMetadata = metadata || { isExamBank: true, savedAt: new Date().toISOString(), term, type }
-    const exam = await prisma.assignment.create({
-      data: {
-        title:       title || 'Untitled Exam',
-        description: description || '',
-        subject:     subject || '',
-        grade:       grade   || '',
-        teacherId:   teacher.id,
-        schoolId:    teacher.schoolId,
-        dueDate:     new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-        totalMarks:  totalMarks ?? 100,
-        questions:   questions || [],
-        content:     content ?? '',
-        answerKey:   answerKey ?? null,
-        isTimed:     isTimed ?? false,
-        timeLimit:   timeLimit ?? null,
-        startTime:   startTime ?? null,
-        metadata:    bankMetadata,
-      } as any,
-    })
-    return NextResponse.json({ exam }, { status: 201 })
-  } catch (error) {
-    console.error('[POST_EXAM_BANK]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+export const POST = route({}, async (req, { user }) => {
+  let teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
+  if (!teacher) {
+    teacher = await prisma.teacher.create({ data: { userId: user.id } })
   }
-}
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const {
+    assignmentId, title, subject, grade, term, type, description,
+    questions, content, answerKey, isTimed, timeLimit, startTime, totalMarks, metadata,
+  } = await req.json()
 
-    const { id } = await request.json()
-    // Remove from bank (clear metadata flag, don't delete the record)
-    await prisma.assignment.update({
-      where: { id },
-      data: { metadata: { isExamBank: false } } as any,
+  if (assignmentId) {
+    const updated = await prisma.assignment.update({
+      where: { id: assignmentId },
+      data: { metadata: { isExamBank: true, savedAt: new Date().toISOString(), term, type } } as any,
     })
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ exam: updated })
   }
-}
+
+  const bankMetadata = metadata || { isExamBank: true, savedAt: new Date().toISOString(), term, type }
+  const exam = await prisma.assignment.create({
+    data: {
+      title:       title || 'Untitled Exam',
+      description: description || '',
+      subject:     subject || '',
+      grade:       grade   || '',
+      teacherId:   teacher.id,
+      schoolId:    teacher.schoolId,
+      dueDate:     new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      totalMarks:  totalMarks ?? 100,
+      questions:   questions || [],
+      content:     content ?? '',
+      answerKey:   answerKey ?? null,
+      isTimed:     isTimed ?? false,
+      timeLimit:   timeLimit ?? null,
+      startTime:   startTime ?? null,
+      metadata:    bankMetadata,
+    } as any,
+  })
+  return NextResponse.json({ exam }, { status: 201 })
+})
+
+export const DELETE = route({}, async (req, { user }) => {
+  const { id } = await req.json()
+  await prisma.assignment.update({
+    where: { id },
+    data: { metadata: { isExamBank: false } } as any,
+  })
+  return NextResponse.json({ success: true })
+})

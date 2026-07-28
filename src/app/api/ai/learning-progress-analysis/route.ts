@@ -2,23 +2,18 @@
  * POST /api/ai/learning-progress-analysis
  * Deep AI analysis of student performance trends
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = route({}, async (request, { user }) => {
     const { studentId } = await request.json()
 
     // Fetch student data
-    const studentUserId = studentId || session.user.id
+    const studentUserId = studentId || user.id
     const student = await prisma.student.findFirst({
-      where: session.user.role === 'STUDENT' ? { userId: session.user.id } : { id: studentId },
+      where: user.role === 'STUDENT' ? { userId: user.id } : { id: studentId },
       include: {
         user: true,
         submissions: {
@@ -99,8 +94,4 @@ Provide a comprehensive learning progress analysis. Return ONLY valid JSON:
 
     const analysis = JSON.parse(raw.slice(start, end + 1))
     return NextResponse.json({ analysis, studentName: name, subjectAvgs })
-  } catch (e: any) {
-    console.error('[LEARNING_PROGRESS_ANALYSIS]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

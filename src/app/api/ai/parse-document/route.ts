@@ -1,16 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { v2 as cloudinary } from 'cloudinary';
+import { NextResponse } from 'next/server';
 import { generateAIContent } from '@/lib/openrouter-ai';
 import { PDFParse } from 'pdf-parse';
 import * as mammoth from 'mammoth';
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+import { route } from '@/lib/api-middleware';
+import { supabaseAdmin } from '@/lib/supabase';
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -21,13 +14,7 @@ const ALLOWED_TYPES = [
 
 const MAX_SIZE_MB = 20;
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     let formData: FormData;
     try {
       formData = await req.formData();
@@ -60,23 +47,20 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Upload to Cloudinary
-    const uploadResult = await new Promise<any>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: `elimunova/exam-documents`,
-          resource_type: 'raw',
-          public_id: `exam_${session.user.id}_${Date.now()}`,
-          use_filename: true,
-          unique_filename: true,
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-      stream.end(buffer);
-    });
+    // Upload to Supabase Storage
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Storage service not configured' }, { status: 500 });
+    }
+    const docPath = `exam-documents/${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { data: docUpload, error: docError } = await supabaseAdmin.storage
+      .from('teacher-documents')
+      .upload(docPath, buffer, { contentType: file.type, upsert: true });
+    if (docError) {
+      console.error('Supabase upload error:', docError);
+      return NextResponse.json({ error: `Upload failed: ${docError.message}` }, { status: 500 });
+    }
+    const { data: docUrlData } = supabaseAdmin.storage.from('teacher-documents').getPublicUrl(docUpload.path);
+    const documentUrl = docUrlData.publicUrl;
 
     // Extract text from uploaded document
     let extractedText: string | null = null;
@@ -175,15 +159,8 @@ Make sure your response is valid JSON without any markdown formatting.`;
     return NextResponse.json({
       success: true,
       exam: parsedExam,
-      documentUrl: uploadResult.secure_url,
+      documentUrl,
       message: 'Exam document parsed successfully'
     });
 
-  } catch (error) {
-    console.error('Document parsing error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to parse document' },
-      { status: 500 }
-    );
-  }
-}
+})

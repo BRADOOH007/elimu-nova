@@ -1,21 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = route({ auth: 'PARENT' }, async (_req, { user, params }) => {
   try {
     const { id } = await params
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const parent = await prisma.parent.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: { students: { select: { studentId: true } } }
     })
 
@@ -80,4 +71,4 @@ export async function GET(
     console.error('[GET_PARENT_CHILDREN_ID]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

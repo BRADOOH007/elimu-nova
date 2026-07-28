@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { RefreshCw, Plus, School, UserPlus, Upload, Loader2, Sparkles, AlertTriangle } from "lucide-react"
+import { LiveMetricsBar } from "@/components/super-admin/live-metrics-bar"
+import { TrendCharts } from "@/components/super-admin/trend-charts"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import CreatePackageModal from "@/components/modals/create-package-modal"
@@ -141,6 +143,11 @@ export default function SuperAdminDashboard() {
       {/* Greeting Banner */}
       <GreetingBanner name={displayName} />
 
+      {/* Live Metrics Bar */}
+      <div className="bg-[#0f172a] rounded-xl border border-white/10 p-3">
+        <LiveMetricsBar />
+      </div>
+
       {/* Error Banner */}
       {fetchError && !loading && (
         <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
@@ -180,6 +187,11 @@ export default function SuperAdminDashboard() {
       {/* Stats Cards */}
       <div className="animate-fade-in-up">
         <StatsCards stats={stats} loading={loading} />
+      </div>
+
+      {/* Trend Charts */}
+      <div className="animate-fade-in-up" style={{ animationDelay: "0.05s" }}>
+        <TrendCharts />
       </div>
 
       {/* Quick Actions + System Status + Package Overview */}

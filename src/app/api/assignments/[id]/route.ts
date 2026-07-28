@@ -1,339 +1,295 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user, params }) => {
+  const { id } = params
 
-    const { id } = await params
-
-    const assignment = await prisma.assignment.findUnique({
-      where: { id },
-      include: {
-        teacher: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true
-              }
+  const assignment = await prisma.assignment.findUnique({
+    where: { id },
+    include: {
+      teacher: {
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
             }
           }
-        },
-        lessonPlan: {
-          select: {
-            id: true,
-            title: true,
-            subject: true,
-            grade: true
-          }
-        },
-        students: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
+        }
+      },
+      lessonPlan: {
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          grade: true
+        }
+      },
+      students: {
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true
             }
           }
-        },
-        submissions: {
-          include: {
-            student: {
-              include: {
-                user: {
-                  select: {
-                    firstName: true,
-                    lastName: true
-                  }
+        }
+      },
+      submissions: {
+        include: {
+          student: {
+            include: {
+              user: {
+                select: {
+                  firstName: true,
+                  lastName: true
                 }
               }
             }
           }
-        },
-        _count: {
-          select: {
-            submissions: true,
-            students: true
-          }
         }
-      }
-    });
-
-    if (!assignment) {
-      return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
-    }
-
-    // Check if user has access to this assignment
-    if (session.user.role === 'STUDENT') {
-      const student = await prisma.student.findUnique({
-        where: { userId: session.user.id }
-      });
-      
-      if (!student || !assignment.students.some(s => s.id === student.id)) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-      }
-    } else if (session.user.role === 'TEACHER') {
-      const teacher = await prisma.teacher.findUnique({
-        where: { userId: session.user.id }
-      });
-      
-      if (!teacher || assignment.teacherId !== teacher.id) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-      }
-    }
-
-    // Find current student's submission if student role
-    let mySubmission = null
-    if (session.user.role === 'STUDENT') {
-      const student = await prisma.student.findUnique({ where: { userId: session.user.id } })
-      if (student) {
-        mySubmission = assignment.submissions.find(s => s.studentId === student.id) || null
-      }
-    }
-
-    // Format assignment for response
-    const formattedAssignment = {
-      id: assignment.id,
-      title: assignment.title,
-      description: assignment.description,
-      content: assignment.content,
-      dueDate: assignment.dueDate,
-      status: assignment.status,
-      isTimed: assignment.isTimed,
-      timeLimit: assignment.timeLimit,
-      answerKey: assignment.answerKey,
-      createdAt: assignment.createdAt,
-      updatedAt: assignment.updatedAt,
-      teacher: {
-        id: assignment.teacher.id,
-        name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
-        email: assignment.teacher.user.email
       },
-      lessonPlan: assignment.lessonPlan ? {
-        id: assignment.lessonPlan.id,
-        title: assignment.lessonPlan.title,
-        subject: assignment.lessonPlan.subject,
-        grade: assignment.lessonPlan.grade
-      } : null,
-      students: assignment.students.map(student => ({
-        id: student.id,
-        name: `${student.user.firstName} ${student.user.lastName}`
-      })),
-      submissions: assignment.submissions.map(submission => ({
-        id: submission.id,
-        content: submission.content,
-        attachments: submission.attachments,
-        grade: submission.grade,
-        feedback: submission.feedback,
-        submittedAt: submission.submittedAt,
-        gradedAt: submission.gradedAt,
-        isAiGraded: submission.isAiGraded,
-        questionScores: submission.questionScores,
-        needsRevision: submission.needsRevision,
-        revisionNotes: submission.revisionNotes,
-        student: {
-          id: submission.student.id,
-          name: `${submission.student.user.firstName} ${submission.student.user.lastName}`
+      _count: {
+        select: {
+          submissions: true,
+          students: true
         }
-      })),
-      mySubmission: mySubmission ? {
-        id: mySubmission.id,
-        grade: mySubmission.grade,
-        feedback: mySubmission.feedback,
-        submittedAt: mySubmission.submittedAt,
-        gradedAt: mySubmission.gradedAt,
-        isAiGraded: mySubmission.isAiGraded,
-        questionScores: mySubmission.questionScores,
-        needsRevision: mySubmission.needsRevision,
-        revisionNotes: mySubmission.revisionNotes,
-      } : null,
-      stats: {
-        totalStudents: assignment._count.students,
-        totalSubmissions: assignment._count.submissions,
-        gradedSubmissions: assignment.submissions.filter(s => s.grade !== null).length,
-        pendingSubmissions: assignment.submissions.filter(s => s.grade === null).length
       }
-    };
+    }
+  })
 
-    return NextResponse.json({ assignment: formattedAssignment });
-
-  } catch (error) {
-    console.error('Error fetching assignment:', error);
-    return NextResponse.json({ error: 'Failed to fetch assignment' }, { status: 500 });
+  if (!assignment) {
+    return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
   }
-}
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (user.role === 'STUDENT') {
+    const student = await prisma.student.findUnique({
+      where: { userId: user.id }
+    })
+
+    if (!student || !assignment.students.some(s => s.id === student.id)) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
-
-    const { id } = await params
-    const body = await req.json();
-    const { title, description, content, dueDate, status, studentIds } = body;
-
-    // Get teacher profile
+  } else if (user.role === 'TEACHER') {
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    });
+      where: { userId: user.id }
+    })
 
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });
+    if (!teacher || assignment.teacherId !== teacher.id) {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
+  }
 
-    // Check if assignment exists and belongs to teacher
-    const existingAssignment = await prisma.assignment.findUnique({
-      where: { id }
-    });
-
-    if (!existingAssignment || existingAssignment.teacherId !== teacher.id) {
-      return NextResponse.json({ error: 'Assignment not found or access denied' }, { status: 404 });
+  let mySubmission = null
+  if (user.role === 'STUDENT') {
+    const student = await prisma.student.findUnique({ where: { userId: user.id } })
+    if (student) {
+      mySubmission = assignment.submissions.find(s => s.studentId === student.id) || null
     }
+  }
 
-    // Update assignment
-    const assignment = await prisma.assignment.update({
-      where: { id },
-      data: {
-        title,
-        description,
-        content,
-        dueDate: dueDate ? new Date(dueDate) : undefined,
-        status: status ? status.toUpperCase() : undefined,
-        students: studentIds ? {
-          set: studentIds.map((id: string) => ({ id }))
-        } : undefined
-      },
-      include: {
-        teacher: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true,
-                email: true
-              }
+  const formattedAssignment = {
+    id: assignment.id,
+    title: assignment.title,
+    description: assignment.description,
+    content: assignment.content,
+    dueDate: assignment.dueDate,
+    status: assignment.status,
+    isTimed: assignment.isTimed,
+    timeLimit: assignment.timeLimit,
+    answerKey: assignment.answerKey,
+    createdAt: assignment.createdAt,
+    updatedAt: assignment.updatedAt,
+    teacher: {
+      id: assignment.teacher.id,
+      name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
+      email: assignment.teacher.user.email
+    },
+    lessonPlan: assignment.lessonPlan ? {
+      id: assignment.lessonPlan.id,
+      title: assignment.lessonPlan.title,
+      subject: assignment.lessonPlan.subject,
+      grade: assignment.lessonPlan.grade
+    } : null,
+    students: assignment.students.map(student => ({
+      id: student.id,
+      name: `${student.user.firstName} ${student.user.lastName}`
+    })),
+    submissions: assignment.submissions.map(submission => ({
+      id: submission.id,
+      content: submission.content,
+      attachments: submission.attachments,
+      grade: submission.grade,
+      feedback: submission.feedback,
+      submittedAt: submission.submittedAt,
+      gradedAt: submission.gradedAt,
+      isAiGraded: submission.isAiGraded,
+      questionScores: submission.questionScores,
+      needsRevision: submission.needsRevision,
+      revisionNotes: submission.revisionNotes,
+      student: {
+        id: submission.student.id,
+        name: `${submission.student.user.firstName} ${submission.student.user.lastName}`
+      }
+    })),
+    mySubmission: mySubmission ? {
+      id: mySubmission.id,
+      grade: mySubmission.grade,
+      feedback: mySubmission.feedback,
+      submittedAt: mySubmission.submittedAt,
+      gradedAt: mySubmission.gradedAt,
+      isAiGraded: mySubmission.isAiGraded,
+      questionScores: mySubmission.questionScores,
+      needsRevision: mySubmission.needsRevision,
+      revisionNotes: mySubmission.revisionNotes,
+    } : null,
+    stats: {
+      totalStudents: assignment._count.students,
+      totalSubmissions: assignment._count.submissions,
+      gradedSubmissions: assignment.submissions.filter(s => s.grade !== null).length,
+      pendingSubmissions: assignment.submissions.filter(s => s.grade === null).length
+    }
+  }
+
+  return NextResponse.json({ assignment: formattedAssignment })
+})
+
+export const PUT = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+  const { id } = params
+  const body = await req.json()
+  const { title, description, content, dueDate, status, studentIds } = body
+
+  const teacher = await prisma.teacher.findUnique({
+    where: { userId: user.id }
+  })
+
+  if (!teacher) {
+    return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 })
+  }
+
+  const existingAssignment = await prisma.assignment.findUnique({
+    where: { id }
+  })
+
+  if (!existingAssignment || existingAssignment.teacherId !== teacher.id) {
+    return NextResponse.json({ error: 'Assignment not found or access denied' }, { status: 404 })
+  }
+
+  const assignment = await prisma.assignment.update({
+    where: { id },
+    data: {
+      title,
+      description,
+      content,
+      dueDate: dueDate ? new Date(dueDate) : undefined,
+      status: status ? status.toUpperCase() : undefined,
+      students: studentIds ? {
+        set: studentIds.map((id: string) => ({ id }))
+      } : undefined
+    },
+    include: {
+      teacher: {
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
             }
           }
-        },
-        lessonPlan: {
-          select: {
-            id: true,
-            title: true,
-            subject: true,
-            grade: true
-          }
-        },
-        students: {
-          include: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
+        }
+      },
+      lessonPlan: {
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          grade: true
+        }
+      },
+      students: {
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true
             }
           }
-        },
-        _count: {
-          select: {
-            submissions: true,
-            students: true
-          }
+        }
+      },
+      _count: {
+        select: {
+          submissions: true,
+          students: true
         }
       }
-    });
+    }
+  })
 
-    // Format response
-    const formattedAssignment = {
-      id: assignment.id,
-      title: assignment.title,
-      description: assignment.description,
-      content: assignment.content,
-      dueDate: assignment.dueDate,
-      status: assignment.status,
-      createdAt: assignment.createdAt,
-      updatedAt: assignment.updatedAt,
-      teacher: {
-        id: assignment.teacher.id,
-        name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
-        email: assignment.teacher.user.email
-      },
-      lessonPlan: assignment.lessonPlan ? {
-        id: assignment.lessonPlan.id,
-        title: assignment.lessonPlan.title,
-        subject: assignment.lessonPlan.subject,
-        grade: assignment.lessonPlan.grade
-      } : null,
-      students: assignment.students.map(student => ({
-        id: student.id,
-        name: `${student.user.firstName} ${student.user.lastName}`
-      })),
-      stats: {
-        totalStudents: assignment._count.students,
-        totalSubmissions: assignment._count.submissions,
-        gradedSubmissions: 0,
-        pendingSubmissions: 0
-      }
-    };
-
-    return NextResponse.json({
-      assignment: formattedAssignment,
-      message: 'Assignment updated successfully'
-    });
-
-  } catch (error) {
-    console.error('Error updating assignment:', error);
-    return NextResponse.json({ error: 'Failed to update assignment' }, { status: 500 });
+  const formattedAssignment = {
+    id: assignment.id,
+    title: assignment.title,
+    description: assignment.description,
+    content: assignment.content,
+    dueDate: assignment.dueDate,
+    status: assignment.status,
+    createdAt: assignment.createdAt,
+    updatedAt: assignment.updatedAt,
+    teacher: {
+      id: assignment.teacher.id,
+      name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
+      email: assignment.teacher.user.email
+    },
+    lessonPlan: assignment.lessonPlan ? {
+      id: assignment.lessonPlan.id,
+      title: assignment.lessonPlan.title,
+      subject: assignment.lessonPlan.subject,
+      grade: assignment.lessonPlan.grade
+    } : null,
+    students: assignment.students.map(student => ({
+      id: student.id,
+      name: `${student.user.firstName} ${student.user.lastName}`
+    })),
+    stats: {
+      totalStudents: assignment._count.students,
+      totalSubmissions: assignment._count.submissions,
+      gradedSubmissions: 0,
+      pendingSubmissions: 0
+    }
   }
-}
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  return NextResponse.json({
+    assignment: formattedAssignment,
+    message: 'Assignment updated successfully'
+  })
+})
 
-    const { id } = await params
+export const DELETE = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+  const { id } = params
 
-    // Get teacher profile
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    });
+  const teacher = await prisma.teacher.findUnique({
+    where: { userId: user.id }
+  })
 
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });
-    }
-
-    // Check if assignment exists and belongs to teacher
-    const existingAssignment = await prisma.assignment.findUnique({
-      where: { id }
-    });
-
-    if (!existingAssignment || existingAssignment.teacherId !== teacher.id) {
-      return NextResponse.json({ error: 'Assignment not found or access denied' }, { status: 404 });
-    }
-
-    // Delete assignment
-    await prisma.assignment.delete({
-      where: { id }
-    });
-
-    return NextResponse.json({
-      message: 'Assignment deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('Error deleting assignment:', error);
-    return NextResponse.json({ error: 'Failed to delete assignment' }, { status: 500 });
+  if (!teacher) {
+    return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 })
   }
-}
+
+  const existingAssignment = await prisma.assignment.findUnique({
+    where: { id }
+  })
+
+  if (!existingAssignment || existingAssignment.teacherId !== teacher.id) {
+    return NextResponse.json({ error: 'Assignment not found or access denied' }, { status: 404 })
+  }
+
+  await prisma.assignment.delete({
+    where: { id }
+  })
+
+  return NextResponse.json({
+    message: 'Assignment deleted successfully'
+  })
+})

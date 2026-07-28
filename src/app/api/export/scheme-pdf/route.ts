@@ -13,87 +13,75 @@
  *   - Print: A4 landscape, 8mm margins
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { uploadFile, BUCKETS } from '@/lib/supabase'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
+export const GET = route({}, async (req, { user }) => {
+  const { searchParams } = new URL(req.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+
+  const scheme = await prisma.schemeOfWork.findUnique({
+    where: { id },
+    include: {
+      topics:  { orderBy: [{ weekNumber: 'asc' }, { lessonNumber: 'asc' }] },
+      teacher: { include: { user: true, school: true } },
+    },
+  })
+  if (!scheme) return NextResponse.json({ error: 'Scheme not found' }, { status: 404 })
+
+  let rows: any[] = []
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const parsed = typeof scheme.content === 'string' ? JSON.parse(scheme.content) : scheme.content
+    rows = Array.isArray(parsed) ? parsed : []
+  } catch { rows = [] }
 
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
-
-    const scheme = await prisma.schemeOfWork.findUnique({
-      where: { id },
-      include: {
-        topics:  { orderBy: [{ weekNumber: 'asc' }, { lessonNumber: 'asc' }] },
-        teacher: { include: { user: true, school: true } },
-      },
-    })
-    if (!scheme) return NextResponse.json({ error: 'Scheme not found' }, { status: 404 })
-
-    // Parse rows from content JSON
-    let rows: any[] = []
-    try {
-      const parsed = typeof scheme.content === 'string' ? JSON.parse(scheme.content) : scheme.content
-      rows = Array.isArray(parsed) ? parsed : []
-    } catch { rows = [] }
-
-    // Fallback: build from SchemeTopic records
-    if (rows.length === 0 && scheme.topics.length > 0) {
-      rows = scheme.topics.map(t => ({
-        week:                     t.weekNumber,
-        lesson:                   t.lessonNumber,
-        strand:                   '',
-        subStrand:                t.title,
-        specificLearningOutcomes: t.objectives[0] || '',
-        keyInquiryQuestions:      [],
-        learningExperiences:      t.activities,
-        learningResources:        t.resources,
-        assessment:               t.assessment || '',
-        reflection:               '',
-        durationMinutes:          t.duration,
-        type:                     'lesson',
-      }))
-    }
-
-    const teacherName = [scheme.teacher?.user?.firstName, scheme.teacher?.user?.lastName]
-      .filter(Boolean).join(' ') || 'Teacher'
-    const schoolName = (scheme.teacher as any)?.school?.name || ''
-
-    const html = buildSchemeHTML(scheme, rows, teacherName, schoolName)
-    const htmlBuffer = Buffer.from(html, 'utf-8')
-
-    // Upload to Supabase (non-blocking)
-    let publicUrl = ''
-    try {
-      publicUrl = await uploadFile(
-        BUCKETS.SCHEMES,
-        `${session.user.id}/scheme-${id}.html`,
-        htmlBuffer,
-        'text/html'
-      ) || ''
-    } catch { /* non-fatal */ }
-
-    const filename = `Scheme_${scheme.subject}_${scheme.grade}_${(scheme.term || 'Term1').replace(/\s/g, '')}.html`
-
-    return new NextResponse(htmlBuffer, {
-      headers: {
-        'Content-Type':        'text/html; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${filename}"`,
-        'X-Download-URL':      publicUrl,
-      },
-    })
-  } catch (error: any) {
-    console.error('[EXPORT_SCHEME_PDF]', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  if (rows.length === 0 && scheme.topics.length > 0) {
+    rows = scheme.topics.map(t => ({
+      week:                     t.weekNumber,
+      lesson:                   t.lessonNumber,
+      strand:                   '',
+      subStrand:                t.title,
+      specificLearningOutcomes: t.objectives[0] || '',
+      keyInquiryQuestions:      [],
+      learningExperiences:      t.activities,
+      learningResources:        t.resources,
+      assessment:               t.assessment || '',
+      reflection:               '',
+      durationMinutes:          t.duration,
+      type:                     'lesson',
+    }))
   }
-}
+
+  const teacherName = [scheme.teacher?.user?.firstName, scheme.teacher?.user?.lastName]
+    .filter(Boolean).join(' ') || 'Teacher'
+  const schoolName = (scheme.teacher as any)?.school?.name || ''
+
+  const html = buildSchemeHTML(scheme, rows, teacherName, schoolName)
+  const htmlBuffer = Buffer.from(html, 'utf-8')
+
+  let publicUrl = ''
+  try {
+    publicUrl = await uploadFile(
+      BUCKETS.SCHEMES,
+      `${user.id}/scheme-${id}.html`,
+      htmlBuffer,
+      'text/html'
+    ) || ''
+  } catch { /* non-fatal */ }
+
+  const filename = `Scheme_${scheme.subject}_${scheme.grade}_${(scheme.term || 'Term1').replace(/\s/g, '')}.html`
+
+  return new NextResponse(htmlBuffer, {
+    headers: {
+      'Content-Type':        'text/html; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'X-Download-URL':      publicUrl,
+    },
+  })
+})
 
 // ── HTML escaping ─────────────────────────────────────────────────────────
 function esc(s: any): string {

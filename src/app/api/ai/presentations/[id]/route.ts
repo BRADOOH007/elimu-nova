@@ -1,24 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { unlink } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({}, async (request, { user, params }) => {
 
     const presentation = await prisma.aIGeneratedContent.findUnique({
       where: {
-        id: (await params).id,
+        id: params.id,
         type: 'POWERPOINT'
       },
       include: {
@@ -41,16 +32,16 @@ export async function GET(
     }
 
     // Check access permissions
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email }
     })
 
-    if (!user) {
+    if (!dbUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
     // Check if user has access to this presentation
-    const hasAccess = await checkPresentationAccess(presentation.id, user.id)
+    const hasAccess = await checkPresentationAccess(presentation.id, dbUser.id)
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
@@ -85,29 +76,13 @@ export async function GET(
         email: presentation.teacher.user.email
       } : null
     })
+})
 
-  } catch (error) {
-    console.error('Error fetching presentation:', error)
-    return NextResponse.json({
-      error: 'Failed to fetch presentation',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const DELETE = route({}, async (request, { user, params }) => {
 
     const presentation = await prisma.aIGeneratedContent.findUnique({
       where: {
-        id: (await params).id,
+        id: params.id,
         type: 'POWERPOINT'
       },
       include: {
@@ -124,7 +99,7 @@ export async function DELETE(
     }
 
     // Check if user owns this presentation
-    if (presentation.teacher?.user.email !== session.user.email) {
+    if (presentation.teacher?.user.email !== user.email) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -174,22 +149,14 @@ export async function DELETE(
 
     // Delete from database
     await prisma.aIGeneratedContent.delete({
-      where: { id: (await params).id }
+      where: { id: params.id }
     })
 
     return NextResponse.json({
       success: true,
       message: 'Presentation deleted successfully'
     })
-
-  } catch (error) {
-    console.error('Error deleting presentation:', error)
-    return NextResponse.json({
-      error: 'Failed to delete presentation',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
-  }
-}
+})
 
 // Helper function to check if user has access to presentation
 async function checkPresentationAccess(presentationId: string, userId: string): Promise<boolean> {

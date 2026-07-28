@@ -8,31 +8,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { 
-  FileText, 
-  Plus, 
-  Search, 
-  Filter, 
-  Calendar,
-  MoreHorizontal,
+import {
+  FileText,
+  Plus,
+  Search,
   Eye,
-  Edit,
-  Trash2,
-  Download,
-  Share2,
-  Copy,
-  CheckCircle,
   Save,
   Brain,
-  Edit3,
   AlertCircle,
-  Printer
 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
+import { RubricsGrid } from './components/rubric-card'
+import { PerformanceLevelsEditor, CriteriaList, CriterionEditDialog } from './components/rubric-form-editors'
+import { RubricPreviewDialog } from './components/rubric-preview-dialog'
 
 interface Rubric {
   id: string
@@ -510,91 +499,14 @@ export default function RubricsPage() {
         </CardContent>
       </Card>
 
-      {/* Rubrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {rubrics.map((rubric) => {
-          const rubricData = typeof rubric.content === 'string' 
-            ? JSON.parse(rubric.content) 
-            : rubric.content
-
-          return (
-            <Card key={rubric.id} className="bg-gradient-to-br from-white via-purple-50 to-blue-50 shadow-lg backdrop-blur-sm border-0 hover:shadow-xl transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-blue-600" />
-                    <Badge className="bg-blue-100 text-blue-800">
-                      Rubric
-                    </Badge>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => handleView(rubric)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        View Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleEdit(rubric)}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleExport(rubric, 'pdf')}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Export PDF
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleExport(rubric, 'word')}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Export Word
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleCopy(rubric)}>
-                        <Copy className="mr-2 h-4 w-4" />
-                        Copy
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleDelete(rubric.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                <CardTitle className="text-lg font-semibold text-gray-900 line-clamp-2">
-                  {rubric.title}
-                </CardTitle>
-                <CardDescription className="text-gray-600">
-                  {rubric.subject} • {rubric.grade}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <span>{new Date(rubric.createdAt).toLocaleDateString()}</span>
-                  </div>
-                  {rubricData && (
-                    <>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        <span>{rubricData.criteria?.length || 0} criteria</span>
-                      </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <FileText className="h-4 w-4 mr-2" />
-                        <span>{rubricData.totalPoints || 100} total points</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+      <RubricsGrid
+        rubrics={rubrics}
+        onView={handleView}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onExport={handleExport}
+        onCopy={handleCopy}
+      />
 
       {/* Empty State */}
       {rubrics.length === 0 && (
@@ -690,158 +602,20 @@ export default function RubricsPage() {
                 </CardContent>
               </Card>
 
-              {/* Performance Levels */}
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                        Performance Levels
-                      </CardTitle>
-                      <CardDescription>Define the scoring levels for your rubric</CardDescription>
-                    </div>
-                    <Button
-                      onClick={addPerformanceLevel}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Level
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {rubricForm.performanceLevels.map((level, index) => (
-                    <div key={level.id} className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
-                      <div className="space-y-2">
-                        <Label>Level Name</Label>
-                        <Input
-                          value={level.name}
-                          onChange={(e) => updatePerformanceLevel(level.id, { name: e.target.value })}
-                          placeholder="e.g., Excellent"
-                          className="bg-white border-0 shadow-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Score</Label>
-                        <Input
-                          type="number"
-                          value={level.score}
-                          onChange={(e) => updatePerformanceLevel(level.id, { score: parseInt(e.target.value) || 0 })}
-                          className="bg-white border-0 shadow-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Input
-                          value={level.description}
-                          onChange={(e) => updatePerformanceLevel(level.id, { description: e.target.value })}
-                          placeholder="e.g., Exceeds expectations"
-                          className="bg-white border-0 shadow-sm"
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <Button
-                          onClick={() => deletePerformanceLevel(level.id)}
-                          variant="outline"
-                          size="sm"
-                          disabled={rubricForm.performanceLevels.length <= 2}
-                          className="text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              <PerformanceLevelsEditor
+                levels={rubricForm.performanceLevels}
+                onUpdate={updatePerformanceLevel}
+                onAdd={addPerformanceLevel}
+                onDelete={deletePerformanceLevel}
+              />
 
-              {/* Criteria */}
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Edit3 className="w-5 h-5 text-purple-600" />
-                        Assessment Criteria
-                      </CardTitle>
-                      <CardDescription>Define what will be assessed in your rubric</CardDescription>
-                    </div>
-                    <Button
-                      onClick={addCriterion}
-                      size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Criterion
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {rubricForm.criteria.map((criterion, index) => (
-                    <div key={criterion.id} className="p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-semibold text-gray-900">Criterion {index + 1}</h4>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => setEditingCriterion(criterion)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <Edit3 className="w-4 h-4 mr-2" />
-                            Edit
-                          </Button>
-                          <Button
-                            onClick={() => deleteCriterion(criterion.id)}
-                            variant="outline"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Title</Label>
-                          <Input
-                            value={criterion.title}
-                            onChange={(e) => updateCriterion(criterion.id, { title: e.target.value })}
-                            placeholder="e.g., Content Quality"
-                            className="bg-white border-0 shadow-sm"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Weight</Label>
-                          <Input
-                            type="number"
-                            value={criterion.weight}
-                            onChange={(e) => updateCriterion(criterion.id, { weight: parseInt(e.target.value) || 1 })}
-                            className="bg-white border-0 shadow-sm"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2 mt-4">
-                        <Label>Description</Label>
-                        <Textarea
-                          value={criterion.description}
-                          onChange={(e) => updateCriterion(criterion.id, { description: e.target.value })}
-                          placeholder="Describe what this criterion assesses..."
-                          rows={2}
-                          className="bg-white border-0 shadow-sm"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                  {rubricForm.criteria.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                      <Edit3 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                      <p>No criteria added yet. Click "Add Criterion" to get started.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <CriteriaList
+                criteria={rubricForm.criteria}
+                onUpdate={updateCriterion}
+                onDelete={deleteCriterion}
+                onAdd={addCriterion}
+                onEdit={(c) => setEditingCriterion(c)}
+              />
             </div>
 
             {/* Right Panel - Actions */}
@@ -920,153 +694,19 @@ export default function RubricsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Preview Modal */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Rubric Preview
-            </DialogTitle>
-            <DialogDescription>
-              Preview your rubric before editing or exporting
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedRubric && (
-            <div className="space-y-6">
-              {(() => {
-                const rubricData = typeof selectedRubric.content === 'string' 
-                  ? JSON.parse(selectedRubric.content) 
-                  : selectedRubric.content
+      <RubricPreviewDialog open={showPreview} onOpenChange={setShowPreview} rubric={selectedRubric} />
 
-                return (
-                  <>
-                    {/* Rubric Header */}
-                    <div className="text-center border-b border-gray-200 pb-4">
-                      <h2 className="text-3xl font-bold text-gray-900 mb-2">{rubricData.title}</h2>
-                      <p className="text-gray-600">{rubricData.subject} • {rubricData.grade}</p>
-                      {rubricData.description && (
-                        <p className="text-gray-700 mt-2">{rubricData.description}</p>
-                      )}
-                    </div>
-
-                    {/* Rubric Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border-0">
-                        <thead>
-                          <tr className="bg-gray-100">
-                            <th className="border-0 px-4 py-2 text-left font-semibold">Criteria</th>
-                            {rubricData.performanceLevels?.map((level: any) => (
-                              <th key={level.id} className="border-0 px-4 py-2 text-center font-semibold">
-                                {level.name}
-                                <br />
-                                <span className="text-sm text-gray-600">({level.score} pts)</span>
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {rubricData.criteria?.map((criterion: any, index: number) => (
-                            <tr key={criterion.id}>
-                              <td className="border-0 px-4 py-2">
-                                <div className="font-semibold">{criterion.title}</div>
-                                <div className="text-sm text-gray-600 mt-1">{criterion.description}</div>
-                                <div className="text-xs text-gray-500 mt-1">Weight: {criterion.weight}</div>
-                              </td>
-                              {rubricData.performanceLevels?.map((level: any) => (
-                                <td key={level.id} className="border-0 px-4 py-2 text-center">
-                                  <div className="text-sm text-gray-700">
-                                    {level.description}
-                                  </div>
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Total Points */}
-                    <div className="text-right text-lg font-semibold">
-                      Total Points: {rubricData.totalPoints || 100}
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Criterion Edit Modal */}
-      <Dialog open={!!editingCriterion} onOpenChange={() => setEditingCriterion(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Criterion</DialogTitle>
-            <DialogDescription>
-              Update the details for this assessment criterion
-            </DialogDescription>
-          </DialogHeader>
-          
-          {editingCriterion && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Title</Label>
-                <Input
-                  value={editingCriterion.title}
-                  onChange={(e) => setEditingCriterion(prev => prev ? { ...prev, title: e.target.value } : null)}
-                  placeholder="e.g., Content Quality"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={editingCriterion.description}
-                  onChange={(e) => setEditingCriterion(prev => prev ? { ...prev, description: e.target.value } : null)}
-                  placeholder="Describe what this criterion assesses..."
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Weight</Label>
-                  <Input
-                    type="number"
-                    value={editingCriterion.weight}
-                    onChange={(e) => setEditingCriterion(prev => prev ? { ...prev, weight: parseInt(e.target.value) || 1 } : null)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Max Score</Label>
-                  <Input
-                    type="number"
-                    value={editingCriterion.maxScore}
-                    onChange={(e) => setEditingCriterion(prev => prev ? { ...prev, maxScore: parseInt(e.target.value) || 4 } : null)}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setEditingCriterion(null)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (editingCriterion) {
-                      updateCriterion(editingCriterion.id, editingCriterion)
-                      setEditingCriterion(null)
-                    }
-                  }}
-                >
-                  Save Changes
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <CriterionEditDialog
+        criterion={editingCriterion}
+        onUpdate={(id, updates) => {
+          setEditingCriterion(prev => prev ? { ...prev, ...updates } : null)
+        }}
+        onSave={(c) => {
+          updateCriterion(c.id, c)
+          setEditingCriterion(null)
+        }}
+        onCancel={() => setEditingCriterion(null)}
+      />
     </div>
   )
 }

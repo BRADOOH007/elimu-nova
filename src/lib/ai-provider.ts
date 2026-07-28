@@ -1,51 +1,85 @@
 /**
  * ElimuNova AI Provider — shared across EduGenius and TutorBot.
  *
- * Waterfall (tested live — Groq first, then fallbacks):
- *   1. Groq          — llama-3.3-70b-versatile (free, ultra-fast)  ⭐
- *   2. Cerebras      — gpt-oss-120b      (2,000 tok/sec — FASTEST)
- *   3. DeepSeek      — deepseek-chat     (best quality)
- *   3b. DeepSeek-R1  — deepseek-reasoner (for reasoning tasks)
- *   4. Gemini Flash  — gemini-2.0-flash  (free quota)
- *   5. OpenRouter    — gpt-4o-mini       (paid fallback)
- *   6. OpenAI direct — gpt-4o-mini       (last resort)
+ * Waterfall:
+ *   1. Active provider (configurable via ai_provider_active in system_settings)
+ *   2. Premium OpenAI — gpt-4o (best quality)
+ *   3. Premium Gemini — gemini-1.5-pro
+ *   4. Groq           — llama-3.3-70b-versatile
+ *   5. Cerebras       — gemma-4-31b (2,000 tok/sec — FASTEST)
+ *   6. DeepSeek       — deepseek-chat / deepseek-reasoner
+ *   7. Gemini Flash   — gemini-2.0-flash (free quota)
+ *   8. OpenRouter     — gpt-4o-mini (paid fallback)
+ *   9. OpenAI direct  — gpt-4o-mini (last resort)
+ *
+ * Models per task type (configured via super-admin AI config page):
+ *   ai_model_default, ai_model_teacher, ai_model_student, ai_model_presentation
  *
  * Keys are read from process.env first, then fall back to the
  * system_settings DB table (configured via super-admin AI config page).
  */
 
 import Cerebras from '@cerebras/cerebras_cloud_sdk'
-import { prisma } from './prisma'
+import { prisma, withRetry } from './prisma'
+import { checkInput, logViolation, buildSafeSystemPrompt } from './ai-safety'
+import { decryptPassword } from './password-encryption'
 
 const DB_KEY_MAP: Record<string, string> = {
-  CEREBRAS_API_KEY:   'ai_provider_cerebras_key',
-  DEEPSEEK_API_KEY:   'ai_provider_deepseek_key',
-  GEMINI_API_KEY:     'ai_provider_gemini_key',
-  GROQ_API_KEY:       'ai_provider_groq_key',
-  OPENROUTER_API_KEY: 'ai_provider_openrouter_key',
-  OPENAI_API_KEY:     'ai_provider_openai_key',
+  CEREBRAS_API_KEY:      'ai_provider_cerebras_key',
+  DEEPSEEK_API_KEY:      'ai_provider_deepseek_key',
+  GEMINI_API_KEY:        'ai_provider_gemini_key',
+  GROQ_API_KEY:          'ai_provider_groq_key',
+  OPENROUTER_API_KEY:    'ai_provider_openrouter_key',
+  OPENAI_API_KEY:        'ai_provider_openai_key',
+  OPENAI_DALLE_API_KEY:  'ai_provider_dalle_key',
+  STABILITY_API_KEY:     'ai_provider_stability_key',
 }
 
 let dbKeysCache: Record<string, string> | null = null
 let dbKeysCacheTime = 0
 
-async function getKey(envVar: string): Promise<string | undefined> {
+const ALL_DB_KEYS = [
+  ...Object.values(DB_KEY_MAP),
+  'ai_premium_enabled',
+  'ai_premium_openai_model',
+  'ai_premium_gemini_model',
+  'ai_provider_dalle_key',
+  'ai_provider_stability_key',
+  'ai_provider_active',
+  'ai_model_default',
+  'ai_model_teacher',
+  'ai_model_student',
+  'ai_model_presentation',
+]
+
+async function refreshDbCache(): Promise<void> {
+  try {
+    const settings = await withRetry(() =>
+      (prisma as any).systemSettings.findMany({
+        where: { key: { in: ALL_DB_KEYS } },
+      })
+    )
+    dbKeysCache = {}
+    for (const s of settings as Array<{ key: string; value: string }>) dbKeysCache[s.key] = decryptPassword(s.value) || s.value
+    dbKeysCacheTime = Date.now()
+  } catch { console.warn('[AI] DB cache refresh failed — using env vars only') }
+}
+
+export async function getKey(envVar: string): Promise<string | undefined> {
   if (process.env[envVar]) return process.env[envVar]
   const dbKey = DB_KEY_MAP[envVar]
   if (!dbKey) return undefined
-  if (dbKeysCache && Date.now() - dbKeysCacheTime < 60_000) return dbKeysCache[dbKey]
-  try {
-    const settings = await (prisma as any).systemSettings.findMany({
-      where: { key: { in: Object.values(DB_KEY_MAP) } },
-    })
-    dbKeysCache = {}
-    for (const s of settings) dbKeysCache[s.key] = s.value
-    dbKeysCacheTime = Date.now()
-    return dbKeysCache[dbKey]
-  } catch { return undefined }
+  if (!dbKeysCache || Date.now() - dbKeysCacheTime >= 60_000) await refreshDbCache()
+  return dbKeysCache?.[dbKey]
 }
 
-export type AIProvider = 'cerebras' | 'deepseek' | 'gemini' | 'groq' | 'openrouter' | 'openai'
+async function getSetting(key: string): Promise<string | undefined> {
+  if (process.env[key]) return process.env[key]
+  if (!dbKeysCache || Date.now() - dbKeysCacheTime >= 60_000) await refreshDbCache()
+  return dbKeysCache?.[key]
+}
+
+export type AIProvider = 'cerebras' | 'deepseek' | 'gemini' | 'groq' | 'openrouter' | 'openai' | 'premium-openai' | 'premium-gemini'
 
 export interface AIMessage {
   role: 'system' | 'user' | 'assistant'
@@ -53,17 +87,20 @@ export interface AIMessage {
 }
 
 export interface AICallOptions {
-  messages:         AIMessage[]
-  maxTokens?:       number
-  temperature?:     number
-  useReasoner?:     boolean
-  cerebrasModel?:   string
-  deepseekModel?:   string
-  geminiModel?:     string
-  groqModel?:       string
-  openrouterModel?: string
-  openaiModel?:     string
-  taskType?:        string
+  messages:          AIMessage[]
+  maxTokens?:        number
+  temperature?:      number
+  useReasoner?:      boolean
+  usePremium?:       boolean
+  cerebrasModel?:    string
+  deepseekModel?:    string
+  geminiModel?:      string
+  groqModel?:        string
+  openrouterModel?:  string
+  openaiModel?:      string
+  premiumOpenaiModel?: string
+  premiumGeminiModel?: string
+  taskType?:         string
 }
 
 export interface AICallResult {
@@ -108,15 +145,18 @@ async function callHTTP(
 export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   const {
     messages,
-    maxTokens       = 2000,
-    temperature     = 0.7,
-    useReasoner     = false,
-    cerebrasModel   = process.env.CEREBRAS_MODEL   || 'gemma-4-31b',
-    deepseekModel   = useReasoner ? 'deepseek-reasoner' : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
-    geminiModel     = process.env.GEMINI_MODEL     || 'gemini-2.0-flash',
-    groqModel       = process.env.GROQ_MODEL       || 'llama-3.3-70b-versatile',
-    openrouterModel = process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
-    openaiModel     = process.env.OPENAI_MODEL     || 'gpt-4o-mini',
+    maxTokens            = 2000,
+    temperature          = 0.7,
+    useReasoner          = false,
+    usePremium           = true,
+    cerebrasModel        = process.env.CEREBRAS_MODEL        || 'gemma-4-31b',
+    deepseekModel        = useReasoner ? 'deepseek-reasoner' : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
+    geminiModel          = process.env.GEMINI_MODEL          || 'gemini-2.0-flash',
+    groqModel            = process.env.GROQ_MODEL            || 'llama-3.3-70b-versatile',
+    openrouterModel      = process.env.OPENROUTER_MODEL      || 'openai/gpt-4o-mini',
+    openaiModel          = process.env.OPENAI_MODEL          || 'gpt-4o-mini',
+    premiumOpenaiModel   = process.env.PREMIUM_OPENAI_MODEL  || 'gpt-4o',
+    premiumGeminiModel   = process.env.PREMIUM_GEMINI_MODEL  || 'gemini-2.0-flash',
   } = opts
 
   const [CEREBRAS_KEY, DEEPSEEK_KEY, GEMINI_KEY, GROQ_KEY, OPENROUTER_KEY, OPENAI_KEY] = await Promise.all([
@@ -132,19 +172,108 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     throw new Error('No AI keys configured. Add keys via super-admin AI config page or set env vars.')
   }
 
+  // Resolve admin-configured settings from DB
+  const resolvedPremium = usePremium && (await getSetting('ai_premium_enabled')) !== 'false'
+  const resolvedPremiumOpenai = await getSetting('ai_premium_openai_model') || premiumOpenaiModel
+  const resolvedPremiumGemini = await getSetting('ai_premium_gemini_model') || premiumGeminiModel
+  const activeProvider = await getSetting('ai_provider_active')
+  const taskModels: Record<string, string> = {
+    default:       await getSetting('ai_model_default') || '',
+    teacher:       await getSetting('ai_model_teacher') || '',
+    student:       await getSetting('ai_model_student') || '',
+    presentation:  await getSetting('ai_model_presentation') || '',
+  }
+  const taskModel = opts.taskType ? taskModels[opts.taskType] || taskModels.default : taskModels.default
+  const effectiveGroqModel   = taskModel || groqModel
+  const effectiveCerebrasModel = taskModel || cerebrasModel
+  const effectiveDeepseekModel = useReasoner ? 'deepseek-reasoner' : (taskModel || deepseekModel)
+  const effectiveGeminiModel   = taskModel || geminiModel
+  const effectiveOpenrouterModel = taskModel || openrouterModel
+  const effectiveOpenaiModel     = taskModel || openaiModel
+
   const errors: string[] = []
   const start = Date.now()
 
-  const hasNonTextContent = messages.some(m => typeof m.content !== 'string')
+  const userMessage = messages.find(m => m.role === 'user')?.content || ''
+  const inputCheck = checkInput(userMessage)
+  if (!inputCheck.passed) {
+    logViolation({
+      userId: 'unknown', userRole: 'unknown',
+      input: userMessage, reason: inputCheck.reason || 'Non-educational content',
+      category: inputCheck.category || 'non_educational', route: 'callAI',
+    })
+    return {
+      content: "I'm designed to help with educational topics. Please ask me something related to teaching, learning, or your school subjects.",
+      provider: 'groq' as AIProvider,
+      model: 'safety-filter',
+    }
+  }
+
+  const safeMessages = messages.map(m =>
+    m.role === 'system' ? { ...m, content: buildSafeSystemPrompt(m.content) } : m
+  )
+
+  const hasNonTextContent = safeMessages.some(m => typeof m.content !== 'string')
   if (hasNonTextContent) {
     console.warn('[AI] Some messages have non-text content — may fail on non-vision models')
   }
 
-  // 1. Groq — free, ultra-fast (first priority)
+  // 0. Active provider (if configured) — tried first
+  if (activeProvider && !useReasoner) {
+    const providerConfig: Record<string, { key: string | undefined; url: string; model: string }> = {
+      groq:       { key: GROQ_KEY, url: GROQ_URL, model: effectiveGroqModel },
+      cerebras:   { key: CEREBRAS_KEY, url: '', model: effectiveCerebrasModel },
+      deepseek:   { key: DEEPSEEK_KEY, url: DEEPSEEK_URL, model: effectiveDeepseekModel },
+      gemini:     { key: GEMINI_KEY, url: GEMINI_URL, model: effectiveGeminiModel },
+      openrouter: { key: OPENROUTER_KEY, url: OPENROUTER_URL, model: effectiveOpenrouterModel },
+      openai:     { key: OPENAI_KEY, url: OPENAI_URL, model: effectiveOpenaiModel },
+    }
+    const cfg = providerConfig[activeProvider]
+    if (cfg?.key) {
+      try {
+        if (activeProvider === 'cerebras') {
+          const client = new Cerebras({ apiKey: cfg.key })
+          const res = await (client.chat.completions.create as any)({
+            model: cfg.model, messages: safeMessages as any,
+            max_completion_tokens: maxTokens, temperature, top_p: 1, stream: false,
+          })
+          const content = (res as any).choices?.[0]?.message?.content || ''
+          if (content) return { content, provider: activeProvider as AIProvider, model: cfg.model, tokensUsed: (res as any).usage?.total_tokens, latencyMs: Date.now() - start }
+        } else {
+          const { content, tokensUsed } = await callHTTP(cfg.url, cfg.key, cfg.model, safeMessages, maxTokens, temperature)
+          if (content) return { content, provider: activeProvider as AIProvider, model: cfg.model, tokensUsed, latencyMs: Date.now() - start }
+        }
+      } catch (e: any) {
+        errors.push(`Active provider ${activeProvider}: ${e.message}`); console.warn('[AI] Active provider:', e.message)
+      }
+    }
+  }
+
+  // 1. Premium OpenAI (GPT-4o) — best quality (skip if key is OpenRouter)
+  if (OPENAI_KEY && !OPENAI_KEY.startsWith('sk-or-') && resolvedPremium) {
+    try {
+      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, resolvedPremiumOpenai, safeMessages, maxTokens, temperature)
+      if (content) return { content, provider: 'premium-openai', model: resolvedPremiumOpenai, tokensUsed, latencyMs: Date.now() - start }
+    } catch (e: any) {
+      errors.push(`Premium OpenAI: ${e.message}`); console.warn('[AI] Premium OpenAI:', e.message)
+    }
+  }
+
+  // 2. Premium Gemini Pro — second priority
+  if (GEMINI_KEY && resolvedPremium) {
+    try {
+      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, resolvedPremiumGemini, safeMessages, maxTokens, temperature)
+      if (content) return { content, provider: 'premium-gemini', model: resolvedPremiumGemini, tokensUsed, latencyMs: Date.now() - start }
+    } catch (e: any) {
+      errors.push(`Premium Gemini: ${e.message}`); console.warn('[AI] Premium Gemini:', e.message)
+    }
+  }
+
+  // 3. Groq — free, ultra-fast
   if (GROQ_KEY && !useReasoner) {
     try {
-      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, groqModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'groq', model: groqModel, tokensUsed, latencyMs: Date.now() - start }
+      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, effectiveGroqModel, safeMessages, maxTokens, temperature)
+      if (content) return { content, provider: 'groq', model: effectiveGroqModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
       if (isImageError) console.warn('[AI] Groq rejected image input — skipping')
@@ -152,20 +281,20 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     }
   }
 
-  // 2. Cerebras — fastest (skip for reasoning tasks)
+  // 4. Cerebras — fastest (skip for reasoning tasks)
   if (CEREBRAS_KEY && !useReasoner) {
     try {
       const client = new Cerebras({ apiKey: CEREBRAS_KEY })
       const res = await (client.chat.completions.create as any)({
-        model: cerebrasModel,
-        messages: messages as any,
+        model: effectiveCerebrasModel,
+        messages: safeMessages as any,
         max_completion_tokens: maxTokens,
         temperature,
         top_p: 1,
         stream: false,
       })
       const content = (res as any).choices?.[0]?.message?.content || ''
-      if (content) return { content, provider: 'cerebras', model: cerebrasModel, tokensUsed: (res as any).usage?.total_tokens, latencyMs: Date.now() - start }
+      if (content) return { content, provider: 'cerebras', model: effectiveCerebrasModel, tokensUsed: (res as any).usage?.total_tokens, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
       if (isImageError) console.warn('[AI] Cerebras rejected image input — skipping')
@@ -173,11 +302,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     }
   }
 
-  // 3. DeepSeek — best quality (V3 for chat, R1 for reasoning)
+  // 5. DeepSeek — best quality (V3 for chat, R1 for reasoning)
   if (DEEPSEEK_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(DEEPSEEK_URL, DEEPSEEK_KEY, deepseekModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'deepseek', model: deepseekModel, tokensUsed, latencyMs: Date.now() - start }
+      const { content, tokensUsed } = await callHTTP(DEEPSEEK_URL, DEEPSEEK_KEY, effectiveDeepseekModel, safeMessages, maxTokens, temperature)
+      if (content) return { content, provider: 'deepseek', model: effectiveDeepseekModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
       if (isImageError) console.warn('[AI] DeepSeek rejected image input — skipping')
@@ -185,11 +314,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     }
   }
 
-  // 4. Gemini Flash — free quota
+  // 6. Gemini Flash — free quota
   if (GEMINI_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, geminiModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'gemini', model: geminiModel, tokensUsed, latencyMs: Date.now() - start }
+      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, effectiveGeminiModel, safeMessages, maxTokens, temperature)
+      if (content) return { content, provider: 'gemini', model: effectiveGeminiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
       if (isImageError) console.warn('[AI] Gemini rejected image input — skipping')
@@ -197,15 +326,15 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     }
   }
 
-  // 5. OpenRouter (or direct OpenAI via same key)
+  // 7. OpenRouter (or direct OpenAI via same key)
   // Also try OPENAI_KEY if it starts with 'sk-or-' (OpenRouter key stored in OPENAI_API_KEY)
   const effectiveORKey = OPENROUTER_KEY || (OPENAI_KEY?.startsWith('sk-or-') ? OPENAI_KEY : undefined)
   if (effectiveORKey) {
     const isOR  = effectiveORKey.startsWith('sk-or-')
     const url   = isOR ? OPENROUTER_URL : OPENAI_URL
-    const model = isOR ? openrouterModel : openaiModel
+    const model = isOR ? effectiveOpenrouterModel : effectiveOpenaiModel
     try {
-      const { content, tokensUsed } = await callHTTP(url, effectiveORKey, model, messages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(url, effectiveORKey, model, safeMessages, maxTokens, temperature)
       if (content) return { content, provider: isOR ? 'openrouter' : 'openai', model, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -214,11 +343,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     }
   }
 
-  // 6. OpenAI direct (only if a different, non-OpenRouter key remains)
+  // 8. OpenAI direct (only if a different, non-OpenRouter key remains)
   if (OPENAI_KEY && !OPENAI_KEY.startsWith('sk-or-') && OPENAI_KEY !== OPENROUTER_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, openaiModel, messages, maxTokens, temperature)
-      if (content) return { content, provider: 'openai', model: openaiModel, tokensUsed, latencyMs: Date.now() - start }
+      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, effectiveOpenaiModel, safeMessages, maxTokens, temperature)
+      if (content) return { content, provider: 'openai', model: effectiveOpenaiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
       if (isImageError) console.warn('[AI] OpenAI rejected image input — skipping')

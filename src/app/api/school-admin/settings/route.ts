@@ -1,34 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const { searchParams } = new URL(req.url)
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = parseInt(searchParams.get('limit') || '10')
+  const search = searchParams.get('search') || ''
+  const category = searchParams.get('category') || ''
+  const sortBy = searchParams.get('sortBy') || 'createdAt'
+  const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const search = searchParams.get('search') || ''
-    const category = searchParams.get('category') || ''
-    const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findFirst({
-      where: { userId: session.user.id },
-      select: { schoolId: true }
-    })
+  const schoolAdmin = await prisma.schoolAdmin.findFirst({
+    where: { userId: user.id },
+    select: { schoolId: true }
+  })
     
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -93,26 +79,10 @@ export async function GET(request: NextRequest) {
         pages
       }
     })
-  } catch (error) {
-    console.error('Error fetching school settings:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const body = await request.json()
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const body = await req.json()
     const { 
       key, 
       value, 
@@ -124,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     // Get school admin's school ID
     const schoolAdmin = await prisma.schoolAdmin.findFirst({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       select: { schoolId: true }
     })
     
@@ -159,7 +129,7 @@ export async function POST(request: NextRequest) {
         category,
         description,
         isEditable,
-        updatedBy: session.user.id
+        updatedBy: user.id
       },
       include: {
         updatedByUser: {
@@ -173,8 +143,4 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(setting, { status: 201 })
-  } catch (error) {
-    console.error('Error creating school setting:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})

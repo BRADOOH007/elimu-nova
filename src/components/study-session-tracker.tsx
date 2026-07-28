@@ -15,6 +15,7 @@ import {
   Loader2,
   CheckCircle
 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface StudySession {
   id: string
@@ -40,6 +41,7 @@ export function StudySessionTracker({ onSessionComplete }: StudySessionTrackerPr
   const [topic, setTopic] = useState("")
   const [notes, setNotes] = useState("")
   const [isSaving, setIsSaving] = useState(false)
+  const { toast } = useToast()
 
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -72,7 +74,7 @@ export function StudySessionTracker({ onSessionComplete }: StudySessionTrackerPr
 
   const handleStart = () => {
     if (!subject.trim()) {
-      alert("Please enter a subject before starting")
+      toast({ title: "Please enter a subject before starting" })
       return
     }
 
@@ -141,7 +143,7 @@ export function StudySessionTracker({ onSessionComplete }: StudySessionTrackerPr
 
     } catch (error) {
       console.error('Error saving study session:', error)
-      alert('Failed to save study session. Please try again.')
+      toast({ title: 'Failed to save study session. Please try again.', variant: 'destructive' })
     } finally {
       setIsSaving(false)
     }

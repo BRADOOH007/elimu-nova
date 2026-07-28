@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   X, UserPlus, Mail, Phone, MapPin, School, AlertCircle,
-  Copy, CheckCircle, Eye, EyeOff, Sparkles, GraduationCap
+  Copy, CheckCircle, Eye, EyeOff, Sparkles, GraduationCap,
+  BookOpen, Plus, XCircle
 } from 'lucide-react'
 
 // All CBC grades
@@ -55,10 +56,10 @@ export default function EnrollStudentModal({
   role     = 'teacher',
   teachers = [],
 }: EnrollStudentModalProps) {
-  const [loading, setLoading]       = useState(false)
-  const [copied,  setCopied]        = useState(false)
-  const [showPwd, setShowPwd]       = useState(false)
-  const [previewPwd] = useState(() => generatePreviewPassword())
+  const [loading,   setLoading]    = useState(false)
+  const [copied,    setCopied]     = useState(false)
+  const [showPwd,   setShowPwd]    = useState(false)
+  const [previewPwd, setPreviewPwd] = useState(() => generatePreviewPassword())
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -73,10 +74,17 @@ export default function EnrollStudentModal({
     parentLastName:  '',
     parentEmail:     '',
     parentPhone:     '',
+    subjects:  [] as string[],
   })
+  const [customSubject, setCustomSubject] = useState('')
   const [errors,      setErrors]      = useState<Record<string, string>>({})
-  const [successData, setSuccessData] = useState<{ email: string; password: string } | null>(null)
+  const [successData, setSuccessData] = useState<{ username?: string; email: string; password: string } | null>(null)
   const [parentSuccessData, setParentSuccessData] = useState<{ email: string; password: string; emailSent?: boolean; emailMethod?: string } | null>(null)
+
+  // Regenerate preview password on open
+  useEffect(() => {
+    if (isOpen) setPreviewPwd(generatePreviewPassword())
+  }, [isOpen])
 
   // Auto-fill grade when class is selected
   useEffect(() => {
@@ -90,6 +98,19 @@ export default function EnrollStudentModal({
     () => previewUsername(formData.firstName, formData.lastName),
     [formData.firstName, formData.lastName]
   )
+
+  const DEFAULT_SUBJECTS = [
+    'Mathematics', 'English', 'Kiswahili', 'Science & Technology',
+    'Social Studies', 'CRE', 'Physical Education', 'Creative Arts',
+    'Agriculture', 'Life Skills', 'Home Science', 'Computer Studies'
+  ]
+
+  const availableSubjects = useMemo(() => {
+    const subjects = new Set<string>()
+    classes.forEach(cls => { if (cls.subject) subjects.add(cls.subject) })
+    if (subjects.size === 0) DEFAULT_SUBJECTS.forEach(s => subjects.add(s))
+    return Array.from(subjects).sort()
+  }, [classes])
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setFormData(prev => ({ ...prev, [field]: e.target.value }))
@@ -126,9 +147,11 @@ export default function EnrollStudentModal({
         grade:     formData.grade || null,
       }
 
+      body.password = previewPwd
+      body.subjects = formData.subjects
+
       if (role === 'school-admin') {
         body.teacherId = formData.teacherId
-        body.password  = previewPwd
       }
 
       // Parent info
@@ -148,6 +171,7 @@ export default function EnrollStudentModal({
 
       if (res.ok) {
         setSuccessData(data.credentials || {
+          username: previewUser,
           email:    body.email || `${previewUser}@student.local`,
           password: previewPwd,
         })
@@ -166,7 +190,8 @@ export default function EnrollStudentModal({
 
   const reset = () => {
     setFormData({ firstName:'', lastName:'', email:'', phone:'', address:'', classId:'', grade:'', teacherId:'',
-      parentFirstName:'', parentLastName:'', parentEmail:'', parentPhone:'' })
+      parentFirstName:'', parentLastName:'', parentEmail:'', parentPhone:'', subjects: [] })
+    setCustomSubject('')
     setErrors({})
     setSuccessData(null)
     setParentSuccessData(null)
@@ -181,9 +206,7 @@ export default function EnrollStudentModal({
 
   const copyCredentials = async () => {
     if (!successData) return
-    const login = successData.email.endsWith('@student.local')
-      ? successData.email.replace('@student.local', '')
-      : successData.email
+    const login = successData.username || successData.email.replace('@student.local', '')
     let text = `Student Login:\n  Username: ${login}\n  Password: ${successData.password}`
     if (parentSuccessData) {
       text += `\n\nParent Login:\n  Email: ${parentSuccessData.email}\n  Password: ${parentSuccessData.password}`
@@ -242,16 +265,24 @@ export default function EnrollStudentModal({
                 <div className="p-4 space-y-3 bg-gray-50">
                   {/* Username */}
                   <div>
-                    <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Username / Login</Label>
+                    <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Username</Label>
                     <div className="mt-1 flex items-center gap-2">
                       <code className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-900">
-                        {displayLogin(successData.email)}
+                        @{successData.username || displayLogin(successData.email)}
                       </code>
                     </div>
-                    {successData.email.endsWith('@student.local') && (
-                      <p className="text-xs text-gray-400 mt-1">Full email: {successData.email}</p>
-                    )}
                   </div>
+                  {/* Email (if not student.local) */}
+                  {successData.email && !successData.email.endsWith('@student.local') && (
+                    <div>
+                      <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</Label>
+                      <div className="mt-1 flex items-center gap-2">
+                        <code className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono text-gray-900">
+                          {successData.email}
+                        </code>
+                      </div>
+                    </div>
+                  )}
                   {/* Password */}
                   <div>
                     <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Password</Label>
@@ -504,7 +535,7 @@ export default function EnrollStudentModal({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-semibold text-gray-600">Email <span className="text-red-500">*</span></Label>
+                  <Label className="text-xs font-semibold text-gray-600">Email</Label>
                   <div className="relative mt-1">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <Input value={formData.parentEmail} onChange={set('parentEmail')}
@@ -524,6 +555,83 @@ export default function EnrollStudentModal({
                 <div className="bg-white border border-amber-200 rounded-lg p-3 text-xs text-gray-600">
                   A parent account will be created for <strong>{formData.parentFirstName} {formData.parentLastName}</strong>
                   {' '}and linked to this student. Credentials will appear after enrollment.
+                </div>
+              )}
+            </div>
+
+            {/* ── Learning Areas / Subjects ──────────────────────────── */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold text-gray-800 flex items-center gap-2 text-sm">
+                <BookOpen className="w-4 h-4 text-amber-600" />
+                Learning Areas / Subjects
+              </h3>
+              <p className="text-xs text-gray-500">Select the subjects this student is enrolled in.</p>
+              <div className="flex flex-wrap gap-1.5">
+                {availableSubjects.map(subject => {
+                  const selected = formData.subjects.includes(subject)
+                  return (
+                    <button
+                      key={subject}
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        subjects: selected
+                          ? prev.subjects.filter(s => s !== subject)
+                          : [...prev.subjects, subject]
+                      }))}
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                        selected
+                          ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300'
+                      }`}
+                    >
+                      {subject}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={customSubject}
+                  onChange={e => setCustomSubject(e.target.value)}
+                  placeholder="Add custom subject…"
+                  className="max-w-xs bg-white border-gray-200 text-sm h-8"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && customSubject.trim()) {
+                      e.preventDefault()
+                      if (!formData.subjects.includes(customSubject.trim())) {
+                        setFormData(prev => ({ ...prev, subjects: [...prev.subjects, customSubject.trim()] }))
+                      }
+                      setCustomSubject('')
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!customSubject.trim()}
+                  className="h-8"
+                  onClick={() => {
+                    if (customSubject.trim() && !formData.subjects.includes(customSubject.trim())) {
+                      setFormData(prev => ({ ...prev, subjects: [...prev.subjects, customSubject.trim()] }))
+                    }
+                    setCustomSubject('')
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              {formData.subjects.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {formData.subjects.map(s => (
+                    <span key={s} className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs font-medium">
+                      {s}
+                      <button type="button" onClick={() => setFormData(prev => ({ ...prev, subjects: prev.subjects.filter(x => x !== s) }))}>
+                        <XCircle className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
             </div>

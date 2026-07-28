@@ -16,7 +16,7 @@ export default function QuickActionsGrid() {
   return (
     <div className="mb-8">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 animate-stagger">
         {actions.map((action) => (
           <Link key={action.href} href={action.href}>
             <Card className="bg-gradient-to-br from-white via-gray-50 to-blue-50 shadow-lg border-0 hover:shadow-xl transition-all duration-300 transform hover:scale-105 cursor-pointer h-full">

@@ -11,8 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   BookOpen, Brain, ClipboardList, NotebookPen, CheckCircle, AlertCircle,
   Send, Loader2, RefreshCw, Play, Target, Clock, Upload, X, File,
-  ChevronLeft, ChevronRight, Award, Star, Zap, Paperclip, Eye, Download
+  ChevronDown, ChevronRight, ChevronLeft, Award, Star, Zap, Paperclip, Eye, Download
 } from 'lucide-react'
+import ChatContainer from '@/components/chat/chat-container'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { ClientDate } from '@/components/ui/client-date'
 
@@ -37,23 +38,63 @@ const SUBJECTS = [
   'Coding','Programming','Web Development','Python'
 ]
 
+const TOPIC_SUGGESTIONS: Record<string, string[]> = {
+  Mathematics: ['Whole Numbers','Fractions','Decimals','Percentages','Measurement','Geometry','Algebra','Data Handling','Money','Time','Length, Area & Volume','Mass & Capacity','Position & Direction','Tables & Graphs','Number Patterns','Ratios & Proportions','Scale Drawing','Circles'],
+  English: ['Listening & Speaking','Reading Comprehension','Grammar','Writing Composition','Vocabulary Development','Spelling','Punctuation','Poetry','Oral Narratives','Letter Writing','Creative Writing','Functional Writing'],
+  Kiswahili: ['Kusikiliza na Kuzungumza','Sarufi','Msamiati','Ufahamu','Insha','Matumizi ya Lugha','Fasihi Simulizi','Ushairi'],
+  Science: ['Living Things','Plants','Animals','Human Body','Energy','Light','Sound','Forces & Motion','Materials','Weather','Water','Soil','Food & Nutrition','Health Education','Simple Machines','Electricity'],
+  'Social Studies': ['Our Country','Our Environment','Resources','Transport','Communication','Culture','Government','Citizenship','History of Kenya','Map Reading','Population','Trade'],
+  Agriculture: ['Crop Farming','Animal Keeping','Soil Preparation','Planting','Harvesting','Farm Tools'],
+  Physics: ['Forces','Motion','Energy','Waves','Light','Electricity','Magnetism','Heat Transfer','Fluids','Sound'],
+  Chemistry: ['States of Matter','Mixtures','Atoms & Elements','Chemical Reactions','Acids & Bases','Water & Solutions','Periodic Table'],
+  Biology: ['Cells','Classification','Nutrition','Respiration','Transport Systems','Reproduction','Ecology','Genetics','Human Health'],
+  History: ['Early Man','Agriculture in Kenya','Trade','Colonial Administration','Struggle for Independence','Constitution & Governance'],
+  Geography: ['Map Work','Weather & Climate','Vegetation','Soils','Mining','Forestry','Fishing','Tourism','Population','Urbanization'],
+  'Computer Studies': ['Computer Basics','Operating Systems','Word Processing','Spreadsheets','Internet','Programming Concepts','Database','Networking','Data Security'],
+  CRE: ['Creation','The Bible','Jesus Christ','The Early Church','Christian Values','Faith & Prayer','Community Service'],
+  'Business Studies': ['Business & Its Environment','Office Practice','Entrepreneurship','Money & Banking','Trade','Consumer Protection','Financial Records'],
+  'Coding': ['Algorithms','Scratch Programming','Python Basics','Web Development','HTML & CSS','JavaScript','Data Structures'],
+  'Programming': ['Variables & Data Types','Conditionals','Loops','Functions','OOP','Algorithms'],
+  'Web Development': ['HTML Structure','CSS Styling','JavaScript','Responsive Design','Frontend Frameworks'],
+  'Python': ['Basics','Data Types','Control Flow','Functions','File I/O','Libraries'],
+}
+
 export default function LearnPage() {
   const { toast } = useToast()
-  const [tab, setTab] = useState('study')
+  const [tab, setTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search)
+      const t = p.get('tab')
+      if (t === 'quiz' || t === 'study' || t === 'assignments' || t === 'tutor') return t
+    }
+    return 'study'
+  })
 
   // ── STUDY state ──────────────────────────────────────────────────────
   const [studySubject, setStudySubject] = useState('Mathematics')
   const [studyTopic,   setStudyTopic]   = useState('')
+  const [studyGrade,   setStudyGrade]   = useState('Grade 4')
   const [studying,     setStudying]     = useState(false)
   const [lessonMd,     setLessonMd]     = useState('')
   const [notes,        setNotes]        = useState('')
   const [savedNotes,   setSavedNotes]   = useState<Array<{id:string;text:string;topic:string}>>([])
+  const [notesOpen,    setNotesOpen]    = useState(false)
+  const [studyStrands, setStudyStrands] = useState<{id:string;name:string}[]>([])
+  const [sessionActive, setSessionActive] = useState(false)
+  const [sessionStart,  setSessionStart]  = useState<Date | null>(null)
+  const [elapsed,       setElapsed]       = useState(0)
+  const [completing,    setCompleting]    = useState(false)
+  const [completed,     setCompleted]     = useState(false)
+  const [teachingChat,   setTeachingChat]   = useState<ChatMsg[]>([])
+  const [teachingInput,  setTeachingInput]  = useState('')
+  const [teachingLoading,setTeachingLoading]= useState(false)
 
   // ── QUIZ state ───────────────────────────────────────────────────────
   const [quizSubject,   setQuizSubject]   = useState('Mathematics')
   const [quizTopic,     setQuizTopic]     = useState('')
   const [quizGrade,     setQuizGrade]     = useState('Grade 4')
   const [quizType,      setQuizType]      = useState<'checkpoint'|'blooms'>('blooms')
+  const [quizStrands,   setQuizStrands]   = useState<{id:string;name:string}[]>([])
   const [genQuiz,       setGenQuiz]       = useState(false)
   const [questions,     setQuestions]     = useState<QuizQ[]>([])
   const [qIndex,        setQIndex]        = useState(0)
@@ -62,6 +103,7 @@ export default function LearnPage() {
   const [submitted,     setSubmitted]     = useState(false)
   const [score,         setScore]         = useState(0)
   const [timeLeft,      setTimeLeft]      = useState(0)
+  const [openFeedback,  setOpenFeedback]  = useState<Record<number,{isCorrect:boolean;feedback:string}>>({})
   const timerRef = useRef<NodeJS.Timeout>(null)
 
   // ── ASSIGNMENTS state ────────────────────────────────────────────────
@@ -74,16 +116,86 @@ export default function LearnPage() {
   const [uploading,    setUploading]    = useState(false)
   const [result,       setResult]       = useState<{grade?:number;feedback?:string}|null>(null)
 
-  // ── AI TUTOR state ───────────────────────────────────────────────────
-  const [chat,        setChat]        = useState<ChatMsg[]>([
-    { role:'ai', content:"Hi! I'm your AI tutor. Ask me anything — I can explain concepts, help with homework, generate practice questions, or guide you through any topic. What would you like to learn?" }
-  ])
-  const [chatInput,   setChatInput]   = useState('')
-  const [chatLoading, setChatLoading] = useState(false)
-  const chatEndRef = useRef<HTMLDivElement>(null)
+  // Fetch topic strands for study
+  useEffect(() => {
+    if (!studySubject) { setStudyStrands([]); return }
+    const fallback = TOPIC_SUGGESTIONS[studySubject] || []
+    fetch(`/api/curriculum/strands?grade=${encodeURIComponent(studyGrade)}&subject=${encodeURIComponent(studySubject)}`)
+      .then(r => r.ok ? r.json() : { strands: [] })
+      .then(d => {
+        const db = (d.strands || []).map((s: any) => ({ id: s.id, name: s.name }))
+        const all = [...db]
+        fallback.forEach(t => { if (!all.some(a => a.name.toLowerCase() === t.toLowerCase())) all.push({ id: `fb-${t}`, name: t }) })
+        setStudyStrands(all)
+      })
+      .catch(() => setStudyStrands(fallback.map(t => ({ id: `fb-${t}`, name: t }))))
+  }, [studySubject, studyGrade])
+
+  // Fetch topic strands for quiz
+  useEffect(() => {
+    if (!quizSubject || !quizGrade) { setQuizStrands([]); return }
+    const fallback = TOPIC_SUGGESTIONS[quizSubject] || []
+    fetch(`/api/curriculum/strands?grade=${encodeURIComponent(quizGrade)}&subject=${encodeURIComponent(quizSubject)}`)
+      .then(r => r.ok ? r.json() : { strands: [] })
+      .then(d => {
+        const db = (d.strands || []).map((s: any) => ({ id: s.id, name: s.name }))
+        const all = [...db]
+        fallback.forEach(t => { if (!all.some(a => a.name.toLowerCase() === t.toLowerCase())) all.push({ id: `fb-${t}`, name: t }) })
+        setQuizStrands(all)
+      })
+      .catch(() => setQuizStrands(fallback.map(t => ({ id: `fb-${t}`, name: t }))))
+  }, [quizSubject, quizGrade])
 
   useEffect(() => { fetchAssignments() }, [])
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [chat])
+
+  // Fetch student's actual grade from their class on mount
+  useEffect(() => {
+    fetch('/api/student/dashboard')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.student?.class) {
+          const cls = d.student.class
+          const gradeMatch = cls.match(/^(Grade\s+\d+|Form\s+\d+)/i)
+          if (gradeMatch) {
+            setQuizGrade(gradeMatch[1])
+            setStudyGrade(gradeMatch[1])
+          }
+        }
+      })
+      .catch(e => console.error('Failed to fetch grade:', e))
+  }, [])
+
+  const handleAITutorChat = async (message: string, history: ChatMsg[]) => {
+    const r = await fetch('/api/ai/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message, context:'student_tutor', messages: history })
+    })
+    if (!r.ok) throw new Error('API error')
+    const d = await r.json()
+    return d.response || 'Sorry, I could not respond right now.'
+  }
+
+  // Sync tab to URL
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    if (p.get('tab') !== tab) {
+      p.set('tab', tab)
+      const url = `${window.location.pathname}?${p.toString()}`
+      window.history.replaceState({}, '', url)
+    }
+  }, [tab])
+
+  // Restore "Start Learning" context from curriculum accordion
+  useEffect(() => {
+    try {
+      const ctx = JSON.parse(sessionStorage.getItem('currentLessonContext') || '{}')
+      if (ctx.title) {
+        setStudyTopic(ctx.title)
+        setStudySubject(ctx.subject || 'Mathematics')
+        sessionStorage.removeItem('currentLessonContext')
+      }
+    } catch (e) { console.error('Failed to restore context:', e) }
+  }, [])
 
   // ── Timer for quiz ───────────────────────────────────────────────────
   useEffect(() => {
@@ -102,17 +214,119 @@ export default function LearnPage() {
     } finally { setLoadingAssn(false) }
   }
 
-  // ── STUDY: generate lesson ───────────────────────────────────────────
+  // ── Timer for study session ──────────────────────────────────────────
+  useEffect(() => {
+    if (!sessionActive || !sessionStart) return
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - sessionStart.getTime()) / 1000)), 1000)
+    return () => clearInterval(id)
+  }, [sessionActive, sessionStart])
+
+  const handleStartSession = async () => {
+    setSessionActive(true)
+    setSessionStart(new Date())
+    setElapsed(0)
+    setCompleted(false)
+    toast({ title: '📖 Study session started!' })
+  }
+
+  const handleEndSession = async () => {
+    if (!sessionStart) return
+    setCompleting(true)
+    const endTime = new Date()
+    const durationSec = Math.floor((endTime.getTime() - sessionStart.getTime()) / 1000)
+    const durationMin = Math.max(1, Math.round(durationSec / 60))
+    try {
+      const r = await fetch('/api/student/study-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: studySubject,
+          topic: studyTopic,
+          duration: durationMin,
+          startTime: sessionStart.toISOString(),
+          endTime: endTime.toISOString(),
+        })
+      })
+      if (r.ok) {
+        setCompleted(true)
+        setSessionActive(false)
+        toast({ title: '✅ Session saved!', description: `Studied for ${durationMin} min` })
+      }
+    } catch (e) { console.warn('[StudentLearn] handleCompleteSession error:', e) } finally { setCompleting(false) }
+  }
+
+  const handleStartTeaching = async () => {
+    if (!lessonMd) return
+    setTeachingLoading(true)
+    setTeachingChat([])
+    try {
+      const r = await fetch('/api/ai/chat', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          context: 'student_tutor',
+          autoTeach: true,
+          lessonContent: lessonMd,
+          subject: studySubject,
+          topic: studyTopic,
+          message: `Teach me "${studyTopic}" interactively. Explain the key concepts step by step, ask me questions to check understanding, give examples, and adapt based on my responses. Don't lecture — have a conversation with me. Let me know when you're ready and ask me the first question.`
+        })
+      })
+      const d = await r.json()
+      if (r.ok && d.response) {
+        setTeachingChat([{ role:'ai', content: d.response }])
+      }
+    } catch (e) { console.warn('[StudentLearn] handleStartTeaching error:', e) } finally { setTeachingLoading(false) }
+  }
+
+  const sendTeachingMsg = async () => {
+    const text = teachingInput.trim()
+    if (!text || teachingLoading) return
+    setTeachingInput('')
+    const userMsg: ChatMsg = { role:'user', content: text }
+    const updated = [...teachingChat, userMsg]
+    setTeachingChat(updated)
+    setTeachingLoading(true)
+    try {
+      const r = await fetch('/api/ai/chat', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          context: 'student_tutor',
+          autoTeach: true,
+          lessonContent: lessonMd,
+          subject: studySubject,
+          topic: studyTopic,
+          message: text,
+          messages: updated.map(m => ({ role: m.role, content: m.content }))
+        })
+      })
+      const d = await r.json()
+      if (r.ok && d.response) {
+        setTeachingChat(prev => [...prev, { role:'ai', content: d.response }])
+      }
+    } catch (e) { console.warn('[StudentLearn] sendTeachingMsg error:', e) } finally { setTeachingLoading(false) }
+  }
+
+  const fmtElapsed = (s: number) => {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m}:${sec.toString().padStart(2, '0')}`
+  }
+
+  // ── STUDY: generate notes + start teaching ─────────────────────────
   const generateLesson = async () => {
     if (!studyTopic.trim()) { toast({ variant:'destructive', title:'Enter a topic first' }); return }
     setStudying(true); setLessonMd('')
     try {
       const r = await fetch('/api/ai/generate-lesson-content', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ lesson:{ title:studyTopic, subject:studySubject }, studentLevel:'intermediate', learningStyle:'visual' })
+        body: JSON.stringify({ lesson:{ title:studyTopic, subject:studySubject, grade:studyGrade }, studentLevel:'intermediate', learningStyle:'visual' })
       })
       const d = await r.json()
-      if (r.ok) setLessonMd(d.content || '')
+      if (r.ok) {
+        setLessonMd(d.content || '')
+        // Auto-start interactive teaching after notes are ready
+        setTimeout(() => handleStartTeaching(), 300)
+      }
       else throw new Error(d.error)
     } catch(e:any) { toast({ variant:'destructive', title:'Could not generate lesson', description:e.message }) }
     finally { setStudying(false) }
@@ -153,18 +367,50 @@ export default function LearnPage() {
     finally { setGenQuiz(false) }
   }
 
-  const handleSubmitQuiz = useCallback(() => {
+  const handleSubmitQuiz = useCallback(async () => {
     clearTimeout(timerRef.current!)
-    let correct = 0
+    let mcqCorrect = 0
+    const mcqCount = questions.filter(q => q.type === 'multiple_choice' || q.type === 'true_false').length
+    const openEnded: { id: number; question: string; studentAnswer: string; correctAnswer?: string }[] = []
+
     questions.forEach((q, i) => {
       if (q.type === 'multiple_choice' || q.type === 'true_false') {
-        if (answers[i] !== undefined && Number(answers[i]) === q.correct_answer) correct++
+        if (answers[i] !== undefined && Number(answers[i]) === q.correct_answer) mcqCorrect++
+      } else {
+        const ans = answers[i]
+        if (ans !== undefined && typeof ans === 'string' && ans.trim()) {
+          openEnded.push({ id: i, question: q.question, studentAnswer: ans, correctAnswer: q.model_answer })
+        }
       }
     })
-    const mcqs = questions.filter(q => q.type === 'multiple_choice' || q.type === 'true_false').length
-    setScore(mcqs > 0 ? Math.round((correct / mcqs) * 100) : 0)
+
+    let openCorrect = 0
+    let openTotal = openEnded.length
+    if (openEnded.length > 0) {
+      try {
+        const r = await fetch('/api/ai/grade-short-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject: quizSubject, grade: quizGrade, questions: openEnded })
+        })
+        if (r.ok) {
+          const data = await r.json()
+          openCorrect = data.results?.filter((res: any) => res.isCorrect).length || 0
+          const fb: Record<number,{isCorrect:boolean;feedback:string}> = {}
+          data.results?.forEach((res: any) => {
+            fb[res.questionId] = { isCorrect: res.isCorrect, feedback: res.feedback }
+            setShowAns(prev => ({ ...prev, [res.questionId]: true }))
+          })
+          setOpenFeedback(fb)
+        }
+      } catch { /* fallback: count none correct */ }
+    }
+
+    const totalQuestions = mcqCount + openTotal
+    const totalCorrect = mcqCorrect + openCorrect
+    setScore(totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0)
     setSubmitted(true)
-  }, [questions, answers])
+  }, [questions, answers, quizSubject, quizGrade])
 
   const fmtTime = (s:number) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`
 
@@ -201,23 +447,6 @@ export default function LearnPage() {
     finally { setUploading(false); e.target.value='' }
   }
 
-  // ── AI TUTOR: send ───────────────────────────────────────────────────
-  const sendChat = async () => {
-    if (!chatInput.trim() || chatLoading) return
-    const msg = chatInput.trim(); setChatInput('')
-    setChat(p => [...p, { role:'user', content:msg }])
-    setChatLoading(true)
-    try {
-      const r = await fetch('/api/ai/chat', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ message:msg, context:'student_tutor' })
-      })
-      const d = await r.json()
-      setChat(p => [...p, { role:'ai', content: d.response || 'Sorry, I could not respond right now.' }])
-    } catch { setChat(p => [...p, { role:'ai', content:"I'm having a brief issue. Please try again!" }]) }
-    finally { setChatLoading(false) }
-  }
-
   const statusColor = (s:string) => ({
     GRADED:'bg-green-100 text-green-800', OVERDUE:'bg-red-100 text-red-800',
     SUBMITTED:'bg-blue-100 text-blue-800', PENDING:'bg-yellow-100 text-yellow-800'
@@ -232,16 +461,16 @@ export default function LearnPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="w-full overflow-x-auto flex">
-          <TabsTrigger value="study" className="shrink-0"><BookOpen className="w-4 h-4 mr-1.5"/>Study</TabsTrigger>
-          <TabsTrigger value="quiz" className="shrink-0"><Target className="w-4 h-4 mr-1.5"/>Quiz</TabsTrigger>
-          <TabsTrigger value="assignments" className="shrink-0"><ClipboardList className="w-4 h-4 mr-1.5"/>
+        <TabsList className="w-full overflow-x-auto flex gap-1.5 px-2">
+          <TabsTrigger value="study" className="shrink-0 whitespace-nowrap"><BookOpen className="w-4 h-4 mr-1.5"/>Study</TabsTrigger>
+          <TabsTrigger value="quiz" className="shrink-0 whitespace-nowrap"><Target className="w-4 h-4 mr-1.5"/>Quiz</TabsTrigger>
+          <TabsTrigger value="assignments" className="shrink-0 whitespace-nowrap"><ClipboardList className="w-4 h-4 mr-1.5"/>
             Assignments{assignments.filter(a=>a.status==='PENDING'||a.status==='OVERDUE').length > 0 &&
-              <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5">
+              <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 whitespace-nowrap">
                 {assignments.filter(a=>a.status==='PENDING'||a.status==='OVERDUE').length}
               </span>}
           </TabsTrigger>
-          <TabsTrigger value="tutor" className="shrink-0"><Brain className="w-4 h-4 mr-1.5"/>AI Tutor</TabsTrigger>
+          <TabsTrigger value="tutor" className="shrink-0 whitespace-nowrap"><Brain className="w-4 h-4 mr-1.5"/>AI Tutor</TabsTrigger>
         </TabsList>
 
         {/* ── STUDY TAB ───────────────────────────────────────────── */}
@@ -260,8 +489,12 @@ export default function LearnPage() {
                 <div>
                   <label className="text-xs font-semibold text-slate-600 mb-1 block">Topic *</label>
                   <input value={studyTopic} onChange={e=>setStudyTopic(e.target.value)}
-                    placeholder="e.g. Fractions" onKeyDown={e=>e.key==='Enter'&&generateLesson()}
+                    placeholder="e.g. Fractions" list="study-topics"
+                    onKeyDown={e=>e.key==='Enter'&&generateLesson()}
                     className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                  <datalist id="study-topics">
+                    {studyStrands.map(s=><option key={s.id} value={s.name}/>)}
+                  </datalist>
                 </div>
               </div>
               <Button onClick={generateLesson} disabled={studying||!studyTopic.trim()} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90">
@@ -280,26 +513,122 @@ export default function LearnPage() {
                       {studyTopic} — {studySubject}
                     </CardTitle>
                   </div>
-                  <button
-                    onClick={() => setLessonMd('')}
-                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-                  >
-                    <X className="h-4 w-4 text-white" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {sessionActive && (
+                      <span className="text-sm font-mono bg-white/20 rounded-lg px-3 py-1">
+                        {fmtElapsed(elapsed)}
+                      </span>
+                    )}
+                    {completed && (
+                      <span className="text-sm bg-green-500/30 text-green-100 rounded-lg px-3 py-1 font-semibold">Completed</span>
+                    )}
+                    <button
+                      onClick={() => { setLessonMd(''); setSessionActive(false); setSessionStart(null); setCompleted(false); setTeachingChat([]) }}
+                      className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                    >
+                      <X className="h-4 w-4 text-white" />
+                    </button>
+                  </div>
+                </div>
+                  <div className="flex gap-2 mt-3 flex-wrap">
+                  {!sessionActive && !completed && (
+                    <Button size="sm" onClick={handleStartSession} className="bg-green-500 hover:bg-green-600 text-white border-0">
+                      <Play className="h-3.5 w-3.5 mr-1.5" />Start Studying
+                    </Button>
+                  )}
+                  {sessionActive && (
+                    <Button size="sm" onClick={handleEndSession} disabled={completing} className="bg-red-500 hover:bg-red-600 text-white border-0">
+                      {completing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
+                      End Session
+                    </Button>
+                  )}
+                  {completed && (
+                    <Button size="sm" onClick={() => { setLessonMd(''); setSessionStart(null); setCompleted(false); setTeachingChat([]) }} variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Study Again
+                    </Button>
+                  )}
+
                 </div>
               </CardHeader>
               <CardContent className="p-6">
                 <div className="max-h-[600px] overflow-y-auto pr-1">
                   <MarkdownRenderer content={lessonMd} />
                 </div>
+
+                {lessonMd && (
+                  <div className="mt-6 border-t pt-4 space-y-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
+                      <Brain className="h-4 w-4" /> Practice Questions
+                    </div>
+                    <div className="max-h-[400px] overflow-y-auto space-y-3 pr-1">
+                      {teachingChat.length === 0 && !teachingLoading && (
+                        <div className="flex items-center gap-2 text-sm text-amber-600 py-4">
+                          <Loader2 className="h-4 w-4 animate-spin" /> Starting interactive practice…
+                        </div>
+                      )}
+                      {teachingChat.map((m, i) => (
+                        <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                          {m.role === 'ai' && (
+                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0">
+                              <Brain className="h-3.5 w-3.5 text-white" />
+                            </div>
+                          )}
+                          <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                            m.role === 'user'
+                              ? 'bg-blue-600 text-white rounded-br-sm'
+                              : 'bg-gray-100 border border-gray-200 rounded-bl-sm'
+                          }`}>
+                            <MarkdownRenderer content={m.content} />
+                          </div>
+                        </div>
+                      ))}
+                      {teachingLoading && (
+                        <div className="flex items-end gap-2 justify-start">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0">
+                            <Brain className="h-3.5 w-3.5 text-white" />
+                          </div>
+                          <div className="bg-gray-100 border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              {[0,1,2].map(i => <div key={i} className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{animationDelay:`${i*0.15}s`}} />)}
+                              <span className="text-xs text-gray-400 ml-2">Teaching…</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        value={teachingInput}
+                        onChange={e => setTeachingInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTeachingMsg() } }}
+                        rows={1}
+                        placeholder="Ask a question, say 'explain more' or 'give an example'…"
+                        className="flex-1 resize-none border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[38px] max-h-24"
+                      />
+                      <button
+                        onClick={sendTeachingMsg}
+                        disabled={teachingLoading || !teachingInput.trim()}
+                        className="h-9 w-9 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 flex items-center justify-center disabled:opacity-40 shrink-0 hover:opacity-90 transition-opacity"
+                      >
+                        <Send className="h-4 w-4 text-white" />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-400 text-center">Enter to send · Shift+Enter for new line</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
 
-          {/* Notes */}
+          {/* Notes — collapsible */}
           <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><NotebookPen className="h-4 w-4 text-amber-600"/>My Notes</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
+            <CardHeader className="cursor-pointer select-none" onClick={() => setNotesOpen(!notesOpen)}>
+              <CardTitle className="text-base flex items-center justify-between">
+                <span className="flex items-center gap-2"><NotebookPen className="h-4 w-4 text-amber-600"/>My Notes</span>
+                {notesOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+              </CardTitle>
+            </CardHeader>
+            {notesOpen && <CardContent className="space-y-3">
               <Textarea value={notes} onChange={e=>setNotes(e.target.value)}
                 placeholder="Type your notes here..." rows={4} className="resize-none"/>
               <div className="flex gap-2">
@@ -322,7 +651,7 @@ export default function LearnPage() {
                   ))}
                 </div>
               )}
-            </CardContent>
+            </CardContent>}
           </Card>
         </TabsContent>
 
@@ -372,8 +701,11 @@ export default function LearnPage() {
                   <div>
                     <label className="text-xs font-semibold text-slate-600 mb-1 block">Topic *</label>
                     <input value={quizTopic} onChange={e=>setQuizTopic(e.target.value)}
-                      placeholder="e.g. Fractions"
+                      placeholder="e.g. Fractions" list="quiz-topics"
                       className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-purple-500"/>
+                    <datalist id="quiz-topics">
+                      {quizStrands.map(s=><option key={s.id} value={s.name}/>)}
+                    </datalist>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -465,14 +797,23 @@ export default function LearnPage() {
                             onChange={e=>!submitted&&setAnswers(p=>({...p,[qIndex]:e.target.value}))}
                             placeholder="Write your answer here..." rows={3} className="resize-none"/>
                           {submitted && (
-                            <div>
+                            <div className="space-y-2">
+                              {openFeedback[qIndex] && (
+                                <div className={`p-3 rounded-xl text-sm ${openFeedback[qIndex].isCorrect ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                                  <div className="flex items-center gap-2 font-semibold mb-1">
+                                    {openFeedback[qIndex].isCorrect ? <CheckCircle className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-red-600" />}
+                                    {openFeedback[qIndex].isCorrect ? 'Correct!' : 'Not quite'}
+                                  </div>
+                                  <p className="text-xs">{openFeedback[qIndex].feedback}</p>
+                                </div>
+                              )}
                               <button onClick={()=>setShowAns(p=>({...p,[qIndex]:!p[qIndex]}))}
                                 className="text-xs text-blue-600 hover:underline">
                                 {showAns[qIndex]?'Hide':'Show'} model answer
                               </button>
                               {showAns[qIndex] && (
-                                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
-                                  {q.model_answer}
+                                <div className="mt-1 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
+                                  <span className="font-bold">Model answer: </span>{q.model_answer}
                                 </div>
                               )}
                             </div>
@@ -536,7 +877,7 @@ export default function LearnPage() {
                   </div>
                   {selAssn.content && (
                     <div className="max-h-64 overflow-y-auto p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                      <MarkdownRenderer content={selAssn.content} />
+                      <MarkdownRenderer content={selAssn.content.replace(/## Answer Key[\s\S]*/i, '').replace(/📝 ANSWER KEY[\s\S]*/i, '')} />
                     </div>
                   )}
 
@@ -617,96 +958,15 @@ export default function LearnPage() {
         </TabsContent>
 
         {/* ── AI TUTOR TAB ─────────────────────────────────────── */}
-        <TabsContent value="tutor" className="mt-4">
-          <Card className="border-0 shadow-xl overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-blue-600 to-purple-600 flex-shrink-0">
-              <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center">
-                <Brain className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <p className="text-white font-bold text-sm leading-tight">AI Tutor</p>
-                <p className="text-blue-100 text-xs">Ask anything · Get instant explanations</p>
-              </div>
-            </div>
-
-            {/* Messages — fixed height, internal scroll only */}
-            <div className="flex flex-col" style={{ height: '60vh' }}>
-              <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4 space-y-4 min-h-0">
-                {chat.map((m, i) => (
-                  <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    {m.role === 'ai' && (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
-                        <Brain className="h-4 w-4 text-white" />
-                      </div>
-                    )}
-                    <div className={`max-w-[80%] flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
-                      <div className={`rounded-2xl shadow-sm overflow-hidden ${
-                        m.role === 'user'
-                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-sm px-4 py-3'
-                          : 'bg-white border border-slate-200 rounded-bl-sm'
-                      }`}>
-                        {m.role === 'user'
-                          ? <p className="text-sm leading-relaxed">{m.content}</p>
-                          : <div className="px-4 py-3"><MarkdownRenderer content={m.content} /></div>
-                        }
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
-                {chatLoading && (
-                  <div className="flex items-end gap-2 justify-start">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
-                      <Brain className="h-4 w-4 text-white" />
-                    </div>
-                    <div className="bg-white border border-slate-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                      <div className="flex items-center gap-1.5">
-                        {[0, 1, 2].map(i => (
-                          <div key={i} className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
-                        ))}
-                        <span className="text-xs text-slate-400 ml-2">AI is thinking…</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Quick prompts */}
-              <div className="flex gap-2 px-4 py-2 bg-white border-t border-slate-100 overflow-x-auto flex-shrink-0">
-                {['Explain simply', 'Practice questions', 'Key formulas', 'Quiz me!', 'Summarise topic'].map(p => (
-                  <button key={p} onClick={() => setChatInput(p)}
-                    className="text-xs whitespace-nowrap px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full hover:bg-blue-100 transition-colors font-medium flex-shrink-0">
-                    {p}
-                  </button>
-                ))}
-              </div>
-
-              {/* Input */}
-              <div className="px-4 py-3 bg-white border-t border-slate-200 flex-shrink-0">
-                <div className="flex items-end gap-2 bg-gray-100 rounded-2xl px-4 py-2">
-                  <Textarea
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    rows={1}
-                    placeholder="Ask anything — explain, practice, quiz me…"
-                    className="flex-1 resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent text-sm p-0 min-h-[24px] max-h-28"
-                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }}
-                  />
-                  <Button
-                    onClick={sendChat}
-                    disabled={!chatInput.trim() || chatLoading}
-                    size="sm"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 rounded-xl h-9 w-9 p-0 shrink-0 disabled:opacity-40"
-                  >
-                    {chatLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <p className="text-[10px] text-slate-400 text-center mt-1.5">Enter to send · Shift+Enter for new line</p>
-              </div>
-            </div>
-          </Card>
+        <TabsContent value="tutor" forceMount className={`mt-4 h-[70vh] ${tab !== 'tutor' ? 'hidden' : ''}`}>
+          <ChatContainer
+            onSend={handleAITutorChat}
+            headerTitle="AI Tutor"
+            headerSubtitle="Ask anything · Get instant explanations"
+            quickPrompts={['Explain simply', 'Practice questions', 'Key formulas', 'Quiz me!', 'Summarise topic']}
+            placeholder="Ask anything — explain, practice, quiz me…"
+            icon="brain"
+          />
         </TabsContent>
       </Tabs>
     </div>

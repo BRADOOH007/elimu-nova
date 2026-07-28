@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
+import { confirmToast } from '@/lib/confirm-toast'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -174,7 +176,7 @@ export default function ResourcesPage() {
   }
 
   const handleDeleteResource = async (resourceId: string) => {
-    if (!confirm('Delete this resource? This cannot be undone.')) return
+    if (!(await confirmToast({ title: 'Delete this resource?', description: 'This cannot be undone.', confirmLabel: 'Delete' }))) return
     try {
       const response = await fetch(`/api/student/resources/${resourceId}`, {
         method: 'DELETE'
@@ -548,7 +550,7 @@ export default function ResourcesPage() {
               </div>
               <div className="prose max-w-none">
                 <div dangerouslySetInnerHTML={{ 
-                  __html: selectedResource.content.replace(/\n/g, '<br>') 
+                  __html: sanitizeHtml(selectedResource.content.replace(/\n/g, '<br>')) 
                 }} />
               </div>
               {selectedResource.metadata && (

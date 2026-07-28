@@ -1,57 +1,50 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
+  const { strengths, interests, grade, skills, goals } = await request.json()
 
-    const { strengths, interests, grade, skills, goals } = await request.json()
-
-    // Gather student's real academic data
-    const student = await prisma.student.findUnique({
-      where: { userId: session.user.id },
-      include: {
-        studentProgress: { orderBy: { masteryScore: 'desc' }, take: 10 },
-        submissions: {
-          include: { assignment: true },
-          where: { status: 'GRADED' },
-          orderBy: { submittedAt: 'desc' },
-          take: 20,
-        },
-        analytics: true,
+  // Gather student's real academic data
+  const student = await prisma.student.findUnique({
+    where: { userId: user.id },
+    include: {
+      studentProgress: { orderBy: { masteryScore: 'desc' }, take: 10 },
+      submissions: {
+        include: { assignment: true },
+        where: { status: 'GRADED' },
+        orderBy: { submittedAt: 'desc' },
+        take: 20,
       },
-    })
+      analytics: true,
+    },
+  })
 
-    // Build subject performance from real data
-    const subjectScores: Record<string, number[]> = {}
-    student?.submissions?.forEach((s: any) => {
-      const subject = s.assignment?.subject
-      if (subject && s.grade != null) {
-        if (!subjectScores[subject]) subjectScores[subject] = []
-        subjectScores[subject].push(s.grade)
-      }
-    })
+  // Build subject performance from real data
+  const subjectScores: Record<string, number[]> = {}
+  student?.submissions?.forEach((s: any) => {
+    const subject = s.assignment?.subject
+    if (subject && s.grade != null) {
+      if (!subjectScores[subject]) subjectScores[subject] = []
+      subjectScores[subject].push(s.grade)
+    }
+  })
 
-    const subjectAverages = Object.entries(subjectScores)
-      .map(([subject, scores]) => ({
-        subject,
-        avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-      }))
-      .sort((a, b) => b.avg - a.avg)
+  const subjectAverages = Object.entries(subjectScores)
+    .map(([subject, scores]) => ({
+      subject,
+      avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+    }))
+    .sort((a, b) => b.avg - a.avg)
 
-    const topMastery = student?.studentProgress
-      ?.filter((p: any) => p.subject !== 'General' && p.masteryScore > 0)
-      ?.slice(0, 5)
-      ?.map((p: any) => `${p.subject} (${p.masteryScore}% mastery)`)
-      ?.join(', ') || 'Not enough data yet'
+  const topMastery = student?.studentProgress
+    ?.filter((p: any) => p.subject !== 'General' && p.masteryScore > 0)
+    ?.slice(0, 5)
+    ?.map((p: any) => `${p.subject} (${p.masteryScore}% mastery)`)
+    ?.join(', ') || 'Not enough data yet'
 
-    const prompt = `You are a career guidance counsellor for a student in ${grade || 'secondary school'}.
+  const prompt = `You are a career guidance counsellor for a student in ${grade || 'secondary school'}.
 Based on their profile, provide personalised career pathway recommendations.
 
 Student Profile:
@@ -77,30 +70,26 @@ Return ONLY valid JSON (no markdown):
 }
 Provide exactly 4 top careers and 3 subject recommendations.`
 
-    const raw = await OpenAIService.generateText(
-      [{ role: 'user', content: prompt }],
-      { maxTokens: 1200, temperature: 0.7 }
-    )
+  const raw = await OpenAIService.generateText(
+    [{ role: 'user', content: prompt }],
+    { maxTokens: 1200, temperature: 0.7 }
+  )
 
-    // Extract JSON
-    const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
-    let result: any = {}
-    if (start !== -1 && end > start) {
-      try { result = JSON.parse(raw.slice(start, end + 1)) } catch {}
-    }
-
-    return NextResponse.json({
-      ...result,
-      studentProfile: {
-        grade,
-        strengths,
-        interests,
-        topSubjects:  subjectAverages.slice(0, 5),
-        averageGrade: student?.analytics?.averageGrade,
-      },
-    })
-  } catch (error) {
-    console.error('[CAREER_API]', error)
-    return NextResponse.json({ error: 'Failed to generate career guidance' }, { status: 500 })
+  // Extract JSON
+  const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+  let result: any = {}
+  if (start !== -1 && end > start) {
+    try { result = JSON.parse(raw.slice(start, end + 1)) } catch (e) { console.warn('[Career] AI JSON parse failed:', e) }
   }
-}
+
+  return NextResponse.json({
+    ...result,
+    studentProfile: {
+      grade,
+      strengths,
+      interests,
+      topSubjects:  subjectAverages.slice(0, 5),
+      averageGrade: student?.analytics?.averageGrade,
+    },
+  })
+})

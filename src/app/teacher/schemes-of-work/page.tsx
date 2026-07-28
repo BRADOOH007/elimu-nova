@@ -28,7 +28,8 @@ import {
   Clock,
   CheckCircle,
   Target,
-  BookOpen
+  BookOpen,
+  BarChart3
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -45,6 +46,7 @@ import {
 } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import SchemeOfWorkModal from '@/components/modals/scheme-of-work-modal'
+import CoverageTracker from '@/components/teacher/coverage-tracker'
 
 interface Topic {
   id: string
@@ -84,6 +86,7 @@ interface SchemeOfWork {
     topics: number;
     sharedWith?: number;
   };
+  sharedByTeacher?: string;
 }
 
 export default function SchemesOfWorkPage() {
@@ -98,6 +101,7 @@ export default function SchemesOfWorkPage() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [schemeOfWorkToShare, setSchemeOfWorkToShare] = useState<SchemeOfWork | null>(null)
   const [schemeToShare, setSchemeToShare] = useState<SchemeOfWork | null>(null)
+  const [showCoverage, setShowCoverage] = useState(false)
   const [students, setStudents] = useState<any[]>([])
   const [classes, setClasses] = useState<any[]>([])
   const [selectedStudents, setSelectedStudents] = useState<string[]>([])
@@ -116,13 +120,20 @@ export default function SchemesOfWorkPage() {
   const [downloading, setDownloading] = useState<'pdf' | 'word' | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editingScheme, setEditingScheme] = useState<SchemeOfWork | null>(null)
+  const [activeTab, setActiveTab] = useState<'mine' | 'learning-area'>('mine')
   const router = useRouter()
 
   // Fetch schemes of work on component mount
   useEffect(() => {
     const fetchSchemesOfWork = async () => {
       try {
-        const response = await fetch('/api/schemes-of-work')
+        const params = new URLSearchParams()
+        if (activeTab === 'learning-area') params.set('view', 'learning-area')
+        if (subjectFilter) params.set('subject', subjectFilter)
+        if (gradeFilter) params.set('grade', gradeFilter)
+        if (searchTerm) params.set('search', searchTerm)
+        const url = `/api/schemes-of-work${params.toString() ? '?' + params.toString() : ''}`
+        const response = await fetch(url)
         if (response.ok) {
           const data = await response.json()
           setSchemesOfWork(data.schemesOfWork || [])
@@ -136,7 +147,7 @@ export default function SchemesOfWorkPage() {
       }
     }
     fetchSchemesOfWork()
-  }, [])
+  }, [activeTab, subjectFilter, gradeFilter, searchTerm])
 
   // Fetch students and classes for sharing
   useEffect(() => {
@@ -146,14 +157,14 @@ export default function SchemesOfWorkPage() {
         const studentsResponse = await fetch('/api/teacher/students')
         if (studentsResponse.ok) {
           const studentsData = await studentsResponse.json()
-          setStudents(studentsData.students || [])
+          setStudents(studentsData.data || [])
         }
 
         // Fetch classes
         const classesResponse = await fetch('/api/teacher/classes')
         if (classesResponse.ok) {
           const classesData = await classesResponse.json()
-          setClasses(classesData.classes || [])
+          setClasses(classesData.data || [])
         }
       } catch (error) {
         console.error('Error fetching students and classes:', error)
@@ -262,7 +273,7 @@ export default function SchemesOfWorkPage() {
       if (response.ok) {
         const newSchemeOfWork = await response.json()
         setSchemesOfWork(prev => [newSchemeOfWork, ...prev])
-        toast({ title:'✅ Scheme created!', variant:'success' as any })
+        toast({ title:'✅ Scheme created!', variant:'success' })
         return true
       } else {
         const errorData = await response.json()
@@ -292,7 +303,7 @@ export default function SchemesOfWorkPage() {
         setSchemesOfWork(prev => prev.map(scheme => 
           scheme.id === editingScheme.id ? updatedSchemeOfWork : scheme
         ))
-        toast({ title:'✅ Scheme updated!', variant:'success' as any })
+        toast({ title:'✅ Scheme updated!', variant:'success' })
         return true
       } else {
         const errorData = await response.json()
@@ -374,7 +385,7 @@ export default function SchemesOfWorkPage() {
           topics: [''],
           objectives: ['']
         })
-        toast({ title:'✅ Scheme saved!', variant:'success' as any })
+        toast({ title:'✅ Scheme saved!', variant:'success' })
       } else {
         toast({ variant:'destructive', title:'Failed to save scheme' })
       }
@@ -418,8 +429,11 @@ export default function SchemesOfWorkPage() {
   }
 
   const handleDownloadScheme = async (format: 'pdf' | 'word', schemeOfWork: SchemeOfWork) => {
-    // Use the new KICD-format export (opens print view in new tab)
-    window.open(`/api/export/scheme-pdf?id=${schemeOfWork.id}`, '_blank')
+    if (format === 'word') {
+      window.open(`/api/export/scheme-of-work?schemeOfWorkId=${schemeOfWork.id}&format=word`, '_blank')
+    } else {
+      window.open(`/api/export/scheme-pdf?id=${schemeOfWork.id}`, '_blank')
+    }
   }
 
   const handleShare = (schemeOfWork: SchemeOfWork) => {
@@ -489,21 +503,49 @@ export default function SchemesOfWorkPage() {
 
   return (
     <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">Schemes of Work</span>
-            </h1>
-            <p className="text-gray-600">Generate and manage AI-powered schemes of work for your classes</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <DocumentUploadButton docType="scheme-of-work" />
-            <DocumentUploadButton docType="curriculum" label="Upload Curriculum" />
-            <Button onClick={() => router.push('/teacher/schemes-of-work/create')} className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700">
-              <Plus className="mr-2 h-4 w-4" />
-              Create New
-            </Button>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            <span className="bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">Schemes of Work</span>
+          </h1>
+          <p className="text-gray-600">Generate and manage AI-powered schemes of work for your classes</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <DocumentUploadButton docType="scheme-of-work" />
+          <Button variant="outline" onClick={() => setShowCoverage(true)} className="border-green-300 text-green-700 hover:bg-green-50 text-xs sm:text-sm">
+            <BarChart3 className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Coverage</span>
+          </Button>
+          <Button onClick={() => router.push('/teacher/schemes-of-work/create')} className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-xs sm:text-sm">
+            <Plus className="h-4 w-4 mr-1" />
+            <span className="hidden sm:inline">Create New</span>
+          </Button>
+        </div>
+      </div>
+
+        {/* Tabs: My Schemes / Learning Area */}
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => { setActiveTab('mine'); setLoading(true) }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'mine'
+                ? 'border-green-600 text-green-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            My Schemes
+          </button>
+          <button
+            onClick={() => { setActiveTab('learning-area'); setLoading(true) }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'learning-area'
+                ? 'border-blue-600 text-blue-700'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Users className="inline h-4 w-4 mr-1" />
+            Learning Area (Other Teachers)
+          </button>
         </div>
 
         {/* Filters */}
@@ -609,24 +651,33 @@ export default function SchemesOfWorkPage() {
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditScheme(schemeOfWork)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
+                        {activeTab === 'learning-area' ? (
+                          <DropdownMenuItem onClick={() => router.push(`/teacher/schemes-of-work/create?template=${schemeOfWork.id}`)}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Use as Template
+                          </DropdownMenuItem>
+                        ) : (
+                          <>
+                            <DropdownMenuItem onClick={() => handleEditScheme(schemeOfWork)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleShare(schemeOfWork)}>
+                              <Share2 className="mr-2 h-4 w-4" />
+                              Share with Students
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteScheme(schemeOfWork.id)}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuItem onClick={() => handleDownloadScheme('pdf', schemeOfWork)}>
                           <Download className="mr-2 h-4 w-4" />
                           Download (Print-ready)
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleShare(schemeOfWork)}>
-                          <Share2 className="mr-2 h-4 w-4" />
-                          Share with Students
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDeleteScheme(schemeOfWork.id)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -662,6 +713,12 @@ export default function SchemesOfWorkPage() {
                         <span>Shared with {schemeOfWork._count.sharedWith} students</span>
                       </div>
                     )}
+                    {schemeOfWork.sharedByTeacher && (
+                      <div className="flex items-center text-sm text-blue-600">
+                        <Users className="h-4 w-4 mr-2" />
+                        <span>by {schemeOfWork.sharedByTeacher}</span>
+                      </div>
+                    )}
                     {schemeOfWork.topics && schemeOfWork.topics.length > 0 && (
                       <div className="flex items-center text-sm text-gray-600">
                         <Target className="h-4 w-4 mr-2" />
@@ -676,14 +733,25 @@ export default function SchemesOfWorkPage() {
                         <Eye className="w-4 h-4 mr-2" />
                         View
                       </Button>
-                      <Button
-                        onClick={() => handleShare(schemeOfWork)}
-                        variant="outline"
-                        className="bg-white/70 hover:bg-white/90"
-                      >
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share
-                      </Button>
+                      {activeTab === 'learning-area' ? (
+                        <Button
+                          onClick={() => router.push(`/teacher/schemes-of-work/create?template=${schemeOfWork.id}`)}
+                          variant="outline"
+                          className="bg-white/70 hover:bg-white/90"
+                        >
+                          <FileText className="w-4 h-4 mr-2" />
+                          Use as Template
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => handleShare(schemeOfWork)}
+                          variant="outline"
+                          className="bg-white/70 hover:bg-white/90"
+                        >
+                          <Share2 className="w-4 h-4 mr-2" />
+                          Share
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -851,7 +919,12 @@ export default function SchemesOfWorkPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Create Scheme Modal removed; navigation now goes to dedicated create page */}
+        {/* Coverage Tracker Modal */}
+        <Dialog open={showCoverage} onOpenChange={setShowCoverage}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CoverageTracker onClose={() => setShowCoverage(false)} />
+          </DialogContent>
+        </Dialog>
 
         {/* Edit Scheme Modal */}
         <SchemeOfWorkModal

@@ -1,202 +1,162 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
+  const { id } = params
 
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const subscription = await prisma.subscription.findUnique({
-      where: { id },
-      include: {
-        school: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            phone: true,
-            email: true,
-            schoolAdmin: {
-              include: {
-                user: {
-                  select: {
-                    firstName: true,
-                    lastName: true,
-                    email: true
-                  }
-                }
+  const include = {
+    school: {
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        phone: true,
+        email: true,
+        schoolAdmin: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true
               }
             }
           }
-        },
-        package: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            duration: true,
-            features: true
-          }
         }
       }
-    })
-
-    if (!subscription) {
-      return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
+    },
+    package: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        duration: true,
+        features: true
+      }
+    },
+    user: {
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true
+      }
     }
+  } as const
 
-    return NextResponse.json(subscription)
-  } catch (error) {
-    console.error('Error fetching subscription:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  const subscription = await prisma.subscription.findUnique({
+    where: { id },
+    include
+  })
+
+  if (!subscription) {
+    return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
   }
-}
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return NextResponse.json(subscription)
+})
 
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
+  const { id } = params
+  const body = await req.json()
+  const {
+    schoolId,
+    packageId,
+    startDate,
+    endDate,
+    amount,
+    status,
+    type,
+    paymentMethod,
+    transactionId,
+    notes
+  } = body
 
-    const body = await request.json()
-    const { 
-      schoolId, 
-      packageId, 
-      startDate, 
-      endDate,
-      amount,
-      status,
-      type,
-      paymentMethod,
-      transactionId,
-      notes
-    } = body
+  const existingSubscription = await prisma.subscription.findUnique({
+    where: { id }
+  })
 
-    // Check if subscription exists
-    const existingSubscription = await prisma.subscription.findUnique({
-      where: { id }
-    })
+  if (!existingSubscription) {
+    return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
+  }
 
-    if (!existingSubscription) {
-      return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
-    }
-
-    // Update subscription
-    const subscription = await prisma.subscription.update({
-      where: { id },
-      data: {
-        ...(schoolId && { schoolId }),
-        ...(packageId && { packageId }),
-        ...(startDate && { startDate: new Date(startDate) }),
-        ...(endDate && { endDate: new Date(endDate) }),
-        ...(amount && { amount }),
-        ...(status && { status }),
-        ...(type && { type }),
-        ...(paymentMethod && { paymentMethod }),
-        ...(transactionId && { transactionId }),
-        ...(notes !== undefined && { notes })
-      },
-      include: {
-        school: {
-          select: {
-            id: true,
-            name: true,
-            address: true,
-            phone: true,
-            email: true,
-            schoolAdmin: {
-              include: {
-                user: {
-                  select: {
-                    firstName: true,
-                    lastName: true,
-                    email: true
-                  }
-                }
+  const include = {
+    school: {
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        phone: true,
+        email: true,
+        schoolAdmin: {
+          include: {
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true
               }
             }
           }
-        },
-        package: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            duration: true,
-            features: true
-          }
         }
       }
-    })
+    },
+    package: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        price: true,
+        duration: true,
+        features: true
+      }
+    },
+    user: {
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true
+      }
+    }
+  } as const
 
-    return NextResponse.json(subscription)
-  } catch (error) {
-    console.error('Error updating subscription:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  const subscription = await prisma.subscription.update({
+    where: { id },
+    data: {
+      ...(schoolId && { schoolId }),
+      ...(packageId && { packageId }),
+      ...(startDate && { startDate: new Date(startDate) }),
+      ...(endDate && { endDate: new Date(endDate) }),
+      ...(amount && { amount }),
+      ...(status && { status }),
+      ...(type && { type }),
+      ...(paymentMethod && { paymentMethod }),
+      ...(transactionId && { transactionId }),
+      ...(notes !== undefined && { notes })
+    },
+    include
+  })
+
+  return NextResponse.json(subscription)
+})
+
+export const DELETE = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
+  const { id } = params
+
+  const existingSubscription = await prisma.subscription.findUnique({
+    where: { id }
+  })
+
+  if (!existingSubscription) {
+    return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
   }
-}
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  await prisma.subscription.delete({
+    where: { id }
+  })
 
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Check if subscription exists
-    const existingSubscription = await prisma.subscription.findUnique({
-      where: { id }
-    })
-
-    if (!existingSubscription) {
-      return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
-    }
-
-    // Delete subscription
-    await prisma.subscription.delete({
-      where: { id }
-    })
-
-    return NextResponse.json({ message: 'Subscription deleted successfully' })
-  } catch (error) {
-    console.error('Error deleting subscription:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+  return NextResponse.json({ message: 'Subscription deleted successfully' })
+})

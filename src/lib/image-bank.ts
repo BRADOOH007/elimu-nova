@@ -270,7 +270,7 @@ export class ImageBank {
         const meta = JSON.parse(img.metadata)
         if (meta.subject) subjects.add(meta.subject)
         if (meta.grade) grades.add(meta.grade)
-      } catch { }
+      } catch (e) { console.warn('[ImageBank] Failed to parse metadata:', e) }
     }
 
     return {
@@ -301,5 +301,5 @@ export class ImageBank {
 }
 
 function tryParseJSON(s: string): any {
-  try { return JSON.parse(s) } catch { return {} }
+  try { return JSON.parse(s) } catch (e) { console.warn('[ImageBank] tryParseJSON failed:', e); return {} }
 }

@@ -35,6 +35,7 @@ import {
   Filter
 } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 import CreateScheduleModal from "@/components/modals/create-schedule-modal"
 import EditScheduleModal from "@/components/modals/edit-schedule-modal"
 
@@ -187,7 +188,7 @@ export default function SchedulePage() {
   }
 
   const handleDeleteEvent = async (eventId: string) => {
-    if (!confirm('Delete this schedule item? This cannot be undone.')) return
+    if (!(await confirmToast({ title: 'Delete this schedule item? This cannot be undone.' }))) return
 
     try {
       const response = await fetch(`/api/teacher/schedules/${eventId}`, {

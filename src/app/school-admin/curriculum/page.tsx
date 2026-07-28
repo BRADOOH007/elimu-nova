@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, BookOpen, Plus, Search, Edit, Trash2, ChevronRight, ChevronDown, GraduationCap } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface Curriculum {
   id: string; name: string; type: string; grade: string
@@ -45,7 +46,7 @@ export default function CurriculumManagementPage() {
     try {
       const res = await fetch('/api/curriculums')
       if (res.ok) setCurriculums((await res.json()).curriculums || (await res.json()) || [])
-    } catch {} finally { setLoading(false) }
+    } catch (e) { console.warn('[SchoolAdminCurriculum] fetchCurriculums error:', e) } finally { setLoading(false) }
   }
 
   const handleCreate = async () => {
@@ -58,16 +59,16 @@ export default function CurriculumManagementPage() {
         body: JSON.stringify({ name, type, grade, description })
       })
       if (res.ok) { toast({ title: 'Curriculum created' }); setShowDialog(false); fetchCurriculums(); setName(''); setGrade(''); setDescription('') }
-      else toast({ title: 'Error', variant: 'destructive' })
-    } catch {} finally { setSaving(false) }
+      else toast({ title: 'Error' })
+    } catch (e) { console.warn('[SchoolAdminCurriculum] handleCreate error:', e) } finally { setSaving(false) }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this curriculum?')) return
+    if (!(await confirmToast({ title: 'Delete this curriculum?' }))) return
     try {
       await fetch(`/api/curriculums/${id}`, { method: 'DELETE' })
       toast({ title: 'Deleted' }); fetchCurriculums()
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminCurriculum] handleDelete error:', e) }
   }
 
   const filtered = curriculums.filter(c =>
@@ -90,7 +91,29 @@ export default function CurriculumManagementPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin" /></div>
+        <div className="space-y-3 animate-pulse">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="border-0 shadow">
+              <CardContent className="p-5 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2">
+                    <div className="h-5 w-48 bg-slate-200 rounded" />
+                    <div className="h-4 w-32 bg-slate-200 rounded" />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-6 w-16 bg-slate-200 rounded-full" />
+                    <div className="h-6 w-16 bg-slate-200 rounded-full" />
+                  </div>
+                </div>
+                <div className="h-4 w-3/4 bg-slate-200 rounded" />
+                <div className="flex gap-2">
+                  <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                  <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-gray-500">No curricula found</CardContent></Card>
       ) : (

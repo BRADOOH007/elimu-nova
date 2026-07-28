@@ -14,44 +14,49 @@ const BloomsTab    = dynamic(() => import('@/components/ai/blooms-quiz-generator
 
 export default function AIToolsPage() {
   return (
-    <div className="h-[calc(100dvh-112px)] max-w-7xl mx-auto flex flex-col overflow-hidden">
-      <div className="mb-6 flex-shrink-0">
-        <h1 className="text-3xl font-bold text-gray-900">AI Tools</h1>
-        <p className="text-gray-600 mt-1">All AI-powered teaching tools in one place</p>
-      </div>
-
+    <div className="h-full max-w-7xl mx-auto flex flex-col overflow-hidden">
       <Tabs defaultValue="hope" className="w-full flex-1 flex flex-col overflow-hidden min-h-0">
-        <TabsList className="flex flex-wrap gap-1 h-auto mb-6 bg-gray-100 p-1 rounded-xl flex-shrink-0">
-          <TabsTrigger value="hope">
-            <Brain className="w-4 h-4 mr-2" />Hope AI
-          </TabsTrigger>
-          <TabsTrigger value="powerpoint">
-            <MonitorPlay className="w-4 h-4 mr-2" />PowerPoint
-          </TabsTrigger>
-          <TabsTrigger value="exams">
-            <BookOpen className="w-4 h-4 mr-2" />Exams
-          </TabsTrigger>
-          <TabsTrigger value="blooms">
-            <GraduationCap className="w-4 h-4 mr-2" />Bloom's Quiz
-          </TabsTrigger>
-          <TabsTrigger value="diagrams">
-            <Microscope className="w-4 h-4 mr-2" />Diagrams
-          </TabsTrigger>
-          <TabsTrigger value="images">
-            <Image className="w-4 h-4 mr-2" />Images
-          </TabsTrigger>
-          <TabsTrigger value="gallery">
-            <Images className="w-4 h-4 mr-2" />Gallery
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex-shrink-0 bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="flex items-center justify-between px-1 pt-1">
+            <div className="flex items-center gap-2 py-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-sm">
+                <Brain className="w-4 h-4 text-white" />
+              </div>
+              <h1 className="text-lg font-bold text-gray-900">AI Tools</h1>
+            </div>
+          </div>
+          <TabsList className="w-full justify-start gap-0 h-auto bg-transparent p-0 rounded-none border-0">
+            <TabsTrigger value="hope" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
+              <Brain className="w-3.5 h-3.5 mr-1.5" />Hope AI
+            </TabsTrigger>
+            <TabsTrigger value="powerpoint" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
+              <MonitorPlay className="w-3.5 h-3.5 mr-1.5" />PowerPoint
+            </TabsTrigger>
+            <TabsTrigger value="exams" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
+              <BookOpen className="w-3.5 h-3.5 mr-1.5" />Exams
+            </TabsTrigger>
+            <TabsTrigger value="blooms" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
+              <GraduationCap className="w-3.5 h-3.5 mr-1.5" />Bloom's
+            </TabsTrigger>
+            <TabsTrigger value="diagrams" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
+              <Microscope className="w-3.5 h-3.5 mr-1.5" />Diagrams
+            </TabsTrigger>
+            <TabsTrigger value="images" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
+              <Image className="w-3.5 h-3.5 mr-1.5" />Images
+            </TabsTrigger>
+            <TabsTrigger value="gallery" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
+              <Images className="w-3.5 h-3.5 mr-1.5" />Gallery
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="hope" className="flex-1 flex flex-col overflow-hidden min-h-0"><HopeAITab /></TabsContent>
-        <TabsContent value="powerpoint" className="flex-1 flex flex-col overflow-hidden min-h-0"><PowerPtTab /></TabsContent>
-        <TabsContent value="exams" className="flex-1 flex flex-col overflow-hidden min-h-0"><AIExamGenerator /></TabsContent>
-        <TabsContent value="blooms" className="flex-1 flex flex-col overflow-hidden min-h-0"><BloomsTab /></TabsContent>
-        <TabsContent value="diagrams" className="flex-1 flex flex-col overflow-hidden min-h-0"><DiagramGenerator /></TabsContent>
-        <TabsContent value="images" className="flex-1 flex flex-col overflow-hidden min-h-0"><ImageGenerator /></TabsContent>
-        <TabsContent value="gallery" className="flex-1 flex flex-col overflow-hidden min-h-0"><ImageGallery /></TabsContent>
+        <TabsContent value="hope" className="flex-1 flex flex-col overflow-hidden min-h-0 mt-0 pt-4"><HopeAITab /></TabsContent>
+        <TabsContent value="powerpoint" className="flex-1 flex flex-col overflow-y-auto min-h-0 mt-0 pt-4"><PowerPtTab /></TabsContent>
+        <TabsContent value="exams" className="flex-1 flex flex-col overflow-y-auto min-h-0 mt-0 pt-4"><AIExamGenerator /></TabsContent>
+        <TabsContent value="blooms" className="flex-1 flex flex-col overflow-y-auto min-h-0 mt-0 pt-4"><BloomsTab /></TabsContent>
+        <TabsContent value="diagrams" className="flex-1 flex flex-col overflow-y-auto min-h-0 mt-0 pt-4"><DiagramGenerator /></TabsContent>
+        <TabsContent value="images" className="flex-1 flex flex-col overflow-y-auto min-h-0 mt-0 pt-4"><ImageGenerator /></TabsContent>
+        <TabsContent value="gallery" className="flex-1 flex flex-col overflow-y-auto min-h-0 mt-0 pt-4"><ImageGallery /></TabsContent>
       </Tabs>
     </div>
   )

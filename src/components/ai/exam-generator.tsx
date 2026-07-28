@@ -59,7 +59,7 @@ export function AIExamGenerator() {
 
   const handleGenerate = async () => {
     if (!examData.examTitle || !examData.subject || !examData.gradeLevel) {
-      alert('Please fill in all required fields');
+      toast({ title: 'Please fill in all required fields' });
       return;
     }
 
@@ -77,11 +77,11 @@ export function AIExamGenerator() {
         setGeneratedExam(data.examContent);
       } else {
         const errorData = await response.json();
-        alert(errorData.error || 'Failed to generate exam');
+        toast({ title: errorData.error || 'Failed to generate exam', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Error generating exam:', error);
-      alert('An error occurred while generating the exam');
+      toast({ title: 'An error occurred while generating the exam', variant: 'destructive' });
     } finally {
       setIsGenerating(false);
     }

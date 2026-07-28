@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 import { 
   Search,
   Plus,
@@ -287,7 +288,7 @@ export default function SchoolAdminSettingsPage() {
 
   // Handle delete setting
   const handleDeleteSetting = async (setting: SchoolSetting) => {
-    if (!confirm('Are you sure you want to delete this setting?')) return
+    if (!(await confirmToast({ title: 'Are you sure you want to delete this setting?' }))) return
 
     try {
       const response = await fetch(`/api/school-admin/settings/${setting.id}`, {

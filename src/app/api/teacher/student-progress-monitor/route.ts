@@ -1,20 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma, withRetry } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 // Student progress monitor — fixed 2024
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     // Get teacher data
     const teacher = await withRetry(() => prisma.teacher.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         user: true,
         students: {
@@ -176,4 +169,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

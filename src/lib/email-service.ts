@@ -1,6 +1,6 @@
 import { readFileSync } from 'fs'
 import { join } from 'path'
-// @ts-expect-error - handlebars types not installed
+// @ts-ignore - handlebars types not installed
 import Handlebars from 'handlebars'
 import nodemailer from 'nodemailer'
 import { prisma } from './prisma'
@@ -34,7 +34,8 @@ async function getSmtpConfig(): Promise<SmtpConfig> {
       pass: map.get('smtp_pass') || process.env.SMTP_PASS || '',
       from: map.get('smtp_from') || process.env.SMTP_FROM || 'noreply@elimunova.com',
     }
-  } catch {
+  } catch (e) {
+    console.warn('[EmailService] Failed to load SMTP config from DB:', e)
     return {
       host: process.env.SMTP_HOST || '',
       port: parseInt(process.env.SMTP_PORT || '587', 10),

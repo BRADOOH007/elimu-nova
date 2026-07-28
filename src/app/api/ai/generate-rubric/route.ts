@@ -1,16 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+export const POST = route({}, async (request, { user }) => {
     const { 
       title, 
       subject, 
@@ -72,7 +64,7 @@ Format the response as a structured rubric that teachers can use for assessment.
         { id: 'needs-improvement', name: 'Needs Improvement', points: 1, description: 'Below expectations' }
       ],
       aiGeneratedContent: aiResponse,
-      createdBy: session.user.id,
+      createdBy: user.id,
       createdAt: new Date().toISOString()
     }
 
@@ -82,11 +74,4 @@ Format the response as a structured rubric that teachers can use for assessment.
       message: 'Rubric generated successfully'
     })
 
-  } catch (error) {
-    console.error('AI Rubric Generation Error:', error)
-    return NextResponse.json(
-      { error: 'Failed to generate rubric' },
-      { status: 500 }
-    )
-  }
-}
+})

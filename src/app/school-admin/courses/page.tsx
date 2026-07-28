@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, BookOpen, Plus, Search, Edit, Trash2, Users, GraduationCap, Clock, BarChart3 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface Course {
   id: string; title: string; type: string; gradeLevel: string
@@ -35,7 +36,7 @@ export default function SchoolAdminCoursesPage() {
     try {
       const res = await fetch('/api/courses')
       if (res.ok) setCourses((await res.json()).courses || [])
-    } catch {} finally { setLoading(false) }
+    } catch (e) { console.warn('[SchoolAdminCourses] fetchCourses error:', e) } finally { setLoading(false) }
   }
 
   const openCreate = () => {
@@ -51,7 +52,7 @@ export default function SchoolAdminCoursesPage() {
   }
 
   const handleSave = async () => {
-    if (!form.title || !form.gradeLevel) { toast({ title: 'Validation', description: 'Title and grade level are required', variant: 'destructive' }); return }
+    if (!form.title || !form.gradeLevel) { toast({ title: 'Validation', description: 'Title and grade level are required' }); return }
     setSaving(true)
     try {
       const url = editingCourse ? `/api/courses/${editingCourse.id}` : '/api/courses'
@@ -62,13 +63,13 @@ export default function SchoolAdminCoursesPage() {
         body: JSON.stringify(editingCourse ? { ...form } : form)
       })
       if (res.ok) { toast({ title: editingCourse ? 'Course updated' : 'Course created' }); setShowDialog(false); fetchCourses() }
-      else { const e = await res.json(); toast({ title: 'Error', description: e.error, variant: 'destructive' }) }
-    } catch {} finally { setSaving(false) }
+      else { const e = await res.json(); toast({ title: 'Error', description: e.error }) }
+    } catch (e) { console.warn('[SchoolAdminCourses] handleSave error:', e) } finally { setSaving(false) }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this course?')) return
-    try { await fetch(`/api/courses/${id}`, { method: 'DELETE' }); toast({ title: 'Deleted' }); fetchCourses() } catch {}
+    if (!(await confirmToast({ title: 'Delete this course?' }))) return
+    try { await fetch(`/api/courses/${id}`, { method: 'DELETE' }); toast({ title: 'Deleted' }); fetchCourses() } catch (e) { console.warn('[SchoolAdminCourses] handleDelete error:', e) }
   }
 
   const filtered = courses.filter(c => c.title.toLowerCase().includes(search.toLowerCase()) || c.type.includes(search.toUpperCase()))
@@ -89,7 +90,24 @@ export default function SchoolAdminCoursesPage() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin" /></div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="border-0 shadow">
+              <CardContent className="p-5 space-y-3 animate-pulse">
+                <div className="w-10 h-10 bg-slate-200 rounded-lg" />
+                <div className="space-y-2">
+                  <div className="h-5 w-3/4 bg-slate-200 rounded" />
+                  <div className="h-4 w-1/2 bg-slate-200 rounded" />
+                </div>
+                <div className="flex gap-2">
+                  <div className="h-6 w-16 bg-slate-200 rounded-full" />
+                  <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                </div>
+                <div className="h-4 w-2/3 bg-slate-200 rounded" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <Card><CardContent className="p-8 text-center text-gray-500">No courses yet</CardContent></Card>
       ) : (

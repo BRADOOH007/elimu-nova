@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 interface MathRendererProps {
   content: string
@@ -51,7 +52,7 @@ export function MathRenderer({ content, className = '', inline = false }: MathRe
         }
 
         if (ref.current && (window as any).renderMathInElement) {
-          ref.current.innerHTML = content
+          ref.current.innerHTML = sanitizeHtml(content)
           ;(window as any).renderMathInElement(ref.current, {
             delimiters: [
               { left: '$$', right: '$$', display: true  },
@@ -78,7 +79,7 @@ export function MathRenderer({ content, className = '', inline = false }: MathRe
       <span
         ref={ref as any}
         className={`math-content ${className}`}
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     )
   }
@@ -87,7 +88,7 @@ export function MathRenderer({ content, className = '', inline = false }: MathRe
     <div
       ref={ref}
       className={`math-content leading-relaxed ${className}`}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
     />
   )
 }

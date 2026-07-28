@@ -1,24 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
 import { OpenAIService } from '@/lib/openai-service'
 import { stripLatex } from '@/lib/clean-ai-text'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    const identifier = session?.user?.id || getIP(request)
-    const rl = await checkRateLimit(identifier, rateLimitAI)
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: `Rate limit reached. Try again in ${rl.resetInSec}s.` },
-        { status: 429, headers: { 'Retry-After': String(rl.resetInSec) } }
-      )
-    }
-
-    const { message, context, lessonContext, schemeContext, assignmentsContext } = await request.json()
+export const POST = route({ auth: 'none' }, async (request, { user }) => {
+    const { message, context, lessonContext, schemeContext, assignmentsContext, autoTeach, lessonContent, subject, topic, messages } = await request.json()
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -41,16 +28,27 @@ Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan
     } else if (context === 'student_tutor') {
       let contextInfo = ''
 
-      // Fetch shared materials for this student
+      // Fetch personal context for this student
       try {
-        if (session?.user?.role === 'STUDENT') {
+        if (user?.role === 'STUDENT') {
           const student = await prisma.student.findUnique({
-            where: { userId: session.user.id },
-            include: { class: { include: { teacher: true } } }
+            where: { userId: user.id },
+            include: {
+              user: { select: { firstName: true, lastName: true } },
+              class: { include: { teacher: true } }
+            }
           })
 
           if (student) {
-            const [lessonPlans, sharedSchemes] = await Promise.all([
+            // Student name
+            contextInfo += `\n\nYou are talking to ${student.user.firstName} ${student.user.lastName}.`
+            if (student.class) {
+              contextInfo += ` They are in ${student.class.name || 'a class'}`
+              if (student.class.grade) contextInfo += ` (Grade ${student.class.grade})`
+              contextInfo += '.'
+            }
+
+            const [lessonPlans, sharedSchemes, recentSessions] = await Promise.all([
               prisma.lessonPlan.findMany({
                 where: { teacherId: student.class?.teacherId, isShared: true },
                 select: { title: true, subject: true, grade: true },
@@ -60,15 +58,28 @@ Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan
                 where: { studentId: student.id } as any,
                 include: { schemeOfWork: { select: { title: true, subject: true, grade: true } } },
                 take: 3
+              }),
+              prisma.studySession.findMany({
+                where: { studentId: student.id },
+                orderBy: { createdAt: 'desc' },
+                select: { subject: true, topic: true, duration: true },
+                take: 5
               })
             ])
 
             if (lessonPlans.length > 0) {
-              contextInfo += `\n\nYour teacher has shared these lesson plans: ${lessonPlans.map(p => `${p.title} (${p.subject} ${p.grade})`).join(', ')}.`
+              contextInfo += `\n\nTheir teacher has shared these lesson plans: ${lessonPlans.map(p => `${p.title} (${p.subject} ${p.grade})`).join(', ')}.`
             }
             if (sharedSchemes.length > 0) {
-              contextInfo += `\n\nShared schemes of work: ${sharedSchemes.map(s => `${(s as any).schemeOfWork.title} (${(s as any).schemeOfWork.subject})`).join(', ')}.`
+              contextInfo += `\n\nShared schemes of work: ${sharedSchemes.map(s => `${(s as any).schemeOfWork.title} (${(s as any).schemeOfWork.subject})`).join(', ')}`
             }
+            if (recentSessions.length > 0) {
+              const topics = [...new Set(recentSessions.map(s => s.topic).filter(Boolean))].slice(0, 3)
+              const subjects = [...new Set(recentSessions.map(s => s.subject).filter(Boolean))].slice(0, 3)
+              if (subjects.length > 0) contextInfo += `\n\nRecently studying: ${subjects.join(', ')}${topics.length > 0 ? ` — topics: ${topics.join(', ')}` : ''}.`
+            }
+
+            contextInfo += `\n\nUse the student's name naturally in conversation. Adapt your explanations to their level. Reference their recent study topics when relevant. Be encouraging and personal.`
           }
         }
       } catch (e) {
@@ -89,34 +100,58 @@ Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan
         contextInfo += `\n\nACTIVE ASSIGNMENTS: ${names}.`
       }
 
-      systemPrompt = `You are an AI Tutor for ElimuNova AI, helping Kenyan students learn and understand subjects.
+      if (autoTeach && lessonContent) {
+        const truncated = lessonContent.length > 4000 ? lessonContent.slice(0, 4000) + '\n\n[Content truncated]' : lessonContent
+        systemPrompt = `You are an interactive AI Tutor for ElimuNova AI. Your role is to TEACH the following lesson on "${topic}" (${subject}) to a Kenyan student in a conversational, engaging way.
+${contextInfo}
 
-You are patient, encouraging, clear, and interactive. You:
+LESSON CONTENT:
+${truncated}
+
+Teaching rules:
+1. Start by briefly summarising the key points from the notes above (2-3 sentences).
+2. Then ask 5 multiple choice questions ONE AT A TIME. Wait for the student to answer before revealing the correct answer.
+3. After each answer: tell them if they were correct, give a brief explanation, then move to the next question.
+4. Each MCQ must have 4 options labelled A, B, C, D.
+5. Use Kenyan examples and contexts.
+6. Be encouraging — praise correct answers, gently correct wrong ones with a clearer explanation.
+7. After all 5 questions, ask if they want to review any topic again or try more questions.
+8. Stay educational — answer ANY question naturally, then gently guide back to learning`
+        systemPrompt = `You are an AI Tutor for ElimuNova AI, helping Kenyan students learn and understand subjects.
+
+You are warm, patient, and conversational — like a favorite teacher who makes learning fun. You:
+- Answer ANY question the student asks — never say "I can't help with that"
 - Explain concepts simply with local Kenyan examples
-- Ask questions to check understanding  
+- Ask questions to check understanding
 - Give step-by-step guidance for problems
 - Help with homework, exam prep, and study strategies
 - Adapt to the student's level
-- Are friendly and supportive
+- Learn about the student — their name, grade, favourite subjects, struggles — and remember them
+- Tell interesting stories and give real-world examples that make learning memorable
+- If a student goes off-topic, chat with them naturally, then gently guide back to learning
+- Always know the student's grade/level and tailor everything to it
+- Be encouraging, supportive, and make the student feel smart and capable
 ${contextInfo}`
+      }
     }
 
     // ── Call AI through waterfall ─────────────────────────────────────────
+    const chatMessages: { role: 'user' | 'system' | 'assistant'; content: string }[] = [
+      { role: 'system', content: systemPrompt },
+    ]
+    if (Array.isArray(messages)) {
+      for (const m of messages) {
+        const role = m.role === 'ai' ? 'assistant' as const : 'user' as const
+        chatMessages.push({ role, content: m.content })
+      }
+    }
+    chatMessages.push({ role: 'user', content: message })
+
     const response = await OpenAIService.generateText(
-      [
-        { role: 'system', content: systemPrompt },
-        { role: 'user',   content: message },
-      ],
-      { maxTokens: 1000, temperature: 0.7 }
+      chatMessages,
+      { maxTokens: autoTeach ? 1200 : 1000, temperature: autoTeach ? 0.75 : 0.7 }
     )
 
     return NextResponse.json({ response: stripLatex(response) })
 
-  } catch (error) {
-    console.error('Chat API error:', error)
-    return NextResponse.json({
-      response: "I'm having a brief technical issue. Please try again in a moment.",
-      error: 'AI service temporarily unavailable'
-    }, { status: 500 })
-  }
-}
+})

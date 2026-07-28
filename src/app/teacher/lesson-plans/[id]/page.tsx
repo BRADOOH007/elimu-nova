@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, ArrowLeft, BookOpen, Calendar, GraduationCap, FileText, Edit, Trash2, Share2, Download } from "lucide-react"
 import { PrintExportButton } from '@/components/print-export-button'
+import { confirmToast } from '@/lib/confirm-toast'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { useToast } from "@/hooks/use-toast"
 import ImageBankDisplay from '@/components/ai/image-bank-display'
@@ -37,7 +38,7 @@ export default function TeacherLessonPlanDetailPage() {
   }, [id])
 
   const handleDelete = async () => {
-    if (!confirm('Delete this lesson plan?')) return
+    if (!(await confirmToast({ title: 'Delete this lesson plan?' }))) return
     try {
       const res = await fetch(`/api/lesson-plans/${id}`, { method: 'DELETE' })
       if (res.ok) { toast({ title: 'Deleted' }); router.push('/teacher/lesson-plans') }

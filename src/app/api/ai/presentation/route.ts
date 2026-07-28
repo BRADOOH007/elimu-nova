@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 import PptxGenJS from 'pptxgenjs'
 import { writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
@@ -19,12 +18,7 @@ const PresentationRequestSchema = z.object({
   imageSize: z.enum(['512x512', '1024x1024']).default('1024x1024')
 })
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const POST = route({}, async (request, { user }) => {
 
     // Validate input
     const body = await request.json()
@@ -94,11 +88,11 @@ export async function POST(request: NextRequest) {
     console.log('💾 Saved PPTX to:', pptxUrl)
 
     // Step 6: Save metadata to database
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email }
     })
 
-    if (!user) {
+    if (!dbUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
@@ -107,14 +101,14 @@ export async function POST(request: NextRequest) {
     let teacherId = null
 
     const student = await prisma.student.findUnique({
-      where: { userId: user.id }
+      where: { userId: dbUser.id }
     })
 
     if (student) {
       studentId = student.id
     } else {
       const teacher = await prisma.teacher.findUnique({
-        where: { userId: user.id }
+        where: { userId: dbUser.id }
       })
       if (teacher) {
         teacherId = teacher.id
@@ -184,23 +178,7 @@ export async function POST(request: NextRequest) {
       },
       databaseId: savedPresentation.id
     })
-
-  } catch (error) {
-    console.error('❌ Presentation generation error:', error)
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({
-        error: 'Invalid input',
-        details: error.errors
-      }, { status: 400 })
-    }
-
-    return NextResponse.json({
-      error: 'Failed to generate presentation',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
-  }
-}
+})
 
 // Generate slide plan using waterfall AI
 async function generateSlidePlan(params: {

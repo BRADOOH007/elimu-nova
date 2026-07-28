@@ -26,25 +26,23 @@ export async function withCache<T>(
   try {
     const cached = await cache.get(key)
     if (cached) return JSON.parse(cached) as T
-  } catch { /* Redis miss or parse error — fall through */ }
+  } catch (e) { console.warn('[Cache] Redis read miss:', e) }
 
   const data = await fetcher()
   try {
     await cache.set(key, JSON.stringify(data), ttlSeconds)
-  } catch { /* Cache write failure is non-fatal */ }
+  } catch (e) { console.warn('[Cache] Redis write failed:', e) }
   return data
 }
 
 /* ── Invalidate a cache key ── */
 export async function invalidateCache(key: string): Promise<void> {
-  try { await cache.del(key) } catch { /* silent */ }
+  try { await cache.del(key) } catch (e) { console.warn('[Cache] Redis del failed:', e) }
 }
 
 /* ── Invalidate all keys matching a prefix ── */
 export async function invalidatePattern(prefix: string): Promise<void> {
-  // For Upstash we don't support SCAN, so we track keys by convention
-  // Key pattern: prefix:id — invalidate by exact key
-  try { await cache.del(prefix) } catch { /* silent */ }
+  try { await cache.del(prefix) } catch (e) { console.warn('[Cache] Redis del pattern failed:', e) }
 }
 
 /* ── Pre-built cache keys ── */

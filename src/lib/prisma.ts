@@ -16,7 +16,7 @@ function buildDatabaseUrl(): string {
   if (url.includes('connection_limit')) return url
 
   const isProd    = process.env.NODE_ENV === 'production'
-  const limit     = isProd ? 3 : 5
+  const limit     = isProd ? 15 : 5
   const separator = url.includes('?') ? '&' : '?'
 
   // pgbouncer=true is required for Neon / PgBouncer pooled connections
@@ -27,10 +27,11 @@ function buildDatabaseUrl(): string {
 function createClient() {
   return new PrismaClient({
     datasources: { db: { url: buildDatabaseUrl() } },
-    log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
+    log: ['error'],
   })
 }
 
+// Global singleton — preserves instance across Next.js hot-reloads in dev
 export const prisma = globalForPrisma.prisma ?? createClient()
 
 if (process.env.NODE_ENV !== 'production') {
@@ -48,18 +49,19 @@ if (process.env.NODE_ENV !== 'production') {
 export async function withRetry<T>(fn: () => Promise<T>, retries = 1): Promise<T> {
   try {
     return await fn()
-  } catch (err: any) {
-    const msg = err?.message ?? ''
+  } catch (err) {
+    const prismaErr = err as { message?: string; code?: string }
+    const msg = prismaErr.message ?? String(err)
     const isConnectionError =
       msg.includes('Connection closed') ||
       msg.includes('kind: Closed') ||
       msg.includes('Server has closed the connection') ||
       msg.includes('ECONNRESET') ||
       msg.includes('Connection reset') ||
-      err?.code === 'P1001' ||
-      err?.code === 'P1002' ||
-      err?.code === 'P1008' ||
-      err?.code === 'P1017'
+      prismaErr.code === 'P1001' ||
+      prismaErr.code === 'P1002' ||
+      prismaErr.code === 'P1008' ||
+      prismaErr.code === 'P1017'
 
     if (isConnectionError && retries > 0) {
       console.warn('[Prisma] Connection dropped — retrying query once…')

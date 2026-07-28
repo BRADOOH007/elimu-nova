@@ -6,11 +6,10 @@
  * - Metadata: subject, grade, topic, totalSlides
  * - Used by the PowerPoint page for preview AND PPTX download
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 export interface GeneratedSlide {
   slideNumber:  number
@@ -42,11 +41,7 @@ function sanitiseSlides(raw: any, fallback: { subject: string; grade: string; to
   }))
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = route({}, async (request, { user }) => {
     const {
       subject, grade, topic,
       slideCount    = 8,
@@ -61,9 +56,9 @@ export async function POST(request: NextRequest) {
 
     // Fetch teacher's saved curriculum template as presentation style reference
     let templateText = documentContext
-    if (!templateText && session.user.role === 'TEACHER') {
+    if (!templateText && user.role === 'TEACHER') {
       const t = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { curriculumTemplate: true },
       })
       templateText = t?.curriculumTemplate || null
@@ -134,7 +129,7 @@ Return exactly this JSON (no other text):
     // ── Save to DB for later access ─────────────────────────────────────────
     let savedId: string | null = null
     try {
-      const teacher = await prisma.teacher.findUnique({ where: { userId: session.user.id } })
+      const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
       if (teacher) {
         const saved = await prisma.aIGeneratedContent.create({
           data: {
@@ -158,11 +153,4 @@ Return exactly this JSON (no other text):
       presentation:   slidesData,
     })
 
-  } catch (error) {
-    console.error('[GENERATE_SIMPLE_PRESENTATION]', error)
-    return NextResponse.json({
-      error:   'Failed to generate presentation',
-      details: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 })
-  }
-}
+})

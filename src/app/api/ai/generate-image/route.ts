@@ -1,22 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { ImageGenerationService } from '@/lib/image-generation'
 import { ImageBank } from '@/lib/image-bank'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
+export const POST = route({}, async (request, { user }) => {
   let parsedBody: any = {}
   try {
     parsedBody = await request.json()
-  } catch {
+  } catch (e) {
+    console.warn('[Image] Invalid request body:', e)
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
-
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const {
       prompt,
@@ -36,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     const displayTopic = topic || prompt.substring(0, 100)
-    const schoolId = session.user.schoolAdminId || undefined
+    const schoolId = user.schoolAdminId || undefined
 
     const cached = await ImageBank.findMatching({
       prompt,
@@ -52,7 +46,7 @@ export async function POST(request: NextRequest) {
           imageId: cached.id,
           contextType: contextType as any,
           contextId,
-          userId: session.user.id,
+          userId: user.id,
         })
       }
 
@@ -89,8 +83,8 @@ export async function POST(request: NextRequest) {
         type: style === 'educational' || style === 'diagram' ? 'DIAGRAM' : 'GENERAL',
         size: sizeToDbSize(size),
         quality,
-        userId: session.user.id,
-        teacherId: session.user.role === 'TEACHER' ? session.user.teacherId : undefined,
+        userId: user.id,
+        teacherId: user.role === 'TEACHER' ? user.teacherId : undefined,
         schoolId,
         provider: result.provider,
       })
@@ -100,7 +94,7 @@ export async function POST(request: NextRequest) {
           imageId: savedEntry.id,
           contextType: contextType as any,
           contextId,
-          userId: session.user.id,
+          userId: user.id,
         })
       }
     }
@@ -114,23 +108,7 @@ export async function POST(request: NextRequest) {
       revisedPrompt: result.revisedPrompt,
       metadata: result.metadata,
     })
-
-  } catch (error) {
-    console.error('Image generation error:', error)
-    const placeholderImageUrl = generatePlaceholderImage(
-      parsedBody.prompt || 'Educational Content',
-      'educational'
-    )
-    return NextResponse.json({
-      imageUrl: placeholderImageUrl,
-      success: true,
-      source: 'placeholder',
-      fromBank: false,
-      message: 'Image generation temporarily unavailable. Using placeholder image.',
-      error: error instanceof Error ? error.message : 'Unknown error',
-    })
-  }
-}
+})
 
 function sizeToDbSize(size: string): string {
   const map: Record<string, string> = {

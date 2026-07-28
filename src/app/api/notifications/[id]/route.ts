@@ -1,49 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { route } from '@/lib/api-middleware'
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const PATCH = route({}, async (req, { params }) => {
 
-    const { id } = await params
+    const { id } = params
     const notification = await prisma.notification.update({
       where: { id },
       data: { isRead: true }
     })
 
     return NextResponse.json(notification)
-  } catch (error) {
-    console.error('Error updating notification:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const DELETE = route({}, async (req, { params }) => {
 
-    const { id } = await params
+    const { id } = params
     await prisma.notification.delete({
       where: { id }
     })
 
     return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error deleting notification:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})

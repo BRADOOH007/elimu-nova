@@ -2,23 +2,16 @@
  * POST /api/ai/teaching-insights
  * Comprehensive Teaching Insights — AI class-wide analysis for teacher
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !['TEACHER','SCHOOL_ADMIN','SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const { classId } = await request.json()
 
     const teacher = await prisma.teacher.findFirst({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         students: {
           where: classId ? { classId } : {},
@@ -120,8 +113,4 @@ Provide actionable teaching insights. Return ONLY valid JSON:
 
     const insights = JSON.parse(raw.slice(start, end + 1))
     return NextResponse.json({ insights, classStats: { total: students.length, classAvg, atRisk, excelling, subjectAvgs } })
-  } catch (e: any) {
-    console.error('[TEACHING_INSIGHTS]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

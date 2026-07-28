@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Bell, CheckCircle, Loader2, RefreshCw } from 'lucide-react'
+import { Bell, CheckCircle, ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -19,15 +19,18 @@ export default function TeacherNotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [notifPage, setNotifPage] = useState(1)
+  const [notifTotalPages, setNotifTotalPages] = useState(1)
 
   const fetchNotifications = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/teacher/notifications?limit=50')
+      const response = await fetch(`/api/teacher/notifications?page=${notifPage}&limit=20`)
       const data = await response.json()
       if (response.ok) {
         setNotifications(data.notifications || [])
         setUnreadCount(data.unreadCount || 0)
+        setNotifTotalPages(data.pagination?.totalPages || 1)
       }
     } finally {
       setLoading(false)
@@ -36,7 +39,7 @@ export default function TeacherNotificationsPage() {
 
   useEffect(() => {
     fetchNotifications()
-  }, [])
+  }, [notifPage])
 
   const markAllRead = async () => {
     await fetch('/api/teacher/notifications', {
@@ -88,6 +91,7 @@ export default function TeacherNotificationsPage() {
           {loading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-blue-600" /></div>
           ) : notifications.length ? (
+            <>
             <div className="space-y-3">
               {notifications.map(notification => (
                 <div key={notification.id} className={`rounded-lg border p-4 ${notification.isRead ? 'bg-white' : 'bg-blue-50'}`}>
@@ -110,6 +114,20 @@ export default function TeacherNotificationsPage() {
                 </div>
               ))}
             </div>
+            <div className="mt-6 flex items-center justify-center gap-4">
+              <Button variant="outline" size="sm" onClick={() => setNotifPage(p => Math.max(1, p - 1))} disabled={notifPage <= 1}>
+                <ChevronLeft className="mr-1 h-4 w-4" />
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {notifPage} of {notifTotalPages}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => setNotifPage(p => Math.min(notifTotalPages, p + 1))} disabled={notifPage >= notifTotalPages}>
+                Next
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+            </>
           ) : (
             <div className="py-12 text-center text-gray-500">
               <Bell className="mx-auto mb-3 h-10 w-10 text-gray-300" />

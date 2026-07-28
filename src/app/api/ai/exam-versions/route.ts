@@ -2,31 +2,20 @@
  * POST /api/ai/exam-versions
  * Exam Version Generator — A/B/C/D versions to prevent cheating
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !['TEACHER', 'SUPER_ADMIN', 'SCHOOL_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) return NextResponse.json({ error: `Rate limit. Retry in ${rl.resetInSec}s` }, { status: 429 })
-
+export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN', 'SCHOOL_ADMIN'] }, async (request, { user }) => {
     const { originalExam, subject, grade, versionsCount = 2, documentContext } = await request.json()
     if (!originalExam) return NextResponse.json({ error: 'originalExam content required' }, { status: 400 })
 
     // Fetch teacher's exam template as format reference
     let templateText = documentContext
-    if (!templateText && session.user.role === 'TEACHER') {
+    if (!templateText && user.role === 'TEACHER') {
       const t = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { examTemplate: true },
       })
       templateText = t?.examTemplate || null
@@ -75,8 +64,4 @@ Return ONLY a valid JSON object:
 
     const result = JSON.parse(raw.slice(start, end + 1))
     return NextResponse.json(result)
-  } catch (e: any) {
-    console.error('[EXAM_VERSIONS]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

@@ -1,24 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 // GET - Fetch student progress for teacher
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const studentId = searchParams.get('studentId')
     const period = searchParams.get('period') || 'week'
 
     // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     })
 
     if (!teacher) {
@@ -182,18 +175,12 @@ export async function GET(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
-}
+})
 
 // POST - Create notification for teacher about student progress
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const body = await request.json()
+    const body = await req.json()
     const { studentId, type, message, priority = 'medium' } = body
 
     // Validate required fields
@@ -205,7 +192,7 @@ export async function POST(request: NextRequest) {
 
     // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     })
 
     if (!teacher) {
@@ -233,7 +220,7 @@ export async function POST(request: NextRequest) {
         title: `Student Progress Update - ${student.user.firstName} ${student.user.lastName}`,
         message,
         type: priority,
-        userId: session.user.id
+        userId: user.id
       }
     })
 
@@ -249,4 +236,4 @@ export async function POST(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
-}
+})

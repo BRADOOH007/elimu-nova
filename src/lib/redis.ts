@@ -1,29 +1,26 @@
-/**
- * Redis client for ElimuNova.
- *
- * Uses Upstash Redis (serverless-compatible, free tier on Vercel).
- * Falls back to a simple in-memory Map when Redis is not configured
- * so development works without any setup.
- *
- * To enable Redis:
- *   1. Create a free database at https://console.upstash.com/
- *   2. Add to .env:
- *        UPSTASH_REDIS_REST_URL="https://xxx.upstash.io"
- *        UPSTASH_REDIS_REST_TOKEN="AXxx..."
- *
- * Alternatively use any Redis URL:
- *        REDIS_URL="redis://localhost:6379"
- */
+// ──────────────────────────────────────────────────────────────
+// Cache layer — auto-selects between Upstash Redis (production)
+// and in-memory fallback (dev/test). Used for rate limiting,
+// idempotency keys, and general caching.
+//
+// To enable Redis: set REDIS_URL env var (Upstash, Redis Cloud)
+// Without it, MemoryCache is used (not distributed across VMs).
+// ──────────────────────────────────────────────────────────────
 
+import type Redis from 'ioredis'
+
+// CacheClient interface — all consumers depend on this abstraction
 export interface CacheClient {
   get(key: string): Promise<string | null>
   set(key: string, value: string, ttlSeconds?: number): Promise<void>
   del(key: string): Promise<void>
   incr(key: string): Promise<number>
   expire(key: string, ttlSeconds: number): Promise<void>
+  ttl(key: string): Promise<number>
+  ping(): Promise<string>
 }
 
-/* ── In-memory fallback (development / no Redis configured) ── */
+// ── In-memory fallback (used when REDIS_URL is not set) ──
 class MemoryCache implements CacheClient {
   private store = new Map<string, { value: string; expiresAt: number | null }>()
 
@@ -60,52 +57,59 @@ class MemoryCache implements CacheClient {
       this.store.set(key, { value: entry.value, expiresAt: Date.now() + ttlSeconds * 1000 })
     }
   }
+
+  async ttl(key: string): Promise<number> {
+    const entry = this.store.get(key)
+    if (!entry || !entry.expiresAt) return -1
+    const remaining = Math.ceil((entry.expiresAt - Date.now()) / 1000)
+    return remaining > 0 ? remaining : -1
+  }
+
+  async ping(): Promise<string> { return 'PONG' }
 }
 
-/* ── Upstash Redis HTTP client (works in edge/serverless) ── */
-class UpstashCache implements CacheClient {
-  constructor(private url: string, private token: string) {}
+// ── Redis client factory (Upstash / standard Redis with TLS) ──
+function createRedisClient(): CacheClient {
+  const url = process.env.REDIS_URL
+  if (!url) return new MemoryCache()
 
-  private async call(command: any[]): Promise<any> {
-    const res = await fetch(`${this.url}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${this.token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(command),
-    })
-    const json = await res.json()
-    return json.result
-  }
+  // Dynamic import so the module never errors if ioredis is missing
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const IORedis = require('ioredis') as typeof Redis
 
-  async get(key: string): Promise<string | null>                 { return this.call(['GET', key]) }
-  async set(key: string, value: string, ttl?: number): Promise<void> {
-    if (ttl) await this.call(['SET', key, value, 'EX', ttl])
-    else     await this.call(['SET', key, value])
+  const isTLS = url.startsWith('rediss://') || url.includes('upstash.io')
+
+  const client = new IORedis(url, {
+    maxRetriesPerRequest: 2,
+    retryStrategy: (times: number) => {
+      if (times > 2) return null
+      return Math.min(times * 200, 1000)
+    },
+    connectTimeout: 5000,
+    lazyConnect: true,
+    ...(isTLS ? { tls: {} } : {}),
+  } as any)
+
+  client.connect()
+
+  return {
+    async get(key: string) {
+      const val = await client.get(key)
+      return val ?? null
+    },
+    async set(key: string, value: string, ttlSeconds?: number) {
+      if (ttlSeconds) await client.set(key, value, 'EX', ttlSeconds)
+      else await client.set(key, value)
+    },
+    async del(key: string) { await client.del(key) },
+    async incr(key: string) { return client.incr(key) },
+    async expire(key: string, ttlSeconds: number) { await client.expire(key, ttlSeconds) },
+    async ttl(key: string) { return client.ttl(key) },
+    async ping() { return client.ping() },
   }
-  async del(key: string): Promise<void>                          { await this.call(['DEL', key]) }
-  async incr(key: string): Promise<number>                       { return this.call(['INCR', key]) }
-  async expire(key: string, ttl: number): Promise<void>          { await this.call(['EXPIRE', key, ttl]) }
 }
 
-/* ── Build the right client based on env vars ── */
-function buildCache(): CacheClient {
-  const upstashUrl   = process.env.UPSTASH_REDIS_REST_URL
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN
-
-  if (upstashUrl && upstashToken) {
-    console.log('[Redis] Using Upstash Redis')
-    return new UpstashCache(upstashUrl, upstashToken)
-  }
-
-  if (process.env.NODE_ENV === 'production') {
-    console.warn('[Redis] No Redis configured in production — using in-memory cache. Add UPSTASH_REDIS_REST_URL for persistence.')
-  }
-
-  return new MemoryCache()
-}
-
+// Global singleton — preserves instance across hot-reloads in dev
 const globalForCache = globalThis as unknown as { cache: CacheClient | undefined }
-export const cache: CacheClient = globalForCache.cache ?? buildCache()
+export const cache: CacheClient = globalForCache.cache ?? createRedisClient()
 if (process.env.NODE_ENV !== 'production') globalForCache.cache = cache

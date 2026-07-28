@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { confirmToast } from '@/lib/confirm-toast'
 import {
   Calendar, Sparkles, Loader2, Trash2, RefreshCw,
   CheckCircle, AlertTriangle, AlertCircle, Users,
@@ -106,7 +107,7 @@ export default function TimetablePage() {
   }
 
   const clearTimetable = async () => {
-    if (!confirm('Clear the entire timetable? This cannot be undone.')) return
+    if (!(await confirmToast({ title: 'Clear the entire timetable? This cannot be undone.' }))) return
     setTtClearing(true)
     try {
       await fetch('/api/school-admin/timetable', { method: 'DELETE' })
@@ -129,7 +130,7 @@ export default function TimetablePage() {
   }
 
   const applyRecommendations = async () => {
-    if (!confirm('Apply the AI recommendations? This will reassign some classes.')) return
+    if (!(await confirmToast({ title: 'Apply the AI recommendations? This will reassign some classes.' }))) return
     setApplying(true)
     try {
       const res = await fetch('/api/school-admin/teacher-allocation', {

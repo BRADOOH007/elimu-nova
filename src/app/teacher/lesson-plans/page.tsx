@@ -31,7 +31,8 @@ import {
   Send,
   CheckCircle,
   Presentation,
-  NotebookPen
+  NotebookPen,
+  User
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -109,6 +110,9 @@ export default function PlanningPage() {
   const [lessonPlanSearch, setLessonPlanSearch] = useState('')
   const [lessonPlanSubjectFilter, setLessonPlanSubjectFilter] = useState('')
   const [lessonPlanGradeFilter, setLessonPlanGradeFilter] = useState('')
+  const [lessonPlanPage, setLessonPlanPage] = useState(1)
+  const [lessonPlanTotalPages, setLessonPlanTotalPages] = useState(1)
+  const [lessonPlanTotal, setLessonPlanTotal] = useState(0)
 
   // Schemes of Work State
   const [schemesOfWork, setSchemesOfWork] = useState<SchemeOfWork[]>([])
@@ -146,23 +150,35 @@ export default function PlanningPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const lpParams = new URLSearchParams({
+          page: String(lessonPlanPage),
+          limit: '50',
+          ...(lessonPlanSearch && { search: lessonPlanSearch })
+        })
+
         const [lessonsRes, schemesRes, studentsRes, classesRes] = await Promise.all([
-          fetch('/api/lesson-plans'),
+          fetch(`/api/lesson-plans?${lpParams}`),
           fetch('/api/schemes-of-work'),
           fetch('/api/teacher/students'),
           fetch('/api/teacher/classes')
         ])
 
-        if (lessonsRes.ok) setLessonPlans((await lessonsRes.json()).lessonPlans || [])
+        if (lessonsRes.ok) {
+          const lessonData = await lessonsRes.json()
+          setLessonPlans(lessonData.lessonPlans || [])
+          if (lessonData.pagination) {
+            setLessonPlanTotalPages(lessonData.pagination.totalPages)
+            setLessonPlanTotal(lessonData.pagination.total)
+          }
+        }
         if (schemesRes.ok) setSchemesOfWork((await schemesRes.json()).schemesOfWork || [])
-        if (studentsRes.ok) setStudents((await studentsRes.json()).students || [])
+        if (studentsRes.ok) setStudents((await studentsRes.json()).data || [])
         if (classesRes.ok) {
-          setClasses((await classesRes.json()).classes || [])
+          setClasses((await classesRes.json()).data || [])
         } else if (classesRes.status === 401) {
-          // Session not ready yet — retry once after a short delay
           setTimeout(async () => {
             const retry = await fetch('/api/teacher/classes').catch(() => null)
-            if (retry?.ok) setClasses((await retry.json()).classes || [])
+            if (retry?.ok) setClasses((await retry.json()).data || [])
           }, 1500)
         }
       } catch (err) {
@@ -173,7 +189,7 @@ export default function PlanningPage() {
       }
     }
     fetchData()
-  }, [])
+  }, [lessonPlanPage, lessonPlanSearch])
 
   // Filtering
   const filteredLessonPlans = lessonPlans.filter(lp => {
@@ -204,24 +220,26 @@ export default function PlanningPage() {
     if (!itemToDelete) return
     setDeleting(true)
     try {
-      const isLesson = 'schemeOfWork' in itemToDelete
+      const isLesson = !('term' in itemToDelete)
       const url = isLesson 
         ? `/api/lesson-plans/${itemToDelete.id}` 
         : `/api/schemes-of-work/${itemToDelete.id}`
       
       const res = await fetch(url, { method: 'DELETE' })
-      if (res.ok) {
-        if (isLesson) {
-          setLessonPlans(prev => prev.filter(lp => lp.id !== itemToDelete.id))
-          toast({ title: 'Lesson Plan Deleted', variant: 'success' })
-        } else {
-          setSchemesOfWork(prev => prev.filter(sw => sw.id !== itemToDelete.id))
-          toast({ title: 'Scheme of Work Deleted', variant: 'success' })
-        }
-        setItemToDelete(null)
+      const data = res.ok ? null : await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast({ title: 'Delete failed', description: data?.error || 'Server error', variant: 'destructive' })
+        return
       }
+      if (isLesson) {
+        setLessonPlans(prev => prev.filter(lp => lp.id !== itemToDelete.id))
+      } else {
+        setSchemesOfWork(prev => prev.filter(sw => sw.id !== itemToDelete.id))
+      }
+      toast({ title: isLesson ? 'Lesson Plan Deleted' : 'Scheme of Work Deleted', variant: 'success' })
+      setItemToDelete(null)
     } catch (err) {
-      console.error('Delete error:', err)
+      toast({ title: 'Delete failed', description: 'Network error — please try again', variant: 'destructive' })
     } finally {
       setDeleting(false)
     }
@@ -265,16 +283,24 @@ export default function PlanningPage() {
     }
   }
 
+  const [teacherName, setTeacherName] = useState('')
+  const [currentDate, setCurrentDate] = useState('')
+
   const handleViewLessonPlan = async (lp: LessonPlan) => {
-    // Open modal immediately with whatever we have, then enrich with full content
     setSelectedLessonPlan(lp)
     setIsViewModalOpen(true)
+    setTeacherName('')
+    setCurrentDate(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }))
     try {
       const res = await fetch(`/api/lesson-plans/${lp.id}`)
       if (res.ok) {
         const full = await res.json()
-        // API returns the plan directly — content is either parsed object or string
         const content = full.content ?? full.generatedContent ?? full
+        // Extract teacher name from API response
+        const tName = full.teacher?.user
+          ? `${full.teacher.user.firstName} ${full.teacher.user.lastName}`.trim()
+          : ''
+        setTeacherName(tName || 'Teacher')
         setSelectedLessonPlan(prev => prev ? { ...prev, content } : prev)
       }
     } catch {
@@ -308,7 +334,6 @@ export default function PlanningPage() {
   const generateNotesFromLesson = async (lp: LessonPlan) => {
     setGeneratingNotes(lp.id)
     try {
-      // Fetch full lesson plan with content
       const planRes = await fetch(`/api/lesson-plans/${lp.id}`)
       if (!planRes.ok) throw new Error('Could not load lesson plan')
       const fullPlan = await planRes.json()
@@ -322,25 +347,54 @@ export default function PlanningPage() {
       if (!res.ok) throw new Error(data.error || 'Failed')
 
       const notes = data.notes
-      const lines: string[] = []
-      if (notes.title)   lines.push(notes.title, '')
-      if (notes.summary) lines.push('SUMMARY\n' + notes.summary, '')
-      ;(notes.sections || []).forEach((s: any) => {
-        lines.push(`\n${s.heading.toUpperCase()}`)
-        if (s.content) lines.push(s.content)
-        ;(s.keyPoints || []).forEach((p: string) => lines.push(`• ${p}`))
-      })
-      if (notes.studyTips?.length) {
-        lines.push('\nSTUDY TIPS')
-        notes.studyTips.forEach((t: string) => lines.push(`• ${t}`))
-      }
-      if (notes.rawResponse) lines.push(notes.rawResponse)
+      const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 
-      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
+      let html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(notes.title || lp.title)}</title>`
+      html += `<style>
+        body { font-family: 'Calibri','Segoe UI',Arial,sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; color: #1e293b; line-height: 1.6; }
+        h1 { font-size: 24px; color: #1e40af; border-bottom: 3px solid #3b82f6; padding-bottom: 8px; margin-bottom: 16px; }
+        h2 { font-size: 18px; color: #1e40af; margin-top: 24px; margin-bottom: 8px; }
+        h3 { font-size: 15px; color: #475569; margin-top: 16px; margin-bottom: 6px; }
+        .summary { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px 16px; border-radius: 6px; margin: 12px 0; }
+        .section { margin: 16px 0; }
+        .section-title { font-size: 16px; font-weight: 600; color: #1e40af; margin-bottom: 6px; }
+        .section-content { color: #334155; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 4px; }
+        .tip { background: #f0fdf4; border-left: 4px solid #22c55e; padding: 10px 14px; border-radius: 6px; margin: 6px 0; }
+        .meta { color: #94a3b8; font-size: 13px; margin-bottom: 20px; }
+        hr { border: none; border-top: 1px solid #e2e8f0; margin: 24px 0; }
+      </style></head><body>`
+
+      if (notes.title) html += `<h1>${esc(notes.title)}</h1>`
+      html += `<p class="meta">${esc(lp.subject)} • ${esc(lp.grade)} • ${new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' })}</p>`
+      if (notes.summary) html += `<div class="summary">${esc(notes.summary)}</div>`
+
+      ;(notes.sections || []).forEach((s: any) => {
+        html += `<div class="section">`
+        if (s.heading) html += `<div class="section-title">${esc(s.heading)}</div>`
+        if (s.content) html += `<div class="section-content">${esc(s.content)}</div>`
+        if (s.keyPoints?.length) {
+          html += `<ul>${s.keyPoints.map((p: string) => `<li>${esc(p)}</li>`).join('')}</ul>`
+        }
+        html += `</div>`
+      })
+
+      if (notes.studyTips?.length) {
+        html += `<hr/><h2>Study Tips</h2>`
+        notes.studyTips.forEach((t: string) => {
+          html += `<div class="tip">${esc(t)}</div>`
+        })
+      }
+
+      html += `<hr/><p style="text-align:center;color:#94a3b8;font-size:12px;">Generated by ElimuNova AI • ${new Date().toLocaleDateString('en-GB')}</p>`
+      html += `</body></html>`
+
+      const blob = new Blob([html], { type: 'application/msword' })
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a')
       a.href     = url
-      a.download = `${lp.title.replace(/[^a-z0-9]/gi, '_')}_notes.txt`
+      a.download = `${lp.title.replace(/[^a-z0-9]/gi, '_')}_notes.doc`
       a.click()
       URL.revokeObjectURL(url)
       toast({ title: 'Notes Downloaded', variant: 'success' })
@@ -377,24 +431,34 @@ export default function PlanningPage() {
     }
   }
 
-  const handleDownload = async (item: LessonPlan | SchemeOfWork, format?: 'pdf' | 'word') => {    try {
-      const isLesson = 'schemeOfWork' in item
+  const handleDownload = async (item: LessonPlan | SchemeOfWork, format?: 'pdf' | 'word') => {
+    try {
+      const isLesson = !('term' in item)
       const url = isLesson 
         ? '/api/export/lesson-plan' 
         : '/api/export/scheme-of-work'
       
+      const extractContent = (item: any): string => {
+        const raw = item.content
+        if (typeof raw === 'string') {
+          try { const p = JSON.parse(raw); return p.generatedContent || p.content || raw } catch { return raw }
+        }
+        if (raw && typeof raw === 'object') return raw.generatedContent || raw.content || ''
+        return ''
+      }
+      const fmt = format || 'pdf'
       const body = isLesson 
-        ? { content: item.content?.generatedContent || '', title: item.title, subject: item.subject, grade: item.grade, topic: item.content?.topic || '', duration: item.content?.duration || 45, format: 'pdf' }
+        ? { content: extractContent(item), title: item.title, subject: item.subject, grade: item.grade, topic: '', duration: 45, format: fmt }
         : { 
-            content: item.content?.generatedContent || '', 
+            content: extractContent(item), 
             title: item.title, 
             subject: item.subject, 
             grade: item.grade, 
-            duration: (item as SchemeOfWork).duration || (item as SchemeOfWork).content?.duration || 12, 
+            duration: (item as SchemeOfWork).duration || 12, 
             lessonsPerWeek: 5, 
             lessonDuration: 45, 
-            topics: (item as SchemeOfWork).content?.topics || [], 
-            format: format || 'pdf' 
+            topics: [], 
+            format: fmt 
           }
 
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -403,7 +467,8 @@ export default function PlanningPage() {
         const urlObj = window.URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = urlObj
-        a.download = `${item.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${isLesson ? 'html' : format === 'word' ? 'doc' : 'html'}`
+        const ext = fmt === 'word' ? 'doc' : 'html'
+        a.download = `${item.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${ext}`
         document.body.appendChild(a)
         a.click()
         a.remove()
@@ -498,7 +563,7 @@ export default function PlanningPage() {
                   <Input
                     placeholder="Search lesson plans..."
                     value={lessonPlanSearch}
-                    onChange={(e) => setLessonPlanSearch(e.target.value)}
+                    onChange={(e) => { setLessonPlanSearch(e.target.value); setLessonPlanPage(1) }}
                     className="pl-10 bg-gradient-to-r from-white via-blue-50 to-purple-50 border-0 shadow-sm"
                   />
                 </div>
@@ -522,7 +587,7 @@ export default function PlanningPage() {
                 </Select>
                 <Button
                   variant="outline"
-                  onClick={() => { setLessonPlanSearch(''); setLessonPlanSubjectFilter(''); setLessonPlanGradeFilter('') }}
+                  onClick={() => { setLessonPlanSearch(''); setLessonPlanSubjectFilter(''); setLessonPlanGradeFilter(''); setLessonPlanPage(1) }}
                   className="bg-white"
                 >
                   <Filter className="mr-2 h-4 w-4" />
@@ -645,6 +710,29 @@ export default function PlanningPage() {
                   </CardContent>
                 </Card>
               ))}
+            </div>
+          )}
+          {/* Lesson Plans Pagination */}
+          {!lessonPlansLoading && lessonPlans.length > 0 && lessonPlanTotalPages > 1 && (
+            <div className="flex items-center justify-between px-2">
+              <p className="text-sm text-gray-600">
+                Page {lessonPlanPage} of {lessonPlanTotalPages} ({lessonPlanTotal} total)
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm"
+                  onClick={() => setLessonPlanPage(p => Math.max(1, p - 1))}
+                  disabled={lessonPlanPage <= 1}
+                >
+                  Previous
+                </Button>
+                <span className="text-sm text-gray-700">Page {lessonPlanPage}</span>
+                <Button variant="outline" size="sm"
+                  onClick={() => setLessonPlanPage(p => Math.min(lessonPlanTotalPages, p + 1))}
+                  disabled={lessonPlanPage >= lessonPlanTotalPages}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
           )}
         </TabsContent>
@@ -797,12 +885,22 @@ export default function PlanningPage() {
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {selectedLessonPlan && <BookOpen className="h-5 w-5" />}
-              {selectedScheme && <FileText className="h-5 w-5" />}
-              {selectedLessonPlan?.title || selectedScheme?.title}
+              {selectedLessonPlan && <BookOpen className="h-5 w-5 text-blue-600" />}
+              {selectedScheme && <FileText className="h-5 w-5 text-green-600" />}
+              <span>{selectedLessonPlan?.title || selectedScheme?.title}</span>
             </DialogTitle>
-            <DialogDescription>
-              {(selectedLessonPlan?.subject || selectedScheme?.subject)} • {(selectedLessonPlan?.grade || selectedScheme?.grade)}
+            <DialogDescription className="flex items-center gap-4 flex-wrap">
+              <span>{(selectedLessonPlan?.subject || selectedScheme?.subject)} • {(selectedLessonPlan?.grade || selectedScheme?.grade)}</span>
+              {selectedLessonPlan && teacherName && (
+                <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full">
+                  <User className="h-3 w-3" /> {teacherName}
+                </span>
+              )}
+              {currentDate && (
+                <span className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                  <Calendar className="h-3 w-3" /> {currentDate}
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -810,14 +908,33 @@ export default function PlanningPage() {
               <h4 className="font-semibold text-gray-900 mb-2">Content</h4>
               {(() => {
                 const c = selectedLessonPlan?.content ?? selectedScheme?.content
-                // Extract text from any shape the content might arrive in
-                const text =
-                  typeof c === 'string' ? c :
-                  c?.generatedContent ??
-                  c?.content ??
-                  c?.lessonPlan ??
-                  (typeof c === 'object' && c !== null ? JSON.stringify(c, null, 2) : null)
-
+                const extract = (raw: any): string | null => {
+                  if (typeof raw === 'string') {
+                    try {
+                      const parsed = JSON.parse(raw)
+                      return parsed.generatedContent ?? parsed.content ?? parsed.lessonPlan ?? JSON.stringify(parsed, null, 2)
+                    } catch {
+                      return raw
+                    }
+                  }
+                  if (raw && typeof raw === 'object') {
+                    return raw.generatedContent ?? raw.content ?? raw.lessonPlan ?? JSON.stringify(raw, null, 2)
+                  }
+                  return null
+                }
+                let text = extract(c)
+                if (text && (teacherName || currentDate)) {
+                  const t = text
+                  text = text
+                    .replace(/[|]\s*Teacher\s*[|]\s*_{3,}\s*/g, `| Teacher | ${teacherName || '________'} `)
+                    .replace(/[|]\s*Date\s*[|]\s*_{3,}\s*/g, `| Date | ${currentDate || '________'} `)
+                    .replace(/_{3,}/g, match => {
+                      const ctx = t.slice(Math.max(0, t.indexOf(match) - 60), t.indexOf(match))
+                      if (/Teacher|Prepared by/i.test(ctx)) return teacherName || match
+                      if (/Date/i.test(ctx)) return currentDate || match
+                      return match
+                    })
+                }
                 return text ? (
                   <MarkdownRenderer content={text} />
                 ) : (
@@ -858,7 +975,7 @@ export default function PlanningPage() {
       <Dialog open={!!itemToDelete} onOpenChange={() => setItemToDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete {itemToDelete && ('schemeOfWork' in itemToDelete ? 'Lesson Plan' : 'Scheme of Work')}</DialogTitle>
+            <DialogTitle>Delete {itemToDelete && (!('term' in itemToDelete) ? 'Lesson Plan' : 'Scheme of Work')}</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete "{itemToDelete?.title}"? This cannot be undone.
             </DialogDescription>

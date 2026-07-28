@@ -1,24 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'PARENT' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'PARENT') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const parent = await prisma.parent.findUnique({ where: { userId: session.user.id } })
+    const parent = await prisma.parent.findUnique({
+      where: { userId: user.id },
+      include: {
+        students: {
+          include: { student: { select: { schoolId: true } } },
+        },
+      },
+    })
     if (!parent) return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
 
-    const { searchParams } = new URL(request.url)
+    // Derive schoolId from the parent's children (if any belong to a school)
+    const childSchoolId = parent.students
+      .map(ps => ps.student.schoolId)
+      .find(Boolean)
+
+    const { searchParams } = new URL(req.url)
     const includePast = searchParams.get('includePast') === 'true'
 
     const meetings = await prisma.meeting.findMany({
       where: {
-        schoolId: (parent as any).schoolId,
+        ...(childSchoolId
+          ? { schoolId: childSchoolId }
+          : { createdBy: user.id }),
         ...(includePast ? {} : { date: { gte: new Date() }, status: { in: ['SCHEDULED', 'IN_PROGRESS'] as any } }),
       },
       include: {
@@ -33,28 +41,34 @@ export async function GET(request: NextRequest) {
     console.error('[PARENT_MEETINGS_GET]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'PARENT' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'PARENT') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const parent = await prisma.parent.findUnique({ where: { userId: session.user.id } })
+    const parent = await prisma.parent.findUnique({
+      where: { userId: user.id },
+      include: {
+        students: {
+          include: { student: { select: { schoolId: true } } },
+        },
+      },
+    })
     if (!parent) return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
 
-    const { title, description, date, time, duration, location } = await request.json()
+    const { title, description, date, time, duration, location } = await req.json()
 
     if (!title || !date || !time) {
       return NextResponse.json({ error: 'Title, date, and time are required' }, { status: 400 })
     }
 
+    const childSchoolId = parent.students
+      .map(ps => ps.student.schoolId)
+      .find(Boolean)
+
     const meeting = await prisma.meeting.create({
       data: {
-        schoolId: (parent as any).schoolId,
-        createdBy: session.user.id,
+        schoolId: childSchoolId || null,
+        createdBy: user.id,
         title,
         description: description || '',
         date: new Date(date),
@@ -70,4 +84,4 @@ export async function POST(request: NextRequest) {
     console.error('[PARENT_MEETINGS_POST]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

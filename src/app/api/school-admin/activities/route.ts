@@ -1,33 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
-      console.error('School admin not found for user:', session.user.id)
+      console.error('School admin not found for user:', user.id)
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
     console.log('School admin found:', schoolAdmin.schoolId)
 
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const type = searchParams.get('type') || ''
@@ -106,38 +93,18 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit)
       }
     })
+})
 
-  } catch (error) {
-    console.error('Error fetching activities:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch activities' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const { type, action, description, metadata } = body
 
     // Validate required fields
@@ -152,7 +119,7 @@ export async function POST(request: NextRequest) {
     const activity = await prisma.activity.create({
       data: {
         schoolId: schoolAdmin.schoolId,
-        userId: session.user.id,
+        userId: user.id,
         type,
         action,
         description,
@@ -187,12 +154,4 @@ export async function POST(request: NextRequest) {
         createdAt: activity.createdAt
       }
     }, { status: 201 })
-
-  } catch (error) {
-    console.error('Error creating activity:', error)
-    return NextResponse.json(
-      { error: 'Failed to create activity' },
-      { status: 500 }
-    )
-  }
-}
+})

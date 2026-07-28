@@ -1,20 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-async function requireSuperAdmin() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id || session.user.role !== 'SUPER_ADMIN') return null
-  return session
-}
-
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const page  = parseInt(searchParams.get('page')  || '1')
     const limit = parseInt(searchParams.get('limit') || '20')
 
@@ -35,37 +25,31 @@ export async function GET(request: NextRequest) {
     console.error('[GET_SYSTEM_SETTINGS]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { key, value, type, category, description } = await request.json()
+    const { key, value, type, category, description } = await req.json()
     if (!key || !value) return NextResponse.json({ error: 'key and value required' }, { status: 400 })
 
     const setting = await (prisma as any).systemSettings.upsert({
       where: { key },
-      update: { value, updatedById: session.user.id },
-      create: { key, value, type: type || 'string', category: category || 'general', description, updatedById: session.user.id },
+      update: { value, updatedById: user.id },
+      create: { key, value, type: type || 'string', category: category || 'general', description, updatedById: user.id },
     })
     return NextResponse.json(setting)
   } catch (error) {
     console.error('[POST_SYSTEM_SETTINGS]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await requireSuperAdmin()
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { id } = await request.json()
+    const { id } = await req.json()
     await (prisma as any).systemSettings.delete({ where: { id } })
     return NextResponse.json({ message: 'Setting deleted' })
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

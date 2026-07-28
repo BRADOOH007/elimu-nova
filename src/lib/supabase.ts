@@ -48,6 +48,7 @@ export const BUCKETS = {
   SCHEMES:         'schemes-of-work', // PDF exports
   PRESENTATIONS:   'presentations',   // PPTX files
   AI_IMAGES:       'ai-images',       // Generated images
+  AVATARS:         'avatars',         // User profile pictures
 } as const
 
 /**

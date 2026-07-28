@@ -26,10 +26,10 @@ export default function ApiUsagePage() {
       if (res.ok) {
         const data = await res.json()
         if (data.settings?.length > 0) {
-          try { setStats(JSON.parse(data.settings[0].value)) } catch {}
+          try { setStats(JSON.parse(data.settings[0].value)) } catch (e) { console.warn('[SuperAdminApiUsage] parse stats error:', e) }
         }
       }
-    } catch {} finally { setLoading(false) }
+    } catch (e) { console.warn('[SuperAdminApiUsage] fetchStats error:', e) } finally { setLoading(false) }
   }
 
   return (

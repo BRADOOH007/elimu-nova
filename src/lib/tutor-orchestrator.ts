@@ -46,6 +46,8 @@ export interface SubmitAnswerResult {
   nextQuestion?: any
   masteryScore: number
   xpEarned: number
+  streakCount: number
+  weakestSkills: { skillName: string; masteryScore: number }[]
 }
 
 // ============================================
@@ -103,7 +105,7 @@ export class TutorOrchestrator {
     }
 
     let subject = scheduleSlot?.subject || 'General'
-    let topic = 'Introduction'
+    let topic = 'General Learning'
     let lessonPlanId: string | undefined
     let schemeOfWorkId: string | undefined
 
@@ -157,23 +159,69 @@ export class TutorOrchestrator {
         classId: student.classId,
         subject: subject,
         topic: topic
+      },
+      include: {
+        skillMastery: true
       }
     })
 
-    const masteryScore = progress?.masteryScore || 0
+    let masteryScore = progress?.masteryScore || 0
+    const totalQuestions = progress?.totalQuestions || 0
+    const daysSinceLastPractice = progress?.lastPracticedAt
+      ? Math.floor((Date.now() - progress.lastPracticedAt.getTime()) / (1000 * 60 * 60 * 24))
+      : 999
+
+    // ── Forgetting curve decay ──────────────────────────────────────
+    // Mastery decays by 2 points per day of inactivity (Ebbinghaus curve).
+    // After 14 days: -28 points. After 30 days: capped at -50.
+    if (daysSinceLastPractice > 1 && masteryScore > 0) {
+      const decay = Math.min(Math.floor(daysSinceLastPractice * 2), 50)
+      masteryScore = Math.max(0, masteryScore - decay)
+    }
+
+    // ── Per-concept mastery analysis ────────────────────────────────
+    // If we have skill-level data, use the weakest skills to determine mode.
+    // Otherwise fall back to the overall masteryScore.
+    const skillMastery = progress?.skillMastery || []
+    let weakestSkills = skillMastery
+      .filter(s => s.masteryScore < 75)
+      .sort((a, b) => a.masteryScore - b.masteryScore)
+
     let mode: 'teach' | 'practice' | 'quiz' | 'revise' = 'teach'
     let difficulty: 'easy' | 'medium' | 'hard' = 'medium'
 
-    // STEP D: Adapt based on mastery
-    if (masteryScore < 40) {
-      mode = 'teach'
-      difficulty = 'easy'
-    } else if (masteryScore < 75) {
-      mode = 'practice'
-      difficulty = 'medium'
+    // ── Dynamic thresholds based on experience ──────────────────────
+    // New students (< 5 questions) get lower thresholds (more teaching).
+    // Experienced students are pushed harder.
+    let teachThreshold = totalQuestions < 5 ? 50 : 35
+    let quizThreshold  = totalQuestions < 5 ? 70 : 80
+
+    // ── STEP D: Adapt based on mastery ──────────────────────────────
+    if (weakestSkills.length > 0 && skillMastery.length > 0) {
+      // Per-concept mode selection: target the weakest concept
+      const avgWeakest = weakestSkills[0].masteryScore
+      if (avgWeakest < teachThreshold) {
+        mode = 'teach'
+        difficulty = 'easy'
+      } else if (avgWeakest < quizThreshold) {
+        mode = 'practice'
+        difficulty = 'medium'
+      } else {
+        mode = 'quiz'
+        difficulty = 'hard'
+      }
     } else {
-      mode = 'quiz'
-      difficulty = 'hard'
+      // Fallback: overall score approach
+      if (masteryScore < teachThreshold) {
+        mode = 'teach'
+        difficulty = 'easy'
+      } else if (masteryScore < quizThreshold) {
+        mode = 'practice'
+        difficulty = 'medium'
+      } else {
+        mode = 'quiz'
+        difficulty = 'hard'
+      }
     }
 
     return {
@@ -298,15 +346,24 @@ export class TutorOrchestrator {
       answer
     )
 
-    // Update mastery score
+    // Update mastery score (includes per-skill + decay + streak)
     const progress = await this.updateMastery(
       session.subject,
       session.topic,
-      grading.isCorrect
+      grading.isCorrect,
+      currentQuestion.skillName
     )
 
-    // Calculate XP
-    const xpEarned = grading.isCorrect ? 10 : 2
+    // ── Streak-based XP multiplier ──────────────────────────────────
+    // 3 in a row = 2×, 5 in a row = 3×, 10 in a row = 5×
+    const streak = progress.consecutiveCorrect || 0
+    let xpMultiplier = 1
+    if (streak >= 10) xpMultiplier = 5
+    else if (streak >= 5) xpMultiplier = 3
+    else if (streak >= 3) xpMultiplier = 2
+
+    const baseXP = grading.isCorrect ? 10 : 2
+    const xpEarned = baseXP * xpMultiplier
 
     // Update session
     await prisma.tutorSession.update({
@@ -320,25 +377,35 @@ export class TutorOrchestrator {
       }
     })
 
-    // Determine next mode
+    // ── Dynamic next mode (per-concept awareness) ───────────────────
+    const weakestSkills = await prisma.skillMastery.findMany({
+      where: { progressId: progress.id, masteryScore: { lt: 75 } },
+      orderBy: { masteryScore: 'asc' },
+      take: 3
+    })
+
     let nextMode = session.mode
-    if (progress.masteryScore >= 75) {
+    if (weakestSkills.length === 0) {
       nextMode = 'quiz'
-    } else if (progress.masteryScore >= 40) {
+    } else if (weakestSkills[0].masteryScore < 35) {
+      nextMode = 'teach'
+    } else if (weakestSkills[0].masteryScore < 80) {
       nextMode = 'practice'
     } else {
-      nextMode = 'teach'
+      nextMode = 'quiz'
     }
 
     return {
       isCorrect: grading.isCorrect,
-      scoreDelta: grading.isCorrect ? 5 : -3,
+      scoreDelta: grading.isCorrect ? 5 * xpMultiplier : -3,
       feedback: grading.feedback,
       hint: grading.hint,
       nextMode,
-      nextQuestion: null, // Will be generated in next call
+      nextQuestion: null,
       masteryScore: progress.masteryScore,
-      xpEarned
+      xpEarned,
+      streakCount: streak,
+      weakestSkills: weakestSkills.map(s => ({ skillName: s.skillName, masteryScore: s.masteryScore }))
     }
   }
 
@@ -350,7 +417,7 @@ export class TutorOrchestrator {
     const context: any = {}
 
     const safeJson = (raw: string) => {
-      try { return JSON.parse(raw) } catch { return raw }
+      try { return JSON.parse(raw) } catch (e) { console.warn('[Tutor] safeJson parse failed:', e); return raw }
     }
 
     // Get lesson plan
@@ -605,9 +672,9 @@ Respond in JSON format:
   private async updateMastery(
     subject: string,
     topic: string,
-    isCorrect: boolean
+    isCorrect: boolean,
+    skillName?: string  // Per-concept tracking: which specific skill was tested
   ) {
-    // First try to find existing progress
     let progress = await prisma.studentProgress.findFirst({
       where: {
         studentId: this.studentId,
@@ -617,28 +684,41 @@ Respond in JSON format:
       }
     });
 
+    const now = new Date()
+    const daysSinceLastPractice = progress?.lastPracticedAt
+      ? Math.floor((now.getTime() - progress.lastPracticedAt.getTime()) / (1000 * 60 * 60 * 24))
+      : 0
+
+    // ── Streak tracking ────────────────────────────────────────────
+    let newStreak = progress?.consecutiveCorrect || 0
+    if (isCorrect) {
+      newStreak += 1
+    } else {
+      newStreak = 0  // Reset streak on wrong answer
+    }
+
+    // ── Forgetting curve decay on update ────────────────────────────
+    // If > 1 day since last practice, apply decay before incrementing
+    let effectiveDecay = 0
+    if (daysSinceLastPractice > 1 && (progress?.masteryScore || 0) > 0) {
+      effectiveDecay = Math.min(Math.floor(daysSinceLastPractice * 2), 50)
+    }
+
     if (progress) {
-      // Update existing
+      const scoreChange = isCorrect ? 5 : -3
+      const newScore = Math.max(0, Math.min(100, progress.masteryScore - effectiveDecay + scoreChange))
+
       progress = await prisma.studentProgress.update({
         where: { id: progress.id },
         data: {
-          masteryScore: {
-            increment: isCorrect ? 5 : -3
-          },
-          totalQuestions: {
-            increment: 1
-          },
-          correctAnswers: {
-            increment: isCorrect ? 1 : 0
-          },
-          xp: {
-            increment: isCorrect ? 10 : 2
-          },
-          lastPracticedAt: new Date()
+          masteryScore: newScore,
+          totalQuestions: { increment: 1 },
+          correctAnswers: { increment: isCorrect ? 1 : 0 },
+          consecutiveCorrect: newStreak,
+          lastPracticedAt: now
         }
       });
     } else {
-      // Create new - fetch teacher from class
       const classInfo = await prisma.class.findUnique({
         where: { id: this.classId },
         select: { teacherId: true }
@@ -654,25 +734,46 @@ Respond in JSON format:
           masteryScore: isCorrect ? 5 : 0,
           totalQuestions: 1,
           correctAnswers: isCorrect ? 1 : 0,
-          xp: isCorrect ? 10 : 2,
-          lastPracticedAt: new Date()
+          consecutiveCorrect: isCorrect ? 1 : 0,
+          xp: 0,
+          lastPracticedAt: now
         }
       });
     }
 
-    // Ensure mastery score stays in 0-100 range
-    if (progress.masteryScore > 100) {
-      await prisma.studentProgress.update({
-        where: { id: progress.id },
-        data: { masteryScore: 100 }
+    // ── Per-skill mastery (SkillMastery) ─────────────────────────
+    if (skillName) {
+      const skillDelta = isCorrect ? 8 : -5  // Skills move faster than overall
+      const existingSkill = await prisma.skillMastery.findUnique({
+        where: {
+          progressId_skillName: { progressId: progress.id, skillName }
+        }
       })
-      progress.masteryScore = 100
-    } else if (progress.masteryScore < 0) {
-      await prisma.studentProgress.update({
-        where: { id: progress.id },
-        data: { masteryScore: 0 }
-      })
-      progress.masteryScore = 0
+
+      if (existingSkill) {
+        const newSkillScore = Math.max(0, Math.min(100, existingSkill.masteryScore + skillDelta))
+        await prisma.skillMastery.update({
+          where: { id: existingSkill.id },
+          data: {
+            masteryScore: newSkillScore,
+            timesCorrect: { increment: isCorrect ? 1 : 0 },
+            timesTested: { increment: 1 },
+            lastPracticedAt: now
+          }
+        })
+      } else {
+        await prisma.skillMastery.create({
+          data: {
+            progressId: progress.id,
+            skillName,
+            skillCategory: 'knowledge',
+            masteryScore: isCorrect ? 8 : 0,
+            timesCorrect: isCorrect ? 1 : 0,
+            timesTested: 1,
+            lastPracticedAt: now
+          }
+        })
+      }
     }
 
     return progress

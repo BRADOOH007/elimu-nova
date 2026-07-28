@@ -19,13 +19,20 @@ import { signOut, useSession } from "next-auth/react"
 import { NotificationsModal } from "@/components/modals/notifications-modal"
 import { SettingsModal } from "@/components/modals/settings-modal"
 import { UserProfileModal } from "@/components/modals/user-profile-modal"
-import { Toaster } from "@/components/ui/toaster"
 import { DashboardSplash } from "@/components/ui/dashboard-splash"
 import { IdleLogoutWarning } from "@/components/ui/idle-logout-warning"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { OfflineBanner } from "@/components/ui/offline-banner"
 import { SkipToContent } from "@/components/ui/skip-to-content"
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
+import { useSubscription } from '@/hooks/use-subscription'
+import { TourProvider } from '@/components/tour/TourProvider'
+import { TourOverlay } from '@/components/tour/TourOverlay'
+import { TourTooltip } from '@/components/tour/TourTooltip'
+import { TourLauncher } from '@/components/tour/TourLauncher'
+import { TourHelpButton } from '@/components/tour/TourHelpButton'
+import { useTour } from '@/components/tour/TourProvider'
+import { useTourState } from '@/components/tour/useTourState'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -38,6 +45,7 @@ interface DashboardLayoutProps {
     label: string
     href: string
     badge?: number
+    tourId?: string
   }>
 }
 
@@ -76,6 +84,8 @@ export function ProfessionalDashboardLayout({
     return !sessionStorage.getItem(key)
   })
   const { unreadCount, refetch: refetchUnread } = useUnreadMessages()
+  const { subscription, hasAccess } = useSubscription()
+  const daysLeft = subscription?.daysRemaining ?? 0
   const [userProfile, setUserProfile] = useState<{
     firstName: string
     lastName: string
@@ -85,11 +95,10 @@ export function ProfessionalDashboardLayout({
   /* ── Splash min-timer — only runs if splash is showing ── */
   useEffect(() => {
     if (!showSplash) return
-    // Elegant splash: dismiss after 5s
     const t = setTimeout(() => {
       setShowSplash(false)
       sessionStorage.setItem(`splash-shown-${userRole}`, '1')
-    }, 5000)
+    }, 6000)
     return () => clearTimeout(t)
   }, [])
 
@@ -108,7 +117,7 @@ export function ProfessionalDashboardLayout({
         const p = await res.json()
         setUserProfile({ firstName: p.firstName, lastName: p.lastName, avatar: p.avatar })
       }
-    } catch { /* silent — timeout or network error */ }
+    } catch (e) { console.warn('[Dashboard] Profile fetch failed:', e) }
     // Always dismiss splash after profile attempt
     setShowSplash(false)
     sessionStorage.setItem(`splash-shown-${userRole}`, '1')
@@ -132,8 +141,35 @@ export function ProfessionalDashboardLayout({
     }
   }
 
+  /* ── Tour completion monitor ── */
+  const { markCompleted } = useTourState()
+  const prevActiveRef = React.useRef(false)
+
+  function TourInner() {
+    const { isActive, activeTourId } = useTour()
+
+    useEffect(() => {
+      if (prevActiveRef.current && !isActive && activeTourId) {
+        markCompleted(userRole)
+        const key = `tour-${userRole.toLowerCase()}-completed`
+        localStorage.setItem(key, new Date().toISOString())
+      }
+      prevActiveRef.current = isActive
+    }, [isActive])
+
+    return null
+  }
+
   return (
+    <TourProvider>
     <div className="min-h-screen bg-slate-50">
+
+      {/* ── TOUR INFRASTRUCTURE ── */}
+      <TourInner />
+      <TourOverlay />
+      <TourTooltip role={userRole} />
+      <TourLauncher />
+      <TourHelpButton />
 
       {/* ── SPLASH SCREEN ── */}
       <DashboardSplash
@@ -191,6 +227,21 @@ export function ProfessionalDashboardLayout({
                 </span>
               )}
             </button>
+
+            {hasAccess && daysLeft > 0 && daysLeft <= 10 && (
+              <span className={`hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                daysLeft <= 3
+                  ? 'bg-red-100 text-red-700'
+                  : daysLeft <= 7
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'bg-green-100 text-green-700'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  daysLeft <= 3 ? 'bg-red-500' : daysLeft <= 7 ? 'bg-amber-500' : 'bg-green-500'
+                }`} />
+                {daysLeft}d left
+              </span>
+            )}
 
             <button
               onClick={() => setSettingsOpen(true)}
@@ -263,6 +314,7 @@ export function ProfessionalDashboardLayout({
                   key={index}
                   href={item.href}
                   title={sidebarCollapsed ? item.label : undefined}
+                  data-tour={item.tourId}
                   onClick={() => { setSidebarOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
                   className={`relative flex items-center gap-3 px-3 py-2 sm:py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                     isActive
@@ -316,7 +368,7 @@ export function ProfessionalDashboardLayout({
         id="main-content"
         className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'} pt-14 sm:pt-16`}
       >
-        <div className="p-3 sm:p-4 md:p-6 max-w-full overflow-x-auto">
+        <div className="p-3 sm:p-4 md:p-6 max-w-full overflow-x-auto animate-fadeIn">
           <ErrorBoundary>
             {children}
           </ErrorBoundary>
@@ -348,10 +400,10 @@ export function ProfessionalDashboardLayout({
               setTimeout(fetchUserProfile, 500)
             }}
           />
-          <Toaster />
         </>
       )}
 
     </div>
+      </TourProvider>
   )
 }

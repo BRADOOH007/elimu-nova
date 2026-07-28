@@ -11,8 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import {
   Globe, Loader2, Save, Clock, DollarSign, Languages,
-  Monitor, BookOpen, Zap, Search,
-  ChevronLeft, ChevronRight, Eye, Lock, Settings
+  Monitor, BookOpen, Zap, Search, Video,
+  ChevronLeft, ChevronRight, Eye, Lock, Settings,
+  ShieldCheck, AlertCircle, CheckCircle, XCircle, ExternalLink,
+  Wrench, Info
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -128,7 +130,7 @@ export default function GlobalSettingsPage() {
           enableAnalytics:          map.get('feature_analytics')?.value === 'true',
         })
       }
-    } catch {}
+    } catch (e) { console.warn('[SuperAdminGlobal] loadAllSettings error:', e) }
   }
 
   useEffect(() => { loadAllSettings().finally(() => setLoading(false)) }, [])
@@ -185,6 +187,12 @@ export default function GlobalSettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="all" className="flex items-center gap-2">
             <Settings className="w-4 h-4" /> All Settings
+          </TabsTrigger>
+          <TabsTrigger value="integrations" className="flex items-center gap-2">
+            <Video className="w-4 h-4" /> Integrations
+          </TabsTrigger>
+          <TabsTrigger value="maintenance" className="flex items-center gap-2">
+            <Wrench className="w-4 h-4" /> Maintenance
           </TabsTrigger>
         </TabsList>
 
@@ -405,6 +413,16 @@ export default function GlobalSettingsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* ── Integrations ─────────────────────────────────────────────── */}
+        <TabsContent value="integrations" className="space-y-4">
+          <ZoomConfigSection />
+        </TabsContent>
+
+        {/* ── Maintenance ──────────────────────────────────────────────── */}
+        <TabsContent value="maintenance" className="space-y-4">
+          <MaintenanceModeCard />
+        </TabsContent>
       </Tabs>
 
       {/* Details Dialog */}
@@ -484,7 +502,19 @@ function SettingsBrowser({
       .finally(() => setLoading(false))
   }, [search, page])
 
-  if (loading) return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+  if (loading) return (
+    <div className="space-y-2 animate-pulse">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+          <div className="flex-1 space-y-1.5">
+            <div className="h-4 w-2/5 bg-slate-200 rounded" />
+            <div className="h-3 w-3/4 bg-slate-200 rounded" />
+          </div>
+          <div className="h-5 w-12 bg-slate-200 rounded ml-4" />
+        </div>
+      ))}
+    </div>
+  )
 
   if (!data.length) return <p className="text-center py-8 text-gray-500">No settings found.</p>
 
@@ -520,6 +550,284 @@ function SettingsBrowser({
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* ── Maintenance Mode Card ── */
+function MaintenanceModeCard() {
+  const { toast } = useToast()
+  const [enabled, setEnabled] = useState(false)
+  const [message, setMessage] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/super-admin/maintenance-status')
+      .then(r => r.json())
+      .then(d => { setEnabled(d.enabled); setMessage(d.message || '') })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const value = JSON.stringify({ enabled, message: message.trim() })
+      const res = await fetch('/api/system-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: 'maintenance_mode',
+          value,
+          type: 'json',
+          category: 'system',
+          description: 'Maintenance mode toggle',
+          isPublic: true,
+          isEditable: true,
+        }),
+      })
+      if (res.ok) {
+        toast({ title: enabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled' })
+      } else {
+        const err = await res.json()
+        toast({ variant: 'destructive', title: 'Error', description: err.error || 'Failed to save' })
+      }
+    } catch {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save' })
+    } finally { setSaving(false) }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+  }
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <Card className={`border-0 ${enabled ? 'bg-gradient-to-r from-red-50 to-rose-50' : 'bg-gradient-to-r from-green-50 to-emerald-50'}`}>
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {enabled ? <AlertCircle className="w-6 h-6 text-red-600" /> : <CheckCircle className="w-6 h-6 text-green-600" />}
+            <div>
+              <p className="font-medium">{enabled ? 'Maintenance mode is active' : 'Maintenance mode is off'}</p>
+              <p className="text-sm text-gray-500">
+                {enabled
+                  ? 'Non-admin users will be redirected to the maintenance page'
+                  : 'All users can access the platform normally'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">{enabled ? 'On' : 'Off'}</span>
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Wrench className="w-5 h-5 text-amber-500" />
+            Maintenance Message
+          </CardTitle>
+          <CardDescription>
+            This message will be shown to users on the maintenance page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Custom Message</Label>
+            <textarea
+              className="w-full min-h-[100px] rounded-lg border border-gray-200 bg-white p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+              placeholder="e.g. We are performing scheduled maintenance. Please check back shortly."
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              disabled={!enabled}
+            />
+            <p className="text-xs text-gray-400">
+              Leave empty to show the default maintenance message.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              onClick={save}
+              disabled={saving}
+              className={enabled
+                ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700'
+                : 'edugenius-button'}
+            >
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {enabled ? 'Disable & Save' : 'Enable & Save'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <CardContent className="p-4 flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-sm text-blue-900">How maintenance mode works</p>
+            <ul className="text-xs text-blue-700 mt-2 space-y-1 list-disc list-inside">
+              <li>Super admins can always access the platform during maintenance</li>
+              <li>All other users are redirected to the maintenance page</li>
+              <li>The maintenance status is cached for 30 seconds in the middleware</li>
+              <li>Changes take effect within 30 seconds of saving</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/* ── Zoom Integration Section ── */
+function ZoomConfigSection() {
+  const { toast } = useToast()
+  const [config, setConfig] = useState({ zoom_sdk_key: '', zoom_sdk_secret: '' })
+  const [isConfigured, setIsConfigured] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null)
+  const [showSecrets, setShowSecrets] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/zoom/config')
+      .then(r => r.json())
+      .then(d => {
+        if (d.config) setConfig(prev => ({ ...prev, ...d.config }))
+        setIsConfigured(d.isConfigured)
+      }).catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/zoom/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast({ title: 'Zoom config saved', description: `Updated: ${data.updated?.join(', ') || 'all'}` })
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: data.error || 'Failed to save' })
+      }
+    } catch { toast({ variant: 'destructive', title: 'Error', description: 'Failed to save config' }) }
+    finally { setSaving(false) }
+  }
+
+  const test = async () => {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const res = await fetch('/api/zoom/config', { method: 'PUT' })
+      const data = await res.json()
+      setTestResult(data)
+    } catch {
+      setTestResult({ success: false, error: 'Connection failed' })
+    } finally { setTesting(false) }
+  }
+
+  if (loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>
+  }
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <Card className={`border-0 ${isConfigured ? 'bg-gradient-to-r from-green-50 to-emerald-50' : 'bg-gradient-to-r from-amber-50 to-yellow-50'}`}>
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isConfigured ? <ShieldCheck className="w-6 h-6 text-green-600" /> : <AlertCircle className="w-6 h-6 text-amber-600" />}
+            <div>
+              <p className="font-medium">{isConfigured ? 'Zoom SDK configured' : 'Zoom SDK not configured'}</p>
+              <p className="text-sm text-gray-500">
+                {isConfigured ? 'Meeting SDK is ready for in-app video calls' : 'Add your Zoom Marketplace SDK credentials below'}
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={test} disabled={testing}>
+            {testing ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Video className="w-4 h-4 mr-1" />}
+            Test
+          </Button>
+        </CardContent>
+      </Card>
+
+      {testResult && (
+        <Card className={`border-0 ${testResult.success ? 'bg-green-50' : 'bg-red-50'}`}>
+          <CardContent className="p-4 flex items-center gap-3">
+            {testResult.success ? <CheckCircle className="w-5 h-5 text-green-600" /> : <XCircle className="w-5 h-5 text-red-600" />}
+            <p className="text-sm">{testResult.message || testResult.error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Video className="w-5 h-5 text-blue-600" />
+            Zoom Meeting SDK Credentials
+          </CardTitle>
+          <CardDescription>
+            Get your SDK Key and Secret from{' '}
+            <a href="https://marketplace.zoom.us/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+              Zoom Marketplace &rarr;
+            </a>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>SDK Key (Client ID)</Label>
+              <Input
+                value={config.zoom_sdk_key}
+                onChange={e => setConfig(p => ({ ...p, zoom_sdk_key: e.target.value }))}
+                placeholder="Enter SDK Key"
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>SDK Secret</Label>
+              <Input
+                type={showSecrets ? 'text' : 'password'}
+                value={config.zoom_sdk_secret}
+                onChange={e => setConfig(p => ({ ...p, zoom_sdk_secret: e.target.value }))}
+                placeholder="Enter SDK Secret"
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={save} disabled={saving} className="bg-gradient-to-r from-blue-600 to-purple-600">
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save Configuration
+            </Button>
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input type="checkbox" checked={showSecrets} onChange={e => setShowSecrets(e.target.checked)} className="rounded" />
+              Show secret
+            </label>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <CardContent className="p-4 flex items-start gap-3">
+          <Video className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-sm text-blue-900">How to get Zoom SDK credentials</p>
+            <ol className="text-xs text-blue-700 mt-2 list-decimal list-inside space-y-1">
+              <li>Go to the <a href="https://marketplace.zoom.us/" target="_blank" rel="noopener noreferrer" className="underline">Zoom Marketplace</a></li>
+              <li>Create a new app with the Meeting SDK capability</li>
+              <li>Copy the SDK Key (Client ID) and SDK Secret</li>
+              <li>Add your app domain to the allowlist: <code className="bg-white/80 px-1 rounded text-xs">{typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}</code></li>
+              <li>Paste them here and click Save</li>
+            </ol>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

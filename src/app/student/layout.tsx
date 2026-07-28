@@ -5,9 +5,10 @@ import { useEffect, useState } from 'react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
+import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
 import {
   BarChart3, BookOpen, ClipboardList, Calendar,
-  Brain, Trophy, MessageSquare, Sparkles, GraduationCap, CreditCard
+  Brain, Trophy, MessageSquare, Sparkles, GraduationCap, CreditCard, BookMarked
 } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
@@ -24,11 +25,12 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const isSchoolStudent = !!session?.user?.schoolId
 
   const sidebarItems = [
-    { icon: BarChart3,     label: 'Dashboard',  href: '/student/dashboard'    },
+    { icon: BarChart3,     label: 'Dashboard',  href: '/student/dashboard',    tourId: 'student-dashboard'   },
     { icon: GraduationCap, label: 'Learn',      href: '/student/learn'        },
-    { icon: BookOpen,      label: 'Lessons',    href: '/student/lesson-plans' },
+    { icon: BookMarked,    label: 'Curriculum', href: '/student/curriculum',   tourId: 'student-curriculum'  },
+    { icon: BookOpen,      label: 'Lessons',    href: '/student/lesson-plans', tourId: 'student-schedule'    },
     { icon: Calendar,      label: 'Classes',    href: '/student/schedule'     },
-    { icon: Trophy,        label: 'Progress',   href: '/student/progress'     },
+    { icon: Trophy,        label: 'Progress',   href: '/student/progress',    tourId: 'student-progress'    },
     { icon: Brain,         label: 'AI & Growth',href: '/student/ai-tutor'     },
     {
       icon: MessageSquare,
@@ -37,7 +39,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       badge: unreadCount > 0 ? unreadCount : undefined,
     },
     ...(!isSchoolStudent
-      ? [{ icon: CreditCard, label: 'Billing', href: '/student/billing' as const }]
+      ? [{ icon: CreditCard, label: 'Billing', href: '/student/billing' as const, tourId: 'student-billing' }]
       : []),
   ]
 
@@ -52,7 +54,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       schoolName={schoolInfo?.school?.name || 'Loading...'}
       sidebarItems={sidebarItems}
     >
-      {children}
+      <SubscriptionGuard>{children}</SubscriptionGuard>
     </ProfessionalDashboardLayout>
   )
 }

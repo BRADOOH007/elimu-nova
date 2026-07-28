@@ -1,24 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { COMPREHENSIVE_SUBJECTS } from '@/lib/subjects'
+import { route } from '@/lib/api-middleware'
 
-async function getSchoolAdmin(userId: string) {
-  return prisma.schoolAdmin.findUnique({
-    where: { userId },
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
     include: { school: true }
   })
-}
-
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const admin = await getSchoolAdmin(session.user.id)
     if (!admin?.schoolId) {
       return NextResponse.json({ error: 'School admin profile not found' }, { status: 404 })
     }
@@ -79,25 +68,18 @@ export async function GET() {
         studentCount: totalStudentCount
       }
     })
-  } catch (error) {
-    console.error('Error fetching learning areas:', error)
-    return NextResponse.json({ error: 'Failed to fetch learning areas' }, { status: 500 })
-  }
-}
+})
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const admin = await getSchoolAdmin(session.user.id)
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true }
+  })
     if (!admin?.schoolId) {
       return NextResponse.json({ error: 'School admin profile not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const name = String(body.name || '').trim()
     const description = String(body.description || '').trim()
 
@@ -115,25 +97,18 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ learningArea, message: 'Learning area created' }, { status: 201 })
-  } catch (error) {
-    console.error('Error creating learning area:', error)
-    return NextResponse.json({ error: 'Failed to create learning area' }, { status: 500 })
-  }
-}
+})
 
-export async function PATCH(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const admin = await getSchoolAdmin(session.user.id)
+export const PATCH = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true }
+  })
     if (!admin?.schoolId) {
       return NextResponse.json({ error: 'School admin profile not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const id = String(body.id || '')
     if (!id) {
       return NextResponse.json({ error: 'Learning area id is required' }, { status: 400 })
@@ -157,11 +132,7 @@ export async function PATCH(request: NextRequest) {
     })
 
     return NextResponse.json({ learningArea, message: 'Learning area updated' })
-  } catch (error) {
-    console.error('Error updating learning area:', error)
-    return NextResponse.json({ error: 'Failed to update learning area' }, { status: 500 })
-  }
-}
+})
 
 /** Find or create a course that serves as assignment container for a learning area */
 async function ensureCourse(learningAreaName: string, schoolId: string) {
@@ -183,19 +154,16 @@ async function ensureCourse(learningAreaName: string, schoolId: string) {
   return course
 }
 
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const admin = await getSchoolAdmin(session.user.id)
+export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true }
+  })
     if (!admin?.schoolId) {
       return NextResponse.json({ error: 'School admin profile not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const { action, learningAreaId, teacherId, studentId } = body
 
     if (!action || !learningAreaId) {
@@ -252,25 +220,18 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
-  } catch (error) {
-    console.error('Error in learning area assignment:', error)
-    return NextResponse.json({ error: 'Failed to process assignment' }, { status: 500 })
-  }
-}
+})
 
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const admin = await getSchoolAdmin(session.user.id)
+export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true }
+  })
     if (!admin?.schoolId) {
       return NextResponse.json({ error: 'School admin profile not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const { action, learningAreaId, teacherId, studentId } = body
 
     if (!action || !learningAreaId) {
@@ -312,8 +273,4 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 })
-  } catch (error) {
-    console.error('Error in learning area removal:', error)
-    return NextResponse.json({ error: 'Failed to remove assignment' }, { status: 500 })
-  }
-}
+})

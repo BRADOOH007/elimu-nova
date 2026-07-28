@@ -20,8 +20,8 @@ export function useSSE(channel: string | null, handlers: Record<string, EventHan
         try {
           const data = JSON.parse(e.data)
           handlersRef.current[event]?.(data)
-        } catch {
-          // ignore malformed events
+        } catch (e) {
+          console.warn('[SSE] Malformed event:', e)
         }
       })
     })

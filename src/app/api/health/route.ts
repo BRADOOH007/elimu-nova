@@ -1,44 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server'
+// ──────────────────────────────────────────────────────────────
+// Health check endpoint — used by Vercel Cron, k6 load tests,
+// and external uptime monitors. Returns 200 if DB + cache are
+// healthy, 503 if degraded.
+// ──────────────────────────────────────────────────────────────
+
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { cache } from '@/lib/redis'
 
-export async function GET(request: NextRequest) {
+export const dynamic = 'force-dynamic'
+
+export async function GET() {
+  const checks: Record<string, string> = {}
+  let healthy = true
+
+  // Database check
   try {
-    const startTime = Date.now()
-    
-    // Test database connection
-    const dbTest = await prisma.$queryRaw`SELECT 1 as test`
-    const dbTime = Date.now() - startTime
-
-    // Get basic counts
-    const userCount = await prisma.user.count()
-    const schoolCount = await prisma.school.count()
-
-    return NextResponse.json({
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      database: {
-        connected: true,
-        responseTime: `${dbTime}ms`,
-        userCount,
-        schoolCount
-      },
-      version: '1.0.0'
-    })
-  } catch (error) {
-    console.error('Health check failed:', error)
-    
-    return NextResponse.json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV,
-      error: {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        type: error instanceof Error ? error.constructor.name : 'Unknown'
-      },
-      database: {
-        connected: false
-      }
-    }, { status: 500 })
+    await prisma.$queryRaw`SELECT 1`
+    checks.database = 'ok'
+  } catch (e) {
+    checks.database = 'error'
+    healthy = false
   }
+
+  // Redis/cache check
+  try {
+    await cache.ping()
+    checks.cache = 'ok'
+  } catch {
+    checks.cache = 'unavailable'
+  }
+
+  const status = healthy ? 200 : 503
+  return NextResponse.json({
+    status: healthy ? 'healthy' : 'degraded',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    checks,
+  }, { status })
 }

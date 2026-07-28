@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, School, Plus, Search, Edit, Trash2, Users, BookOpen, GraduationCap, MoreHorizontal } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface ClassRecord {
   id: string; name: string; subject: string; grade: string
@@ -43,7 +44,7 @@ export default function SchoolAdminClassesPage() {
         const data = await res.json()
         setClasses(data.classes || [])
       }
-    } catch {} finally { setLoading(false) }
+    } catch (e) { console.warn('[SchoolAdminClasses] fetchClasses error:', e) } finally { setLoading(false) }
   }
 
   const fetchTeachers = async () => {
@@ -53,7 +54,7 @@ export default function SchoolAdminClassesPage() {
         const data = await res.json()
         setTeachers((data.teachers || []).map((t: any) => ({ id: t.id, name: t.name })))
       }
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminClasses] fetchTeachers error:', e) }
   }
 
   const openCreate = () => {
@@ -83,17 +84,17 @@ export default function SchoolAdminClassesPage() {
         setShowDialog(false); fetchClasses()
       } else {
         const err = await res.json()
-        toast({ title: 'Error', description: err.error, variant: 'destructive' })
+        toast({ title: 'Error', description: err.error })
       }
-    } catch {} finally { setSaving(false) }
+    } catch (e) { console.warn('[SchoolAdminClasses] handleSave error:', e) } finally { setSaving(false) }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this class?')) return
+    if (!(await confirmToast({ title: 'Delete this class?' }))) return
     try {
       const res = await fetch(`/api/school-admin/classes/${id}`, { method: 'DELETE' })
       if (res.ok) { toast({ title: 'Deleted' }); fetchClasses() }
-    } catch {}
+    } catch (e) { console.warn('[SchoolAdminClasses] handleDelete error:', e) }
   }
 
   const filtered = classes.filter(c =>

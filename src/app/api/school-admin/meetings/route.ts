@@ -1,27 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logActivity } from '@/lib/activity-logger'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      include: { school: true }
-    })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -30,7 +16,7 @@ export async function GET(request: NextRequest) {
     const schoolId = schoolAdmin.schoolId
 
     // Get query parameters
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
@@ -118,40 +104,19 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit)
       }
     })
+})
 
-  } catch (error) {
-    console.error('Error fetching meetings:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch meetings' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
     const schoolId = schoolAdmin.schoolId
-    const body = await request.json()
+    const body = await req.json()
     const { title, description, date, time, duration, location, attendees } = body
 
     // Validate required fields
@@ -165,7 +130,7 @@ export async function POST(request: NextRequest) {
     const meeting = await prisma.meeting.create({
       data: {
         schoolId,
-        createdBy: session.user.id,
+        createdBy: user.id,
         title,
         description: description || null,
         date: new Date(date),
@@ -188,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Log activity
     await logActivity({
       schoolId,
-      userId: session.user.id,
+      userId: user.id,
       type: 'MEETING_SCHEDULED',
       action: 'Meeting Scheduled',
       description: `Scheduled meeting: ${title}`,
@@ -222,12 +187,4 @@ export async function POST(request: NextRequest) {
       message: 'Meeting scheduled successfully',
       meeting: formattedMeeting
     }, { status: 201 })
-
-  } catch (error) {
-    console.error('Error creating meeting:', error)
-    return NextResponse.json(
-      { error: 'Failed to create meeting' },
-      { status: 500 }
-    )
-  }
-}
+})

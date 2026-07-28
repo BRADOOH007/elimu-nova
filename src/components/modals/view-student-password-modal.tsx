@@ -193,16 +193,11 @@ export default function ViewStudentPasswordModal({
             <CardContent className="space-y-2">
               <div className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-gray-500" />
-                <div>
-                  <span className="text-sm font-medium">
-                    {student.email.endsWith('@student.local')
-                      ? student.email.replace('@student.local', '')
-                      : student.email}
-                  </span>
-                  <span className="text-xs text-gray-400 ml-2">
-                    {student.email.endsWith('@student.local') ? '(username login)' : '(email login)'}
-                  </span>
-                </div>
+                <span className="text-sm font-medium">
+                  Username: {student.email.endsWith('@student.local')
+                    ? student.email.replace('@student.local', '')
+                    : student.email}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-gray-500" />
@@ -331,9 +326,7 @@ export default function ViewStudentPasswordModal({
               <li className="flex items-start gap-2">
                 <span className="text-indigo-600 font-bold">•</span>
                 <span>Login with username: <strong>
-                  {student.email.endsWith('@student.local')
-                    ? student.email.replace('@student.local', '')
-                    : student.email}
+                  {student.email.replace('@student.local', '')}
                 </strong></span>
               </li>
               <li className="flex items-start gap-2">

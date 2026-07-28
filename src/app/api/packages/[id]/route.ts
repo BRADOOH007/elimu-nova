@@ -1,24 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
+    const { id } = params
 
     const packageData = await prisma.package.findUnique({
       where: { id },
@@ -47,30 +32,12 @@ export async function GET(
     }
 
     return NextResponse.json(packageData)
-  } catch (error) {
-    console.error('Error fetching package:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
+    const { id } = params
 
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const body = await request.json()
+    const body = await req.json()
     const { 
       name,
       description,
@@ -139,28 +106,10 @@ export async function PUT(
     })
 
     return NextResponse.json(packageData)
-  } catch (error) {
-    console.error('Error updating package:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+export const DELETE = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
+    const { id } = params
 
     // Check if package exists
     const existingPackage = await prisma.package.findUnique({
@@ -189,8 +138,4 @@ export async function DELETE(
     })
 
     return NextResponse.json({ message: 'Package deleted successfully' })
-  } catch (error) {
-    console.error('Error deleting package:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})

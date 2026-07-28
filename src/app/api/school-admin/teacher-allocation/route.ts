@@ -1,20 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const admin = await (prisma as any).schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      include: { school: true },
-    })
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await (prisma as any).schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true },
+  })
     if (!admin) return NextResponse.json({ error: 'Not a school admin' }, { status: 403 })
 
-    const { applyRecommendations = false } = await request.json()
+    const { applyRecommendations = false } = await req.json()
 
     // Fetch all teachers with their current load
     const teachers = await prisma.teacher.findMany({
@@ -125,8 +120,4 @@ Focus on: workload balance, subject expertise matching, student-teacher ratios.`
       teacherProfiles,
       appliedRecommendations: applied,
     })
-  } catch (error) {
-    console.error('[TEACHER_ALLOCATION]', error)
-    return NextResponse.json({ error: 'Failed to analyse teacher allocation' }, { status: 500 })
-  }
-}
+})

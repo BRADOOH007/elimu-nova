@@ -1,375 +1,95 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { NextResponse } from 'next/server'
+import { prisma, withRetry } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { encryptPassword, stripPasswordFromAddress } from '@/lib/password-encryption'
-import { sendCredentialEmail } from '@/lib/email'
-
-function generateStudentPassword(): string {
-  const adjs  = ['Blue','Green','Happy','Brave','Swift','Bright','Calm','Bold']
-  const nouns = ['Lion','Star','River','Eagle','Mountain','Sunrise','Ocean','Forest']
-  const adj  = adjs [Math.floor(Math.random() * adjs.length)]
-  const noun = nouns[Math.floor(Math.random() * nouns.length)]
-  const num  = Math.floor(100 + Math.random() * 900)
-  return `${adj}${noun}${num}`
-}
+import { route } from '@/lib/api-middleware'
+import { CreateStudentSchema } from '@/lib/validators'
+import { parsePagination, paginate } from '@/lib/pagination'
+import { generatePassword as genPwd, generateUsername } from '@/lib/bulk-import'
 
 function generateStudentEmail(firstName: string, lastName: string, suffix?: string): string {
-  const base = `${firstName.toLowerCase().replace(/\s+/g,'')}` +
-               `.${lastName.toLowerCase().replace(/\s+/g,'')}`
+  const base = `${firstName.toLowerCase().replace(/\s+/g,'')}.${lastName.toLowerCase().replace(/\s+/g,'')}`
   return suffix ? `${base}.${suffix}@student.local` : `${base}@student.local`
 }
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      include: { school: true }
-    })
-
-    if (!schoolAdmin) {
-      return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
-    }
-
-    const schoolId = schoolAdmin.schoolId
-
-    // Get query parameters
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const search = searchParams.get('search') || ''
-    const status = searchParams.get('status') || 'all'
-
-    const skip = (page - 1) * limit
-
-    // Build where clause
-    const where: any = {
-      schoolId
-    }
-
-    if (search) {
-      where.OR = [
-        {
-          user: {
-            firstName: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        },
-        {
-          user: {
-            lastName: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        },
-        {
-          user: {
-            email: {
-              contains: search,
-              mode: 'insensitive'
-            }
-          }
-        },
-        {
-          teacher: {
-            user: {
-              OR: [
-                {
-                  firstName: {
-                    contains: search,
-                    mode: 'insensitive'
-                  }
-                },
-                {
-                  lastName: {
-                    contains: search,
-                    mode: 'insensitive'
-                  }
-                }
-              ]
-            }
-          }
-        }
-      ]
-    }
-
-    if (status !== 'all') {
-      where.user = {
-        ...where.user,
-        isActive: status === 'active'
-      }
-    }
-
-    // Get students with pagination
-    const [students, total] = await Promise.all([
-      prisma.student.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { user: { createdAt: 'desc' } },
-        include: {
-          user: {
-            select: {
-              firstName: true,
-              lastName: true,
-              email: true,
-              createdAt: true,
-              isActive: true,
-              phone: true,
-              address: true
-            }
-          },
-          teacher: {
-            include: {
-              user: {
-                select: {
-                  firstName: true,
-                  lastName: true
-                }
-              }
-            }
-          },
-          class: {
-            select: {
-              name: true,
-              subject: true,
-              grade: true
-            }
-          }
-        }
-      }),
-      prisma.student.count({ where })
-    ])
-
-    // Format students data
-    const formattedStudents = students.map(student => ({
-      id: student.id,
-      name: `${student.user.firstName} ${student.user.lastName}`,
-      email: student.user.email,
-      teacher: student.teacher ? `${student.teacher.user.firstName} ${student.teacher.user.lastName}` : '',
-      class: student.class?.name,
-      grade: student.class?.grade,
-      status: student.user.isActive ? 'Active' : 'Inactive',
-      joinDate: student.user.createdAt.toISOString().split('T')[0],
-      phone: student.user.phone,
-      address: stripPasswordFromAddress(student.user.address)
-    }))
-
-    return NextResponse.json({
-      students: formattedStudents,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    })
-
-  } catch (error) {
-    console.error('Error fetching students:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch students' },
-      { status: 500 }
-    )
+async function generateUniqueUsername(firstName: string, lastName: string): Promise<string> {
+  let username = generateUsername(firstName, lastName)
+  let suffixAttempt = 0
+  while (await prisma.user.findUnique({ where: { username } })) {
+    suffixAttempt++
+    username = generateUsername(firstName, lastName, `${Date.now().toString(36)}${suffixAttempt}`)
   }
+  return username
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const admin = await prisma.schoolAdmin.findUnique({ where: { userId: user.id } })
+  if (!admin) return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
+
+  const { searchParams } = new URL(req.url)
+  const pg = parsePagination(searchParams)
+
+  const [students, total] = await Promise.all([
+    prisma.student.findMany({
+      where: { schoolId: admin.schoolId, deletedAt: null },
+      include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, address: true, isActive: true, createdAt: true } }, class: { select: { id: true, name: true, grade: true } } },
+      orderBy: { user: { firstName: 'asc' } },
+      skip: (pg.page - 1) * pg.pageSize,
+      take: pg.pageSize,
+    }),
+    prisma.student.count({ where: { schoolId: admin.schoolId, deletedAt: null } }),
+  ])
+
+  return NextResponse.json(paginate(
+    students.map(s => ({ id: s.id, name: `${s.user.firstName} ${s.user.lastName}`, email: s.user.email, phone: s.user.phone, address: stripPasswordFromAddress(s.user.address), grade: s.class?.grade || 'Not assigned', className: s.class?.name || 'No class', classId: s.classId, status: s.user.isActive ? 'Active' : 'Inactive', joinDate: s.user.createdAt.toISOString() })),
+    total, pg,
+  ))
+})
+
+export const POST = route({ auth: 'SCHOOL_ADMIN', schema: CreateStudentSchema }, async (req, { user, body }) => {
+  const admin = await prisma.schoolAdmin.findUnique({ where: { userId: user.id } })
+  if (!admin) return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
+
+  const { firstName, lastName, email, phone, address, classId, password } = body!
+  const plainPassword = password || genPwd()
+  const hashedPassword = await bcrypt.hash(plainPassword, 10)
+  const encryptedPassword = encryptPassword(plainPassword)
+  const addressWithPassword = address ? `${encryptedPassword}\n---\n${address}` : encryptedPassword
+
+  const loginEmail = email?.trim() ? email.trim().toLowerCase() : generateStudentEmail(firstName, lastName)
+
+  const existingUser = await prisma.user.findUnique({ where: { email: loginEmail } })
+  if (existingUser) {
+    if (!email?.trim()) {
+      let suffix = 1
+      let emailWithSuffix: string
+      let existingWithSuffix: any
+      do {
+        emailWithSuffix = generateStudentEmail(firstName, lastName, String(suffix))
+        existingWithSuffix = await prisma.user.findUnique({ where: { email: emailWithSuffix } })
+        suffix++
+      } while (existingWithSuffix && suffix < 1000)
+      if (existingWithSuffix) return NextResponse.json({ error: 'A student with this name already exists.' }, { status: 400 })
+      return createStudent(firstName, lastName, emailWithSuffix, phone ?? null, address ?? null, classId ?? null, admin, plainPassword, hashedPassword, addressWithPassword)
     }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      include: { school: true }
-    })
-
-    if (!schoolAdmin) {
-      return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
-    }
-
-    const schoolId = schoolAdmin.schoolId
-    const body = await request.json()
-    const { firstName, lastName, email, phone, address, teacherId, classId, grade,
-            parentFirstName, parentLastName, parentEmail, parentPhone } = body
-
-    if (!firstName || !lastName || !teacherId) {
-      return NextResponse.json(
-        { error: 'firstName, lastName and teacherId are required' },
-        { status: 400 }
-      )
-    }
-
-    // Verify teacher belongs to this school
-    const teacher = await prisma.teacher.findFirst({
-      where: { id: teacherId, schoolId }
-    })
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found in this school' }, { status: 404 })
-    }
-
-    // Generate or validate email
-    const baseEmail = email?.trim()
-      ? email.trim().toLowerCase()
-      : generateStudentEmail(firstName, lastName)
-
-    // Ensure unique email
-    let loginEmail = baseEmail
-    const existing = await prisma.user.findUnique({ where: { email: loginEmail } })
-    if (existing) {
-      if (email?.trim()) {
-        return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 })
-      }
-      loginEmail = generateStudentEmail(firstName, lastName, Date.now().toString().slice(-4))
-    }
-
-    const plainPassword  = generateStudentPassword()
-    const hashedPassword = await bcrypt.hash(plainPassword, 10)
-
-    const encryptedPassword = encryptPassword(plainPassword)
-    const addressWithPassword = address
-      ? `${encryptedPassword}\n---\n${address}`
-      : encryptedPassword
-
-    // Handle parent account
-    let parentResult: { user?: any; parent?: any; credentials?: { email: string; password: string }; emailSent?: boolean; emailMethod?: string } = {}
-
-    if (parentFirstName && parentLastName && parentEmail) {
-      // Check if parent email already exists
-      let parentUser = await prisma.user.findUnique({ where: { email: parentEmail.trim().toLowerCase() } })
-
-      if (!parentUser) {
-        const parentPlainPassword = generateStudentPassword()
-        const parentHashed = await bcrypt.hash(parentPlainPassword, 10)
-
-        parentUser = await prisma.user.create({
-          data: {
-            firstName: parentFirstName.trim(),
-            lastName:  parentLastName.trim(),
-            email:     parentEmail.trim().toLowerCase(),
-            password:  parentHashed,
-            role:      'PARENT',
-            isActive:  true,
-            phone:     parentPhone?.trim() || null,
-          },
-        })
-
-        await prisma.parent.create({
-          data: { userId: parentUser.id },
-        })
-
-        parentResult.credentials = { email: parentEmail.trim().toLowerCase(), password: parentPlainPassword }
-
-        // Send credential email to parent
-        sendCredentialEmail({
-          to: parentEmail.trim().toLowerCase(),
-          recipientName: `${parentFirstName.trim()} ${parentLastName.trim()}`,
-          role: 'PARENT',
-          email: parentEmail.trim().toLowerCase(),
-          password: parentPlainPassword,
-          studentName: `${firstName} ${lastName}`,
-        }).then(result => {
-          parentResult.emailSent = result.sent
-          parentResult.emailMethod = result.method
-        }).catch(err => console.error('Failed to send parent credential email:', err))
-      }
-
-      parentResult.user = parentUser
-    }
-
-    const result = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          firstName, lastName,
-          email:    loginEmail,
-          password: hashedPassword,
-          role:     'STUDENT',
-          isActive: true,
-          phone:    phone   || null,
-          address:  addressWithPassword,
-        },
-      })
-      const student = await tx.student.create({
-        data: {
-          userId:    user.id,
-          schoolId,
-          teacherId,
-          classId:   classId || null,
-        },
-        include: {
-          user:  { select: { firstName: true, lastName: true, email: true } },
-          class: { select: { name: true, grade: true } },
-        },
-      })
-
-      // Link parent to student if parent was created/found
-      if (parentResult.user) {
-        const parentRecord = await tx.parent.findUnique({ where: { userId: parentResult.user.id } })
-        if (parentRecord) {
-          await tx.parentStudent.create({
-            data: { parentId: parentRecord.id, studentId: student.id },
-          })
-        }
-      }
-
-      return { user, student }
-    })
-
-    const response: any = {
-      message: 'Student enrolled successfully',
-      student: {
-        id:        result.student.id,
-        name:      `${result.student.user.firstName} ${result.student.user.lastName}`,
-        email:     result.student.user.email,
-        grade:     result.student.class?.grade || grade || 'Not assigned',
-        className: result.student.class?.name  || 'No class',
-      },
-      credentials: {
-        email:    loginEmail,
-        password: plainPassword,
-      },
-    }
-
-    if (parentResult.credentials) {
-      response.parentCredentials = {
-        ...parentResult.credentials,
-        emailSent:   parentResult.emailSent ?? false,
-        emailMethod: parentResult.emailMethod ?? 'none',
-      }
-    }
-
-    return NextResponse.json(response)
-
-  } catch (error) {
-    console.error('Error enrolling student:', error)
-    return NextResponse.json(
-      { error: 'Failed to enroll student' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 })
   }
+
+  return createStudent(firstName, lastName, loginEmail, phone ?? null, address ?? null, classId ?? null, admin, plainPassword, hashedPassword, addressWithPassword)
+})
+
+async function createStudent(firstName: string, lastName: string, email: string, phone: string | null, address: string | null, classId: string | null, admin: { id: string; schoolId: string | null }, plainPassword: string, hashedPassword: string, addressWithPassword: string) {
+  const username = await generateUniqueUsername(firstName, lastName)
+  const result = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({ data: { username, firstName, lastName, email, password: hashedPassword, role: 'STUDENT', isActive: true, phone: phone || null, address: addressWithPassword } })
+    const student = await tx.student.create({ data: { userId: user.id, schoolId: admin.schoolId, classId: classId || null } })
+    const studentWithRelations = await tx.student.findUnique({ where: { id: student.id }, include: { user: { select: { id: true, firstName: true, lastName: true, email: true } }, class: { select: { id: true, name: true, grade: true } } } })
+    return { user, student: studentWithRelations }
+  })
+
+  return NextResponse.json({
+    success: true, message: 'Student created successfully',
+    student: { id: result.student!.id, name: `${result.student!.user.firstName} ${result.student!.user.lastName}`, email: result.student!.user.email, grade: result.student!.class?.grade || 'Not assigned', className: result.student!.class?.name || 'No class' },
+    credentials: { username: result.user.username, email: result.user.email, password: plainPassword },
+  })
 }

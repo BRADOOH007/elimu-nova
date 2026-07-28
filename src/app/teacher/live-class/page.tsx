@@ -9,6 +9,7 @@ import {
   Sparkles, BookOpen, RotateCcw, Download, Plus, Video, Link
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { confirmToast } from '@/lib/confirm-toast'
 
 const DiscussTab = dynamic(() => import('@/app/teacher/discussions/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
@@ -56,7 +57,7 @@ export default function LiveClassPage() {
   const pollRef = useRef<NodeJS.Timeout>(null)
 
   useEffect(() => {
-    fetch('/api/teacher/classes').then(r => r.json()).then(d => setClasses(d.classes || []))
+    fetch('/api/teacher/classes').then(r => r.json()).then(d => setClasses(d.data || []))
   }, [])
 
   useEffect(() => {
@@ -98,7 +99,7 @@ export default function LiveClassPage() {
   }
 
   const endSession = async () => {
-    if (!liveSession || !confirm('End this live session?')) return
+    if (!liveSession || !(await confirmToast({ title: 'End this live session?' }))) return
     await fetch('/api/live-session', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },

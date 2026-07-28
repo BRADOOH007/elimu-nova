@@ -1,21 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 // GET - Fetch packages overview with subscription counts
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+export const GET = route({ auth: 'SUPER_ADMIN' }, async () => {
 
     const packages = await prisma.package.findMany({
       where: {
@@ -120,8 +108,4 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(overview)
-  } catch (error) {
-    console.error('Error fetching packages overview:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})

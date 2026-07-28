@@ -1,29 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized - Please log in' },
-        { status: 401 }
-      )
-    }
-
-    // Allow teachers and super admins to generate schemes of work
-    const userRole = session.user.role
-    if (userRole !== 'TEACHER' && userRole !== 'SUPER_ADMIN') {
-      return NextResponse.json(
-        { error: 'Access denied - Teachers only' },
-        { status: 403 }
-      )
-    }
-
+export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const body = await request.json()
     const { subject, grade, topic, duration, lessonsPerWeek, prerequisites, language = 'english', topics: requestTopics, documentContext } = body
 
@@ -32,9 +12,9 @@ export async function POST(request: NextRequest) {
 
     // Fetch teacher's saved scheme-of-work template if no explicit context provided
     let templateText = documentContext
-    if (!templateText && userRole === 'TEACHER') {
+    if (!templateText && user.role === 'TEACHER') {
       const teacher = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { schemeOfWorkTemplate: true },
       })
       templateText = teacher?.schemeOfWorkTemplate || null
@@ -173,14 +153,4 @@ CRITICAL REQUIREMENTS:
         language: isKiswahili ? 'swahili' : 'english'
       }
     })
-  } catch (error) {
-    console.error('Error generating scheme of work:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to generate scheme of work', 
-        details: error instanceof Error ? error.message : 'Unknown error' 
-      },
-      { status: 500 }
-    )
-  }
-}
+})

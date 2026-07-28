@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import CreatePackageModal from '@/components/modals/create-package-modal'
 import PackageDetailsModal from '@/components/modals/package-details-modal'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface Package {
   id: string
@@ -380,7 +381,7 @@ export default function PackagesPage() {
                         size="sm"
                         onClick={async (e) => {
                           e.stopPropagation()
-                          if (!confirm(`Delete "${pkg.name}"? This cannot be undone.`)) return
+                          if (!(await confirmToast({ title: `Delete "${pkg.name}"?`, description: 'This cannot be undone.', confirmLabel: 'Delete' }))) return
                           try {
                             const response = await fetch(`/api/packages/${pkg.id}`, {
                               method: 'DELETE',

@@ -36,7 +36,8 @@ export function decryptPassword(encoded: string): string | null {
     let decrypted = decipher.update(ciphertext, 'hex', 'utf8')
     decrypted += decipher.final('utf8')
     return decrypted
-  } catch {
+  } catch (e) {
+    console.warn('[Encryption] Decryption failed:', e)
     return null
   }
 }

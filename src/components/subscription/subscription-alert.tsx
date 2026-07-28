@@ -17,7 +17,6 @@ import {
 import Link from 'next/link'
 import { useState } from 'react'
 
-// Returns the correct billing path for the current user's role
 function useBillingPath() {
   const { data: session } = useSession()
   const role = session?.user?.role
@@ -29,15 +28,14 @@ function useBillingPath() {
 }
 
 export function SubscriptionAlert() {
-  const { subscription, hasAccess, isTrialEligible, startTrial } = useSubscription()
+  const { subscription, hasAccess } = useSubscription()
   const billingPath = useBillingPath()
   const [dismissed, setDismissed] = useState(false)
 
-  // Hide if dismissed or fully active (non-trial)
-  if (dismissed || (hasAccess && !subscription?.isTrial)) return null
+  if (dismissed || (hasAccess && !subscription?.isTrial) || !subscription) return null
 
-  // ── Trial expiring ≤ 3 days ──────────────────────────────────────────
-  if (subscription?.isTrial && subscription.daysRemaining <= 3 && subscription.daysRemaining > 0) {
+  // ── Trial expiring ≤ 3 days ──
+  if (subscription.isTrial && subscription.daysRemaining <= 3 && subscription.daysRemaining > 0) {
     return (
       <Card className="mb-6 border-orange-200 bg-gradient-to-r from-orange-50 to-red-50">
         <CardContent className="p-4">
@@ -53,7 +51,7 @@ export function SubscriptionAlert() {
                   Upgrade now to keep all premium features.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={billingPath}>
+                  <Link href="/pricing">
                     <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
                       <CreditCard className="w-4 h-4 mr-2" />Upgrade Now
                     </Button>
@@ -75,8 +73,8 @@ export function SubscriptionAlert() {
     )
   }
 
-  // ── Trial expired ────────────────────────────────────────────────────
-  if (subscription?.isExpired && subscription?.isTrial) {
+  // ── Trial expired ──
+  if (subscription.isExpired && subscription.isTrial) {
     return (
       <Card className="mb-6 border-red-200 bg-gradient-to-r from-red-50 to-pink-50">
         <CardContent className="p-4">
@@ -88,10 +86,10 @@ export function SubscriptionAlert() {
               <div className="flex-1">
                 <h3 className="font-semibold text-red-900 mb-1">Trial Expired</h3>
                 <p className="text-red-700 text-sm mb-3">
-                  Your free trial has ended. Upgrade to a premium plan to restore access.
+                  Your 10-day free trial has ended. Subscribe to a plan to restore access.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={billingPath}>
+                  <Link href="/pricing">
                     <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
                       <CreditCard className="w-4 h-4 mr-2" />Upgrade Now
                     </Button>
@@ -113,47 +111,8 @@ export function SubscriptionAlert() {
     )
   }
 
-  // ── Paid subscription expiring ≤ 7 days ──────────────────────────────
-  if (subscription && !subscription.isTrial && subscription.daysRemaining <= 7 && subscription.daysRemaining > 0) {
-    return (
-      <Card className="mb-6 border-yellow-200 bg-gradient-to-r from-yellow-50 to-orange-50">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-yellow-900 mb-1">Subscription Expiring Soon</h3>
-                <p className="text-yellow-700 text-sm mb-3">
-                  Your {subscription.packageName} plan expires in {subscription.daysRemaining} day{subscription.daysRemaining !== 1 ? 's' : ''}.
-                  Renew to avoid interruption.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={billingPath}>
-                    <Button size="sm" className="bg-yellow-600 hover:bg-yellow-700 text-white">
-                      <CreditCard className="w-4 h-4 mr-2" />Renew Now
-                    </Button>
-                  </Link>
-                  <Link href={billingPath}>
-                    <Button size="sm" variant="outline" className="border-yellow-300 text-yellow-700 hover:bg-yellow-100">
-                      <Calendar className="w-4 h-4 mr-2" />Manage Billing
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setDismissed(true)} className="text-yellow-600 hover:bg-yellow-100 shrink-0">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // ── Active trial > 3 days ────────────────────────────────────────────
-  if (subscription?.isTrial && subscription.daysRemaining > 3) {
+  // ── Active trial > 3 days ──
+  if (subscription.isTrial && subscription.daysRemaining > 3) {
     return (
       <Card className="mb-6 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50">
         <CardContent className="p-4">
@@ -170,11 +129,12 @@ export function SubscriptionAlert() {
                   </Badge>
                 </h3>
                 <p className="text-blue-700 text-sm mb-3">
-                  You have full access to all premium features until{' '}
+                  You have full access until{' '}
                   {new Date(subscription.trialEndsAt!).toLocaleDateString()}.
+                  Upgrade anytime to keep access after your trial.
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  <Link href={billingPath}>
+                  <Link href="/pricing">
                     <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
                       <Crown className="w-4 h-4 mr-2" />Upgrade Early
                     </Button>
@@ -188,42 +148,6 @@ export function SubscriptionAlert() {
               </div>
             </div>
             <Button variant="ghost" size="sm" onClick={() => setDismissed(true)} className="text-blue-600 hover:bg-blue-100 shrink-0">
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  // ── Eligible for trial (new user) ────────────────────────────────────
-  if (isTrialEligible) {
-    return (
-      <Card className="mb-6 border-green-200 bg-gradient-to-r from-green-50 to-emerald-50">
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shrink-0">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-green-900 mb-1">Start Your Free Trial</h3>
-                <p className="text-green-700 text-sm mb-3">
-                  Get 7 days of full access to all premium features — no credit card required.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" onClick={startTrial} className="bg-green-600 hover:bg-green-700 text-white">
-                    <Zap className="w-4 h-4 mr-2" />Start Free Trial
-                  </Button>
-                  <Link href="/pricing">
-                    <Button size="sm" variant="outline" className="border-green-300 text-green-700 hover:bg-green-100">
-                      View Plans
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setDismissed(true)} className="text-green-600 hover:bg-green-100 shrink-0">
               <X className="w-4 h-4" />
             </Button>
           </div>

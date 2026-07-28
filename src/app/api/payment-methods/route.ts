@@ -1,14 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req) => {
 
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -66,21 +60,9 @@ export async function GET(req: NextRequest) {
         hasPrev: page > 1
       }
     })
-  } catch (error) {
-    console.error('Error fetching payment methods:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch payment methods' },
-      { status: 500 }
-    )
-  }
-}
+})
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req) => {
 
     const body = await req.json()
     const { name, type, description, isActive = true } = body
@@ -104,11 +86,4 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json(paymentMethod, { status: 201 })
-  } catch (error) {
-    console.error('Error creating payment method:', error)
-    return NextResponse.json(
-      { error: 'Failed to create payment method' },
-      { status: 500 }
-    )
-  }
-}
+})

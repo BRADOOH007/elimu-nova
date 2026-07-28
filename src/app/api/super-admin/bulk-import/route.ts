@@ -1,16 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
+import { generateUsername } from '@/lib/bulk-import'
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { type, rows } = await request.json()
+    const { type, rows } = await req.json()
     if (!rows || !Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json({ error: 'No rows to import' }, { status: 400 })
     }
@@ -44,8 +39,15 @@ export async function POST(request: NextRequest) {
             ? await prisma.school.findFirst({ where: { id: r.schoolCode } })
             : null
 
+          let username = generateUsername(r.firstName || r.name, r.lastName || '')
+          let suffixAttempt = 0
+          while (await prisma.user.findUnique({ where: { username } })) {
+            suffixAttempt++
+            username = generateUsername(r.firstName || r.name, r.lastName || '', `${Date.now().toString(36)}${suffixAttempt}`)
+          }
           await prisma.user.create({
             data: {
+              username,
               firstName: r.firstName || r.name,
               lastName: r.lastName || '',
               email: r.email,
@@ -67,4 +69,4 @@ export async function POST(request: NextRequest) {
     console.error('[BULK_IMPORT_POST]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

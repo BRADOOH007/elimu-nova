@@ -1,0 +1,32 @@
+{
+  "version": "6.5.0",
+  "steps": [
+    {
+      "tag": "AlterTable",
+      "table": "parents",
+      "operations": [
+        {
+          "tag": "AddColumn",
+          "column": {
+            "name": "school_id",
+            "type": "TEXT",
+            "nullable": true
+          }
+        }
+      ]
+    },
+    {
+      "tag": "CreateForeignKey",
+      "table": "parents",
+      "foreignKey": {
+        "name": "parents_school_id_fkey",
+        "columns": ["school_id"],
+        "referencedTable": "schools",
+        "referencedColumns": ["id"],
+        "onDelete": "SET NULL",
+        "onUpdate": "CASCADE"
+      }
+    }
+  ],
+  "datamodel": "replace with actual datamodel hash"
+}

@@ -1,19 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/activity-logger';
+import { route } from '@/lib/api-middleware';
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const PUT = route({}, async (req, { user, params }) => {
 
     const body = await req.json();
     const { status } = body;
@@ -33,7 +23,7 @@ export async function PUT(
 
     // Check if meeting exists
     const existingMeeting = await prisma.meeting.findUnique({
-      where: { id: (await params).id },
+      where: { id: params.id },
       include: {
         creator: {
           select: {
@@ -50,7 +40,7 @@ export async function PUT(
 
     // Update meeting status
     const updatedMeeting = await prisma.meeting.update({
-      where: { id: (await params).id },
+      where: { id: params.id },
       data: { status: status as any }, // Cast to MeetingStatus enum
       include: {
         creator: {
@@ -66,7 +56,7 @@ export async function PUT(
     // Log activity
     await logActivity({
       schoolId: existingMeeting.schoolId,
-      userId: session.user.id,
+      userId: user.id,
       type: 'OTHER',
       action: 'Meeting Status Updated',
       description: `Meeting "${existingMeeting.title}" status changed to ${status}`,
@@ -88,12 +78,4 @@ export async function PUT(
         updatedAt: updatedMeeting.updatedAt
       }
     });
-
-  } catch (error) {
-    console.error('Error updating meeting status:', error);
-    return NextResponse.json(
-      { error: 'Failed to update meeting status' },
-      { status: 500 }
-    );
-  }
-}
+})
