@@ -6,6 +6,12 @@ const mockPrisma = {
 }
 
 vi.mock('@/lib/prisma', () => ({ prisma: mockPrisma }))
+vi.mock('@/lib/subscription-service', () => ({
+  hasAccess: vi.fn().mockResolvedValue(true),
+  getSubscriptionStatus: vi.fn(),
+  startFreeTrial: vi.fn(),
+  createCheckoutSession: vi.fn(),
+}))
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 vi.mock('@/lib/zoom-api', () => ({
   createZoomMeeting: vi.fn(),

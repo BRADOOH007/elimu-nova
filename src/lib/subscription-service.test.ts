@@ -27,19 +27,16 @@ describe('subscription-service', () => {
       })
     })
 
-    it('returns TRIAL_ELIGIBLE when user was created within 7 days', async () => {
+    it('returns NO_SUBSCRIPTION when user has no subscription (trial check moved to autoCreateTrial)', async () => {
       ;(prisma.subscription.findFirst as any).mockResolvedValue(null)
-      ;(prisma.user.findUnique as any).mockResolvedValue({
-        id: 'user-1',
-        createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      })
 
       const result = await getSubscriptionStatus('user-1')
 
-      expect(result.isActive).toBe(true)
-      expect(result.isTrial).toBe(true)
-      expect(result.status).toBe('TRIAL_ELIGIBLE')
-      expect(result.daysRemaining).toBe(5)
+      expect(result.isActive).toBe(false)
+      expect(result.isTrial).toBe(false)
+      expect(result.isExpired).toBe(true)
+      expect(result.status).toBe('NO_SUBSCRIPTION')
+      expect(result.daysRemaining).toBe(0)
     })
 
     it('returns active subscription status', async () => {

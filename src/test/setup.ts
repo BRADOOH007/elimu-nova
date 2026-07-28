@@ -11,7 +11,8 @@ vi.mock('@/lib/prisma', () => ({
     subscription: {
       findFirst: vi.fn(),
       create: vi.fn(),
-      update: vi.fn(),
+      update: vi.fn().mockResolvedValue(undefined),
+      findMany: vi.fn(),
     },
     package: {
       findUnique: vi.fn(),
