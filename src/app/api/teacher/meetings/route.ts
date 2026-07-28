@@ -164,6 +164,9 @@ export const POST = route({ auth: 'TEACHER', schema: createMeetingSchema }, asyn
   if (!teacher) {
     return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });
   }
+  if (!teacher.schoolId) {
+    return NextResponse.json({ error: 'Teacher has no assigned school' }, { status: 400 });
+  }
 
   const meetingDate = new Date(`${data.date}T${data.time}:00`);
 
@@ -174,7 +177,7 @@ export const POST = route({ auth: 'TEACHER', schema: createMeetingSchema }, asyn
       date: meetingDate,
       time: data.time,
       duration: data.duration || 60,
-      location: data.location,
+      location: data.location ?? undefined,
       status: 'SCHEDULED',
       schoolId: teacher.schoolId,
       createdBy: user.id,
