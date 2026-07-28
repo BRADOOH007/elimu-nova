@@ -110,13 +110,16 @@ export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
 
   const user = await prisma.$transaction(async (tx) => {
     if (role && role !== currentUser.role) {
-      // Role changed — delete old role-specific record
-      if (currentUser.schoolAdmin) await tx.schoolAdmin.delete({ where: { userId: id } })
-      if (currentUser.teacher) await tx.teacher.delete({ where: { userId: id } })
-      if (currentUser.student) await tx.student.delete({ where: { userId: id } })
+      // Role changed — delete old role-specific record and create new one
+      // SUPER_ADMIN and PARENT have no role record to create; just keep existing data
 
-      // Create new role-specific record
-      if (schoolId) {
+      const needsNewRecord = schoolId && ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT'].includes(role)
+
+      if (needsNewRecord) {
+        if (currentUser.schoolAdmin) await tx.schoolAdmin.delete({ where: { userId: id } })
+        if (currentUser.teacher) await tx.teacher.delete({ where: { userId: id } })
+        if (currentUser.student) await tx.student.delete({ where: { userId: id } })
+
         if (role === 'SCHOOL_ADMIN') {
           await tx.schoolAdmin.create({ data: { userId: id, schoolId } })
         } else if (role === 'TEACHER') {
