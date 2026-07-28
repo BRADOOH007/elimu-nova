@@ -12,6 +12,13 @@ vi.mock('@/lib/logger', () => ({
   },
 }))
 
+vi.mock('@/lib/subscription-service', () => ({
+  hasAccess: vi.fn().mockResolvedValue(true),
+  getSubscriptionStatus: vi.fn(),
+  startFreeTrial: vi.fn(),
+  createCheckoutSession: vi.fn(),
+}))
+
 vi.mock('next-auth', () => ({
   getServerSession: vi.fn(),
 }))

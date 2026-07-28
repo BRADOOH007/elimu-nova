@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { z } from 'zod'
+
+const createMeetingSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  date: z.string().min(1, 'Date is required'),
+  time: z.string().min(1, 'Time is required'),
+  duration: z.number().optional(),
+  description: z.string().optional(),
+  location: z.string().optional(),
+})
 
 export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
@@ -142,4 +152,45 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
     console.error('Error fetching teacher meetings:', error);
     return NextResponse.json({ error: 'Failed to fetch meetings' }, { status: 500 });
   }
+});
+
+export const POST = route({ auth: 'TEACHER', schema: createMeetingSchema }, async (req, { user, body }) => {
+  const data = body as z.infer<typeof createMeetingSchema>
+
+  const teacher = await prisma.teacher.findUnique({
+    where: { userId: user.id },
+  });
+
+  if (!teacher) {
+    return NextResponse.json({ error: 'Teacher profile not found' }, { status: 404 });
+  }
+
+  const meetingDate = new Date(`${data.date}T${data.time}:00`);
+
+  const meeting = await prisma.meeting.create({
+    data: {
+      title: data.title,
+      description: data.description || '',
+      date: meetingDate,
+      time: data.time,
+      duration: data.duration || 60,
+      location: data.location,
+      status: 'SCHEDULED',
+      schoolId: teacher.schoolId,
+      createdBy: user.id,
+      attendees: [],
+    },
+  });
+
+  return NextResponse.json({
+    meeting: {
+      id: meeting.id,
+      title: meeting.title,
+      date: meeting.date,
+      time: meeting.time,
+      duration: meeting.duration,
+      location: meeting.location,
+      status: meeting.status,
+    },
+  }, { status: 200 });
 });
