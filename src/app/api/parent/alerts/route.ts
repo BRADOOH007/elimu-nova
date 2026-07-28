@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 const prismaClient = prisma as any
 
@@ -173,15 +172,10 @@ function buildAlerts(student: any): Alert[] {
 }
 
 // GET — fetch all current alerts for a parent's children
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'PARENT' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const parent = await prismaClient.parent.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         students: {
           include: {
@@ -226,18 +220,13 @@ export async function GET(request: NextRequest) {
     console.error('[GET_PARENT_ALERTS]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})
 
 // POST — create a real notification in the DB and push to parent
 // Called by a cron job or teacher action
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'PARENT' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { parentUserId, studentName, alertType, severity, title, message } = await request.json()
+    const { parentUserId, studentName, alertType, severity, title, message } = await req.json()
 
     const notification = await prisma.notification.create({
       data: {
@@ -245,7 +234,7 @@ export async function POST(request: NextRequest) {
         message,
         type: severity === 'critical' ? 'error' : severity === 'warning' ? 'warning' : 'info',
         userId: parentUserId,
-        senderId: session.user.id,
+        senderId: user.id,
       },
     })
 
@@ -254,4 +243,4 @@ export async function POST(request: NextRequest) {
     console.error('[POST_PARENT_ALERTS]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+})

@@ -1,17 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { simplePresentationGenerator } from '@/lib/simple-presentation-generator'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+export const POST = route({}, async (request, { user }) => {
     const { 
       title, 
       subject, 
@@ -38,9 +30,9 @@ export async function POST(request: NextRequest) {
 
     // Fetch teacher's curriculum template as presentation style reference
     let templateText = documentContext
-    if (!templateText && session.user.role === 'TEACHER') {
+    if (!templateText && user.role === 'TEACHER') {
       const t = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { curriculumTemplate: true },
       })
       templateText = t?.curriculumTemplate || null
@@ -96,12 +88,12 @@ export async function POST(request: NextRequest) {
 
       buffer = await simplePresentationGenerator.generatePresentation({
         title: presentationTitle,
-        author: session.user.name || 'ElimuNova User',
+        author: user.name || 'ElimuNova User',
         slides: simpleSlides,
         generateImages: generateImages !== false,
         imageStyle: imageStyle === 'vivid' ? 'vivid' : 'natural',
-        userId: session.user.id,
-        teacherId: session.user.role === 'TEACHER' ? session.user.id : undefined
+        userId: user.id,
+        teacherId: user.role === 'TEACHER' ? user.id : undefined
       })
     } else if (content) {
       console.log('🎯 Generating PowerPoint from content...')
@@ -111,12 +103,12 @@ export async function POST(request: NextRequest) {
       
       buffer = await simplePresentationGenerator.generatePresentation({
         title: presentationTitle,
-        author: session.user.name || 'ElimuNova User',
+        author: user.name || 'ElimuNova User',
         slides: contentSlides,
         generateImages: generateImages !== false,
         imageStyle: imageStyle === 'vivid' ? 'vivid' : 'natural',
-        userId: session.user.id,
-        teacherId: session.user.role === 'TEACHER' ? session.user.id : undefined
+        userId: user.id,
+        teacherId: user.role === 'TEACHER' ? user.id : undefined
       })
     } else {
       return NextResponse.json(
@@ -133,17 +125,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-  } catch (error) {
-    console.error('Presentation generation error:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to generate presentation',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
-  }
-}
+})
 
 // Helper function to parse content into slides
 function parseContentToSlides(content: string) {

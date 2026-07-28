@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -10,30 +11,52 @@ import { useSSE } from '@/hooks/use-sse'
 import {
   Video,
   VideoOff,
-  Mic,
-  MicOff,
   MessageSquare,
   Users,
   X,
   Send,
   Brain,
-  PenLine,
   Hand,
-  PenTool
+  PenTool,
+  Loader2,
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react'
+
+const ZoomMeeting = dynamic(() => import('@/components/zoom-meeting'), { ssr: false })
+
+interface StudentMeetingDetail {
+  id: string
+  title: string
+  description?: string
+  date: string
+  time: string
+  duration: number
+  location?: string
+  status: string
+  zoomMeetingId?: string | null
+  zoomMeetingPassword?: string | null
+  zoomJoinUrl?: string | null
+  zoomProvider?: string | null
+}
 
 export default function StudentLiveRoom() {
   const { data: session } = useSession()
   const params = useParams()
   const router = useRouter()
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
-  const [isVideoOn, setIsVideoOn] = useState(true)
-  const [isAudioOn, setIsAudioOn] = useState(true)
+  const [meeting, setMeeting] = useState<StudentMeetingDetail | null>(null)
   const [isHandRaised, setIsHandRaised] = useState(false)
   const [chatMessages, setChatMessages] = useState<Array<{ id: string | number; sender: string; type: string; content: string; time: string }>>([])
   const [newMessage, setNewMessage] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(true)
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false)
+  const [zoomActive, setZoomActive] = useState(false)
+  const [zoomLoading, setZoomLoading] = useState(false)
+  const [zoomError, setZoomError] = useState<string | null>(null)
+  const [zoomInfo, setZoomInfo] = useState<{ signature: string; sdkKey: string } | null>(null)
+  const [meetingNumberInput, setMeetingNumberInput] = useState('')
+  const [meetingPasswordInput, setMeetingPasswordInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const addChatMessage = useCallback((msg: { id: string | number; sender: string; type: string; content: string; time: string }) => {
@@ -48,6 +71,21 @@ export default function StudentLiveRoom() {
       content: 'Welcome to the live class! Raise your hand if you need help.',
       time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
     })
+
+    fetch(`/api/teacher/meetings/${id}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data?.meeting) {
+          setMeeting(data.meeting)
+          if (data.meeting.zoomMeetingId) {
+            setMeetingNumberInput(data.meeting.zoomMeetingId)
+            if (data.meeting.zoomMeetingPassword) {
+              setMeetingPasswordInput(data.meeting.zoomMeetingPassword)
+            }
+          }
+        }
+      })
+      .catch(() => {})
 
     fetch(`/api/teacher/meetings/${id}/chat`)
       .then(r => r.ok ? r.json() : [])
@@ -91,6 +129,36 @@ export default function StudentLiveRoom() {
       })
     }
     setNewMessage('')
+  }
+
+  const handleJoinZoom = async () => {
+    if (!meetingNumberInput.trim()) return
+    setZoomLoading(true)
+    setZoomError(null)
+    try {
+      const res = await fetch('/api/zoom/signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meetingNumber: meetingNumberInput.trim(), role: 0 }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setZoomError(data.error || 'Failed to get Zoom signature')
+        return
+      }
+      setZoomInfo({ signature: data.signature, sdkKey: data.sdkKey })
+      setZoomActive(true)
+    } catch {
+      setZoomError('Failed to connect to Zoom service')
+    } finally {
+      setZoomLoading(false)
+    }
+  }
+
+  const handleLeaveZoom = () => {
+    setZoomActive(false)
+    setZoomInfo(null)
+    setZoomError(null)
   }
 
   const participants = [
@@ -138,68 +206,104 @@ export default function StudentLiveRoom() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Video Grid */}
+        {/* Video / Zoom Area */}
         <div className={`flex-1 p-6 overflow-auto ${isWhiteboardOpen ? 'w-1/2' : ''}`}>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {participants.map(participant => (
-              <Card key={participant.id} className="bg-gray-800 border-gray-700 overflow-hidden">
-                <div className={`aspect-video flex items-center justify-center relative ${
-                  participant.role === 'teacher' 
-                    ? 'bg-gradient-to-br from-blue-900 to-indigo-900' 
-                    : 'bg-gradient-to-br from-green-900 to-emerald-900'
-                }`}>
-                  <div className="text-white text-center">
-                    <div className={`w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-2 ${
-                      participant.role === 'teacher' 
-                        ? 'bg-gradient-to-br from-blue-500 to-indigo-600' 
-                        : 'bg-gradient-to-br from-green-500 to-emerald-600'
-                    }`}>
-                      {participant.name.charAt(0)}
-                    </div>
-                    <p className="text-sm font-semibold">{participant.name}</p>
+          {zoomActive && zoomInfo ? (
+            <ZoomMeeting
+              meetingNumber={meetingNumberInput}
+              passWord={meetingPasswordInput || undefined}
+              userName={session?.user?.name || 'Student'}
+              userEmail={session?.user?.email || undefined}
+              role={0}
+              sdkKey={zoomInfo.sdkKey}
+              signature={zoomInfo.signature}
+              onLeave={handleLeaveZoom}
+            />
+          ) : (
+            <div className="space-y-4">
+              {/* Zoom join form */}
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                    <Video className="w-5 h-5 text-blue-400" />
+                    Join Video Meeting
+                    {meeting?.zoomProvider === 'auto' && (
+                      <span className="ml-2 text-xs bg-green-600/30 text-green-400 px-2 py-0.5 rounded-full border border-green-500/40">
+                        Ready
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-gray-400 text-sm mb-4">
+                    {meeting?.zoomProvider === 'auto'
+                      ? 'A Zoom meeting has been auto-created for this class. Click Join or open the link.'
+                      : 'Ask your teacher for the Zoom Meeting ID and passcode.'}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 mb-3">
+                    <Input
+                      value={meetingNumberInput}
+                      onChange={e => setMeetingNumberInput(e.target.value)}
+                      placeholder="Zoom Meeting ID"
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 font-mono flex-1"
+                    />
+                    <Input
+                      value={meetingPasswordInput}
+                      onChange={e => setMeetingPasswordInput(e.target.value)}
+                      placeholder="Passcode (optional)"
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 w-40"
+                    />
                   </div>
-                  {participant.isSpeaking && (
-                    <div className="absolute bottom-4 left-4 px-2 py-1 bg-green-500 text-white text-xs rounded-full flex items-center gap-1">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                      Speaking
-                    </div>
+                  {zoomError && (
+                    <p className="text-red-400 text-sm mb-3 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" /> {zoomError}
+                    </p>
                   )}
-                </div>
-              </Card>
-            ))}
-
-            <Card className="bg-gray-800 border-gray-700 overflow-hidden">
-              <div className="aspect-video bg-gradient-to-br from-purple-900 to-pink-900 flex items-center justify-center relative">
-                <div className="text-white text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-2">
-                    Y
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleJoinZoom}
+                      disabled={zoomLoading || !meetingNumberInput.trim()}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600"
+                    >
+                      {zoomLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Video className="w-4 h-4 mr-2" />}
+                      {zoomLoading ? 'Connecting...' : 'Join Video'}
+                    </Button>
+                    {meeting?.zoomJoinUrl && (
+                      <a href={meeting.zoomJoinUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" className="text-white border-gray-600">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Open Zoom App
+                        </Button>
+                      </a>
+                    )}
                   </div>
-                  <p className="text-sm font-semibold">You</p>
-                </div>
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-black/50 hover:bg-black/70 rounded-full"
-                    onClick={() => setIsVideoOn(!isVideoOn)}
-                  >
-                    {isVideoOn ? <Video className="w-5 h-5 text-white" /> : <VideoOff className="w-5 h-5 text-red-400" />}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="bg-black/50 hover:bg-black/70 rounded-full"
-                    onClick={() => setIsAudioOn(!isAudioOn)}
-                  >
-                    {isAudioOn ? <Mic className="w-5 h-5 text-white" /> : <MicOff className="w-5 h-5 text-red-400" />}
-                  </Button>
-                </div>
-              </div>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+
+              {/* Participants preview */}
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-gray-400" />
+                    Participants
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-blue-900/30 border border-blue-500/30">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">{session?.user?.name?.charAt(0) || 'Y'}</div>
+                      <span className="text-white text-sm">{session?.user?.name || 'You'}</span>
+                    </div>
+                    {participants.map(p => (
+                      <div key={p.id} className={`flex items-center gap-3 p-2 rounded-lg ${p.role === 'teacher' ? 'bg-purple-900/30 border border-purple-500/30' : 'bg-gray-700/50'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${p.role === 'teacher' ? 'bg-purple-500' : 'bg-green-500'}`}>{p.name.charAt(0)}</div>
+                        <span className="text-white text-sm">{p.name} {p.role === 'teacher' && <span className="text-purple-400 text-xs">(Teacher)</span>}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Whiteboard Section (Read Only for Student) */}
-          {isWhiteboardOpen && (
+          {isWhiteboardOpen && !zoomActive && (
             <Card className="mt-6 bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
@@ -219,7 +323,6 @@ export default function StudentLiveRoom() {
         {/* Sidebar (Chat/Participants) */}
         {isChatOpen && (
           <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
-            {/* Tabs */}
             <div className="flex border-b border-gray-700">
               <button className="flex-1 py-3 px-4 text-sm font-semibold text-white border-b-2 border-blue-500">
                 Chat
@@ -230,7 +333,6 @@ export default function StudentLiveRoom() {
               </button>
             </div>
 
-            {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {chatMessages.map(msg => (
                 <div
@@ -258,7 +360,6 @@ export default function StudentLiveRoom() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* AI Assistant */}
             <div className="p-3 border-t border-gray-700 bg-gray-900">
               <Card className="bg-gradient-to-br from-indigo-900 to-purple-900 border-indigo-500/30">
                 <CardContent className="p-4">
@@ -280,7 +381,6 @@ export default function StudentLiveRoom() {
               </Card>
             </div>
 
-            {/* Message Input */}
             <div className="p-4 border-t border-gray-700">
               <div className="flex gap-2">
                 <Input

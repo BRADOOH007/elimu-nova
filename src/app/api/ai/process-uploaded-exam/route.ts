@@ -2,22 +2,11 @@
  * POST /api/ai/process-uploaded-exam
  * Process Uploaded Exam — AI extracts questions from PDF text into editable format
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !['TEACHER','SCHOOL_ADMIN','SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) return NextResponse.json({ error: `Rate limit. Retry in ${rl.resetInSec}s` }, { status: 429 })
-
+export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const { rawText, subject, grade } = await request.json()
     if (!rawText) return NextResponse.json({ error: 'rawText required' }, { status: 400 })
 
@@ -77,8 +66,4 @@ Rules:
     const questionCount = (extracted.sections || []).reduce((s: number, sec: any) => s + (sec.questions?.length || 0), 0)
 
     return NextResponse.json({ extracted, questionCount, subject, grade })
-  } catch (e: any) {
-    console.error('[PROCESS_UPLOADED_EXAM]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

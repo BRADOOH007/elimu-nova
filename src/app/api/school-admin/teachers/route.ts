@@ -1,27 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { route } from '@/lib/api-middleware'
+import { generateUsername } from '@/lib/bulk-import'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+async function generateUniqueUsername(firstName: string, lastName: string): Promise<string> {
+  let username = generateUsername(firstName, lastName)
+  let suffixAttempt = 0
+  while (await prisma.user.findUnique({ where: { username } })) {
+    suffixAttempt++
+    username = generateUsername(firstName, lastName, `${Date.now().toString(36)}${suffixAttempt}`)
+  }
+  return username
+}
 
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      include: { school: true }
-    })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -30,7 +27,7 @@ export async function GET(request: NextRequest) {
     const schoolId = schoolAdmin.schoolId
 
     // Get query parameters
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
@@ -134,41 +131,20 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit)
       }
     })
+})
 
-  } catch (error) {
-    console.error('Error fetching teachers:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch teachers' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      include: { school: true }
-    })
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
     const schoolId = schoolAdmin.schoolId
-    const body = await request.json()
+    const body = await req.json()
     const { firstName, lastName, email, password } = body
 
     if (!firstName || !lastName || !email || !password) {
@@ -193,9 +169,13 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
+    // Generate username
+    const username = await generateUniqueUsername(firstName, lastName)
+
     // Create user
-    const user = await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
+        username,
         firstName,
         lastName,
         email,
@@ -208,7 +188,7 @@ export async function POST(request: NextRequest) {
     // Create teacher record
     const teacher = await prisma.teacher.create({
       data: {
-        userId: user.id,
+        userId: newUser.id,
         schoolId: schoolId
       },
       include: {
@@ -234,12 +214,4 @@ export async function POST(request: NextRequest) {
         joinDate: teacher.user.createdAt.toISOString().split('T')[0]
       }
     })
-
-  } catch (error) {
-    console.error('Error enrolling teacher:', error)
-    return NextResponse.json(
-      { error: 'Failed to enroll teacher' },
-      { status: 500 }
-    )
-  }
-}
+})

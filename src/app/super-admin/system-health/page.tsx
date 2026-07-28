@@ -42,7 +42,7 @@ export default function SystemHealthPage() {
         setChecks(mapped)
         if (data.database?.status === 'healthy') setUptime(99.8)
       }
-    } catch {} finally {
+    } catch (e) { console.warn('[SuperAdminSystemHealth] runChecks error:', e) } finally {
       setTimeout(() => setLoading(false), 1000)
     }
   }

@@ -1,3 +1,5 @@
+import { getKey } from '@/lib/ai-provider'
+
 export interface ImageGenerationRequest {
   prompt: string
   style?: 'natural' | 'vivid'
@@ -36,7 +38,7 @@ export class ImageGenerationService {
   }
 
   private async generateDalle(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
-    const apiKey = process.env.OPENAI_DALLE_API_KEY || ''
+    const apiKey = await getKey('OPENAI_DALLE_API_KEY') || ''
     if (!apiKey || apiKey.startsWith('sk-or-')) return this.placeholder(request.prompt)
 
     try {
@@ -76,7 +78,7 @@ export class ImageGenerationService {
   }
 
   private async generateStability(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
-    const apiKey = process.env.STABILITY_API_KEY
+    const apiKey = await getKey('STABILITY_API_KEY')
     if (!apiKey) {
       console.warn('[ImageGen] No Stability AI key configured')
       return this.placeholder(request.prompt)

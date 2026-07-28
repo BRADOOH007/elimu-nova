@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { route } from '@/lib/api-middleware';
 import bcrypt from 'bcryptjs';
 import { encryptPassword } from '@/lib/password-encryption';
 
@@ -18,20 +17,15 @@ function buildAddressWithPassword(plainPassword: string, realAddress: string | n
   return realAddress ? `${encrypted}\n---\n${realAddress}` : encrypted;
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { id } = await params;
+    const { id } = params;
     const body = await req.json();
     const { password, generatePassword, resetPassword } = body;
 
     // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     });
 
     if (!teacher) {
@@ -106,4 +100,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     console.error('Error generating student credentials:', error);
     return NextResponse.json({ error: 'Failed to generate credentials' }, { status: 500 });
   }
-}
+});

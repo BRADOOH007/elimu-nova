@@ -1,31 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logActivity } from '@/lib/activity-logger'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { id } = await params
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -71,39 +53,16 @@ export async function GET(
     }
 
     return NextResponse.json({ meeting: formattedMeeting })
+})
 
-  } catch (error) {
-    console.error('Error fetching meeting:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch meeting' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { id } = await params
-    const body = await request.json()
+export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+    const body = await req.json()
     const { title, description, date, time, duration, location, status, attendees } = body
 
     // Get school admin's school ID
     const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     })
 
     if (!schoolAdmin) {
@@ -161,7 +120,7 @@ export async function PUT(
     if (status && status !== existingMeeting.status) {
       await logActivity({
         schoolId: schoolAdmin.schoolId,
-        userId: session.user.id,
+        userId: user.id,
         type: 'MEETING_SCHEDULED',
         action: 'Meeting Status Updated',
         description: `Meeting status changed to: ${status}`,
@@ -196,38 +155,13 @@ export async function PUT(
       message: 'Meeting updated successfully',
       meeting: formattedMeeting
     })
+})
 
-  } catch (error) {
-    console.error('Error updating meeting:', error)
-    return NextResponse.json(
-      { error: 'Failed to update meeting' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { id } = await params
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -253,7 +187,7 @@ export async function DELETE(
     // Log activity
     await logActivity({
       schoolId: schoolAdmin.schoolId,
-      userId: session.user.id,
+      userId: user.id,
       type: 'MEETING_SCHEDULED',
       action: 'Meeting Deleted',
       description: `Deleted meeting: ${existingMeeting.title}`,
@@ -265,12 +199,4 @@ export async function DELETE(
     })
 
     return NextResponse.json({ message: 'Meeting deleted successfully' })
-
-  } catch (error) {
-    console.error('Error deleting meeting:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete meeting' },
-      { status: 500 }
-    )
-  }
-}
+})

@@ -1,0 +1,72 @@
+# ──────────────────────────────────────────────────────────────────
+# Automated Database Backup — runs daily at 2 AM UTC.
+# Uses pg_dump (custom format) and stores as GitHub artifact.
+# Retention: 90 days. Old artifacts auto-cleaned.
+#
+# Manual trigger: GitHub UI → Actions → Database Backup → Run workflow
+#
+# Prerequisite: Add DATABASE_URL to GitHub repo secrets.
+#   Settings → Secrets and variables → Actions → Add DATABASE_URL
+# ──────────────────────────────────────────────────────────────────
+
+name: Database Backup
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # Daily at 2 AM UTC
+  workflow_dispatch:       # Manual trigger
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  backup:
+    name: pg_dump
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Run pg_dump
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%dT%H-%M-%S)
+          FILENAME="elimunova-backup-${TIMESTAMP}.sql"
+          pg_dump "${{ secrets.DATABASE_URL }}" \
+            --no-owner \
+            --no-acl \
+            --format=custom \
+            --file="${FILENAME}"
+          echo "BACKUP_FILE=${FILENAME}" >> $GITHUB_ENV
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 90
+
+  cleanup:
+    name: Clean old backups
+    runs-on: ubuntu-latest
+    needs: [backup]
+    steps:
+      - name: Delete backups older than 90 days
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: artifacts } = await github.rest.actions.listArtifactsForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.name,
+            });
+            const cutoff = Date.now() - 90 * 24 * 60 * 60 * 1000;
+            for (const artifact of artifacts.artifacts) {
+              if (new Date(artifact.created_at).getTime() < cutoff) {
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.name,
+                  artifact_id: artifact.id,
+                });
+              }
+            }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { useParams, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -10,8 +11,6 @@ import { useSSE } from '@/hooks/use-sse'
 import {
   Video,
   VideoOff,
-  Mic,
-  MicOff,
   MessageSquare,
   Users,
   X,
@@ -20,8 +19,11 @@ import {
   PenTool,
   Share2,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react'
+
+const ZoomMeeting = dynamic(() => import('@/components/zoom-meeting'), { ssr: false })
 
 interface MeetingDetail {
   id: string
@@ -34,6 +36,10 @@ interface MeetingDetail {
   status: string
   attendees?: any
   createdBy: { name: string; email: string }
+  zoomMeetingId?: string | null
+  zoomMeetingPassword?: string | null
+  zoomJoinUrl?: string | null
+  zoomProvider?: string | null
 }
 
 export default function LiveTeachingRoom() {
@@ -45,8 +51,12 @@ export default function LiveTeachingRoom() {
   const [meeting, setMeeting] = useState<MeetingDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isVideoOn, setIsVideoOn] = useState(true)
-  const [isAudioOn, setIsAudioOn] = useState(true)
+  const [zoomActive, setZoomActive] = useState(false)
+  const [zoomLoading, setZoomLoading] = useState(false)
+  const [zoomError, setZoomError] = useState<string | null>(null)
+  const [zoomInfo, setZoomInfo] = useState<{ signature: string; sdkKey: string } | null>(null)
+  const [meetingNumberInput, setMeetingNumberInput] = useState('')
+  const [meetingPasswordInput, setMeetingPasswordInput] = useState('')
   const [chatMessages, setChatMessages] = useState<Array<{ id: string | number; sender: string; type: string; content: string; time: string }>>([])
   const [newMessage, setNewMessage] = useState('')
   const [isChatOpen, setIsChatOpen] = useState(true)
@@ -67,6 +77,12 @@ export default function LiveTeachingRoom() {
         setChatMessages([
           { id: 1, sender: 'Hope AI', type: 'system', content: `Welcome to "${data.meeting.title}"! I'm Hope, your AI assistant for this session.${data.meeting.description ? `\n\n${data.meeting.description}` : ''}`, time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) },
         ])
+        if (data.meeting.zoomMeetingId) {
+          setMeetingNumberInput(data.meeting.zoomMeetingId)
+          if (data.meeting.zoomMeetingPassword) {
+            setMeetingPasswordInput(data.meeting.zoomMeetingPassword)
+          }
+        }
         setLoading(false)
       })
       .catch(() => { setError('Meeting not found'); setLoading(false) })
@@ -113,6 +129,36 @@ export default function LiveTeachingRoom() {
       })
     }
     setNewMessage('')
+  }
+
+  const handleStartZoom = async () => {
+    if (!meetingNumberInput.trim()) return
+    setZoomLoading(true)
+    setZoomError(null)
+    try {
+      const res = await fetch('/api/zoom/signature', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meetingNumber: meetingNumberInput.trim(), role: 1 }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setZoomError(data.error || 'Failed to get Zoom signature')
+        return
+      }
+      setZoomInfo({ signature: data.signature, sdkKey: data.sdkKey })
+      setZoomActive(true)
+    } catch {
+      setZoomError('Failed to connect to Zoom service')
+    } finally {
+      setZoomLoading(false)
+    }
+  }
+
+  const handleStopZoom = () => {
+    setZoomActive(false)
+    setZoomInfo(null)
+    setZoomError(null)
   }
 
   const rawAttendees: Array<{ name: string }> = (() => {
@@ -173,55 +219,100 @@ export default function LiveTeachingRoom() {
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Video Grid */}
+        {/* Video / Zoom Area */}
         <div className={`flex-1 p-6 overflow-auto ${isWhiteboardOpen ? 'w-1/2' : ''}`}>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            <Card className="bg-gray-800 border-gray-700 overflow-hidden">
-              <div className="aspect-video bg-gradient-to-br from-blue-900 to-purple-900 flex items-center justify-center relative">
-                <div className="text-white text-center">
-                  <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-3xl font-bold mx-auto mb-2">
-                    T
+          {zoomActive && zoomInfo ? (
+            <ZoomMeeting
+              meetingNumber={meetingNumberInput}
+              passWord={meetingPasswordInput || undefined}
+              userName={session?.user?.name || 'Teacher'}
+              userEmail={session?.user?.email || undefined}
+              role={1}
+              sdkKey={zoomInfo.sdkKey}
+              signature={zoomInfo.signature}
+              onLeave={handleStopZoom}
+            />
+          ) : (
+            <div className="space-y-4">
+              {/* Zoom join form */}
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                    <Video className="w-5 h-5 text-blue-400" />
+                    Start Video Meeting
+                    {meeting.zoomProvider === 'auto' && (
+                      <span className="ml-2 text-xs bg-green-600/30 text-green-400 px-2 py-0.5 rounded-full border border-green-500/40">
+                        Auto-created
+                      </span>
+                    )}
+                  </h3>
+                  <div className="flex flex-col sm:flex-row gap-3 mb-3">
+                    <Input
+                      value={meetingNumberInput}
+                      onChange={e => setMeetingNumberInput(e.target.value)}
+                      placeholder="Zoom Meeting ID"
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 font-mono flex-1"
+                    />
+                    <Input
+                      value={meetingPasswordInput}
+                      onChange={e => setMeetingPasswordInput(e.target.value)}
+                      placeholder="Passcode (optional)"
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 w-40"
+                    />
                   </div>
-                  <p className="text-lg font-semibold">You</p>
-                </div>
-                <div className="absolute bottom-4 right-4 flex gap-2">
-                  <Button variant="ghost" size="icon" className="bg-black/50 hover:bg-black/70 rounded-full" onClick={() => setIsVideoOn(!isVideoOn)}>
-                    {isVideoOn ? <Video className="w-5 h-5 text-white" /> : <VideoOff className="w-5 h-5 text-red-400" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="bg-black/50 hover:bg-black/70 rounded-full" onClick={() => setIsAudioOn(!isAudioOn)}>
-                    {isAudioOn ? <Mic className="w-5 h-5 text-white" /> : <MicOff className="w-5 h-5 text-red-400" />}
-                  </Button>
-                </div>
-              </div>
-            </Card>
-
-            {participants.length === 0 ? (
-              <Card className="bg-gray-800 border-gray-700 col-span-1">
-                <div className="aspect-video flex items-center justify-center">
-                  <p className="text-gray-400 text-sm">No attendees yet</p>
-                </div>
-              </Card>
-            ) : (
-              participants.map(participant => (
-                <Card key={participant.id} className="bg-gray-800 border-gray-700 overflow-hidden">
-                  <div className="aspect-video bg-gradient-to-br from-green-900 to-emerald-900 flex items-center justify-center relative">
-                    <div className="text-white text-center">
-                      <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-2">
-                        {participant.name.charAt(0)}
-                      </div>
-                      <p className="text-sm font-semibold">{participant.name}</p>
-                    </div>
-                    {participant.isSpeaking && (
-                      <div className="absolute bottom-4 left-4 px-2 py-1 bg-green-500 text-white text-xs rounded-full flex items-center gap-1">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                        Speaking
-                      </div>
+                  {zoomError && (
+                    <p className="text-red-400 text-sm mb-3 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" /> {zoomError}
+                    </p>
+                  )}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleStartZoom}
+                      disabled={zoomLoading || !meetingNumberInput.trim()}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600"
+                    >
+                      {zoomLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Video className="w-4 h-4 mr-2" />}
+                      {zoomLoading ? 'Connecting...' : 'Start Video'}
+                    </Button>
+                    {meeting.zoomJoinUrl && (
+                      <a href={meeting.zoomJoinUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" className="text-white border-gray-600">
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Open Zoom App
+                        </Button>
+                      </a>
                     )}
                   </div>
-                </Card>
-              ))
-            )}
-          </div>
+                  <p className="text-gray-500 text-xs mt-3">
+                    Enter your Zoom Meeting ID and passcode. Students will use the same ID to join.
+                    Get a meeting ID from your Zoom desktop/mobile app or schedule one on zoom.us.
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* Participant list preview */}
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6">
+                  <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-gray-400" />
+                    Participants ({participants.length + 1})
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-blue-900/30 border border-blue-500/30">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-sm font-bold">T</div>
+                      <span className="text-white text-sm">You <span className="text-blue-400 text-xs">(Host)</span></span>
+                    </div>
+                    {participants.map(p => (
+                      <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg bg-gray-700/50">
+                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-sm font-bold">{p.name.charAt(0)}</div>
+                        <span className="text-white text-sm">{p.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Whiteboard Section */}
           {isWhiteboardOpen && (
@@ -259,18 +350,16 @@ export default function LiveTeachingRoom() {
         {/* Sidebar (Chat/Participants) */}
         {isChatOpen && (
           <div className="w-80 bg-gray-800 border-l border-gray-700 flex flex-col">
-            {/* Tabs */}
             <div className="flex border-b border-gray-700">
               <button className="flex-1 py-3 px-4 text-sm font-semibold text-white border-b-2 border-blue-500">
                 Chat
               </button>
               <button className="flex-1 py-3 px-4 text-sm font-semibold text-gray-400 hover:text-gray-300">
                 <Users className="w-4 h-4 inline mr-1" />
-                Participants ({participants.length})
+                Participants ({participants.length + 1})
               </button>
             </div>
 
-            {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {chatMessages.map(msg => (
                 <div key={msg.id} className={`flex flex-col ${msg.type === 'teacher' ? 'items-end' : 'items-start'}`}>
@@ -291,7 +380,6 @@ export default function LiveTeachingRoom() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* AI Assistant */}
             <div className="p-3 border-t border-gray-700 bg-gray-900">
               <Card className="bg-gradient-to-br from-indigo-900 to-purple-900 border-indigo-500/30">
                 <CardContent className="p-4">
@@ -313,7 +401,6 @@ export default function LiveTeachingRoom() {
               </Card>
             </div>
 
-            {/* Message Input */}
             <div className="p-4 border-t border-gray-700">
               <div className="flex gap-2">
                 <Input

@@ -1,22 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { searchParams } = new URL(request.url)
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
@@ -96,26 +83,10 @@ export async function GET(request: NextRequest) {
         pages
       }
     })
-  } catch (error) {
-    console.error('Error fetching security policies:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is school admin
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const body = await request.json()
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const body = await req.json()
     const { 
       name, 
       description,
@@ -152,8 +123,8 @@ export async function POST(request: NextRequest) {
         rules: typeof rules === 'string' ? rules : JSON.stringify(rules),
         isActive,
         priority,
-        createdBy: session.user.id,
-        updatedBy: session.user.id
+        createdBy: user.id,
+        updatedBy: user.id
       },
       include: {
         createdByUser: {
@@ -174,8 +145,4 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(policy, { status: 201 })
-  } catch (error) {
-    console.error('Error creating security policy:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})

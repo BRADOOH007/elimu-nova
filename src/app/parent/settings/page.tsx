@@ -67,7 +67,7 @@ export default function ParentSettings() {
           setPreferences(p)
           if (p.language) setLanguage(p.language)
         }
-      } catch {}
+      } catch (e) { console.warn('[ParentSettings] load profile error:', e) }
       finally { setProfileLoading(false) }
     }
     load()

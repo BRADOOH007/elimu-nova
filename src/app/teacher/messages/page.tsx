@@ -48,29 +48,39 @@ export default function TeacherMessagesPage() {
   const [reply, setReply]           = useState('')
   const [sending, setSending]       = useState(false)
   const replyRef = useRef<HTMLTextAreaElement>(null)
+  const pageRef = useRef(1)
+  const [messagePage, setMessagePage] = useState(1)
+  const [messageTotalPages, setMessageTotalPages] = useState(1)
+  const [messageTotal, setMessageTotal] = useState(0)
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (page = 1) => {
     try {
-      const r = await fetch('/api/teacher/messages')
+      const r = await fetch(`/api/teacher/messages?page=${page}&limit=25`)
       const d = await r.json()
       if (d.messages) setMessages(d.messages)
-    } catch { /* silent */ }
+      if (d.pagination) {
+        setMessageTotalPages(d.pagination.totalPages ?? 1)
+        setMessageTotal(d.pagination.total ?? 0)
+      }
+    } catch (e) { console.error('Failed to fetch messages:', e) }
     finally { setLoading(false) }
   }, [])
 
   useEffect(() => {
-    fetchMessages()
+    fetchMessages(messagePage)
     fetch('/api/teacher/students').then(r => r.json()).then(d => {
-      if (d.students) setStudents(d.students.map((s: any) => ({ id: s.id, name: s.name, email: s.email })))
-    }).catch(() => {})
+      if (d.data) setStudents(d.data.map((s: any) => ({ id: s.id, name: s.name, email: s.email })))
+    }).catch(e => console.error('Failed to fetch students:', e))
     fetch('/api/teacher/parents').then(r => r.json()).then(d => {
       if (d.parents) setParents(d.parents.map((p: any) => ({ id: p.id, name: p.name, email: p.email })))
-    }).catch(() => {})
-  }, [fetchMessages])
+    }).catch(e => console.error('Failed to fetch parents:', e))
+  }, [fetchMessages, messagePage])
+
+  useEffect(() => { pageRef.current = messagePage }, [messagePage])
 
   useSSE(
     session?.user?.role === 'TEACHER' ? 'messages:teacher:' + session.user.id : null,
-    { 'message-sent': fetchMessages, 'new-message': fetchMessages }
+    { 'message-sent': () => fetchMessages(pageRef.current), 'new-message': () => fetchMessages(pageRef.current) }
   )
 
   const openMessage = async (msg: Message) => {
@@ -83,7 +93,7 @@ export default function TeacherMessagesPage() {
           body: JSON.stringify({ messageId: msg.id })
         })
         setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, read: true } : m))
-      } catch { /* silent */ }
+      } catch (e) { console.error('Failed to mark as read:', e) }
     }
   }
 
@@ -168,7 +178,7 @@ export default function TeacherMessagesPage() {
               </div>
               <div className="flex gap-1">
                 {(['all','unread','sent'] as const).map(f => (
-                  <button key={f} onClick={() => setFilter(f)}
+                  <button key={f} onClick={() => { setFilter(f); setMessagePage(1) }}
                     className={`flex-1 text-[11px] font-medium py-1 rounded-md transition-colors capitalize ${filter===f?'bg-blue-600 text-white':'text-slate-500 hover:bg-slate-100'}`}>
                     {f}{f==='unread'&&unreadCount>0?` (${unreadCount})`:''}
                   </button>
@@ -203,6 +213,33 @@ export default function TeacherMessagesPage() {
                 </button>
               ))}
             </div>
+
+            {/* Pagination */}
+            {!loading && messageTotalPages > 1 && (
+              <div className="flex items-center justify-between px-3 py-2 border-t border-slate-200 bg-white shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={messagePage <= 1}
+                  onClick={() => setMessagePage(p => Math.max(1, p - 1))}
+                  className="h-7 text-xs"
+                >
+                  Previous
+                </Button>
+                <span className="text-xs text-slate-500">
+                  Page {messagePage} of {messageTotalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={messagePage >= messageTotalPages}
+                  onClick={() => setMessagePage(p => Math.min(messageTotalPages, p + 1))}
+                  className="h-7 text-xs"
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Right: full message + reply */}

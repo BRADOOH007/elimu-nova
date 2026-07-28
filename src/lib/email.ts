@@ -22,15 +22,16 @@ async function getSmtpConfig(): Promise<SmtpConfig> {
       port: parseInt(map.get('smtp_port') || process.env.SMTP_PORT || '587', 10),
       user: map.get('smtp_user') || process.env.SMTP_USER || '',
       pass: map.get('smtp_pass') || process.env.SMTP_PASS || '',
-      from: map.get('smtp_from') || process.env.SMTP_FROM || 'noreply@edugenius.com',
+      from: map.get('smtp_from') || process.env.SMTP_FROM || 'noreply@elimunova.com',
     }
-  } catch {
+  } catch (e) {
+    console.warn('[Email] Failed to load SMTP config from DB, falling back to env:', e)
     return {
       host: process.env.SMTP_HOST || '',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
       user: process.env.SMTP_USER || '',
       pass: process.env.SMTP_PASS || '',
-      from: process.env.SMTP_FROM || 'noreply@edugenius.com',
+      from: process.env.SMTP_FROM || 'noreply@elimunova.com',
     }
   }
 }
@@ -53,7 +54,7 @@ export async function sendCredentialEmail(payload: CredentialEmailPayload): Prom
     : `Welcome to EduGenius – Student Account`
 
   const roleLabel = payload.role === 'PARENT' ? 'Parent' : 'Student'
-  const loginUrl  = `${baseUrl}/login`
+  const loginUrl  = `${baseUrl}/auth/signin`
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
@@ -106,7 +107,6 @@ export async function sendCredentialEmail(payload: CredentialEmailPayload): Prom
     }
   }
 
-  console.log(`[EMAIL] To: ${payload.to} | Subject: ${subject} | Email: ${payload.email} | Password: ${payload.password}`)
   return { sent: false, method: 'logged' }
 }
 

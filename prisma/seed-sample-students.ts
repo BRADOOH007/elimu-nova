@@ -38,6 +38,7 @@ async function main() {
   if (!teacher) {
     const teacherUser = await prisma.user.create({
       data: {
+        username: 'john.teacher',
         email: 'teacher@demoschool.edu',
         password: await bcrypt.hash('password123', 12),
         firstName: 'John',
@@ -80,6 +81,7 @@ async function main() {
   if (!raelStudent) {
     const raelUser = await prisma.user.create({
       data: {
+        username: 'rael.wanjiku',
         email: 'rael@gmail.com',
         password: await bcrypt.hash('password123', 12),
         firstName: 'Rael',

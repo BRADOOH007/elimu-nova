@@ -1,30 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     // Get teacher's school ID
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     })
 
     if (!teacher) {
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
     }
 
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const type = searchParams.get('type') || ''
@@ -139,30 +128,20 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
     // Get teacher's school ID
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     })
 
     if (!teacher) {
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const { 
       title, 
       description, 
@@ -266,4 +245,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

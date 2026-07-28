@@ -363,7 +363,7 @@ export function AutonomousAITutorPage() {
       {/* Chat Interface */}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="h-[680px] flex flex-col bg-white rounded-3xl shadow-lg overflow-hidden">
+          <div className="h-[calc(100vh-200px)] min-h-[400px] flex flex-col bg-white rounded-3xl shadow-lg overflow-hidden">
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50 min-h-0">
               {messages.map((message, index) => (
@@ -504,10 +504,10 @@ export function AutonomousAITutorPage() {
 export default function AIGrowthPage() {
   return (
     <Tabs defaultValue="tutor" className="space-y-4 p-4">
-      <TabsList className="w-full overflow-x-auto flex">
-        <TabsTrigger value="tutor" className="shrink-0"><Brain className="w-4 h-4 mr-2"/>AI Tutor</TabsTrigger>
-        <TabsTrigger value="coding" className="shrink-0"><Code2 className="w-4 h-4 mr-2"/>Coding Studio</TabsTrigger>
-        <TabsTrigger value="career" className="shrink-0"><Compass className="w-4 h-4 mr-2"/>Career Pathways</TabsTrigger>
+      <TabsList className="w-full overflow-x-auto flex gap-1.5 px-2">
+        <TabsTrigger value="tutor" className="shrink-0 whitespace-nowrap"><Brain className="w-4 h-4 mr-2"/>AI Tutor</TabsTrigger>
+        <TabsTrigger value="coding" className="shrink-0 whitespace-nowrap"><Code2 className="w-4 h-4 mr-2"/>Coding Studio</TabsTrigger>
+        <TabsTrigger value="career" className="shrink-0 whitespace-nowrap"><Compass className="w-4 h-4 mr-2"/>Career Pathways</TabsTrigger>
       </TabsList>
       <TabsContent value="tutor"><AutonomousAITutorPage /></TabsContent>
       <TabsContent value="coding"><CodingTab /></TabsContent>

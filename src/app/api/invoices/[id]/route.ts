@@ -1,19 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
 
-    const { id } = await params
+    const { id } = params
 
     const invoice = await prisma.invoice.findUnique({
       where: { id },
@@ -57,27 +48,12 @@ export async function GET(
     }
 
     return NextResponse.json(invoice)
-  } catch (error) {
-    console.error('Error fetching invoice:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch invoice' },
-      { status: 500 }
-    )
-  }
-}
+})
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
 
-    const { id } = await params
-    const body = await request.json()
+    const { id } = params
+    const body = await req.json()
     const { 
       amount, 
       taxAmount, 
@@ -144,26 +120,11 @@ export async function PUT(
     })
 
     return NextResponse.json(updatedInvoice)
-  } catch (error) {
-    console.error('Error updating invoice:', error)
-    return NextResponse.json(
-      { error: 'Failed to update invoice' },
-      { status: 500 }
-    )
-  }
-}
+})
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const DELETE = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
 
-    const { id } = await params
+    const { id } = params
 
     // Check if invoice exists
     const existingInvoice = await prisma.invoice.findUnique({
@@ -191,11 +152,4 @@ export async function DELETE(
     })
 
     return NextResponse.json({ message: 'Invoice deleted successfully' })
-  } catch (error) {
-    console.error('Error deleting invoice:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete invoice' },
-      { status: 500 }
-    )
-  }
-}
+})

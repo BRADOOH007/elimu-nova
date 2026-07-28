@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, ArrowLeft, Calendar, User2, FileText, Clock, CheckCircle, XCircle, Brain } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { useExamLockdown } from '@/hooks/use-exam-lockdown'
+import { LockdownOverlay } from '@/components/exam/lockdown-overlay'
+import ExamSplitPane from '@/components/exam/exam-split-pane'
 
 interface Question {
   id: number
@@ -105,6 +108,16 @@ export default function StudentAssignmentDetailPage() {
 
   const isTimedExam = assignment?.isTimed === true && questions.length > 0
 
+  const lockdown = useExamLockdown(assignmentId, isTimedExam && examStarted && !examSubmitted)
+
+  // Lockdown overlay when re-entry pending/approved/denied
+  if (lockdown.isLocked || lockdown.reentryStatus === 'APPROVED' || lockdown.reentryStatus === 'DENIED') {
+    if (lockdown.reentryStatus === 'APPROVED') {
+      return <LockdownOverlay reentryStatus="APPROVED" violationCount={lockdown.violationCount} onCheckStatus={lockdown.checkReentryStatus} />
+    }
+    return <LockdownOverlay reentryStatus={lockdown.reentryStatus} violationCount={lockdown.violationCount} onCheckStatus={lockdown.checkReentryStatus} />
+  }
+
   // Prevent navigation away during exam
   useEffect(() => {
     if (!examStarted || examSubmitted) return
@@ -195,38 +208,67 @@ export default function StudentAssignmentDetailPage() {
     sessionStorage.setItem(`exam_${assignmentId}_answers`, JSON.stringify(updated))
   }
 
-  const handleSubmitExam = async () => {
+  const handleSubmitExamWithAnswers = async (examAnswers: Record<string, string>, timeSpent: number) => {
     if (hasSubmittedRef.current) return
     hasSubmittedRef.current = true
     if (timerRef.current) clearInterval(timerRef.current)
+    setAnswers(examAnswers)
     setExamSubmitted(true)
     setIsSubmitting(true)
-
-    const timeSpent = startedAt
-      ? Math.round((Date.now() - new Date(startedAt).getTime()) / 1000)
-      : 0
 
     // Build answer key comparison results
     const qs: Record<string, { correct: boolean; studentAnswer: string; correctAnswer: string; marks: number }> = {}
     let score = 0
     let totalMarks = 0
+    const shortAnswerQuestions: { id: number; text: string; studentAnswer: string; correctAnswer: string; marks: number }[] = []
     for (const q of questions) {
       totalMarks += q.marks || 1
-      const studentAns = answers[String(q.id)] || ''
+      const studentAns = examAnswers[String(q.id)] || ''
       const correctAns = answerKey[String(q.id)] || ''
       const correct = studentAns.toLowerCase().trim() === correctAns.toLowerCase().trim()
       if (correct) score += q.marks || 1
       qs[String(q.id)] = { correct, studentAnswer: studentAns, correctAnswer: correctAns, marks: q.marks || 1 }
+      if (q.type === 'short_answer' && studentAns.trim() && correctAns) {
+        shortAnswerQuestions.push({ id: q.id, text: q.text, studentAnswer: studentAns, correctAnswer: correctAns, marks: q.marks || 1 })
+      }
     }
 
     try {
+      // For short answer questions, call AI grading
+      let aiFeedback = ''
+      if (shortAnswerQuestions.length > 0) {
+        try {
+          const aiRes = await fetch('/api/ai/grade-short-answer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subject: assignment?.subject || '',
+              grade: assignment?.lessonPlan?.grade || '',
+              questions: shortAnswerQuestions,
+            }),
+          })
+          if (aiRes.ok) {
+            const aiData = await aiRes.json()
+            if (aiData.results) {
+              for (const r of aiData.results) {
+                if (qs[String(r.questionId)]) {
+                  qs[String(r.questionId)].correct = r.isCorrect
+                  if (r.isCorrect) score += qs[String(r.questionId)].marks
+                }
+              }
+            }
+            aiFeedback = aiData.feedback || ''
+          }
+        } catch (e) { console.warn('[StudentAssignment] fetch AI feedback error:', e) }
+      }
+
       const res = await fetch(`/api/assignments/${assignmentId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          content: JSON.stringify({ answers, questions }),
+          content: JSON.stringify({ answers: examAnswers, questions }),
           attachments: [],
-          startedAt,
+          startedAt: startedAt || new Date().toISOString(),
           timeSpent: String(timeSpent),
         }),
       })
@@ -237,7 +279,7 @@ export default function StudentAssignmentDetailPage() {
       setSubmissionResult({
         id: sub.id,
         grade: sub.grade ?? score,
-        feedback: sub.feedback || `You scored ${score}/${totalMarks}`,
+        feedback: sub.feedback || aiFeedback || `You scored ${score}/${totalMarks}`,
         questionScores: sub.questionScores || qs,
         needsRevision: sub.needsRevision ?? score < totalMarks,
         revisionNotes: sub.revisionNotes,
@@ -251,6 +293,12 @@ export default function StudentAssignmentDetailPage() {
       sessionStorage.removeItem(`exam_${assignmentId}_answers`)
       sessionStorage.removeItem(`exam_${assignmentId}_started`)
     }
+  }
+
+  const handleSubmitExam = async () => {
+    handleSubmitExamWithAnswers(answers, startedAt
+      ? Math.round((Date.now() - new Date(startedAt).getTime()) / 1000)
+      : 0)
   }
 
   const formatTime = (seconds: number) => {
@@ -408,146 +456,27 @@ export default function StudentAssignmentDetailPage() {
     )
   }
 
-  // ── Exam mode — timed exam in progress ──
+  // ── Exam mode — timed exam in progress (split-pane) ──
   if (isTimedExam && examStarted && !examSubmitted) {
-    const q = questions[currentQuestion]
-    if (!q) {
+    if (questions.length === 0) {
       return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>
     }
-    const allAnswered = questions.every(qq => answers[String(qq.id)]?.trim())
-
     return (
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        {/* Timer bar */}
-        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-200 -mx-6 px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <FileText className="w-4 h-4" />
-            {assignment.title}
-          </div>
-          <div className={`flex items-center gap-2 font-mono text-lg font-bold ${timeRemaining !== null && timeRemaining < 300 ? 'text-red-600 animate-pulse' : 'text-gray-800'}`}>
-            <Clock className="w-5 h-5" />
-            {timeRemaining !== null ? formatTime(timeRemaining) : '--:--'}
-          </div>
-        </div>
-
-        {/* Progress */}
-        <div className="flex items-center gap-2">
-          {questions.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentQuestion(i)}
-              className={`w-8 h-8 rounded-full text-xs font-bold transition-colors ${
-                i === currentQuestion ? 'ring-2 ring-blue-500 ring-offset-2 bg-blue-600 text-white' :
-                answers[String(questions[i].id)]?.trim() ? 'bg-green-500 text-white' :
-                'bg-slate-200 text-slate-600 hover:bg-slate-300'
-              }`}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
-
-        {/* Current question */}
-        <Card className="border-0 shadow-lg">
-          <CardContent className="p-6 space-y-6">
-            <div className="flex items-start justify-between">
-              <Badge variant="outline" className="text-sm">Question {currentQuestion + 1} of {questions.length}</Badge>
-              <Badge>{q.marks || 1} mark{(q.marks || 1) > 1 ? 's' : ''}</Badge>
-            </div>
-
-            <p className="text-lg font-medium text-gray-800">{q.text}</p>
-
-            {q.type === 'multiple_choice' && q.options && (
-              <div className="space-y-3">
-                {q.options.map((opt, oi) => {
-                  const optLetter = opt.charAt(0)
-                  const isSelected = answers[String(q.id)] === optLetter
-                  return (
-                    <label
-                      key={oi}
-                      className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300 bg-white'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-slate-300'
-                      }`}>
-                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-                      <span className="text-sm text-gray-700">{opt}</span>
-                      <input
-                        type="radio"
-                        name={`q_${q.id}`}
-                        value={optLetter}
-                        checked={isSelected}
-                        onChange={() => handleAnswer(q.id, optLetter)}
-                        className="hidden"
-                      />
-                    </label>
-                  )
-                })}
-              </div>
-            )}
-
-            {q.type === 'true_false' && (
-              <div className="flex gap-4">
-                {['True', 'False'].map(val => {
-                  const letter = val.charAt(0).toUpperCase()
-                  const isSelected = answers[String(q.id)] === letter
-                  return (
-                    <button
-                      key={val}
-                      onClick={() => handleAnswer(q.id, letter)}
-                      className={`flex-1 py-4 rounded-xl text-lg font-bold transition-all ${
-                        isSelected ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border-2 border-slate-200 text-slate-600 hover:border-blue-300'
-                      }`}
-                    >
-                      {val}
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            {q.type === 'short_answer' && (
-              <Textarea
-                value={answers[String(q.id)] || ''}
-                onChange={(e) => handleAnswer(q.id, e.target.value)}
-                placeholder="Type your answer here..."
-                rows={4}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
-            disabled={currentQuestion === 0}
-          >
-            Previous
-          </Button>
-          <span className="text-sm text-gray-500">
-            {Object.keys(answers).length} of {questions.length} answered
-          </span>
-          {currentQuestion < questions.length - 1 ? (
-            <Button onClick={() => setCurrentQuestion(prev => Math.min(questions.length - 1, prev + 1))}>
-              Next
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSubmitExam}
-              disabled={isSubmitting}
-              className="bg-gradient-to-r from-green-500 to-emerald-600 text-white"
-            >
-              {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              {isSubmitting ? 'Submitting...' : allAnswered ? 'Submit All' : `Submit (${questions.length - Object.keys(answers).length} unanswered)`}
-            </Button>
-          )}
-        </div>
-      </div>
+      <ExamSplitPane
+        title={assignment.title}
+        description={assignment.description}
+        questions={questions}
+        timeLimit={assignment.timeLimit || 60}
+        onSubmit={(answers, timeSpent) => {
+          setAnswers(answers)
+          handleSubmitExamWithAnswers(answers, timeSpent)
+        }}
+        isSubmitting={isSubmitting}
+        startedAt={startedAt}
+        dueDate={assignment.dueDate}
+        subject={assignment.subject || undefined}
+        grade={assignment.lessonPlan?.grade}
+      />
     )
   }
 
@@ -600,16 +529,153 @@ export default function StudentAssignmentDetailPage() {
 
           {/* Regular assignment content */}
           {!isTimedExam && assignment.content && (
-            <div className="p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
-              <div className="flex items-center mb-3 text-gray-700 font-semibold">
-                <FileText className="w-4 h-4 mr-2 text-blue-600"/> Assignment Content
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
+                <div className="flex items-center mb-3 text-gray-700 font-semibold">
+                  <FileText className="w-4 h-4 mr-2 text-blue-600"/> Assignment Content
+                </div>
+                <MarkdownRenderer content={assignment.content.replace(/## Answer Key[\s\S]*/i, '').replace(/📝 ANSWER KEY[\s\S]*/i, '')} />
               </div>
-              <MarkdownRenderer content={assignment.content} />
+
+              {/* Smart answer sheet */}
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-green-600"/> Your Answers
+                </h2>
+
+                {(() => {
+                  const lines = (assignment.content || '').replace(/## Answer Key[\s\S]*/i, '').replace(/📝 ANSWER KEY[\s\S]*/i, '').split('\n')
+                  const qs: string[] = []
+                  let buf = ''
+                  let num = 0
+                  for (const line of lines) {
+                    const m = line.match(/^(?:(\d+)[.)]\s*|Question\s+\d+[:\-–—]\s*)/i)
+                    if (m && !line.startsWith('```')) {
+                      if (buf && num > 0) { qs.push(buf.trim()); buf = '' }
+                      num++
+                      buf = line.replace(m[0], '').trim() || `Question ${num}`
+                    } else if (num > 0 && line.trim() && !line.startsWith('```')) {
+                      buf += ' ' + line.trim()
+                    }
+                  }
+                  if (buf && num > 0) qs.push(buf.trim())
+
+                  if (qs.length >= 2) {
+                    return (
+                      <>
+                        <div className="text-xs text-gray-500 mb-1">
+                          {qs.length} question{qs.length > 1 ? 's' : ''} detected — answer each below
+                        </div>
+                        {qs.map((q, i) => (
+                          <div key={i} className="p-3 rounded-lg border border-slate-200 bg-white shadow-sm">
+                            <label className="text-xs font-semibold text-slate-500 mb-1 block">
+                              Question {i + 1}
+                            </label>
+                            <p className="text-xs text-slate-600 mb-2 italic">{q}</p>
+                            <Textarea
+                              value={answers[`q${i}`] || ''}
+                              onChange={(e) => setAnswers({ ...answers, [`q${i}`]: e.target.value })}
+                              placeholder={`Your answer for Q${i + 1}...`}
+                              rows={3}
+                              className="text-sm resize-none"
+                            />
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-3 pt-2">
+                          <Button
+                            onClick={async () => {
+                              if (!assignmentId) return
+                              const answerEntries = qs.map((_, i) => ({
+                                question: i + 1,
+                                answer: answers[`q${i}`] || ''
+                              }))
+                              const hasContent = answerEntries.some(e => e.answer.trim())
+                              if (!hasContent) return
+                              setIsSubmitting(true)
+                              setSubmitMessage(null)
+                              try {
+                                const res = await fetch(`/api/assignments/${assignmentId}/submit`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    content: JSON.stringify({ answers: answerEntries }),
+                                    attachments: []
+                                  })
+                                })
+                                const data = await res.json()
+                                if (!res.ok) throw new Error(data.error || 'Failed to submit')
+                                setSubmitMessage('Submitted and auto-graded successfully!')
+                                const refreshed = await fetch(`/api/assignments/${assignmentId}`)
+                                if (refreshed.ok) {
+                                  const d = await refreshed.json()
+                                  setAssignment(d.assignment)
+                                }
+                              } catch (e) {
+                                setSubmitMessage(e instanceof Error ? e.message : 'Submission failed')
+                              } finally {
+                                setIsSubmitting(false)
+                              }
+                            }}
+                            disabled={isSubmitting || !qs.some((_, i) => (answers[`q${i}`] || '').trim())}
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+                          >
+                            {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : null}
+                            {isSubmitting ? 'Submitting...' : 'Submit for AI Check'}
+                          </Button>
+                          {submitMessage && <span className="text-sm text-gray-600">{submitMessage}</span>}
+                        </div>
+                      </>
+                    )
+                  }
+
+                  // Fallback: single textarea
+                  return (
+                    <>
+                      <Textarea
+                        value={workContent}
+                        onChange={(e) => setWorkContent(e.target.value)}
+                        placeholder="Type your answer here..."
+                        rows={10}
+                      />
+                      <div className="flex items-center gap-3">
+                        <Button onClick={async () => {
+                          if (!assignmentId || !workContent.trim()) return
+                          setIsSubmitting(true)
+                          setSubmitMessage(null)
+                          try {
+                            const res = await fetch(`/api/assignments/${assignmentId}/submit`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ content: workContent, attachments: [] })
+                            })
+                            const data = await res.json()
+                            if (!res.ok) throw new Error(data.error || 'Failed to submit')
+                            setSubmitMessage('Submitted and auto-graded successfully!')
+                            const refreshed = await fetch(`/api/assignments/${assignmentId}`)
+                            if (refreshed.ok) {
+                              const d = await refreshed.json()
+                              setAssignment(d.assignment)
+                            }
+                          } catch (e) {
+                            setSubmitMessage(e instanceof Error ? e.message : 'Submission failed')
+                          } finally {
+                            setIsSubmitting(false)
+                          }
+                        }} disabled={isSubmitting || !workContent.trim()} className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+                          {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin"/> : null}
+                          {isSubmitting ? 'Submitting...' : 'Submit for AI Check'}
+                        </Button>
+                        {submitMessage && <span className="text-sm text-gray-600">{submitMessage}</span>}
+                      </div>
+                    </>
+                  )
+                })()}
+              </div>
             </div>
           )}
 
-          {/* Regular assignment workspace */}
-          {!isTimedExam && (
+          {/* Regular assignment workspace (no content) */}
+          {!isTimedExam && !assignment.content && (
             <div className="space-y-3">
               <h2 className="text-lg font-semibold">Your Workspace</h2>
               <Textarea

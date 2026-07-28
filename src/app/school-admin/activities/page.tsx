@@ -42,6 +42,7 @@ import {
   Loader2
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 import CreateActivityModal from "@/components/modals/create-activity-modal"
 import EditActivityModal from "@/components/modals/edit-activity-modal"
 import {
@@ -167,7 +168,7 @@ export default function AcademicsPage() {
   }
 
   const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Are you sure you want to delete this activity?')) return
+    if (!(await confirmToast({ title: 'Are you sure you want to delete this activity?' }))) return
 
     try {
       const response = await fetch(`/api/school-admin/activities/${activityId}`, { method: 'DELETE' })
@@ -185,8 +186,33 @@ export default function AcademicsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+      <div className="space-y-6 max-w-6xl mx-auto p-6 animate-pulse">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-7 w-48 bg-slate-200 rounded" />
+            <div className="h-4 w-64 bg-slate-200 rounded" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 w-24 bg-slate-200 rounded-lg" />
+            <div className="h-10 w-24 bg-slate-200 rounded-lg" />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <div className="h-10 w-28 bg-slate-200 rounded-lg" />
+          <div className="h-10 w-28 bg-slate-200 rounded-lg" />
+          <div className="h-10 w-28 bg-slate-200 rounded-lg" />
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-slate-200 rounded-lg shrink-0" />
+              <div className="space-y-2 flex-1">
+                <div className="h-4 w-3/5 bg-slate-200 rounded" />
+                <div className="h-3 w-full bg-slate-200 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }

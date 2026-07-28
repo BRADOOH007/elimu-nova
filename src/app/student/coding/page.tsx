@@ -7,6 +7,7 @@ import {
   ArrowLeft, Sparkles, Lightbulb, RefreshCw, CheckCircle,
   BookOpen, Target, Zap, ChevronRight, X
 } from 'lucide-react'
+import ChatContainer from '@/components/chat/chat-container'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { CodePlayground } from '@/components/coding/code-playground'
 import { ScratchEmbed } from '@/components/coding/scratch-embed'
@@ -124,109 +125,26 @@ const TRACKS = [
 
 /* ─────────────────────────── AI Tutor Panel ─────────────────── */
 function AITutorPanel({ language, lessonTitle }: { language: string; lessonTitle: string }) {
-  const [messages, setMessages] = useState<Message[]>([{
-    role: 'assistant',
-    content: `Hi! I'm your coding tutor 🤖 Ask me anything about **${lessonTitle}** and I'll help you step by step.`
-  }])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
-
-  const send = async () => {
-    const text = input.trim()
-    if (!text || loading) return
-    setMessages(m => [...m, { role: 'user', content: text }])
-    setInput('')
-    setLoading(true)
-    try {
-      const res = await fetch('/api/student/coding/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, language, lessonTitle }),
-      })
-      const data = await res.json()
-      setMessages(m => [...m, { role: 'assistant', content: data.response || 'Sorry, try again!' }])
-    } catch {
-      setMessages(m => [...m, { role: 'assistant', content: 'Sorry, I had a connection issue. Try again!' }])
-    } finally {
-      setLoading(false)
-    }
+  const handleCodingChat = async (message: string) => {
+    const res = await fetch('/api/student/coding/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, language, lessonTitle }),
+    })
+    if (!res.ok) throw new Error('API error')
+    const data = await res.json()
+    return data.response || 'Sorry, try again!'
   }
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl border border-slate-200 overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-blue-50">
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-          <Sparkles className="h-3.5 w-3.5 text-white" />
-        </div>
-        <span className="text-sm font-semibold text-slate-800">AI Coding Tutor</span>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.map((m, i) => (
-          <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            {m.role === 'assistant' && (
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center shrink-0 mb-1">
-                <Brain className="h-3.5 w-3.5 text-white" />
-              </div>
-            )}
-            <div className={`max-w-[90%] rounded-2xl text-sm leading-relaxed shadow-sm overflow-hidden ${
-              m.role === 'user'
-                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-br-sm px-3 py-2'
-                : 'bg-white border border-slate-200 rounded-bl-sm'
-            }`}>
-              {m.role === 'user'
-                ? <p>{m.content}</p>
-                : <div className="px-3 py-2"><MarkdownRenderer content={m.content} /></div>
-              }
-            </div>
-          </div>
-        ))}
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-slate-100 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1">
-              {[0, 150, 300].map(d => (
-                <span key={d} className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
-              ))}
-            </div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      {/* Quick prompts */}
-      <div className="px-3 pb-2 flex gap-2 flex-wrap">
-        {['Explain this simply', 'Give me an example', 'Give me a challenge'].map(p => (
-          <button
-            key={p}
-            onClick={() => setInput(p)}
-            className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full transition-colors"
-          >
-            {p}
-          </button>
-        ))}
-      </div>
-
-      <div className="p-3 border-t border-slate-100 flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Ask your coding question..."
-          className="flex-1 h-9 px-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
-        <button
-          onClick={send}
-          disabled={loading || !input.trim()}
-          className="w-9 h-9 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 flex items-center justify-center disabled:opacity-50 transition-opacity"
-        >
-          {loading ? <Loader2 className="h-4 w-4 text-white animate-spin" /> : <Send className="h-4 w-4 text-white" />}
-        </button>
-      </div>
-    </div>
+    <ChatContainer
+      onSend={handleCodingChat}
+      headerTitle="AI Coding Tutor"
+      headerSubtitle={`Helping with ${lessonTitle}`}
+      quickPrompts={['Explain this simply', 'Give me an example', 'Give me a challenge']}
+      placeholder="Ask your coding question..."
+      icon="brain"
+    />
   )
 }
 

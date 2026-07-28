@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Calendar, Users, CheckCircle, X, Save, RefreshCw, Download, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, Users, CheckCircle, X, Save, RefreshCw, Download, ChevronLeft, ChevronRight, BarChart3, ChevronDown, ChevronUp, TrendingUp, AlertTriangle } from 'lucide-react'
 
 interface Student { id: string; name: string; class: string }
 interface ClassInfo { id: string; name: string; grade: string }
+interface AttendanceSummaryItem { id: string; name: string; present: number; absent: number; total: number; rate: number }
+interface AttendanceStats { totalStudents: number; totalSessions: number; averageRate: number; above90: number; below75: number }
 
 type DayKey = 'mon' | 'tue' | 'wed' | 'thu' | 'fri'
 type Session = 'am' | 'pm'
@@ -40,6 +42,11 @@ export default function AttendancePage() {
   const [loading, setLoading]     = useState(true)
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
+  const [summary, setSummary]     = useState<AttendanceSummaryItem[]>([])
+  const [summaryStats, setSummaryStats] = useState<AttendanceStats | null>(null)
+  const [summaryLoading, setSummaryLoading] = useState(false)
+  const [showSummary, setShowSummary] = useState(false)
+  const [summaryWeeks, setSummaryWeeks] = useState(0)
 
   const loadData = async () => {
     setLoading(true)
@@ -108,6 +115,27 @@ export default function AttendancePage() {
       setSaved(true)
     } catch (e) { console.error(e) }
     finally { setSaving(false) }
+  }
+
+  const loadSummary = async () => {
+    if (!classId) return
+    setSummaryLoading(true)
+    try {
+      const params = new URLSearchParams({ classId })
+      const res = await fetch(`/api/teacher/attendance/summary?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setSummary(data.summary || [])
+        setSummaryStats(data.stats || null)
+        setSummaryWeeks(data.weeks || 0)
+      }
+    } catch (e) { console.warn('[Attendance] Failed to load summary:', e) }
+    finally { setSummaryLoading(false) }
+  }
+
+  const toggleSummary = () => {
+    if (!showSummary) loadSummary()
+    setShowSummary(!showSummary)
   }
 
   const prevWeek = () => { const d = new Date(weekDate); d.setDate(d.getDate() - 7); setWeekDate(d) }
@@ -258,6 +286,104 @@ export default function AttendancePage() {
               </tr>
             </tfoot>
           </table>
+        </div>
+      )}
+      {/* Term Summary */}
+      {classId && (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          <button onClick={toggleSummary} className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition-colors">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-blue-600" />
+              <span className="font-semibold text-slate-800">Term Attendance Summary</span>
+              {summaryWeeks > 0 && <span className="text-xs text-slate-400">({summaryWeeks} weeks)</span>}
+            </div>
+            {showSummary ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+          </button>
+
+          {showSummary && (
+            <div className="border-t border-slate-100">
+              {summaryLoading ? (
+                <div className="flex items-center justify-center py-10">
+                  <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
+                </div>
+              ) : summary.length === 0 ? (
+                <div className="text-center py-10 text-slate-400">
+                  <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No attendance records yet. Start marking weekly attendance above.</p>
+                </div>
+              ) : (
+                <div className="p-5 space-y-4">
+                  {/* Stats cards */}
+                  {summaryStats && (
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Avg Attendance', value: `${summaryStats.averageRate}%`, icon: TrendingUp, color: `text-${summaryStats.averageRate >= 80 ? 'green' : summaryStats.averageRate >= 60 ? 'amber' : 'red'}-600` },
+                        { label: 'Students ≥90%', value: summaryStats.above90.toString(), icon: CheckCircle, color: 'text-green-600' },
+                        { label: 'Students <75%', value: summaryStats.below75.toString(), icon: AlertTriangle, color: 'text-red-600' },
+                        { label: 'Total Sessions', value: summaryStats.totalSessions.toString(), icon: Calendar, color: 'text-blue-600' },
+                      ].map(s => (
+                        <div key={s.label} className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                          <div className="flex items-center gap-2 mb-1">
+                            <s.icon className={`h-4 w-4 ${s.color}`} />
+                            <span className="text-xs text-slate-500">{s.label}</span>
+                          </div>
+                          <p className="text-xl font-bold text-slate-900">{s.value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Summary table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50">
+                          <th className="text-left px-3 py-2 font-semibold text-slate-600">Student</th>
+                          <th className="text-center px-3 py-2 font-semibold text-slate-600">Present</th>
+                          <th className="text-center px-3 py-2 font-semibold text-slate-600">Absent</th>
+                          <th className="text-center px-3 py-2 font-semibold text-slate-600">Total</th>
+                          <th className="text-center px-3 py-2 font-semibold text-slate-600">Rate</th>
+                          <th className="text-center px-3 py-2 font-semibold text-slate-600">Bar</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summary.map((s, i) => (
+                          <tr key={s.id} className={`border-b border-slate-100 ${i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}`}>
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
+                                  <span className="text-white text-[10px] font-bold">{s.name.split(' ').map(n => n[0]).join('')}</span>
+                                </div>
+                                <span className="font-medium text-slate-800">{s.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 text-center font-medium text-green-700">{s.present}</td>
+                            <td className="px-3 py-2 text-center font-medium text-red-600">{s.absent}</td>
+                            <td className="px-3 py-2 text-center text-slate-600">{s.total}</td>
+                            <td className="px-3 py-2 text-center">
+                              <span className={`text-sm font-bold ${s.rate >= 90 ? 'text-green-700' : s.rate >= 75 ? 'text-amber-700' : 'text-red-700'}`}>
+                                {s.rate}%
+                              </span>
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="w-24 h-2.5 bg-slate-100 rounded-full mx-auto overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    s.rate >= 90 ? 'bg-green-500' : s.rate >= 75 ? 'bg-amber-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${s.rate}%` }}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

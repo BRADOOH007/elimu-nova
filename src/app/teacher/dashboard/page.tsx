@@ -3,17 +3,23 @@
 import { useSchoolInfo } from "@/hooks/use-school-info"
 import { useUnreadMessages } from "@/hooks/use-unread-messages"
 import { IndependentUserWelcome } from "@/components/onboarding/independent-user-welcome"
+import { confirmToast } from '@/lib/confirm-toast'
 import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import TeacherStatsGrid from "@/components/teacher/stats-grid"
 import QuickActionsGrid from "@/components/teacher/quick-actions"
+import TeacherLiveMetricsBar from "@/components/teacher/live-metrics-bar"
+import TeacherTrendCharts from "@/components/teacher/trend-charts"
+import AlertCenter from "@/components/teacher/alert-center"
+import QuickGradeWidget from "@/components/teacher/quick-grade-widget"
 import TodaySchedule from "@/components/teacher/today-schedule"
 import AIAlertsPanel from "@/components/teacher/ai-alerts"
 import RecentSubmissionsPanel from "@/components/teacher/recent-submissions"
 import MessagesOverview from "@/components/teacher/messages-overview"
 import ActivityList from "@/components/teacher/activity-list"
 import MeetingsList from "@/components/teacher/meetings-list"
+import MasteryHeatmap from "@/components/teacher/mastery-heatmap"
 
 interface Meeting {
   id: string; title: string; description: string | null; date: string; time: string;
@@ -60,7 +66,7 @@ export default function TeacherDashboard() {
     fetch(`/api/user-profile?userId=${session.user.id}`)
       .then(r => r.ok ? r.json() : null)
       .then(p => { if (p) setDisplayName(`${p.firstName || ""} ${p.lastName || ""}`.trim()) })
-      .catch(() => {})
+      .catch(e => console.error('Failed to fetch profile:', e))
   }, [session?.user?.id])
 
   useEffect(() => {
@@ -106,7 +112,7 @@ export default function TeacherDashboard() {
           const data = await response.json()
           setMeetings((data.upcomingMeetings || []).filter((m: Meeting) => m.status !== "COMPLETED" && m.status !== "CANCELLED"))
         }
-      } catch { /* silent */ }
+      } catch (e) { console.error('Failed to fetch meetings:', e) }
       finally { setLoading(false) }
     })()
   }, [])
@@ -118,7 +124,7 @@ export default function TeacherDashboard() {
         const today = new Date().toISOString().split("T")[0]
         const res = await fetch(`/api/teacher/schedules?date=${today}&limit=10&sortOrder=asc`)
         if (res.ok) setTodaySchedule((await res.json()).schedules || [])
-      } catch { /* silent */ }
+      } catch (e) { console.error('Failed to fetch schedule:', e) }
       finally { setScheduleLoading(false) }
     })()
   }, [])
@@ -132,7 +138,7 @@ export default function TeacherDashboard() {
           const data = await res.json()
           setAiAlerts((data.insights || []).filter((i: any) => i.priority === "high" || i.priority === "medium").slice(0, 5))
         }
-      } catch { /* silent */ }
+      } catch (e) { console.error('Failed to fetch AI insights:', e) }
       finally { setAlertsLoading(false) }
     })()
   }, [])
@@ -146,7 +152,7 @@ export default function TeacherDashboard() {
           const data = await res.json()
           setRecentSubmissions(data.assignments || data.submissions || [])
         }
-      } catch { /* silent */ }
+      } catch (e) { console.error('Failed to fetch submissions:', e) }
       finally { setSubmissionsLoading(false) }
     })()
   }, [])
@@ -162,16 +168,16 @@ export default function TeacherDashboard() {
     try {
       const response = await fetch("/api/activities?limit=3")
       if (response.ok) setRecentActivities((await response.json()).activities)
-    } catch { /* silent */ }
+    } catch (e) { console.error('Failed to refresh activities:', e) }
     finally { setActivityLoading(false) }
   }
 
   const deleteActivity = async (activityId: string) => {
-    if (!confirm('Delete this activity?')) return
+    if (!(await confirmToast({ title: 'Delete this activity?' }))) return
     try {
       const response = await fetch(`/api/activities/${activityId}`, { method: "DELETE" })
       if (response.ok) setRecentActivities(prev => prev.filter(a => a.id !== activityId))
-    } catch { /* silent */ }
+    } catch (e) { console.error('Failed to delete activity:', e) }
   }
 
   if (showOnboarding && session?.user) {
@@ -185,7 +191,7 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div>
+    <div className="max-w-full overflow-x-auto"><div className="max-w-7xl mx-auto p-4 md:p-6">
       <SubscriptionAlert />
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -201,12 +207,20 @@ export default function TeacherDashboard() {
         </p>
       </div>
 
+      <TeacherLiveMetricsBar />
       <TeacherStatsGrid stats={stats} loading={statsLoading} />
       <QuickActionsGrid />
+      <MasteryHeatmap />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <TodaySchedule schedules={todaySchedule} loading={scheduleLoading} />
-        <AIAlertsPanel alerts={aiAlerts} loading={alertsLoading} />
+      <TeacherTrendCharts />
+
+      <QuickGradeWidget />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <div className="lg:col-span-2">
+          <TodaySchedule schedules={todaySchedule} loading={scheduleLoading} />
+        </div>
+        <AlertCenter />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -216,6 +230,6 @@ export default function TeacherDashboard() {
 
       <ActivityList activities={recentActivities} loading={statsLoading || activityLoading} onRefresh={refreshActivities} onDelete={deleteActivity} />
       <MeetingsList meetings={meetings} loading={loading} />
-    </div>
+    </div></div>
   )
 }

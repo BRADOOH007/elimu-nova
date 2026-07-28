@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Edit, Trash2, Save, X, Lock, Globe, Settings, Shield, Bell, Database, BarChart3 } from 'lucide-react'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface SystemSetting {
   id: string
@@ -123,7 +124,7 @@ export default function SystemSettingDetailsModal({
 
   const handleDelete = async () => {
     if (!setting) return
-    if (!confirm(`Delete setting "${setting.key}"? This cannot be undone.`)) return
+    if (!(await confirmToast({ title: `Delete setting "${setting.key}"? This cannot be undone.`, variant: 'destructive' }))) return
 
     setLoading(true)
     try {

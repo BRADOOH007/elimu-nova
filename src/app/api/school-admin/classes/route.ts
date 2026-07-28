@@ -1,31 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logClassCreated } from '@/lib/activity-logger'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+  if (!schoolAdmin) {
+    return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
+  }
 
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
-
-    if (!schoolAdmin) {
-      return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
-    }
-
-    const { searchParams } = new URL(request.url)
+  const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
@@ -99,38 +86,18 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit)
       }
     })
+})
 
-  } catch (error) {
-    console.error('Error fetching classes:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch classes' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const { name, description, subject, grade, teacherId } = body
 
     // Validate required fields
@@ -187,7 +154,7 @@ export async function POST(request: NextRequest) {
     // Log activity
     await logClassCreated(
       schoolAdmin.schoolId,
-      session.user.id,
+      user.id,
       newClass.name,
       newClass.subject
     )
@@ -208,12 +175,4 @@ export async function POST(request: NextRequest) {
         createdAt: newClass.createdAt
       }
     }, { status: 201 })
-
-  } catch (error) {
-    console.error('Error creating class:', error)
-    return NextResponse.json(
-      { error: 'Failed to create class' },
-      { status: 500 }
-    )
-  }
-}
+})

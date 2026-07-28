@@ -1,25 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden - School admin access required' }, { status: 403 })
-    }
-
-    // Get school admin info
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id },
-      include: { school: true }
-    })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true }
+  })
 
     if (!schoolAdmin?.schoolId) {
       return NextResponse.json({ error: 'School not found' }, { status: 404 })
@@ -58,11 +45,4 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, invoices: mockInvoices })
-  } catch (error) {
-    console.error('Error fetching invoices:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch invoices' },
-      { status: 500 }
-    )
-  }
-}
+})

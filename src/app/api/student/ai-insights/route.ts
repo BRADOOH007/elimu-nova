@@ -1,27 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
+  const student = await prisma.student.findFirst({
+    where: { userId: user.id },
+    include: {
+      analytics:       true,
+      studySessions:   { orderBy: { createdAt: 'desc' }, take: 10 },
+      aiTutorSessions: { orderBy: { createdAt: 'desc' }, take: 5 },
+    },
+  })
 
-    const student = await prisma.student.findFirst({
-      where: { userId: session.user.id },
-      include: {
-        analytics:       true,
-        studySessions:   { orderBy: { createdAt: 'desc' }, take: 10 },
-        aiTutorSessions: { orderBy: { createdAt: 'desc' }, take: 5 },
-      },
-    })
+  if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
 
-    if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
-
-    const a = student.analytics
-    const prompt = `You are an educational analyst. Analyse this student's learning data and provide personalised insights.
+  const a = student.analytics
+  const prompt = `You are an educational analyst. Analyse this student's learning data and provide personalised insights.
 
 Total study time: ${a?.totalStudyTime || 0} minutes
 Average grade: ${a?.averageGrade ? Math.round(a.averageGrade) + '%' : 'N/A'}
@@ -55,42 +50,38 @@ Return ONLY valid JSON:
   "personalizedRecommendations": ["rec 1", "rec 2", "rec 3"]
 }`
 
-    const raw = await OpenAIService.generateText(
-      [{ role: 'user', content: prompt }],
-      { maxTokens: 600, temperature: 0.5 }
-    )
+  const raw = await OpenAIService.generateText(
+    [{ role: 'user', content: prompt }],
+    { maxTokens: 600, temperature: 0.5 }
+  )
 
-    const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
-    if (start !== -1 && end > start) {
-      return NextResponse.json(JSON.parse(raw.slice(start, end + 1)))
-    }
-
-    // Fallback static insights
-    return NextResponse.json({
-      learningStyle:   'visual',
-      currentLevel:    'intermediate',
-      strengths:       ['Consistent effort', 'Good AI tutor usage'],
-      areasForImprovement: ['Complete pending assignments', 'Increase daily study time'],
-      recommendedFocus:    ['Regular study sessions', 'Review weak topics'],
-      nextSteps:           ['Set a daily study goal', 'Use AI tutor for difficult topics'],
-      studyPatterns: {
-        totalStudyTime: a?.totalStudyTime || 0,
-        averageSessionTime: 0,
-        mostActiveSubject: 'General',
-        preferredStudyTime: 'afternoon',
-        consistencyScore: Math.min(100, (a?.streakDays || 0) * 10),
-      },
-      performanceTrends: {
-        trend: 'stable', direction: 'stable', completionRate: 0,
-      },
-      personalizedRecommendations: [
-        'Set daily study goals',
-        'Focus on challenging topics with AI tutor',
-        'Review completed lessons regularly',
-      ],
-    })
-  } catch (error) {
-    console.error('Error fetching AI insights:', error)
-    return NextResponse.json({ error: 'Failed to generate AI insights' }, { status: 500 })
+  const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+  if (start !== -1 && end > start) {
+    return NextResponse.json(JSON.parse(raw.slice(start, end + 1)))
   }
-}
+
+  // Fallback static insights
+  return NextResponse.json({
+    learningStyle:   'visual',
+    currentLevel:    'intermediate',
+    strengths:       ['Consistent effort', 'Good AI tutor usage'],
+    areasForImprovement: ['Complete pending assignments', 'Increase daily study time'],
+    recommendedFocus:    ['Regular study sessions', 'Review weak topics'],
+    nextSteps:           ['Set a daily study goal', 'Use AI tutor for difficult topics'],
+    studyPatterns: {
+      totalStudyTime: a?.totalStudyTime || 0,
+      averageSessionTime: 0,
+      mostActiveSubject: 'General',
+      preferredStudyTime: 'afternoon',
+      consistencyScore: Math.min(100, (a?.streakDays || 0) * 10),
+    },
+    performanceTrends: {
+      trend: 'stable', direction: 'stable', completionRate: 0,
+    },
+    personalizedRecommendations: [
+      'Set daily study goals',
+      'Focus on challenging topics with AI tutor',
+      'Review completed lessons regularly',
+    ],
+  })
+})

@@ -1,227 +1,199 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Get student information
-    const student = await prisma.student.findFirst({
-      where: { userId: session.user.id },
-      include: {
-        analytics: true,
-        studySessions: {
-          orderBy: { createdAt: 'desc' },
-          take: 5
-        }
+export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
+  // Get student information
+  const student = await prisma.student.findFirst({
+    where: { userId: user.id },
+    include: {
+      analytics: true,
+      studySessions: {
+        orderBy: { createdAt: 'desc' },
+        take: 5
       }
-    })
-
-    if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
     }
+  })
 
-    // Get shared lesson plans from teachers
-    const sharedLessonPlans = await prisma.sharedLessonPlan.findMany({
-      where: {
-        studentId: student.id,
-        isActive: true
+  if (!student) {
+    return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+  }
+
+  // Get shared lesson plans from teachers
+  const sharedLessonPlans = await prisma.sharedLessonPlan.findMany({
+    where: {
+      studentId: student.id,
+      isActive: true
+    },
+    include: {
+      lessonPlan: {
+        select: {
+          id: true,
+          title: true,
+          subject: true,
+          grade: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true
+        }
       },
-      include: {
-        lessonPlan: {
-          select: {
-            id: true,
-            title: true,
-            subject: true,
-            grade: true,
-            content: true,
-            createdAt: true,
-            updatedAt: true
-          }
-        },
-        teacher: {
-          select: {
-            user: {
-              select: {
-                firstName: true,
-                lastName: true
-              }
+      teacher: {
+        select: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true
             }
           }
         }
-      },
-      orderBy: { sharedAt: 'desc' },
-      take: 10
-    })
-
-    // Convert shared lesson plans to AI lessons automatically
-    const aiLessons = await Promise.all(
-      sharedLessonPlans.map(async (shared) => {
-        try {
-          // Determine student level and learning style
-          const studentLevel = student.analytics?.averageGrade ? 
-            (student.analytics.averageGrade >= 85 ? 'advanced' : 
-             student.analytics.averageGrade >= 70 ? 'intermediate' : 'beginner') : 'intermediate'
-          
-          const learningStyle = 'visual' // Could be determined from analytics in the future
-
-          // Generate AI-powered content based on the lesson plan
-          const aiContent = await (OpenAIService as any).generateLessonContent(
-            shared.lessonPlan,
-            studentLevel,
-            learningStyle
-          )
-
-          // Generate AI insights for this specific lesson
-          const aiInsights = await (OpenAIService as any).generateStudentInsights({
-            ...student,
-            currentLesson: shared.lessonPlan
-          })
-
-          return {
-            id: `ai-lesson-${shared.id}`,
-            title: `${shared.lessonPlan.title} - AI Enhanced`,
-            subject: shared.lessonPlan.subject,
-            grade: shared.lessonPlan.grade,
-            difficulty: studentLevel,
-            duration: 45,
-            type: 'interactive' as const,
-            aiGenerated: true,
-            personalized: true,
-            progress: 0,
-            completed: false,
-            rating: 0,
-            estimatedTime: '45 min',
-            learningObjectives: [
-              'Master the core concepts from the lesson',
-              'Apply knowledge through interactive exercises',
-              'Develop critical thinking skills'
-            ],
-            prerequisites: [
-              'Basic understanding of the subject',
-              'Willingness to engage with AI-enhanced content'
-            ],
-            aiInsights: {
-              strengths: aiInsights.strengths || ['Eager to learn', 'Good problem solving'],
-              areasForImprovement: aiInsights.areasForImprovement || ['Need more practice', 'Focus on fundamentals'],
-              recommendedFocus: aiInsights.recommendedFocus || ['Master core concepts', 'Practice regularly'],
-              nextSteps: aiInsights.nextSteps || ['Complete exercises', 'Take assessment']
-            },
-            generatedContent: aiContent,
-            originalLessonPlan: shared.lessonPlan,
-            teacher: shared.teacher.user,
-            autoGenerated: true // Flag to indicate this was auto-generated from teacher's lesson plan
-          }
-        } catch (error) {
-          console.error('Error generating AI content for lesson:', error)
-          // Return basic lesson without AI content
-          return {
-            id: `ai-lesson-${shared.id}`,
-            title: shared.lessonPlan.title,
-            subject: shared.lessonPlan.subject,
-            grade: shared.lessonPlan.grade,
-            difficulty: 'intermediate' as const,
-            duration: 45,
-            type: 'interactive' as const,
-            aiGenerated: true,
-            personalized: false,
-            progress: 0,
-            completed: false,
-            rating: 0,
-            estimatedTime: '45 min',
-            learningObjectives: [
-              'Understand key concepts from the lesson',
-              'Apply knowledge to solve problems'
-            ],
-            prerequisites: [
-              'Basic understanding of the subject'
-            ],
-            aiInsights: {
-              strengths: ['Eager to learn'],
-              areasForImprovement: ['Need more practice'],
-              recommendedFocus: ['Master core concepts'],
-              nextSteps: ['Complete exercises']
-            },
-            generatedContent: (typeof shared.lessonPlan.content === 'string' ? JSON.parse(shared.lessonPlan.content) : shared.lessonPlan.content)?.generatedContent || 'Content not available',
-            originalLessonPlan: shared.lessonPlan,
-            teacher: shared.teacher.user,
-            autoGenerated: true
-          }
-        }
-      })
-    )
-
-    return NextResponse.json({
-      lessons: aiLessons,
-      total: aiLessons.length
-    })
-
-  } catch (error) {
-    console.error('Error fetching AI lessons:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch AI lessons', 
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const body = await req.json()
-    const { subject, topic, grade, difficulty, learningStyle } = body
-
-    // Generate AI lesson content
-    const aiLesson = {
-      id: `ai-lesson-${Date.now()}`,
-      title: `${topic} - ${subject}`,
-      subject,
-      grade: grade || 'Grade 8',
-      difficulty: difficulty || 'intermediate',
-      duration: Math.floor(Math.random() * 60) + 30, // 30-90 minutes
-      type: learningStyle === 'visual' ? 'video' : learningStyle === 'kinesthetic' ? 'interactive' : 'reading',
-      aiGenerated: true,
-      personalized: true,
-      progress: 0,
-      completed: false,
-      rating: 0,
-      estimatedTime: `${Math.floor(Math.random() * 60) + 30} min`,
-      learningObjectives: [
-        `Understand key concepts in ${topic}`,
-        `Apply ${topic} knowledge to solve problems`,
-        `Analyze and evaluate ${topic} scenarios`
-      ],
-      prerequisites: [
-        'Basic understanding of the subject',
-        'Willingness to learn and practice'
-      ],
-      aiInsights: {
-        strengths: ['Eager to learn', 'Good problem solving'],
-        areasForImprovement: ['Need more practice', 'Focus on fundamentals'],
-        recommendedFocus: [`Master ${topic} basics`, 'Practice regularly'],
-        nextSteps: ['Complete exercises', 'Take assessment']
       }
-    }
+    },
+    orderBy: { sharedAt: 'desc' },
+    take: 10
+  })
 
-    return NextResponse.json({
-      lesson: aiLesson,
-      message: 'AI lesson generated successfully'
+  // Convert shared lesson plans to AI lessons automatically
+  const aiLessons = await Promise.all(
+    sharedLessonPlans.map(async (shared) => {
+      try {
+        // Determine student level and learning style
+        const studentLevel = student.analytics?.averageGrade ? 
+          (student.analytics.averageGrade >= 85 ? 'advanced' : 
+           student.analytics.averageGrade >= 70 ? 'intermediate' : 'beginner') : 'intermediate'
+
+        const learningStyle = 'visual' // Could be determined from analytics in the future
+
+        // Generate AI-powered content based on the lesson plan
+        const aiContent = await (OpenAIService as any).generateLessonContent(
+          shared.lessonPlan,
+          studentLevel,
+          learningStyle
+        )
+
+        // Generate AI insights for this specific lesson
+        const aiInsights = await (OpenAIService as any).generateStudentInsights({
+          ...student,
+          currentLesson: shared.lessonPlan
+        })
+
+        return {
+          id: `ai-lesson-${shared.id}`,
+          title: `${shared.lessonPlan.title} - AI Enhanced`,
+          subject: shared.lessonPlan.subject,
+          grade: shared.lessonPlan.grade,
+          difficulty: studentLevel,
+          duration: 45,
+          type: 'interactive' as const,
+          aiGenerated: true,
+          personalized: true,
+          progress: 0,
+          completed: false,
+          rating: 0,
+          estimatedTime: '45 min',
+          learningObjectives: [
+            'Master the core concepts from the lesson',
+            'Apply knowledge through interactive exercises',
+            'Develop critical thinking skills'
+          ],
+          prerequisites: [
+            'Basic understanding of the subject',
+            'Willingness to engage with AI-enhanced content'
+          ],
+          aiInsights: {
+            strengths: aiInsights.strengths || ['Eager to learn', 'Good problem solving'],
+            areasForImprovement: aiInsights.areasForImprovement || ['Need more practice', 'Focus on fundamentals'],
+            recommendedFocus: aiInsights.recommendedFocus || ['Master core concepts', 'Practice regularly'],
+            nextSteps: aiInsights.nextSteps || ['Complete exercises', 'Take assessment']
+          },
+          generatedContent: aiContent,
+          originalLessonPlan: shared.lessonPlan,
+          teacher: shared.teacher.user,
+          autoGenerated: true // Flag to indicate this was auto-generated from teacher's lesson plan
+        }
+      } catch (error) {
+        console.error('Error generating AI content for lesson:', error)
+        // Return basic lesson without AI content
+        return {
+          id: `ai-lesson-${shared.id}`,
+          title: shared.lessonPlan.title,
+          subject: shared.lessonPlan.subject,
+          grade: shared.lessonPlan.grade,
+          difficulty: 'intermediate' as const,
+          duration: 45,
+          type: 'interactive' as const,
+          aiGenerated: true,
+          personalized: false,
+          progress: 0,
+          completed: false,
+          rating: 0,
+          estimatedTime: '45 min',
+          learningObjectives: [
+            'Understand key concepts from the lesson',
+            'Apply knowledge to solve problems'
+          ],
+          prerequisites: [
+            'Basic understanding of the subject'
+          ],
+          aiInsights: {
+            strengths: ['Eager to learn'],
+            areasForImprovement: ['Need more practice'],
+            recommendedFocus: ['Master core concepts'],
+            nextSteps: ['Complete exercises']
+          },
+          generatedContent: (typeof shared.lessonPlan.content === 'string' ? JSON.parse(shared.lessonPlan.content) : shared.lessonPlan.content)?.generatedContent || 'Content not available',
+          originalLessonPlan: shared.lessonPlan,
+          teacher: shared.teacher.user,
+          autoGenerated: true
+        }
+      }
     })
+  )
 
-  } catch (error) {
-    console.error('Error generating AI lesson:', error)
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+  return NextResponse.json({
+    lessons: aiLessons,
+    total: aiLessons.length
+  })
+})
+
+export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
+  const body = await req.json()
+  const { subject, topic, grade, difficulty, learningStyle } = body
+
+  // Generate AI lesson content
+  const aiLesson = {
+    id: `ai-lesson-${Date.now()}`,
+    title: `${topic} - ${subject}`,
+    subject,
+    grade: grade || 'Grade 8',
+    difficulty: difficulty || 'intermediate',
+    duration: Math.floor(Math.random() * 60) + 30, // 30-90 minutes
+    type: learningStyle === 'visual' ? 'video' : learningStyle === 'kinesthetic' ? 'interactive' : 'reading',
+    aiGenerated: true,
+    personalized: true,
+    progress: 0,
+    completed: false,
+    rating: 0,
+    estimatedTime: `${Math.floor(Math.random() * 60) + 30} min`,
+    learningObjectives: [
+      `Understand key concepts in ${topic}`,
+      `Apply ${topic} knowledge to solve problems`,
+      `Analyze and evaluate ${topic} scenarios`
+    ],
+    prerequisites: [
+      'Basic understanding of the subject',
+      'Willingness to learn and practice'
+    ],
+    aiInsights: {
+      strengths: ['Eager to learn', 'Good problem solving'],
+      areasForImprovement: ['Need more practice', 'Focus on fundamentals'],
+      recommendedFocus: [`Master ${topic} basics`, 'Practice regularly'],
+      nextSteps: ['Complete exercises', 'Take assessment']
+    }
   }
-}
+
+  return NextResponse.json({
+    lesson: aiLesson,
+    message: 'AI lesson generated successfully'
+  })
+})

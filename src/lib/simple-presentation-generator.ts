@@ -71,12 +71,12 @@ export class SimplePresentationGenerator {
 
       const total = request.slides.length
 
-      // Title slide (first slide always uses title layout)
+      // Title slide
       this.addTitleSlide(pptx, request.title, request.author, request.subject, request.grade)
 
       // Content slides
       for (let i = 0; i < total; i++) {
-        const slide     = request.slides[i]
+        const slide     = request.slides[i]!
         const section   = getSection(slide, i, total)
         const style     = SECTION_STYLES[section]
         const imageData = imageMap.get(slide.id)
@@ -84,8 +84,10 @@ export class SimplePresentationGenerator {
         this.addContentSlide(pptx, slide, section, style, imageData, slideNum, total, request.subject, request.grade)
       }
 
+      // Closing slide
+      this.addClosingSlide(pptx, request.title, request.subject, request.grade)
+
       const buffer = await pptx.write({ outputType: 'nodebuffer' }) as Buffer
-      console.log('✅ PPTX generated successfully')
       return buffer
 
     } catch (error) {
@@ -273,6 +275,43 @@ export class SimplePresentationGenerator {
     }
   }
 
+  // ── Closing Slide ─────────────────────────────────────────────────────────
+  private addClosingSlide(pptx: PptxGenJS, title?: string, subject?: string, grade?: string) {
+    const slide = pptx.addSlide()
+    slide.background = { color: '0f172a' }
+
+    // Top accent bar
+    slide.addShape('rect', { x: 0, y: 0, w: '100%', h: 0.12, fill: { color: '8b5cf6' } })
+
+    // Decorative line art
+    slide.addShape('rect', { x: 0.8, y: 1.0, w: 8.4, h: 0.015, fill: { color: '334155' } })
+
+    // Thank you text
+    slide.addText('Thank You', {
+      x: 0.8, y: 1.4, w: 8.4, h: 1.2,
+      fontSize: 44, bold: true, color: 'FFFFFF',
+      fontFace: 'Calibri', align: 'center', valign: 'middle',
+      shadow: { type: 'outer', blur: 6, offset: 2, angle: 45, opacity: 0.3 },
+    })
+
+    // Decorative line
+    slide.addShape('rect', { x: 3.5, y: 2.75, w: 3, h: 0.06, fill: { color: '8b5cf6' } })
+
+    // Subtitle
+    const meta = [subject, grade].filter(Boolean).join(' • ')
+    slide.addText(meta || 'Keep Learning!', {
+      x: 1, y: 3.0, w: 8, h: 0.5,
+      fontSize: 16, color: '94a3b8', fontFace: 'Calibri', align: 'center',
+    })
+
+    // Bottom bar
+    slide.addShape('rect', { x: 0, y: 5.2, w: '100%', h: 0.12, fill: { color: '1e3a5f' } })
+    slide.addText('Powered by ElimuNova AI — Kenya CBC Curriculum', {
+      x: 0.4, y: 5.25, w: 9.2, h: 0.25,
+      fontSize: 9, color: '94a3b8', fontFace: 'Arial', align: 'center',
+    })
+  }
+
   // ── Image generation ─────────────────────────────────────────────────────
   private async generateImages(
     slides: SimplePresentationSlide[],
@@ -327,7 +366,8 @@ export class SimplePresentationGenerator {
                 const resp = await fetch(result.url)
                 const buf  = Buffer.from(await resp.arrayBuffer())
                 imageMap.set(slide.id, `data:image/png;base64,${buf.toString('base64')}`)
-              } catch {
+              } catch (e) {
+                console.warn('[PresentationGen] Buffer conversion failed:', e)
                 imageMap.set(slide.id, result.url) // use URL directly as fallback
               }
             }
@@ -356,10 +396,10 @@ export class SimplePresentationGenerator {
         size:       'MEDIUM_1024',
         quality:    'standard',
         userId:     userId || '',
-        teacherId:  teacherId || null,
+        teacherId:  teacherId ?? undefined,
         provider:   'openai-dalle-3',
       })
-    } catch { /* non-fatal */ }
+    } catch (e) { console.error('[IMG_SAVE] Failed to save image to bank', e) }
   }
 }
 

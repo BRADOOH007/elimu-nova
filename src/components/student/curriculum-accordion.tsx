@@ -40,9 +40,7 @@ export default function CurriculumAccordion({ learningAreas, currentTerm }: Curr
   const router = useRouter()
 
   return (
-    <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-background/95 via-background/90 to-muted/50 backdrop-blur-xl mt-8">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+    <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-background/95 via-background/90 to-muted/50 mt-8">
 
       <CardHeader className="relative">
         <CardTitle className="flex items-center gap-3 text-xl">
@@ -57,27 +55,20 @@ export default function CurriculumAccordion({ learningAreas, currentTerm }: Curr
       </CardHeader>
 
       <CardContent className="relative">
-        <Accordion type="single" collapsible defaultValue="term-1">
-          {[1, 2, 3].map((term) => (
-            <AccordionItem key={term} value={`term-${term}`} className="border-none">
-              <AccordionTrigger className="text-lg font-semibold hover:no-underline py-4 px-4 rounded-xl hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-md ${
-                    term === currentTerm
-                      ? "bg-gradient-to-br from-blue-500 to-blue-600"
-                      : "bg-gradient-to-br from-gray-300 to-gray-400"
-                  }`}>
-                    <Calendar className="h-5 w-5 text-white" strokeWidth={2.5} />
-                  </div>
-                  <span>Term {term}</span>
-                  {term === currentTerm && (
-                    <Badge className="bg-blue-100 text-blue-700 border-blue-300 shadow-sm">Current</Badge>
-                  )}
-                  <Badge variant="outline" className="bg-gray-100 shadow-sm">
-                    {learningAreas.length} Learning Areas
-                  </Badge>
+        <Accordion type="single" collapsible defaultValue={`term-${currentTerm}`}>
+          <AccordionItem value={`term-${currentTerm}`} className="border-none">
+            <AccordionTrigger className="text-lg font-semibold hover:no-underline py-4 px-4 rounded-xl hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md">
+                  <Calendar className="h-5 w-5 text-white" strokeWidth={2.5} />
                 </div>
-              </AccordionTrigger>
+                <span>Term {currentTerm}</span>
+                <Badge className="bg-blue-100 text-blue-700 border-blue-300 shadow-sm">Current</Badge>
+                <Badge variant="outline" className="bg-gray-100 shadow-sm">
+                  {learningAreas.length} Learning Areas
+                </Badge>
+              </div>
+            </AccordionTrigger>
               <AccordionContent className="pt-2 pb-4">
                 <div className="grid gap-5">
                   {learningAreas.map((subject) => {
@@ -179,7 +170,6 @@ export default function CurriculumAccordion({ learningAreas, currentTerm }: Curr
                 </div>
               </AccordionContent>
             </AccordionItem>
-          ))}
         </Accordion>
       </CardContent>
     </Card>

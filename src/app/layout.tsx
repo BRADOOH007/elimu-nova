@@ -25,6 +25,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "ElimuNova AI - Intelligent Education Platform",
   description: "Transform education with AI-powered lesson plans, schemes of work, and personalized learning experiences.",
+  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
   keywords: ["education", "AI", "learning", "teaching", "lesson plans", "schemes of work"],
   authors: [{ name: "ElimuNova AI Team" }],
   icons: {

@@ -1,5 +1,12 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// ──────────────────────────────────────────────────────────────────
+// Prisma Schema — ElimuNova Database (PostgreSQL on Neon)
+// Key design decisions:
+//   • schoolId is nullable on Teacher/Student/Class/Parent —
+//     independent (school-less) users coexist with school-managed
+//   • deletedAt on Teacher/Student/Class enables soft delete
+//   • Roles: SUPER_ADMIN > SCHOOL_ADMIN > TEACHER > STUDENT > PARENT
+//   • All tables use @@map for explicit snake_case table names
+// ──────────────────────────────────────────────────────────────────
 
 generator client {
   provider = "prisma-client-js"
@@ -9,6 +16,8 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// ── Enums ────────────────────────────────────────────────────────
 
 enum UserRole {
   SUPER_ADMIN
@@ -58,19 +67,27 @@ enum ReportStatus {
   EXPIRED
 }
 
+// ── Core User ────────────────────────────────────────────────────
+// Central identity table — every person (of any role) is a User first.
+// Role-specific extensions (Teacher, Student, etc.) link via userId FK.
+// address field may contain encrypted initial password after '---' separator.
+
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  firstName String
-  lastName  String
-  role      UserRole
-  avatar    String?
-  phone     String?
-  address   String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String    @id @default(cuid())
+  username        String   @unique
+  email           String    @unique
+  password        String
+  firstName       String
+  lastName        String
+  role            UserRole
+  avatar          String?
+  phone           String?
+  address         String?
+  isActive        Boolean   @default(true)
+  loginAttempts   Int       @default(0)
+  lockedUntil     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relationships
   schoolAdmin             SchoolAdmin?
@@ -94,6 +111,7 @@ model User {
   activities              Activity[]
   createdMeetings         Meeting[]
   subscriptions           Subscription[]
+  adminAuditLogs          AdminAuditLog[]
 
   // AI Generated Content
   generatedImages AIGeneratedImage[]
@@ -109,6 +127,10 @@ model SuperAdmin {
 
   @@map("super_admins")
 }
+
+// ── School ───────────────────────────────────────────────────────
+// A school groups Teachers, Students, Classes, and Parents.
+// Nullable schoolId on child models enables school-less independent users.
 
 model School {
   id        String   @id @default(cuid())
@@ -149,6 +171,9 @@ model School {
   // Notifications
   notifications Notification[]
 
+  // Parents
+  parents Parent[]
+
   @@map("schools")
 }
 
@@ -161,6 +186,11 @@ model SchoolAdmin {
 
   @@map("school_admins")
 }
+
+// ── Teacher ──────────────────────────────────────────────────────
+// Links to User (auth) and School (nullable for independent teachers).
+// Has template fields for AI-generated content personalization.
+// Soft-deletable via deletedAt.
 
 model Teacher {
   id       String   @id @default(cuid())
@@ -195,11 +225,20 @@ model Teacher {
   // AI Generated Images
   generatedImages AIGeneratedImage[]
 
+  // Generated notes
+  notes TeacherNote[]
+
+  deletedAt DateTime?
+
   @@map("teachers")
 }
 
+// ── Class ────────────────────────────────────────────────────────
+// Belongs to a Teacher and optionally a School. Groups Students.
+// Soft-deletable via deletedAt.
+
 model Class {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
   description String?
   subject     String
@@ -224,8 +263,16 @@ model Class {
   // Shared presentations
   sharedPresentations AIGeneratedContent[]
 
+  deletedAt DateTime?
+
   @@map("classes")
 }
+
+// ── Student ──────────────────────────────────────────────────────
+// Links to User, Teacher, School, and Class (all nullable for flexibility).
+// Multi-subject support via String[] subjects field.
+// Parent relationships are many-to-many through ParentStudent.
+// Soft-deletable via deletedAt.
 
 model Student {
   id        String   @id @default(cuid())
@@ -254,19 +301,35 @@ model Student {
   sharedAIContent   SharedAIContent[]
   parents           ParentStudent[]
 
+  // Wellness
+  wellnessCheckIns WellnessCheckIn[]
+
   // Courses
   courseEnrollments CourseEnrollment[]
 
   // AI Generated Images
   generatedImages AIGeneratedImage[]
 
+  // Exam lockdown sessions
+  examSessions ExamSession[]
+
+  deletedAt DateTime?
+
   @@map("students")
 }
 
+// ── Parent ───────────────────────────────────────────────────────
+// Links to User and optionally School (via schoolId for scoped access).
+// Children are linked through ParentStudent junction table.
+// Parent schoolId was added via migration for meeting access scoping.
+
 model Parent {
-  id     String @id @default(cuid())
-  userId String @unique
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String  @id @default(cuid())
+  userId String  @unique
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  schoolId String?
+
+  school School? @relation(fields: [schoolId], references: [id])
 
   // Relationships
   students ParentStudent[]
@@ -276,6 +339,10 @@ model Parent {
 
   @@map("parents")
 }
+
+// ── Parent-Student Junction ──────────────────────────────────────
+// Many-to-many: a Parent can have multiple children, a Student can
+// have multiple parents. Unique constraint prevents duplicates.
 
 model ParentStudent {
   id        String  @id @default(cuid())
@@ -617,6 +684,7 @@ model LessonPlan {
   assignments  Assignment[]
   sharedWith   SharedLessonPlan[]
   resources    Resource[]
+  notes        TeacherNote[]
 
   @@map("lesson_plans")
 }
@@ -627,9 +695,11 @@ model SharedLessonPlan {
   studentId    String
   teacherId    String
   sharedAt     DateTime @default(now())
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  isActive      Boolean   @default(true)
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Relationships
   lessonPlan LessonPlan @relation(fields: [lessonPlanId], references: [id], onDelete: Cascade)
@@ -673,6 +743,9 @@ model Assignment {
 
   // Courses
   courseAssignments CourseAssignment[]
+
+  // Exam lockdown sessions
+  examSessions ExamSession[]
 
   @@map("assignments")
 }
@@ -726,6 +799,7 @@ model StudentProgress {
   preferredDifficulty String    @default("medium") // "easy", "medium", "hard"
   engagementProfile   Json? // Likes quizzes, stories, attention span, etc.
   streak              Int       @default(0) // Consecutive days of practice
+  consecutiveCorrect  Int       @default(0) // Streak of correct answers in current session
   xp                  Int       @default(0) // Experience points
   totalQuestions      Int       @default(0)
   correctAnswers      Int       @default(0)
@@ -734,12 +808,38 @@ model StudentProgress {
   updatedAt DateTime @updatedAt
 
   // Relationships
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  teacher       Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  student       Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skillMastery  SkillMastery[]
 
   @@index([studentId, subject])
   @@index([classId, subject])
   @@map("student_progress")
+}
+
+// ── SkillMastery (per-concept mastery tracking) ──────────────
+// Replaces the single masteryScore with granular tracking per
+// learning outcome, enabling targeted teach/practice/quiz per
+// concept rather than whole-topic modes.
+
+model SkillMastery {
+  id              String        @id @default(cuid())
+  progressId      String
+  skillName       String      // e.g. "Photosynthesis equation", "Cell division phases"
+  skillCategory   String      // "knowledge", "comprehension", "application" (Bloom's)
+  masteryScore    Int         @default(0) // 0-100 per skill
+  timesCorrect    Int         @default(0)
+  timesTested     Int         @default(0)
+  lastPracticedAt DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relationships
+  progress StudentProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+
+  @@unique([progressId, skillName])
+  @@index([progressId, masteryScore])
+  @@map("skill_mastery")
 }
 
 model StudySession {
@@ -813,6 +913,27 @@ model AITutorSession {
   @@index([studentId, classId])
   @@index([studentId, subject])
   @@map("ai_tutor_sessions")
+}
+
+model WellnessCheckIn {
+  id        String   @id @default(cuid())
+  studentId String
+  mood      Int      // 1-5
+  energy    Int      // 1-5
+  stress    Int      // 1-5
+  sleep     Int      // 1-5
+  social    Int      // 1-5
+  openness  Int      // 1-5
+  concerns  String?  // Optional open-ended response
+  score     Int      // 0-100 wellbeing score
+  flags     String[] // e.g. ["LOW_MOOD", "HIGH_STRESS"]
+  aiInsight String?  // AI-generated encouraging response
+  createdAt DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, createdAt])
+  @@map("wellness_checkins")
 }
 
 model Message {
@@ -928,6 +1049,7 @@ model UserPreference {
   curriculum         String   @default("")
   emailNotifications Boolean  @default(true)
   pushNotifications  Boolean  @default(true)
+  tourCompletion     Json?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -955,6 +1077,14 @@ model Meeting {
   time        String // Store time as string (HH:MM format)
   duration    Int           @default(60) // Duration in minutes
   location    String?
+
+  // Zoom auto-creation fields
+  zoomMeetingId        String?
+  zoomMeetingPassword  String?
+  zoomJoinUrl          String?
+  zoomProvider         String   @default("manual") // "auto" (via API) or "manual"
+  zoomMeetingRecording String? // JSON array of recording files from webhook
+
   status      MeetingStatus @default(SCHEDULED)
   attendees   Json? // Store attendee information as JSON
   createdAt   DateTime      @default(now())
@@ -1405,9 +1535,11 @@ enum CourseType {
 // Curriculum Model: Represents a full curriculum (e.g., CBC Grade 7)
 model Curriculum {
   id          String         @id @default(cuid())
-  name        String // e.g., "CBC Grade 7"
+  name        String // e.g., "CBC Grade 7 Mathematics Term 1"
   type        CurriculumType @default(CBC)
+  subject     String // Learning area name (e.g., "Mathematics Activities", "English Language Activities")
   grade       String
+  term        Int? // 1, 2, or 3 (null for senior secondary where terms aren't divided)
   description String?
   isActive    Boolean        @default(true)
   schoolId    String?
@@ -1419,7 +1551,8 @@ model Curriculum {
   strands CurriculumStrand[]
   courses Course[]
 
-  @@index([type, grade])
+  @@unique([type, grade, subject, term])
+  @@index([type, grade, subject])
   @@map("curriculums")
 }
 
@@ -1440,11 +1573,13 @@ model CurriculumStrand {
 
 // Curriculum Substrand: A sub-topic within a strand (e.g., "Whole Numbers" under "Numbers")
 model CurriculumSubstrand {
-  id          String  @id @default(cuid())
-  strandId    String
-  name        String // e.g., "Whole Numbers"
-  description String?
-  order       Int     @default(0)
+  id               String   @id @default(cuid())
+  strandId         String
+  name             String // e.g., "Whole Numbers"
+  description      String?
+  learningOutcomes String[] // Specific learning outcomes (SLOs) for this substrand
+  activities       String[] // Learning experiences / activities
+  order            Int      @default(0)
 
   // Relationships
   strand  CurriculumStrand   @relation(fields: [strandId], references: [id], onDelete: Cascade)
@@ -1665,4 +1800,112 @@ model RedisConfig {
   updatedAt DateTime      @updatedAt
 
   @@map("redis_configs")
+}
+
+// Teacher-generated notes from AI lesson notes feature
+model TeacherNote {
+  id          String   @id @default(cuid())
+  title       String
+  content     String // JSON content of the notes
+  subject     String
+  grade       String
+  topic       String?
+  noteType    String   @default("detailed") // summary, detailed, study-guide, quick-reference, interactive
+  teacherId   String
+  lessonPlanId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  teacher    Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  lessonPlan LessonPlan? @relation(fields: [lessonPlanId], references: [id], onDelete: SetNull)
+
+  @@index([teacherId, createdAt])
+  @@index([teacherId, subject])
+  @@index([subject, grade])
+  @@map("teacher_notes")
+}
+
+// Super admin audit log for industrial-grade change tracking
+model AdminAuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String   // CREATE, UPDATE, DELETE
+  entity    String   // "school", "user", "package", "billing", "system_setting"
+  entityId  String?
+  summary   String
+  changes   String?  // JSON diff of before/after
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
+}
+
+// Exam Lockdown / Proctoring
+enum ViolationType {
+  TAB_SWITCH
+  FULLSCREEN_EXIT
+  COPY_PASTE
+  RIGHT_CLICK
+  OTHER
+}
+
+enum ReentryStatus {
+  NONE
+  PENDING
+  APPROVED
+  DENIED
+}
+
+model ExamSession {
+  id             String         @id @default(cuid())
+  assignmentId   String
+  studentId      String
+  startedAt      DateTime       @default(now())
+  endedAt        DateTime?
+  timeLimitMins  Int?
+  reentryStatus  ReentryStatus  @default(NONE)
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  violations LockdownViolation[]
+
+  @@unique([assignmentId, studentId])
+  @@index([studentId])
+  @@index([assignmentId])
+  @@index([reentryStatus])
+  @@map("exam_sessions")
+}
+
+model ContactMessage {
+  id         String   @id @default(cuid())
+  firstName  String
+  lastName   String
+  email      String
+  subject    String
+  message    String   @db.Text
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([isRead, createdAt])
+  @@map("contact_messages")
+}
+
+model LockdownViolation {
+  id          String        @id @default(cuid())
+  sessionId   String
+  type        ViolationType
+  details     String?
+  createdAt   DateTime      @default(now())
+
+  session ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("lockdown_violations")
 }

@@ -154,7 +154,7 @@ export default function TeacherLessonNotesPage() {
     try {
       const stored = localStorage.getItem('elimunova_saved_notes')
       if (stored) setSavedNotes(JSON.parse(stored))
-    } catch {}
+    } catch (e) { console.warn('[LessonNotes] Failed to parse saved notes:', e) }
   }, [])
 
   const persistSavedNotes = (updated: typeof savedNotes) => {

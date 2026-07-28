@@ -19,11 +19,12 @@ async function loadSecretKey(): Promise<string> {
   // Try DB first (set by super admin)
   try {
     const { prisma } = await import('@/lib/prisma')
+    const { decryptPassword } = await import('./password-encryption')
     const setting = await (prisma as any).systemSettings.findUnique({
       where: { key: 'stripe_secret_key' },
     })
-    if (setting?.value) return setting.value
-  } catch { /* DB not ready yet — fall through */ }
+    if (setting?.value) return decryptPassword(setting.value) || setting.value
+  } catch (e) { console.warn('[Stripe] DB load secret key failed:', e) }
 
   // Fallback to env var
   const envKey = process.env.STRIPE_SECRET_KEY
@@ -42,7 +43,7 @@ export async function getPublishableKey(): Promise<string> {
       where: { key: 'stripe_publishable_key' },
     })
     if (setting?.value) return setting.value
-  } catch { /* fall through */ }
+  } catch (e) { console.warn('[Stripe] DB load publishable key failed:', e) }
 
   const envKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   if (envKey && envKey !== 'pk_test_placeholder') return envKey
@@ -56,11 +57,12 @@ export async function getPublishableKey(): Promise<string> {
 export async function getWebhookSecret(): Promise<string> {
   try {
     const { prisma } = await import('@/lib/prisma')
+    const { decryptPassword } = await import('./password-encryption')
     const setting = await (prisma as any).systemSettings.findUnique({
       where: { key: 'stripe_webhook_secret' },
     })
-    if (setting?.value) return setting.value
-  } catch { /* fall through */ }
+    if (setting?.value) return decryptPassword(setting.value) || setting.value
+  } catch (e) { console.warn('[Stripe] DB load webhook secret failed:', e) }
 
   const envKey = process.env.STRIPE_WEBHOOK_SECRET
   if (envKey && envKey !== 'whsec_placeholder') return envKey

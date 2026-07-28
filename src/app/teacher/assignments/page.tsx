@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
-import { Loader2 as _L2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 
-const MarksTab   = dynamic(() => import('@/app/teacher/marks/page'),    { ssr: false, loading: () => <div className="flex justify-center py-12"><_L2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
-const ExamBkTab  = dynamic(() => import('@/app/teacher/exam-bank/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><_L2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
+const MarksTab   = dynamic(() => import('@/app/teacher/marks/page'),    { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
+const ExamBkTab  = dynamic(() => import('@/app/teacher/exam-bank/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,7 +19,7 @@ import {
 import {
   ClipboardList, Plus, Search, Filter, Calendar, Clock, User, MoreHorizontal,
   Eye, Edit, Trash2, Download, Users, CheckCircle, AlertCircle, FileText,
-  Brain, GraduationCap, Database, Loader2
+  Brain, GraduationCap, Database, Lightbulb
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -106,31 +106,84 @@ export default function AssessmentsPage() {
   const [assignmentStatusFilter, setAssignmentStatusFilter] = useState('all')
   const [examSearch, setExamSearch] = useState('')
   const [examStatusFilter, setExamStatusFilter] = useState('all')
-  
+  const [assignmentPage, setAssignmentPage] = useState(1)
+  const [assignmentTotalPages, setAssignmentTotalPages] = useState(1)
+  const [assignmentTotal, setAssignmentTotal] = useState(0)
+  const ASSIGNMENTS_PAGE_SIZE = 20
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  const handleAssignmentSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    clearTimeout(searchTimeoutRef.current)
+    searchTimeoutRef.current = setTimeout(() => {
+      setAssignmentSearch(value)
+      setAssignmentPage(1)
+    }, 300)
+  }
+
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createInitialData, setCreateInitialData] = useState<any>(null)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null)
   const [viewAssignmentId, setViewAssignmentId] = useState<string | null>(null)
 
+  // Suggest
+  const [showSuggest, setShowSuggest] = useState(false)
+  const [suggestions, setSuggestions] = useState<string[]>([])
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const suggestRef = useRef<HTMLDivElement>(null)
+
+  const fetchSuggestions = async () => {
+    setSuggestLoading(true)
+    try {
+      const r = await fetch('/api/lesson-plans?limit=10&sort=recent')
+      if (r.ok) {
+        const data = await r.json()
+        const topics = (data.lessonPlans || []).map((lp: any) => lp.title).filter(Boolean)
+        const uniq = [...new Set<string>(topics)]
+        setSuggestions(uniq.length > 0 ? uniq : ['Review Quiz', 'End of Topic Test', 'Homework Practice', 'Group Discussion Task'])
+      } else {
+        setSuggestions(['Review Quiz', 'End of Topic Test', 'Homework Practice', 'Group Discussion Task'])
+      }
+    } catch {
+      setSuggestions(['Review Quiz', 'End of Topic Test', 'Homework Practice', 'Group Discussion Task'])
+    } finally {
+      setSuggestLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) {
+        setShowSuggest(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const assignmentsRes = await fetch(
-          `/api/assignments${assignmentSearch || assignmentStatusFilter !== 'all'
-            ? `?${new URLSearchParams({
-              ...(assignmentSearch && { search: assignmentSearch }),
-              ...(assignmentStatusFilter !== 'all' && { status: assignmentStatusFilter })
-            })}`
-            : ''}`
-        )
+        const params = new URLSearchParams({
+          page: String(assignmentPage),
+          limit: String(ASSIGNMENTS_PAGE_SIZE),
+          ...(assignmentSearch && { search: assignmentSearch }),
+          ...(assignmentStatusFilter !== 'all' && { status: assignmentStatusFilter })
+        })
+        const assignmentsRes = await fetch(`/api/assignments?${params}`)
         if (assignmentsRes.ok) {
           const data = await assignmentsRes.json()
           setAssignments(data.assignments || [])
+          if (data.pagination) {
+            setAssignmentTotalPages(data.pagination.totalPages)
+            setAssignmentTotal(data.pagination.total)
+          }
         }
       } catch (error) {
         console.error('Error fetching assignments:', error)
@@ -139,7 +192,7 @@ export default function AssessmentsPage() {
       }
     }
     fetchData()
-  }, [assignmentSearch, assignmentStatusFilter])
+  }, [assignmentSearch, assignmentStatusFilter, assignmentPage])
 
   // Fetch scheduled exams (assignments that were scheduled from the exam generator)
   useEffect(() => {
@@ -307,6 +360,40 @@ export default function AssessmentsPage() {
           <p className="text-gray-600">Manage assignments and exams for your students</p>
         </div>
         <div className="flex space-x-3">
+          <div className="relative" ref={suggestRef}>
+            <Button
+              onClick={() => { if (!showSuggest) fetchSuggestions(); setShowSuggest(!showSuggest) }}
+              variant="outline"
+              className="flex items-center space-x-2"
+            >
+              <Lightbulb className="w-4 h-4" />
+              <span>Suggest Ideas</span>
+            </Button>
+            {showSuggest && (
+              <div className="absolute right-0 top-full mt-1 w-72 bg-white border rounded-lg shadow-xl z-50 p-2">
+                <div className="text-xs font-medium text-gray-500 px-2 py-1.5">Suggested Topics</div>
+                {suggestLoading ? (
+                  <div className="flex items-center justify-center py-4"><Loader2 className="w-5 h-5 animate-spin text-blue-500" /></div>
+                ) : (
+                  <div className="space-y-0.5">
+                    {suggestions.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setCreateInitialData({ title: s, subject: '', grade: '' })
+                          setShowCreateModal(true)
+                          setShowSuggest(false)
+                        }}
+                        className="w-full text-left px-2 py-2 text-sm text-gray-700 hover:bg-blue-50 rounded-md transition-colors"
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <Button
             onClick={() => setShowAIGenerator(true)}
             variant="outline"
@@ -343,7 +430,7 @@ export default function AssessmentsPage() {
                     <Input
                       placeholder="Search assignments..."
                       value={assignmentSearch}
-                      onChange={(e) => setAssignmentSearch(e.target.value)}
+                      onChange={handleAssignmentSearchChange}
                       className="pl-10"
                     />
                   </div>
@@ -351,7 +438,7 @@ export default function AssessmentsPage() {
                 <div className="flex gap-2">
                   <select
                     value={assignmentStatusFilter}
-                    onChange={(e) => setAssignmentStatusFilter(e.target.value)}
+                    onChange={(e) => { setAssignmentStatusFilter(e.target.value); setAssignmentPage(1) }}
                     className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="all">All Status</option>
@@ -362,7 +449,7 @@ export default function AssessmentsPage() {
                   </select>
                   <Button
                     variant="outline"
-                    onClick={() => { setAssignmentSearch(''); setAssignmentStatusFilter('all') }}
+                    onClick={() => { setAssignmentSearch(''); setAssignmentStatusFilter('all'); setAssignmentPage(1) }}
                   >
                     <Filter className="w-4 h-4 mr-2" />
                     Clear
@@ -461,7 +548,32 @@ export default function AssessmentsPage() {
             ))}
           </div>
 
-          {assignments.length === 0 && (
+            {assignments.length > 0 && assignmentTotalPages > 1 && (
+              <div className="flex items-center justify-between px-2">
+                <p className="text-sm text-gray-600">
+                  Page {assignmentPage} of {assignmentTotalPages} ({assignmentTotal} total)
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => setAssignmentPage(p => Math.max(1, p - 1))}
+                    disabled={assignmentPage <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-gray-700">Page {assignmentPage}</span>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => setAssignmentPage(p => Math.min(assignmentTotalPages, p + 1))}
+                    disabled={assignmentPage >= assignmentTotalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {assignments.length === 0 && (
             <Card>
               <CardContent className="p-12 text-center">
                 <ClipboardList className="w-16 h-16 mx-auto text-gray-400 mb-4" />
@@ -616,8 +728,9 @@ export default function AssessmentsPage() {
 
       <CreateAssignmentModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => { setShowCreateModal(false); setCreateInitialData(null) }}
         onSuccess={handleAssignmentCreated}
+        initialData={createInitialData}
       />
 
       <EditAssignmentModal
@@ -645,7 +758,18 @@ export default function AssessmentsPage() {
         <AIGeneratorModal
           isOpen={showAIGenerator}
           onClose={() => setShowAIGenerator(false)}
-          onSuccess={() => {}}
+          onSuccess={(result) => {
+            if (result.type === 'assignment' || result.type === 'exam') {
+              setCreateInitialData({
+                title: result.title,
+                content: result.content,
+                subject: result.subject,
+                grade: result.grade,
+                topic: result.topic,
+              })
+              setShowCreateModal(true)
+            }
+          }}
         />
       )}
     </div>

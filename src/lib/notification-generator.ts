@@ -1,4 +1,5 @@
 import { prisma } from './prisma'
+import { whatsappService } from './whatsapp-service'
 
 export interface NotificationData {
   title: string
@@ -247,6 +248,21 @@ export class NotificationGenerator {
       await this.createNotification(notification)
     } catch (error) {
       console.error('Error generating low study time notification:', error)
+    }
+  }
+
+  // Notify parents via WhatsApp about student performance
+  static async notifyParentsViaWhatsApp(studentId: string, title: string, message: string) {
+    try {
+      const parentLinks = await prisma.parentStudent.findMany({
+        where: { studentId },
+        include: { parent: true, student: { include: { user: true } } },
+      })
+      for (const link of parentLinks) {
+        await whatsappService.sendParentAlert(link.parent.id, title, message)
+      }
+    } catch (error) {
+      console.error('Error sending WhatsApp parent notification:', error)
     }
   }
 

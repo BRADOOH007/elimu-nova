@@ -132,7 +132,7 @@ export default function AnalyticsPage() {
       const response = await fetch('/api/teacher/classes')
       if (response.ok) {
         const data = await response.json()
-        setClasses(Array.isArray(data) ? data : [])
+        setClasses(data.data || [])
       } else {
         setClasses([])
       }

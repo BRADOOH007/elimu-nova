@@ -1,21 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 import { sseBus } from '@/lib/sse-events'
 
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
     console.log('📨 Fetching teacher messages...')
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     // Get teacher record
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     })
 
     if (!teacher) {
@@ -31,7 +25,7 @@ export async function GET(request: NextRequest) {
           { recipientId: teacher.id, recipientType: 'TEACHER' },
           { senderId: teacher.id, senderType: 'TEACHER' },
           // Parents can also message teachers directly using the teacher's userId
-          { recipientId: session.user.id, recipientType: 'TEACHER' },
+          { recipientId: user.id, recipientType: 'TEACHER' },
         ]
       },
       orderBy: {
@@ -99,7 +93,7 @@ export async function GET(request: NextRequest) {
           senderInfo = {
             name: 'You',
             role: 'Teacher',
-            avatar: session.user.avatar || null
+            avatar: user.avatar || null
           }
         }
 
@@ -131,27 +125,22 @@ export async function GET(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
-}
+})
 
 // POST endpoint to send a message
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
     console.log('📤 Sending message...')
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     })
 
     if (!teacher) {
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const { recipientId, subject, content, recipientType = 'STUDENT', parentId, attachments = [] } = body
 
     if (!recipientId || !subject || !content) {
@@ -195,26 +184,20 @@ export async function POST(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
-}
+})
 
 // PATCH endpoint to mark message as read
-export async function PATCH(request: NextRequest) {
+export const PATCH = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     })
 
     if (!teacher) {
       return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const { messageId } = body
 
     if (!messageId) {
@@ -246,4 +229,4 @@ export async function PATCH(request: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 })
   }
-}
+})

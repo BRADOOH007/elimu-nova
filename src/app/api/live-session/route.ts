@@ -1,19 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 // We store live sessions in the Schedule table (type=CLASS, status=IN_PROGRESS)
 // and use metadata JSON for session state (board content, chat, participants)
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const GET = route({}, async (req, { user }) => {
 
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = new URL(req.url)
     const sessionId = searchParams.get('sessionId')
-    const role = session.user.role
+    const role = user.role
 
     if (sessionId) {
       // Get a specific session
@@ -27,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // For teachers: get their active sessions
     if (role === 'TEACHER') {
-      const teacher = await (prisma as any).teacher.findUnique({ where: { userId: session.user.id } })
+      const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
       if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
       const sessions = await prisma.schedule.findMany({
@@ -41,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     // For students: get their class's active session
     if (role === 'STUDENT') {
-      const student = await (prisma as any).student.findUnique({ where: { userId: session.user.id } })
+      const student = await prisma.student.findUnique({ where: { userId: user.id } })
       if (!student?.classId) return NextResponse.json({ sessions: [] })
 
       const sessions = await prisma.schedule.findMany({
@@ -54,27 +50,18 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({ sessions: [] })
-  } catch (error) {
-    console.error('[GET_LIVE_SESSION]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})
 
 // POST — teacher starts a new live session
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
 
-    const teacher = await (prisma as any).teacher.findUnique({
-      where: { userId: session.user.id },
+    const teacher = await prisma.teacher.findUnique({
+      where: { userId: user.id },
       include: { classes: true },
     })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-    const { title, classId, subject, description, meetingLink } = await request.json()
+    const { title, classId, subject, description, meetingLink } = await req.json()
 
     const now = new Date()
     const end = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour default
@@ -104,19 +91,12 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json({ session: liveSession })
-  } catch (error) {
-    console.error('[POST_LIVE_SESSION]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})
 
 // PATCH — update session state (board, chat, end session)
-export async function PATCH(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const PATCH = route({}, async (req, { user }) => {
 
-    const { sessionId, action, data } = await request.json()
+    const { sessionId, action, data } = await req.json()
 
     const existing = await prisma.schedule.findUnique({ where: { id: sessionId } })
     if (!existing) return NextResponse.json({ error: 'Session not found' }, { status: 404 })
@@ -152,8 +132,4 @@ export async function PATCH(request: NextRequest) {
       data: { metadata: meta },
     })
     return NextResponse.json({ session: updated })
-  } catch (error) {
-    console.error('[PATCH_LIVE_SESSION]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})

@@ -1,14 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const POST = route({}, async (req, { user }) => {
 
-    const body = await request.json()
+    const body = await req.json()
     const { recipientId, recipientType, subject, content } = body
 
     if (!recipientId || !content) {
@@ -16,22 +12,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine sender model ID based on role
-    let senderId = session.user.id
-    if (session.user.role === 'TEACHER') {
-      const teacher = await prisma.teacher.findUnique({ where: { userId: session.user.id } })
+    let senderId = user.id
+    if (user.role === 'TEACHER') {
+      const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
       if (teacher) senderId = teacher.id
-    } else if (session.user.role === 'PARENT') {
-      const parent = await prisma.parent.findUnique({ where: { userId: session.user.id } })
+    } else if (user.role === 'PARENT') {
+      const parent = await prisma.parent.findUnique({ where: { userId: user.id } })
       if (parent) senderId = parent.id
-    } else if (session.user.role === 'STUDENT') {
-      const student = await prisma.student.findUnique({ where: { userId: session.user.id } })
+    } else if (user.role === 'STUDENT') {
+      const student = await prisma.student.findUnique({ where: { userId: user.id } })
       if (student) senderId = student.id
     }
 
     const message = await prisma.message.create({
       data: {
         senderId,
-        senderType: session.user.role as any,
+        senderType: user.role as any,
         recipientId,
         recipientType: recipientType || 'PARENT',
         subject: subject || 'No subject',
@@ -41,8 +37,4 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(message, { status: 201 })
-  } catch (error) {
-    console.error('Error sending message:', error)
-    return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
-  }
-}
+})

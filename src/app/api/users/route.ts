@@ -1,207 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req) => {
+  const { searchParams } = new URL(req.url)
+  const page = parseInt(searchParams.get('page') || '1')
+  const limit = parseInt(searchParams.get('limit') || '10')
+  const search = searchParams.get('search') || ''
+  const role = searchParams.get('role') || ''
+  const status = searchParams.get('status') || ''
+  const sortBy = searchParams.get('sortBy') || 'createdAt'
+  const sortOrder = searchParams.get('sortOrder') || 'desc'
 
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { searchParams } = new URL(request.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const search = searchParams.get('search') || ''
-    const role = searchParams.get('role') || ''
-    const status = searchParams.get('status') || ''
-    const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'
-
-    const where: any = {}
-    
-    // Search filter
-    if (search) {
-      where.OR = [
-        { firstName: { contains: search, mode: 'insensitive' } },
-        { lastName: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { phone: { contains: search, mode: 'insensitive' } }
-      ]
-    }
-    
-    // Role filter
-    if (role && role !== 'all') {
-      where.role = role
-    }
-    
-    // Status filter
-    if (status === 'active') {
-      where.isActive = true
-    } else if (status === 'inactive') {
-      where.isActive = false
-    }
-
-    // Sort configuration
-    const orderBy: any = {}
-    if (sortBy === 'name') {
-      orderBy.firstName = sortOrder
-    } else if (sortBy === 'email') {
-      orderBy.email = sortOrder
-    } else if (sortBy === 'lastLogin') {
-      orderBy.lastLogin = sortOrder
-    } else {
-      orderBy.createdAt = sortOrder
-    }
-
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy,
-        include: {
-          schoolAdmin: {
-            include: {
-              school: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
-            }
-          },
-          teacher: {
-            include: {
-              school: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
-            }
-          },
-          student: {
-            include: {
-              school: {
-                select: {
-                  id: true,
-                  name: true
-                }
-              }
-            }
-          }
-        }
-      }),
-      prisma.user.count({ where })
-    ])
-
-    const pages = Math.ceil(total / limit)
-
-    return NextResponse.json({
-      users,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages
-      }
-    })
-  } catch (error) {
-    console.error('Error fetching users:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  const where: any = {}
+  
+  if (search) {
+    where.OR = [
+      { username: { contains: search, mode: 'insensitive' } },
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+      { email: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search, mode: 'insensitive' } }
+    ]
   }
-}
+  
+  if (role && role !== 'all') {
+    where.role = role
+  }
+  
+  if (status === 'active') {
+    where.isActive = true
+  } else if (status === 'inactive') {
+    where.isActive = false
+  }
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const orderBy: any = {}
+  if (sortBy === 'name') {
+    orderBy.firstName = sortOrder
+  } else if (sortBy === 'email') {
+    orderBy.email = sortOrder
+  } else if (sortBy === 'lastLogin') {
+    orderBy.lastLogin = sortOrder
+  } else {
+    orderBy.createdAt = sortOrder
+  }
 
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const body = await request.json()
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      phone, 
-      role, 
-      schoolId,
-      password,
-      isActive = true 
-    } = body
-
-    // Validate required fields
-    if (!firstName || !lastName || !email || !role) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    })
-
-    if (existingUser) {
-      return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
-    }
-
-    // Hash password — generate secure random if not provided
-    const bcrypt = await import('bcryptjs')
-    const finalPassword = password || require('crypto').randomBytes(16).toString('hex')
-    const hashedPassword = await bcrypt.hash(finalPassword, 12)
-
-    // Validate role is a known enum value
-    const validRoles = ['STUDENT', 'TEACHER', 'PARENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN']
-    if (!validRoles.includes(role)) {
-      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
-    }
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        phone,
-        role,
-        isActive,
-        password: hashedPassword,
-        ...(role === 'SCHOOL_ADMIN' && schoolId && {
-          schoolAdmin: {
-            create: {
-              schoolId
-            }
-          }
-        }),
-        ...(role === 'TEACHER' && schoolId && {
-          teacher: {
-            create: {
-              schoolId
-            }
-          }
-        }),
-        ...(role === 'STUDENT' && schoolId && {
-          student: {
-            create: {
-              schoolId
-            }
-          }
-        })
-      },
+  const [users, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+      orderBy,
       include: {
         schoolAdmin: {
           include: {
@@ -234,11 +83,143 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-    })
+    }),
+    prisma.user.count({ where })
+  ])
 
-    return NextResponse.json(user, { status: 201 })
-  } catch (error) {
-    console.error('Error creating user:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  const pages = Math.ceil(total / limit)
+
+  return NextResponse.json({
+    users,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages
+    }
+  })
+})
+
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req) => {
+  const body = await req.json()
+  const { 
+    firstName, 
+    lastName, 
+    email, 
+    phone, 
+    role, 
+    schoolId,
+    password,
+    isActive = true 
+  } = body
+
+  if (!firstName || !lastName || !email || !role) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
-}
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email }
+  })
+
+  if (existingUser) {
+    return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
+  }
+
+  const bcrypt = await import('bcryptjs')
+  const { generatePassword: genPwd, generateUsername } = await import('@/lib/bulk-import')
+  const { encryptPassword } = await import('@/lib/password-encryption')
+  const finalPassword = password || genPwd()
+  const hashedPassword = await bcrypt.hash(finalPassword, 12)
+  const encryptedPwd = !password ? encryptPassword(finalPassword) : undefined
+
+  // Generate unique username
+  let username = generateUsername(firstName, lastName)
+  let suffixAttempt = 0
+  while (await prisma.user.findUnique({ where: { username } })) {
+    suffixAttempt++
+    username = generateUsername(firstName, lastName, `${Date.now().toString(36)}${suffixAttempt}`)
+  }
+
+  const validRoles = ['STUDENT', 'TEACHER', 'PARENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN']
+  if (!validRoles.includes(role)) {
+    return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+  }
+
+  const schoolRoles = ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT']
+  if (schoolRoles.includes(role) && !schoolId) {
+    return NextResponse.json({ error: 'School selection is required for this role' }, { status: 400 })
+  }
+
+  const user = await prisma.user.create({
+    data: {
+      username,
+      firstName,
+      lastName,
+      email,
+      phone,
+      role,
+      isActive,
+      password: hashedPassword,
+      ...(encryptedPwd ? { address: encryptedPwd } : {}),
+      ...(role === 'SCHOOL_ADMIN' && schoolId && {
+        schoolAdmin: {
+          create: {
+            schoolId
+          }
+        }
+      }),
+      ...(role === 'TEACHER' && schoolId && {
+        teacher: {
+          create: {
+            schoolId
+          }
+        }
+      }),
+      ...(role === 'STUDENT' && schoolId && {
+        student: {
+          create: {
+            schoolId
+          }
+        }
+      })
+    },
+    include: {
+      schoolAdmin: {
+        include: {
+          school: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      },
+      teacher: {
+        include: {
+          school: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      },
+      student: {
+        include: {
+          school: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      }
+    }
+  })
+
+  const responseBody = password
+    ? user
+    : { ...user, generatedPassword: finalPassword }
+
+  return NextResponse.json(responseBody, { status: 201 })
+})

@@ -1,14 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { ImageBank } from '@/lib/image-bank'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({}, async (request, { user }) => {
 
     const { searchParams } = new URL(request.url)
     const contextType = searchParams.get('contextType')
@@ -20,8 +14,4 @@ export async function GET(request: NextRequest) {
 
     const images = await ImageBank.getContextImages(contextType, contextId)
     return NextResponse.json(images)
-  } catch (error) {
-    console.error('Context images error:', error)
-    return NextResponse.json({ error: 'Failed to get context images' }, { status: 500 })
-  }
-}
+})

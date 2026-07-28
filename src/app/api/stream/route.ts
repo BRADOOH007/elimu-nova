@@ -1,17 +1,11 @@
-import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { sseBus } from '@/lib/sse-events'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return new Response('Unauthorized', { status: 401 })
-  }
-
-  const channel = request.nextUrl.searchParams.get('channel')
+export const GET = route({}, async (req, { user }) => {
+  const channel = req.nextUrl.searchParams.get('channel')
   if (!channel) {
-    return new Response('Missing channel query parameter', { status: 400 })
+    return NextResponse.json({ error: 'Missing channel query parameter' }, { status: 400 })
   }
 
   const encoder = new TextEncoder()
@@ -37,18 +31,18 @@ export async function GET(request: NextRequest) {
         }
       })
 
-      request.signal.addEventListener('abort', () => {
+      req.signal.addEventListener('abort', () => {
         clearInterval(keepalive)
         unsubscribe()
       })
     },
   })
 
-  return new Response(stream, {
+  return new NextResponse(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     },
   })
-}
+})

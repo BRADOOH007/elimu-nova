@@ -381,3 +381,70 @@ button, a {
 .signin-stagger-3 { animation-delay: 0.4s; }
 .signin-stagger-4 { animation-delay: 0.55s; }
 .signin-stagger-5 { animation-delay: 0.7s; }
+
+/* Page transition */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.35s ease-out;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Scale in */
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.animate-scaleIn {
+  animation: scaleIn 0.2s ease-out;
+}
+
+/* Slide up */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Stagger children */
+.animate-stagger > * {
+  animation: slideUp 0.3s ease-out both;
+}
+.animate-stagger > *:nth-child(1) { animation-delay: 0.05s; }
+.animate-stagger > *:nth-child(2) { animation-delay: 0.1s; }
+.animate-stagger > *:nth-child(3) { animation-delay: 0.15s; }
+.animate-stagger > *:nth-child(4) { animation-delay: 0.2s; }
+.animate-stagger > *:nth-child(5) { animation-delay: 0.25s; }
+.animate-stagger > *:nth-child(6) { animation-delay: 0.3s; }
+.animate-stagger > *:nth-child(7) { animation-delay: 0.35s; }
+.animate-stagger > *:nth-child(8) { animation-delay: 0.4s; }
+
+/* ── Tour animations ── */
+@keyframes tour-overlay-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes tour-tooltip-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-tour-overlay-in {
+  animation: tour-overlay-in 0.25s ease-out;
+}
+.animate-tour-tooltip-in {
+  animation: tour-tooltip-in 0.3s ease-out;
+}

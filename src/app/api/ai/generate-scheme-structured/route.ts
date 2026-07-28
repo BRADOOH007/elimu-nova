@@ -13,11 +13,11 @@
  * Break rows use type: 'break' with a reason field.
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { callAI } from '@/lib/ai-provider'
+import { buildKICDSchemePrompt, CBC_SUBJECT_LESSON_ALLOCATION } from '@/lib/cbc-context'
+import { route } from '@/lib/api-middleware'
 
 export interface KICDRow {
   week:                      number
@@ -127,14 +127,8 @@ function normaliseRow(r: any, week: number, lesson: number): KICDRow {
   }
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const teacher = await prisma.teacher.findUnique({ where: { userId: session.user.id } })
+export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
+    const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
     const {
@@ -157,7 +151,7 @@ export async function POST(request: NextRequest) {
     let templateText = documentContext
     if (!templateText) {
       const t = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { schemeOfWorkTemplate: true },
       })
       templateText = t?.schemeOfWorkTemplate || null
@@ -165,7 +159,8 @@ export async function POST(request: NextRequest) {
 
     // Only ask AI to generate the TEACHING weeks (not break weeks)
     const teachingWeeks  = weeksCount
-    const totalLessons   = teachingWeeks * lessonsPerWeek
+    const effectiveLessonsPerWeek = subject ? (CBC_SUBJECT_LESSON_ALLOCATION[subject] || lessonsPerWeek) : lessonsPerWeek
+    const totalLessons   = teachingWeeks * effectiveLessonsPerWeek
 
     const topicsStr = selectedTopics.length > 0
       ? selectedTopics.map((t: any) => `${t.strand} → ${t.subStrand}`).join('\n')
@@ -176,13 +171,15 @@ export async function POST(request: NextRequest) {
       : ''
 
     // ── System prompt — extremely strict about output format ───────────────
-    const systemPrompt = `You are a Kenyan CBC curriculum expert creating official KICD schemes of work.${templateBlock}
+    const kicdContext = buildKICDSchemePrompt(grade, subject)
+    const systemPrompt = `You are a Kenyan CBC/CBE curriculum expert creating official KICD schemes of work.${templateBlock}
+${kicdContext}
 You MUST return ONLY a raw JSON array — no markdown, no code fences, no explanation text, nothing else.
 The first character of your response must be [ and the last must be ].
 Each element is an object with EXACTLY these keys (no extras, no missing):
 {
   "week": <number 1-${teachingWeeks}>,
-  "lesson": <number 1-${lessonsPerWeek}>,
+  "lesson": <number 1-${effectiveLessonsPerWeek}>,
   "strand": "<string>",
   "subStrand": "<string>",
   "specificLearningOutcomes": "<string — starts with 'By the end of the lesson, the learner should be able to'>",
@@ -194,13 +191,13 @@ Each element is an object with EXACTLY these keys (no extras, no missing):
   "durationMinutes": 40
 }
 CBC-aligned content. Kenya-specific examples. Appropriate for ${grade} ${subject}.
-Week numbers go 1 to ${teachingWeeks}. Lessons 1 to ${lessonsPerWeek} per week.`
+Week numbers go 1 to ${teachingWeeks}. Lessons 1 to ${effectiveLessonsPerWeek} per week for ${subject}.`
 
     const userPrompt = `Generate a ${teachingWeeks}-week CBC scheme of work:
 Subject: ${subject}
 Grade: ${grade}
 Term: ${term}
-Lessons per week: ${lessonsPerWeek}
+Lessons per week (KICD standard for ${subject}): ${effectiveLessonsPerWeek}
 Total teaching lessons: ${totalLessons}
 
 Topics (Strand → Sub-Strand):
@@ -208,7 +205,7 @@ ${topicsStr}
 
 Rules:
 - Distribute topics evenly across all ${teachingWeeks} weeks
-- Each week has exactly ${lessonsPerWeek} lessons
+- Each week has exactly ${effectiveLessonsPerWeek} lessons
 - Lessons within each week build progressively
 - Use Kenyan contexts and examples
 - Return exactly ${totalLessons} objects in the JSON array`
@@ -247,7 +244,7 @@ Rules:
         const raw = await provider.fn()
         console.log(`[SCHEME] ${provider.name} raw (first 200):`, raw.slice(0, 200))
         rows = extractJsonArray(raw).map((r, i) =>
-          normaliseRow(r, Math.floor(i / lessonsPerWeek) + 1, (i % lessonsPerWeek) + 1)
+          normaliseRow(r, Math.floor(i / effectiveLessonsPerWeek) + 1, (i % effectiveLessonsPerWeek) + 1)
         )
         if (rows.length > 0) {
           console.log(`[SCHEME] ✅ ${provider.name} returned ${rows.length} rows`)
@@ -288,8 +285,8 @@ Rules:
           weekRows.forEach(wr => allRows.push({ ...wr, week: slot.week }))
         } else {
           // fallback — use sequential rows
-          for (let l = 1; l <= lessonsPerWeek; l++) {
-            const idx = rowIndex * lessonsPerWeek + (l - 1)
+          for (let l = 1; l <= effectiveLessonsPerWeek; l++) {
+            const idx = rowIndex * effectiveLessonsPerWeek + (l - 1)
             if (rows[idx]) allRows.push({ ...rows[idx], week: slot.week })
           }
         }
@@ -338,8 +335,4 @@ Rules:
       rows: allRows,
       totalLessons: teachingRows.length,
     })
-  } catch (error: any) {
-    console.error('[GENERATE_SCHEME_STRUCTURED]', error)
-    return NextResponse.json({ error: error.message || 'Failed to generate scheme' }, { status: 500 })
-  }
-}
+})

@@ -1,21 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { route } from '@/lib/api-middleware';
 
-export async function POST(req: NextRequest) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await req.json();
     const { classId, lessonPlanIds } = body;
 
     // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     });
 
     if (!teacher) {
@@ -78,4 +72,4 @@ export async function POST(req: NextRequest) {
     console.error('Error sharing lesson plans:', error);
     return NextResponse.json({ error: 'Failed to share lesson plans' }, { status: 500 });
   }
-}
+});

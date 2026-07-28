@@ -13,24 +13,17 @@
  *   6. Return download URL + file buffer
  */
 
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { simplePresentationGenerator } from '@/lib/simple-presentation-generator'
 import { uploadFile, BUCKETS } from '@/lib/supabase'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
+export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
     const {
-      lessonPlanId,    // load from DB
-      lessonContent,   // or pass directly
+      lessonPlanId,
+      lessonContent,
       subject,
       grade,
       slideCount = 8,
@@ -42,7 +35,7 @@ export async function POST(request: NextRequest) {
     let templateText = documentContext
     if (!templateText) {
       const t = await prisma.teacher.findUnique({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { curriculumTemplate: true },
       })
       templateText = t?.curriculumTemplate || null
@@ -128,20 +121,20 @@ For each slide:
     }))
 
     // ── Generate PPTX ──────────────────────────────────────────────────────
-    const teacher = await prisma.teacher.findUnique({ where: { userId: session.user.id } })
+    const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
 
     const pptxBuffer = await simplePresentationGenerator.generatePresentation({
       title:          planTitle,
-      author:         session.user.name || 'ElimuNova Teacher',
+      author:         user.name || 'ElimuNova Teacher',
       slides:         normalised,
       generateImages: generateImages,
       imageStyle:     'natural',
-      userId:         session.user.id,
+      userId:         user.id,
       teacherId:      teacher?.id,
     })
 
     // ── Upload to Supabase Storage ─────────────────────────────────────────
-    const fileName  = `${session.user.id}/${Date.now()}-${planTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx`
+    const fileName  = `${user.id}/${Date.now()}-${planTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx`
     const publicUrl = await uploadFile(BUCKETS.PRESENTATIONS, fileName, pptxBuffer, 'application/vnd.openxmlformats-officedocument.presentationml.presentation')
 
     // Save reference to DB if we have a lesson plan
@@ -170,8 +163,4 @@ For each slide:
         'X-Slide-Count':       String(normalised.length),
       },
     })
-  } catch (error: any) {
-    console.error('[GENERATE_PPTX_FROM_LESSON]', error)
-    return NextResponse.json({ error: error.message || 'Failed to generate PowerPoint' }, { status: 500 })
-  }
-}
+})

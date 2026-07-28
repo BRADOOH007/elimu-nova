@@ -2,16 +2,12 @@
  * POST /api/ai/previous-learning
  * Previous Learning Recap — AI summary of what was covered before this lesson
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const POST = route({}, async (request, { user }) => {
 
     const { subject, grade, currentStrand, currentSubStrand, schemeId } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
@@ -65,8 +61,4 @@ Use:
     if (start === -1 || end <= start) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
 
     return NextResponse.json({ recap: JSON.parse(raw.slice(start, end + 1)), subject, grade })
-  } catch (e: any) {
-    console.error('[PREVIOUS_LEARNING]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

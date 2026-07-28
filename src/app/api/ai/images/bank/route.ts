@@ -1,14 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { ImageBank } from '@/lib/image-bank'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({}, async (request, { user }) => {
 
     const { searchParams } = new URL(request.url)
     const subject = searchParams.get('subject') || undefined
@@ -23,14 +17,10 @@ export async function GET(request: NextRequest) {
       grade,
       topic,
       prompt,
-      schoolId: session.user.schoolAdminId || undefined,
+      schoolId: user.schoolAdminId || undefined,
       limit: Math.min(limit, 50),
       offset,
     })
 
     return NextResponse.json(result)
-  } catch (error) {
-    console.error('Image bank search error:', error)
-    return NextResponse.json({ error: 'Failed to search image bank' }, { status: 500 })
-  }
-}
+})

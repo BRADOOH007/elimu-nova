@@ -1,18 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { route } from '@/lib/api-middleware';
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     });
 
     if (!teacher) {
@@ -22,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     // Get class with students
     const classData = await prisma.class.findUnique({
       where: { 
-        id: (await params).id,
+        id: params.id,
         teacherId: teacher.id
       },
       include: {
@@ -72,21 +66,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     console.error('Error fetching class:', error);
     return NextResponse.json({ error: 'Failed to fetch class' }, { status: 500 });
   }
-}
+})
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const PUT = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await req.json();
     const { name, subject, grade, description, isActive } = body;
 
     // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     });
 
     if (!teacher) {
@@ -95,7 +84,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // Check if class exists and belongs to teacher
     const existingClass = await prisma.class.findUnique({
-      where: { id: (await params).id }
+      where: { id: params.id }
     });
 
     if (!existingClass || existingClass.teacherId !== teacher.id) {
@@ -121,7 +110,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // Update class
     const updatedClass = await prisma.class.update({
-      where: { id: (await params).id },
+      where: { id: params.id },
       data: {
         name,
         subject,
@@ -159,18 +148,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     console.error('Error updating class:', error);
     return NextResponse.json({ error: 'Failed to update class' }, { status: 500 });
   }
-}
+})
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     // Get teacher profile
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
+      where: { userId: user.id }
     });
 
     if (!teacher) {
@@ -179,7 +163,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     // Check if class exists and belongs to teacher
     const existingClass = await prisma.class.findUnique({
-      where: { id: (await params).id }
+      where: { id: params.id }
     });
 
     if (!existingClass || existingClass.teacherId !== teacher.id) {
@@ -188,7 +172,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
     // Delete class (this will also unassign all students from this class)
     await prisma.class.delete({
-      where: { id: (await params).id }
+      where: { id: params.id }
     });
 
     return NextResponse.json({
@@ -199,4 +183,4 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     console.error('Error deleting class:', error);
     return NextResponse.json({ error: 'Failed to delete class' }, { status: 500 });
   }
-}
+})

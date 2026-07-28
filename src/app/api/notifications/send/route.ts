@@ -1,16 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { checkRateLimit, getClientIdentifier, rateLimitAuth } from '@/lib/rate-limit'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const POST = route({}, async (req, { user }) => {
+
+    const rl = await checkRateLimit(`notif-send:${user.id}`, { maxRequests: 30, windowMs: 60000, keyPrefix: 'ratelimit:notif' })
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many notifications sent. Try again later.' }, { status: 429 })
     }
 
-    const body = await request.json()
+    const body = await req.json()
     const {
       title,
       message,
@@ -55,16 +55,16 @@ export async function POST(request: NextRequest) {
       // For super admin: send to all users
       // For school admin: send to all users in their school
       // For teacher: send to their students and parents
-      if (session.user.role === 'SUPER_ADMIN') {
+      if (user.role === 'SUPER_ADMIN') {
         const allUsers = await prisma.user.findMany({
           where: { isActive: true },
           select: { id: true }
         })
         targetUserIds = allUsers.map(u => u.id)
-      } else if (session.user.role === 'SCHOOL_ADMIN') {
+      } else if (user.role === 'SCHOOL_ADMIN') {
         // Get school admin's school
         const schoolAdmin = await prisma.schoolAdmin.findUnique({
-          where: { userId: session.user.id },
+          where: { userId: user.id },
           select: { schoolId: true }
         })
         
@@ -82,10 +82,10 @@ export async function POST(request: NextRequest) {
           })
           targetUserIds = schoolUsers.map(u => u.id)
         }
-      } else if (session.user.role === 'TEACHER') {
+      } else if (user.role === 'TEACHER') {
         // Get teacher's students and their parents
         const teacher = await prisma.teacher.findUnique({
-          where: { userId: session.user.id },
+          where: { userId: user.id },
           include: {
             students: {
               select: {
@@ -110,29 +110,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Create notifications for all target users
-    const notifications = await Promise.all(
-      targetUserIds.map(userId =>
-        prisma.notification.create({
-          data: {
-            title,
-            message,
-            type,
-            userId,
-            senderId: session.user.id,
-            ...(schoolId && { schoolId })
-          }
-        })
-      )
-    )
+    if (targetUserIds.length > 0) {
+      await prisma.notification.createMany({
+        data: targetUserIds.map(userId => ({
+          title,
+          message,
+          type,
+          userId,
+          senderId: user.id,
+          ...(schoolId && { schoolId })
+        }))
+      })
+    }
 
     return NextResponse.json({
       success: true,
-      count: notifications.length,
-      notifications
+      count: targetUserIds.length
     }, { status: 201 })
-
-  } catch (error) {
-    console.error('Error sending notifications:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
+})

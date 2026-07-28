@@ -1,17 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import ImageStorageService from '@/lib/image-storage-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const POST = route({}, async (request, { user, params }) => {
 
     const { usageType, context } = await request.json()
 
@@ -20,22 +11,12 @@ export async function POST(
     }
 
     await ImageStorageService.trackImageUsage(
-      (await params).id,
-      session.user.id,
+      params.id,
+      user.id,
       usageType,
       context
     )
 
     return NextResponse.json({ success: true, message: 'Usage tracked successfully' })
 
-  } catch (error) {
-    console.error('Error tracking image usage:', error)
-    return NextResponse.json(
-      { 
-        error: 'Failed to track image usage',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    )
-  }
-}
+})

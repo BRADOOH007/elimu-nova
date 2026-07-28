@@ -208,6 +208,7 @@ export default function SignInPage() {
                   key={id}
                   type="button"
                   onClick={() => setActiveRole(id)}
+                  suppressHydrationWarning
                   className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                     activeRole === id
                       ? 'bg-white text-gray-900 shadow-sm'   // active tab
@@ -229,17 +230,17 @@ export default function SignInPage() {
 
             {/* Credentials form */}
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Email / Username field */}
+              {/* Username field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Email or Username
+                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Username
                 </label>
                 <Input
-                  id="email"
+                  id="username"
                   type="text"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="email@example.com"
+                  placeholder="e.g. jane.doe"
                   required
                   autoComplete="username"
                   className="h-11 bg-gray-50 border-gray-200 focus:bg-white"

@@ -1,19 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { id } = await params
+    const { id } = params
 
     const meeting = await prisma.meeting.findUnique({
       where: { id },
@@ -30,6 +21,36 @@ export async function GET(
 
     if (!meeting) {
       return NextResponse.json({ error: 'Meeting not found' }, { status: 404 })
+    }
+
+    // Role-based access control
+    const role = user.role
+    if (role === 'TEACHER') {
+      // Teacher can view meetings at their school or meetings they created
+      const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
+      if (!teacher) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      if (meeting.createdBy !== user.id && meeting.schoolId !== teacher.schoolId) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      }
+    } else if (role === 'PARENT') {
+      // Parent can view meetings at their child's school or meetings they created
+      const parent = await prisma.parent.findUnique({
+        where: { userId: user.id },
+        include: { students: { include: { student: { select: { schoolId: true } } } } },
+      })
+      if (!parent) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      const childSchoolIds = parent.students.map(ps => ps.student.schoolId).filter(Boolean)
+      if (meeting.createdBy !== user.id && !childSchoolIds.includes(meeting.schoolId)) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      }
+    } else if (role === 'SCHOOL_ADMIN') {
+      // School admin can view meetings at their school
+      const admin = await prisma.schoolAdmin.findUnique({ where: { userId: user.id } })
+      if (!admin || meeting.schoolId !== admin.schoolId) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      }
+    } else {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
     return NextResponse.json({
@@ -53,4 +74,4 @@ export async function GET(
     console.error('Error fetching meeting:', error)
     return NextResponse.json({ error: 'Failed to fetch meeting' }, { status: 500 })
   }
-}
+})

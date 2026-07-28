@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Upload, X, CheckCircle, AlertTriangle, Download, Loader2, Users } from 'lucide-react'
+import { Upload, X, CheckCircle, AlertTriangle, Download, Loader2, Users, Copy } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface Props {
   isOpen:   boolean
@@ -12,14 +13,23 @@ interface Props {
 
 interface ParsedStudent { firstName: string; lastName: string; email?: string; grade?: string }
 
+interface StudentResult {
+  name: string; email: string; username?: string; password: string; status: 'created' | 'skipped'; reason?: string
+}
+
+interface UploadResponse {
+  created: number; skipped: number; total: number; results: StudentResult[]; message?: string
+}
+
 export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, classes = [] }: Props) {
   const [step, setStep]           = useState<'upload' | 'preview' | 'done'>('upload')
   const [parsed, setParsed]       = useState<ParsedStudent[]>([])
   const [selectedClass, setSelectedClass] = useState('')
   const [uploading, setUploading] = useState(false)
-  const [result, setResult]       = useState<{ created: number; skipped: number; errors: string[] } | null>(null)
+  const [response, setResponse]   = useState<UploadResponse | null>(null)
   const [error, setError]         = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const { toast } = useToast()
 
   if (!isOpen) return null
 
@@ -38,7 +48,7 @@ export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, cla
       const firstName = getCol(cols, ['first', 'fname']) || getCol(cols, ['name'])?.split(' ')[0] || ''
       const lastName  = getCol(cols, ['last', 'surname', 'lname']) || getCol(cols, ['name'])?.split(' ').slice(1).join(' ') || ''
       const email     = getCol(cols, ['email', 'mail'])
-      const grade     = getCol(cols, ['grade', 'class', 'level'])
+      const grade     = getCol(cols, ['grade', 'class', 'level', 'form'])
       return { firstName, lastName, email: email || undefined, grade: grade || undefined }
     }).filter(s => s.firstName)
   }
@@ -70,10 +80,12 @@ export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, cla
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ students: parsed, classId: selectedClass || null }),
       })
-      const data = await res.json()
-      setResult(data)
+      const data: UploadResponse = await res.json()
+      setResponse(data)
       setStep('done')
       if (data.created > 0) onSuccess(data.created)
+    } catch {
+      setError('Upload failed. Please try again.')
     } finally { setUploading(false) }
   }
 
@@ -86,7 +98,18 @@ export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, cla
     URL.revokeObjectURL(url)
   }
 
-  const reset = () => { setStep('upload'); setParsed([]); setResult(null); setError(''); if (fileRef.current) fileRef.current.value = '' }
+  const downloadCredentials = () => {
+    if (!response) return
+    const created = response.results.filter(r => r.status === 'created')
+    const csv = `Name,Username,Email,Password\n${created.map(r => `${r.name},${r.username || ''},${r.email},${r.password}`).join('\n')}`
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'student-credentials.csv'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const reset = () => { setStep('upload'); setParsed([]); setResponse(null); setError(''); if (fileRef.current) fileRef.current.value = '' }
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -178,10 +201,6 @@ export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, cla
                 )}
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800">
-                <strong>Default password:</strong> <code>student1234</code> — students should change on first login. Duplicate emails will be skipped.
-              </div>
-
               <div className="flex gap-3">
                 <button onClick={reset} className="flex-1 h-11 border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 transition-colors">
                   Back
@@ -195,20 +214,64 @@ export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, cla
           )}
 
           {/* Step 3 — Done */}
-          {step === 'done' && result && (
+          {step === 'done' && response && (
             <div className="text-center space-y-4 py-4">
               <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">
                 <CheckCircle className="h-8 w-8 text-green-500" />
               </div>
               <div>
-                <p className="text-xl font-bold text-slate-900">{result.created} students imported!</p>
-                {result.skipped > 0 && <p className="text-sm text-slate-500 mt-1">{result.skipped} skipped (duplicates or errors)</p>}
+                <p className="text-xl font-bold text-slate-900">{response.created} students imported!</p>
+                {response.skipped > 0 && <p className="text-sm text-slate-500 mt-1">{response.skipped} skipped</p>}
               </div>
-              {result.errors.length > 0 && (
-                <div className="text-left bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 max-h-32 overflow-y-auto">
-                  {result.errors.slice(0, 10).map((e, i) => <p key={i}>{e}</p>)}
+
+              {/* Show credentials for created students */}
+              {response.results.filter(r => r.status === 'created').length > 0 && (
+                <div className="text-left">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wider">Generated Credentials</p>
+                    <button
+                      onClick={downloadCredentials}
+                      className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                    >
+                      <Download className="h-3 w-3" /> Download CSV
+                    </button>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl bg-slate-50/50">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 sticky top-0">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-semibold text-slate-500">Name</th>
+                          <th className="text-left px-3 py-2 font-semibold text-slate-500">Username</th>
+                          <th className="text-left px-3 py-2 font-semibold text-slate-500">Password</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {response.results.filter(r => r.status === 'created').map((r, i) => (
+                          <tr key={i} className="hover:bg-white">
+                            <td className="px-3 py-1.5 font-medium text-slate-800">{r.name}</td>
+                            <td className="px-3 py-1.5 text-slate-500 font-mono">@{r.username || r.email.replace('@student.local', '')}</td>
+                            <td className="px-3 py-1.5">
+                              <code className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded border border-amber-200">
+                                {r.password}
+                              </code>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
+
+              {/* Errors */}
+              {response.results.filter(r => r.status === 'skipped').length > 0 && (
+                <div className="text-left bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 max-h-32 overflow-y-auto">
+                  {response.results.filter(r => r.status === 'skipped').slice(0, 10).map((r, i) => (
+                    <p key={i} className="mb-1">{r.name}: {r.reason}</p>
+                  ))}
+                </div>
+              )}
+
               <button onClick={onClose}
                 className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl transition-all">
                 Done

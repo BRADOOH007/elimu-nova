@@ -20,6 +20,7 @@ import {
   Trash2
 } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface ViewAssignmentModalProps {
   isOpen: boolean
@@ -89,8 +90,8 @@ export default function ViewAssignmentModal({ isOpen, onClose, assignmentId, onE
     handleClose()
   }
 
-  const handleDelete = () => {
-    if (!assignment || !confirm(`Delete "${assignment.title}"? This cannot be undone.`)) return
+  const handleDelete = async () => {
+    if (!assignment || !(await confirmToast({ title: `Delete "${assignment.title}"? This cannot be undone.`, variant: 'destructive' }))) return
     onDelete(assignmentId!)
     handleClose()
   }

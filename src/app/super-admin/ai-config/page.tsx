@@ -77,6 +77,32 @@ const PROVIDERS = [
     docsUrl:  'https://platform.openai.com/api-keys',
     color:    'green',
   },
+  {
+    id:       'dalle',
+    label:    'DALL-E 3 (Image Generation)',
+    keyField: 'ai_provider_dalle_key',
+    badge:    'Image Generation',
+    desc:     'OpenAI DALL-E 3 for generating lesson images, diagrams, and presentation artwork.',
+    envVar:   'OPENAI_DALLE_API_KEY',
+    docsUrl:  'https://platform.openai.com/api-keys',
+    color:    'pink',
+  },
+  {
+    id:       'stability',
+    label:    'Stability AI (Image Generation)',
+    keyField: 'ai_provider_stability_key',
+    badge:    'Image Fallback',
+    desc:     'Stability AI SD3 for image generation when DALL-E is unavailable.',
+    envVar:   'STABILITY_API_KEY',
+    docsUrl:  'https://platform.stability.ai/account/keys',
+    color:    'sky',
+  },
+]
+
+const PREMIUM_SETTINGS = [
+  { key: 'ai_premium_enabled',     label: 'Enable Premium Models',     desc: 'When on, GPT-4o and Gemini Pro are tried first before free models', type: 'toggle', defaultVal: 'true' },
+  { key: 'ai_premium_openai_model', label: 'Premium OpenAI Model',     desc: 'e.g. gpt-4o, gpt-4-turbo', type: 'text', defaultVal: 'gpt-4o' },
+  { key: 'ai_premium_gemini_model', label: 'Premium Gemini Model',     desc: 'e.g. gemini-1.5-pro, gemini-2.0-pro', type: 'text', defaultVal: 'gemini-1.5-pro' },
 ]
 
 const MODEL_ASSIGNMENTS = [
@@ -141,6 +167,8 @@ export default function AIConfigPage() {
     orange: 'border-orange-200 bg-orange-50/50',
     purple: 'border-purple-200 bg-purple-50/50',
     green:  'border-green-200 bg-green-50/50',
+    pink:   'border-pink-200 bg-pink-50/50',
+    sky:    'border-sky-200 bg-sky-50/50',
   }
 
   if (loading) return (
@@ -180,8 +208,8 @@ export default function AIConfigPage() {
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-4 flex items-start gap-3">
         <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
         <div className="text-sm text-blue-800">
-          <strong>AI Waterfall:</strong> ElimuNova tries providers in order — Groq → Cerebras → DeepSeek → Gemini → OpenRouter → OpenAI.
-          If one fails, it automatically moves to the next. Both EduGenius and TutorBot share the same keys and waterfall.
+          <strong>AI Waterfall:</strong> Premium (GPT-4o / Gemini Pro) → Groq → Cerebras → DeepSeek → Gemini → OpenRouter → OpenAI.
+          Premium models are tried first when enabled. If one fails, it moves to the next. Both EduGenius and TutorBot share the same keys and waterfall.
           <span className="block mt-1 text-blue-600">Configure your keys below. Values are stored securely in the database.</span>
         </div>
       </div>
@@ -262,6 +290,73 @@ export default function AIConfigPage() {
             </div>
           )
         })}
+      </div>
+
+      {/* Premium model config */}
+      <div className="space-y-3">
+        <h2 className="font-bold text-slate-800 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-amber-500" /> Premium Models
+        </h2>
+        <p className="text-xs text-slate-400">
+          Premium models (GPT-4o, Gemini Pro) are tried first in the waterfall when enabled.
+          They fall back to free models if unavailable.
+        </p>
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+          {PREMIUM_SETTINGS.map((s, i) => {
+            const currentVal = edits[s.key] !== undefined ? edits[s.key] : (data?.config?.[s.key] || s.defaultVal)
+            return (
+              <div key={s.key} className={`px-5 py-4 ${i > 0 ? 'border-t border-slate-100' : ''}`}>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-slate-800 text-sm">{s.label}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">{s.desc}</p>
+                  </div>
+                  {s.type === 'toggle' ? (
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer"
+                        checked={currentVal === 'true'}
+                        onChange={e => set(s.key, e.target.checked ? 'true' : 'false')} />
+                      <div className="w-9 h-5 bg-slate-200 rounded-full peer peer-checked:bg-amber-500 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                    </label>
+                  ) : (
+                    <input type="text" value={currentVal}
+                      onChange={e => set(s.key, e.target.value)}
+                      className="h-9 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-52" />
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Active Provider selector */}
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <p className="font-medium text-slate-800 text-sm flex items-center gap-1.5">
+                <Zap className="h-4 w-4 text-amber-500" /> Active Provider
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Choose which provider is tried first. Falls back to the waterfall if it fails.
+              </p>
+            </div>
+            <select
+              value={edits['ai_provider_active'] !== undefined ? edits['ai_provider_active'] : (data?.config?.['ai_provider_active'] || '')}
+              onChange={e => set('ai_provider_active', e.target.value)}
+              className="h-9 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-44"
+            >
+              <option value="">Auto (waterfall order)</option>
+              <option value="groq">Groq</option>
+              <option value="cerebras">Cerebras</option>
+              <option value="deepseek">DeepSeek</option>
+              <option value="gemini">Gemini</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="openai">OpenAI</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Model assignments */}

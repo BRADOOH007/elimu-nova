@@ -1,19 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
+  const { message, language, lessonTitle } = await request.json()
+  if (!message) return NextResponse.json({ error: 'Message required' }, { status: 400 })
 
-    const { message, language, lessonTitle } = await request.json()
-    if (!message) return NextResponse.json({ error: 'Message required' }, { status: 400 })
-
-    const systemPrompt = `You are an expert coding tutor for the ElimuNova AI Coding Studio.
+  const systemPrompt = `You are an expert coding tutor for the ElimuNova AI Coding Studio.
 You help Kenyan students (Grade 1-12) learn programming step by step.
 
 Current context:
@@ -32,14 +25,10 @@ Your teaching style:
 
 Always respond in a friendly, encouraging tone.`
 
-    const response = await OpenAIService.generateText([
-      { role: 'system', content: systemPrompt },
-      { role: 'user',   content: message         },
-    ], { maxTokens: 600, temperature: 0.7 })
+  const response = await OpenAIService.generateText([
+    { role: 'system', content: systemPrompt },
+    { role: 'user',   content: message         },
+  ], { maxTokens: 600, temperature: 0.7 })
 
-    return NextResponse.json({ response })
-  } catch (error) {
-    console.error('[CODING_CHAT]', error)
-    return NextResponse.json({ error: 'Failed to get AI response' }, { status: 500 })
-  }
-}
+  return NextResponse.json({ response })
+})

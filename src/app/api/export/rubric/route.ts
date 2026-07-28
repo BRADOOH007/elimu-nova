@@ -1,44 +1,26 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { route } from '@/lib/api-middleware';
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = route({}, async (req, { user }) => {
+  const { rubric, format = 'pdf' } = await req.json();
 
-    const { rubric, format = 'pdf' } = await req.json();
-
-    if (!rubric || !rubric.title || !rubric.criteria || !rubric.performanceLevels) {
-      return NextResponse.json({ error: 'Invalid rubric data' }, { status: 400 });
-    }
-
-    if (format === 'pdf') {
-      return await generatePDF(rubric);
-    } else if (format === 'word') {
-      return await generateWord(rubric);
-    } else {
-      return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
-    }
-
-  } catch (error) {
-    console.error('Error generating rubric export:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate export' },
-      { status: 500 }
-    );
+  if (!rubric || !rubric.title || !rubric.criteria || !rubric.performanceLevels) {
+    return NextResponse.json({ error: 'Invalid rubric data' }, { status: 400 });
   }
-}
+
+  if (format === 'pdf') {
+    return await generatePDF(rubric);
+  } else if (format === 'word') {
+    return await generateWord(rubric);
+  } else {
+    return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
+  }
+});
 
 async function generatePDF(rubric: any) {
   try {
-    // For now, we'll generate HTML that can be converted to PDF
-    // In a production environment, you'd use a library like Puppeteer or jsPDF
     const html = generateRubricHTML(rubric);
-    
+
     return new NextResponse(html, {
       headers: {
         'Content-Type': 'text/html',
@@ -53,10 +35,8 @@ async function generatePDF(rubric: any) {
 
 async function generateWord(rubric: any) {
   try {
-    // For now, we'll generate HTML that can be opened in Word
-    // In a production environment, you'd use a library like docx
     const html = generateRubricHTML(rubric);
-    
+
     return new NextResponse(html, {
       headers: {
         'Content-Type': 'application/msword',
@@ -211,7 +191,7 @@ function generateRubricHTML(rubric: any) {
         <thead>
             <tr>
                 <th style="width: 30%;">Criteria</th>
-                ${rubric.performanceLevels.map((level: any) => 
+                ${rubric.performanceLevels.map((level: any) =>
                     `<th class="performance-level">
                         <div class="performance-level-name">${level.name}</div>
                         <div class="performance-level-score">(${level.score} points)</div>
@@ -227,7 +207,7 @@ function generateRubricHTML(rubric: any) {
                         <div class="criterion-description">${criterion.description}</div>
                         <div class="criterion-weight">Weight: ${criterion.weight}</div>
                     </td>
-                    ${rubric.performanceLevels.map((level: any) => 
+                    ${rubric.performanceLevels.map((level: any) =>
                         `<td>
                             <div class="performance-level-description">${level.description}</div>
                         </td>`

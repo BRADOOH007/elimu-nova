@@ -1,14 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({}, async (request, { user }) => {
 
     const { searchParams } = new URL(request.url)
     const studentId = searchParams.get('studentId')
@@ -17,11 +11,11 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0')
 
     // Get user
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
+    const dbUser = await prisma.user.findUnique({
+      where: { email: user.email }
     })
 
-    if (!user) {
+    if (!dbUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
@@ -162,11 +156,4 @@ export async function GET(request: NextRequest) {
       }
     })
 
-  } catch (error) {
-    console.error('Error fetching presentations:', error)
-    return NextResponse.json({
-      error: 'Failed to fetch presentations',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
-  }
-}
+})

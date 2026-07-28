@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Loader2, Brain, Clock, Play, Pause, StopCircle, BarChart3, Plus, Trash2, Calendar } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface StudySession {
   id: string; subject: string; topic?: string; duration: number
@@ -48,7 +49,7 @@ export default function StudentStudySessionsPage() {
         const data = await res.json()
         setSessions(data.sessions || [])
       }
-    } catch {} finally { setLoading(false) }
+    } catch (e) { console.warn('[StudentStudySessions] fetchSessions error:', e) } finally { setLoading(false) }
   }
 
   const startSession = async () => {
@@ -67,7 +68,7 @@ export default function StudentStudySessionsPage() {
         setShowNewSession(false)
         toast({ title: 'Study session started!' })
       }
-    } catch { toast({ title: 'Failed to start', variant: 'destructive' }) }
+    } catch { toast({ title: 'Failed to start' }) }
   }
 
   const stopSession = async () => {
@@ -85,15 +86,15 @@ export default function StudentStudySessionsPage() {
         setActiveSessionId(null)
         fetchSessions()
       }
-    } catch { toast({ title: 'Failed to save', variant: 'destructive' }) }
+    } catch { toast({ title: 'Failed to save' }) }
   }
 
   const deleteSession = async (id: string) => {
-    if (!confirm('Delete this study session?')) return
+    if (!(await confirmToast({ title: 'Delete this study session?', confirmLabel: 'Delete' }))) return
     try {
       await fetch(`/api/student/study-sessions?id=${id}`, { method: 'DELETE' })
       fetchSessions()
-    } catch {}
+    } catch (e) { console.warn('[StudentStudySessions] deleteSession error:', e) }
   }
 
   const formatTime = (s: number) => {

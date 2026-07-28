@@ -1,20 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = route({}, async (req, { user }) => {
     const body = await req.json()
     const { subject, topic, grade, difficulty, learningStyle } = body
 
+    const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
+    const approaches = ['inquiry-based', 'storytelling', 'real-world application', 'Socratic', 'hands-on discovery', 'project-based']
+    const approach = approaches[Math.floor(Math.random() * approaches.length)]
+
     const content = await OpenAIService.generateText([
-      { role: 'system', content: 'You are an expert AI tutor creating personalized lesson content for Kenyan students. Return structured JSON with: title, subject, grade, difficulty, duration, type, objectives, prerequisites, insights, content.' },
-      { role: 'user',   content: `Create an AI-personalized lesson for: Subject: ${subject}, Topic: ${topic}, Grade: ${grade || 'Grade 8'}, Level: ${difficulty || 'intermediate'}, Style: ${learningStyle || 'visual'}. Return ONLY valid JSON.` },
-    ], { maxTokens: 1500, temperature: 0.7 })
+      { role: 'system', content: `You are an expert AI tutor creating unique lesson content for Kenyan students. Use a ${approach} approach — vary examples and structure every time. Return ONLY valid JSON with: title, subject, grade, difficulty, duration, type, objectives (array), prerequisites (array), insights (array), content (detailed markdown lesson body).` },
+      { role: 'user',   content: `Create a unique, personalized lesson for: Subject: ${subject}, Topic: ${topic}, Grade: ${grade || 'Grade 8'}, Level: ${difficulty || 'intermediate'}, Style: ${learningStyle || 'visual'}. Request ID: ${requestId}. Use a Kenya-specific example that's different from any previous lesson. Return ONLY valid JSON.` },
+    ], { maxTokens: 2000, temperature: 0.85 })
 
     let lessonData: any = {}
     try {
@@ -40,8 +39,4 @@ export async function POST(req: NextRequest) {
       },
       message: 'AI lesson generated successfully',
     })
-  } catch (error) {
-    console.error('Error generating AI lesson:', error)
-    return NextResponse.json({ error: 'Failed to generate AI lesson', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })
-  }
-}
+})

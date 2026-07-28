@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Loader2, ArrowLeft, BookOpen, Calendar, GraduationCap, FileText, Edit, Trash2, Target, Clock, ListChecks, BookMarked } from "lucide-react"
 import { PrintExportButton } from '@/components/print-export-button'
+import { confirmToast } from '@/lib/confirm-toast'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { useToast } from "@/hooks/use-toast"
 import ImageBankDisplay from '@/components/ai/image-bank-display'
@@ -46,7 +47,7 @@ export default function TeacherSchemeOfWorkDetailPage() {
   }, [id])
 
   const handleDelete = async () => {
-    if (!confirm('Delete this scheme of work?')) return
+    if (!(await confirmToast({ title: 'Delete this scheme of work?' }))) return
     try {
       const res = await fetch(`/api/schemes-of-work/${id}`, { method: 'DELETE' })
       if (res.ok) { toast({ title: 'Deleted' }); router.push('/teacher/schemes-of-work') }

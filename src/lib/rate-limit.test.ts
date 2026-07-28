@@ -1,40 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { checkRateLimit, rateLimitAuth, rateLimitAPI } from '@/lib/rate-limit'
-import { Redis } from '@upstash/redis'
 
-vi.mock('@upstash/redis', () => ({
-  Redis: vi.fn().mockImplementation(() => ({
-    get: vi.fn(),
-    set: vi.fn(),
-    incr: vi.fn(),
-    expire: vi.fn(),
-    ttl: vi.fn(),
-  })),
+const mockCache = vi.hoisted(() => ({
+  get: vi.fn(),
+  set: vi.fn(),
+  del: vi.fn(),
+  incr: vi.fn(),
+  expire: vi.fn(),
+  ttl: vi.fn(),
 }))
 
-describe('rate-limit', () => {
-  let mockRedis: any
+vi.mock('@/lib/redis', () => ({ cache: mockCache }))
 
+import { checkRateLimit, rateLimitAuth, rateLimitAPI } from '@/lib/rate-limit'
+
+describe('rate-limit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockRedis = new Redis({ url: 'test', token: 'test' })
   })
 
   describe('checkRateLimit', () => {
     it('allows first request', async () => {
-      mockRedis.get.mockResolvedValue(null)
-      mockRedis.set.mockResolvedValue('OK')
+      mockCache.get.mockResolvedValue(null)
+      mockCache.incr.mockResolvedValue(1)
 
       const result = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
 
       expect(result.allowed).toBe(true)
-      expect(result.remaining).toBe(5)
+      expect(result.remaining).toBe(4)
       expect(result.limit).toBe(5)
     })
 
     it('allows requests under limit', async () => {
-      mockRedis.get.mockResolvedValue(2)
-      mockRedis.incr.mockResolvedValue(3)
+      mockCache.get.mockResolvedValue('2')
+      mockCache.incr.mockResolvedValue(3)
 
       const result = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
 
@@ -43,8 +41,8 @@ describe('rate-limit', () => {
     })
 
     it('blocks requests over limit', async () => {
-      mockRedis.get.mockResolvedValue(5)
-      mockRedis.ttl.mockResolvedValue(30)
+      mockCache.get.mockResolvedValue('5')
+      mockCache.ttl.mockResolvedValue(30)
 
       const result = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
 
@@ -52,8 +50,8 @@ describe('rate-limit', () => {
       expect(result.remaining).toBe(0)
     })
 
-    it('allows request on Redis failure', async () => {
-      mockRedis.get.mockRejectedValue(new Error('Redis down'))
+    it('allows request on cache failure', async () => {
+      mockCache.get.mockRejectedValue(new Error('Cache down'))
 
       const result = await checkRateLimit('test-key', { maxRequests: 5, windowMs: 60000 })
 

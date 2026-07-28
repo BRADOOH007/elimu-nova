@@ -38,6 +38,7 @@ import {
 import CreateReportModal from '@/components/modals/create-report-modal'
 import ReportDetailsModal from '@/components/modals/report-details-modal'
 import { generateReportPDF } from '@/lib/pdf-generator'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface Report {
   id: string
@@ -452,11 +453,7 @@ export default function ReportsPage() {
                         size="sm"
                         onClick={async (e) => {
                           e.stopPropagation()
-                          const confirmed = window.confirm(`Are you sure you want to delete "${report.title}"? This action cannot be undone.`)
-                          
-                          if (!confirmed) {
-                            return
-                          }
+                          if (!(await confirmToast({ title: 'Delete Report', description: `Are you sure you want to delete "${report.title}"? This action cannot be undone.`, confirmLabel: 'Delete' }))) return
                           
                           try {
                             const response = await fetch(`/api/reports/${report.id}`, {

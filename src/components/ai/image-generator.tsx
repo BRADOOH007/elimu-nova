@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Image as ImageIcon, Download, Loader2, Sparkles, Database, BookOpen, GraduationCap } from 'lucide-react'
-import { toast } from 'sonner'
+import { useToast } from '@/hooks/use-toast'
 import { safeApiRequest } from '@/lib/api-utils'
 import ImagePicker from './image-picker'
 
 export default function ImageGenerator() {
   const { data: session, status } = useSession()
+  const { toast } = useToast()
 
   const [prompt, setPrompt] = useState('')
   const [style, setStyle] = useState('educational')
@@ -30,11 +31,11 @@ export default function ImageGenerator() {
 
   const handleGenerate = async () => {
     if (!session) {
-      toast.error('Please log in to generate images')
+      toast({ title: 'Please log in to generate images', variant: 'destructive' })
       return
     }
     if (!prompt.trim()) {
-      toast.error('Please enter a prompt')
+      toast({ title: 'Please enter a prompt', variant: 'destructive' })
       return
     }
 
@@ -72,11 +73,11 @@ export default function ImageGenerator() {
           })
 
           if (data.fromBank) {
-            toast.success('Found matching image in shared bank!')
+            toast({ title: 'Found matching image in shared bank!', variant: 'success' })
           } else if (data.source === 'placeholder') {
-            toast.success(`Image generated! ${data.message}`)
+            toast({ title: `Image generated! ${data.message}`, variant: 'success' })
           } else {
-            toast.success('AI image generated successfully!')
+            toast({ title: 'AI image generated successfully!', variant: 'success' })
           }
         } else {
           throw new Error(data.message || 'No image URL in response')
@@ -86,7 +87,7 @@ export default function ImageGenerator() {
       }
     } catch (error) {
       console.error('Error generating image:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to generate image')
+      toast({ title: error instanceof Error ? error.message : 'Failed to generate image', variant: 'destructive' })
     } finally {
       setIsGenerating(false)
     }
@@ -100,7 +101,7 @@ export default function ImageGenerator() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
-    toast.success('Image downloaded!')
+    toast({ title: 'Image downloaded!', variant: 'success' })
   }
 
   const handleBankSelect = (img: any) => {
@@ -113,7 +114,7 @@ export default function ImageGenerator() {
       message: `Reused from bank (${img.usageCount} previous uses) — no AI call needed.`,
     })
     setBankOpen(false)
-    toast.success('Image selected from shared bank!')
+    toast({ title: 'Image selected from shared bank!', variant: 'success' })
   }
 
   const quickPrompts = [

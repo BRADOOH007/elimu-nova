@@ -1,248 +1,231 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
-  try {
-    console.log('📚 Fetching AI teacher insights...')
-    const session = await getServerSession(authOptions)
-    
-    if (!session || session.user.role !== 'STUDENT') {
-      console.log('❌ Unauthorized - not a student')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
+  console.log('📚 Fetching AI teacher insights...')
+  console.log('✅ Session found:', user.email)
+
+  // Get student profile
+  const student = await prisma.student.findUnique({
+    where: { userId: user.id },
+    include: {
+      teacher: {
+        include: {
+          user: true
+        }
+      },
+      class: true
     }
+  })
 
-    console.log('✅ Session found:', session.user.email)
+  if (!student) {
+    console.log('❌ Student not found')
+    return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+  }
 
-    // Get student profile
-    const student = await prisma.student.findUnique({
-      where: { userId: session.user.id },
-      include: {
-        teacher: {
-          include: {
-            user: true
-          }
-        },
-        class: true
+  console.log('✅ Student found:', student.id)
+
+  // Get the most recent lesson plan from the student's teacher
+  const recentLessonPlan = student.teacherId ? await prisma.lessonPlan.findFirst({
+    where: {
+      teacherId: student.teacherId
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    select: {
+      id: true,
+      title: true,
+      subject: true,
+      grade: true,
+      content: true,
+      schemeOfWorkId: true,
+      createdAt: true
+    }
+  }) : null
+
+  console.log('📖 Recent lesson plan:', recentLessonPlan?.title || 'None found')
+
+  // Get student's progress on assignments
+  const assignments = await prisma.assignment.findMany({
+    where: {
+      students: {
+        some: {
+          id: student.id
+        }
       }
-    })
+    },
+    include: {
+      submissions: {
+        where: {
+          studentId: student.id
+        }
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 10
+  })
 
-    if (!student) {
-      console.log('❌ Student not found')
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+  const completedAssignments = assignments.filter(a => 
+    a.submissions.some(s => s.status === 'GRADED')
+  )
+
+  // Get AI tutor sessions for learning path
+  const aiSessions = await prisma.aITutorSession.findMany({
+    where: {
+      studentId: student.id
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 10,
+    select: {
+      subject: true,
+      topic: true,
+      createdAt: true
     }
+  })
 
-    console.log('✅ Student found:', student.id)
+  // Build current lesson from recent lesson plan
+  let lessonContent: any = {}
+  if (recentLessonPlan?.content) {
+    try {
+      lessonContent = typeof recentLessonPlan.content === 'string' ? 
+        JSON.parse(recentLessonPlan.content) : 
+        recentLessonPlan.content
+    } catch (e) {
+      console.log('Failed to parse lesson content')
+    }
+  }
 
-    // Get the most recent lesson plan from the student's teacher
-    const recentLessonPlan = student.teacherId ? await prisma.lessonPlan.findFirst({
-      where: {
-        teacherId: student.teacherId
+  const currentLesson = recentLessonPlan ? {
+    title: recentLessonPlan.title,
+    subject: recentLessonPlan.subject,
+    objectives: lessonContent.objectives || lessonContent.learningObjectives || 
+      ["Study the lesson content", "Complete practice exercises", "Ask questions if needed"],
+    progress: calculateProgress(assignments, completedAssignments),
+    nextSteps: generateNextSteps(assignments, aiSessions)
+  } : {
+    title: "Getting Started with Learning",
+    subject: "General",
+    objectives: [
+      "Explore your dashboard and available resources",
+      "Check your assignments and upcoming lessons",
+      "Use the AI tutor for personalized help"
+    ],
+    progress: 0,
+    nextSteps: [
+      "Complete your profile setup",
+      "Review your first assignment",
+      "Ask the AI tutor any questions"
+    ]
+  }
+
+  // Build learning path from multiple sources
+  // 1. Completed topics from graded assignments and AI sessions
+  const completedFromAssignments = assignments
+    .filter(a => a.submissions.some(s => s.status === 'GRADED'))
+    .map(a => a.title)
+
+  const completedFromAI = aiSessions
+    .filter(s => s.topic)
+    .map(s => s.topic as string)
+
+  const completedTopics = [...new Set([...completedFromAssignments, ...completedFromAI])]
+
+  // 2. Current topic from most recent activity
+  const currentTopic = aiSessions[0]?.topic || 
+                      recentLessonPlan?.title || 
+                      assignments[0]?.title || 
+                      "Getting Started"
+
+  // 3. Upcoming topics from pending assignments and lesson plans
+  const upcomingFromAssignments = assignments
+    .filter(a => !a.submissions.some(s => s.status === 'GRADED'))
+    .map(a => a.title)
+
+  const upcomingTopics = upcomingFromAssignments.length > 0 ? 
+    upcomingFromAssignments.slice(0, 3) : 
+    ["New topics coming soon", "Check with your teacher", "Explore AI tutor"]
+
+  // Get today's schedule to determine what to teach
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+
+  const todaySchedule = student.schoolId ? await prisma.schedule.findMany({
+    where: {
+      schoolId: student.schoolId,
+      startTime: {
+        gte: today,
+        lt: tomorrow
       },
-      orderBy: {
-        createdAt: 'desc'
-      },
+      type: 'CLASS'
+    },
+    include: {
+      class: true
+    },
+    orderBy: {
+      startTime: 'asc'
+    }
+  }) : []
+
+  console.log('📅 Today\'s schedule:', todaySchedule.length, 'classes')
+
+  // Get scheme of work for current subject
+  const schemeOfWork = recentLessonPlan?.schemeOfWorkId ? 
+    await prisma.schemeOfWork.findUnique({
+      where: { id: recentLessonPlan.schemeOfWorkId },
       select: {
-        id: true,
         title: true,
         subject: true,
         grade: true,
         content: true,
-        schemeOfWorkId: true,
-        createdAt: true
+        objectives: true
       }
     }) : null
 
-    console.log('📖 Recent lesson plan:', recentLessonPlan?.title || 'None found')
+  console.log('📋 Scheme of work:', schemeOfWork?.title || 'None found')
 
-    // Get student's progress on assignments
-    const assignments = await prisma.assignment.findMany({
-      where: {
-        students: {
-          some: {
-            id: student.id
-          }
-        }
-      },
-      include: {
-        submissions: {
-          where: {
-            studentId: student.id
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 10
-    })
+  // Generate personalized recommendations
+  const recommendations = generateRecommendations(student, assignments, aiSessions)
 
-    const completedAssignments = assignments.filter(a => 
-      a.submissions.some(s => s.status === 'GRADED')
-    )
+  // Performance analysis
+  const performanceAnalysis = analyzePerformance(assignments, aiSessions)
 
-    // Get AI tutor sessions for learning path
-    const aiSessions = await prisma.aITutorSession.findMany({
-      where: {
-        studentId: student.id
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 10,
-      select: {
-        subject: true,
-        topic: true,
-        createdAt: true
-      }
-    })
+  // Generate AI teaching plan based on schedule and lesson plans
+  const aiTeachingPlan = await generateAITeachingPlan(
+    recentLessonPlan,
+    schemeOfWork,
+    todaySchedule,
+    assignments,
+    student
+  )
 
-    // Build current lesson from recent lesson plan
-    let lessonContent: any = {}
-    if (recentLessonPlan?.content) {
-      try {
-        lessonContent = typeof recentLessonPlan.content === 'string' ? 
-          JSON.parse(recentLessonPlan.content) : 
-          recentLessonPlan.content
-      } catch (e) {
-        console.log('Failed to parse lesson content')
-      }
-    }
+  console.log('📚 Learning Path Data:')
+  console.log('  Completed:', completedTopics.length, 'topics')
+  console.log('  Current:', currentTopic)
+  console.log('  Upcoming:', upcomingTopics.length, 'topics')
 
-    const currentLesson = recentLessonPlan ? {
-      title: recentLessonPlan.title,
-      subject: recentLessonPlan.subject,
-      objectives: lessonContent.objectives || lessonContent.learningObjectives || 
-        ["Study the lesson content", "Complete practice exercises", "Ask questions if needed"],
-      progress: calculateProgress(assignments, completedAssignments),
-      nextSteps: generateNextSteps(assignments, aiSessions)
-    } : {
-      title: "Getting Started with Learning",
-      subject: "General",
-      objectives: [
-        "Explore your dashboard and available resources",
-        "Check your assignments and upcoming lessons",
-        "Use the AI tutor for personalized help"
-      ],
-      progress: 0,
-      nextSteps: [
-        "Complete your profile setup",
-        "Review your first assignment",
-        "Ask the AI tutor any questions"
-      ]
-    }
-
-    // Build learning path from multiple sources
-    // 1. Completed topics from graded assignments and AI sessions
-    const completedFromAssignments = assignments
-      .filter(a => a.submissions.some(s => s.status === 'GRADED'))
-      .map(a => a.title)
-    
-    const completedFromAI = aiSessions
-      .filter(s => s.topic)
-      .map(s => s.topic as string)
-    
-    const completedTopics = [...new Set([...completedFromAssignments, ...completedFromAI])]
-    
-    // 2. Current topic from most recent activity
-    const currentTopic = aiSessions[0]?.topic || 
-                        recentLessonPlan?.title || 
-                        assignments[0]?.title || 
-                        "Getting Started"
-    
-    // 3. Upcoming topics from pending assignments and lesson plans
-    const upcomingFromAssignments = assignments
-      .filter(a => !a.submissions.some(s => s.status === 'GRADED'))
-      .map(a => a.title)
-    
-    const upcomingTopics = upcomingFromAssignments.length > 0 ? 
-      upcomingFromAssignments.slice(0, 3) : 
-      ["New topics coming soon", "Check with your teacher", "Explore AI tutor"]
-
-    // Get today's schedule to determine what to teach
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-
-    const todaySchedule = student.schoolId ? await prisma.schedule.findMany({
-      where: {
-        schoolId: student.schoolId,
-        startTime: {
-          gte: today,
-          lt: tomorrow
-        },
-        type: 'CLASS'
-      },
-      include: {
-        class: true
-      },
-      orderBy: {
-        startTime: 'asc'
-      }
-    }) : []
-
-    console.log('📅 Today\'s schedule:', todaySchedule.length, 'classes')
-
-    // Get scheme of work for current subject
-    const schemeOfWork = recentLessonPlan?.schemeOfWorkId ? 
-      await prisma.schemeOfWork.findUnique({
-        where: { id: recentLessonPlan.schemeOfWorkId },
-        select: {
-          title: true,
-          subject: true,
-          grade: true,
-          content: true,
-          objectives: true
-        }
-      }) : null
-
-    console.log('📋 Scheme of work:', schemeOfWork?.title || 'None found')
-
-    // Generate personalized recommendations
-    const recommendations = generateRecommendations(student, assignments, aiSessions)
-
-    // Performance analysis
-    const performanceAnalysis = analyzePerformance(assignments, aiSessions)
-
-    // Generate AI teaching plan based on schedule and lesson plans
-    const aiTeachingPlan = await generateAITeachingPlan(
-      recentLessonPlan,
-      schemeOfWork,
-      todaySchedule,
-      assignments,
-      student
-    )
-
-    console.log('📚 Learning Path Data:')
-    console.log('  Completed:', completedTopics.length, 'topics')
-    console.log('  Current:', currentTopic)
-    console.log('  Upcoming:', upcomingTopics.length, 'topics')
-
-    const insights = {
-      currentLesson,
-      learningPath: {
-        completed: completedTopics.slice(0, 5),
-        current: currentTopic,
-        upcoming: upcomingTopics.length > 0 ? upcomingTopics : ["New assignments coming soon"]
-      },
-      personalizedRecommendations: recommendations,
-      performanceAnalysis,
-      aiTeachingPlan
-    }
-
-    console.log('✅ AI insights generated successfully')
-    return NextResponse.json(insights)
-
-  } catch (error) {
-    console.error('❌ Error fetching AI teacher insights:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch AI insights',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+  const insights = {
+    currentLesson,
+    learningPath: {
+      completed: completedTopics.slice(0, 5),
+      current: currentTopic,
+      upcoming: upcomingTopics.length > 0 ? upcomingTopics : ["New assignments coming soon"]
+    },
+    personalizedRecommendations: recommendations,
+    performanceAnalysis,
+    aiTeachingPlan
   }
-}
+
+  console.log('✅ AI insights generated successfully')
+  return NextResponse.json(insights)
+})
 
 // Helper functions
 function calculateProgress(assignments: any[], completedAssignments: any[]): number {
@@ -252,29 +235,29 @@ function calculateProgress(assignments: any[], completedAssignments: any[]): num
 
 function generateNextSteps(assignments: any[], aiSessions: any[]): string[] {
   const steps: string[] = []
-  
+
   const pendingAssignments = assignments.filter(a => 
     !a.submissions.some((s: any) => s.status === 'GRADED')
   )
-  
+
   if (pendingAssignments.length > 0) {
     steps.push(`Complete ${pendingAssignments[0].title}`)
   }
-  
+
   if (aiSessions.length === 0) {
     steps.push("Try the AI tutor for personalized help")
   }
-  
+
   steps.push("Review lesson materials and objectives")
   steps.push("Practice with exercises and examples")
-  
+
   return steps.slice(0, 3)
 }
 
 function generateRecommendations(student: any, assignments: any[], aiSessions: any[]) {
   const focusAreas: string[] = []
   const studyMethods: string[] = []
-  
+
   // Analyze subjects from assignments
   const subjects = [...new Set(assignments.map(a => a.subject).filter(Boolean))]
   if (subjects.length > 0) {
@@ -282,17 +265,17 @@ function generateRecommendations(student: any, assignments: any[], aiSessions: a
   } else {
     focusAreas.push("Core subjects", "Foundation concepts", "Practice exercises")
   }
-  
+
   // Study methods based on activity
   if (aiSessions.length > 5) {
     studyMethods.push("Continue using AI tutor - you're doing great!")
   } else {
     studyMethods.push("Try the AI tutor for personalized help")
   }
-  
+
   studyMethods.push("Practice with real examples")
   studyMethods.push("Review lesson materials regularly")
-  
+
   return {
     focusAreas,
     studyMethods,
@@ -312,14 +295,14 @@ function generateRecommendations(student: any, assignments: any[], aiSessions: a
 function analyzePerformance(assignments: any[], aiSessions: any[]) {
   const strengths: string[] = []
   const improvements: string[] = []
-  
+
   const completedCount = assignments.filter(a => 
     a.submissions.some((s: any) => s.status === 'GRADED')
   ).length
-  
+
   const totalCount = assignments.length
   const completionRate = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
-  
+
   if (completionRate > 70) {
     strengths.push("Excellent assignment completion rate")
   } else if (completionRate > 40) {
@@ -327,7 +310,7 @@ function analyzePerformance(assignments: any[], aiSessions: any[]) {
   } else {
     improvements.push("Focus on completing more assignments")
   }
-  
+
   if (aiSessions.length > 10) {
     strengths.push("Active engagement with AI learning tools")
   } else if (aiSessions.length > 0) {
@@ -335,16 +318,16 @@ function analyzePerformance(assignments: any[], aiSessions: any[]) {
   } else {
     improvements.push("Try using the AI tutor for personalized help")
   }
-  
+
   // Add default items if lists are empty
   if (strengths.length === 0) {
     strengths.push("Ready to learn", "Good attitude", "Eager to improve")
   }
-  
+
   if (improvements.length === 0) {
     improvements.push("Consistent practice", "Regular study schedule", "Active participation")
   }
-  
+
   return {
     strengths,
     improvements,
@@ -433,7 +416,7 @@ async function generateAITeachingPlan(
   // THIS WEEK - Based on lesson plan and scheme of work
   if (lessonPlan) {
     thisWeek.push(`Master ${lessonPlan.subject}: ${lessonPlan.title}`)
-    
+
     const objectives = lessonContent.objectives || lessonContent.learningObjectives || []
     objectives.slice(0, 2).forEach((obj: string) => {
       thisWeek.push(`Achieve: ${obj}`)
@@ -470,7 +453,7 @@ async function generateAITeachingPlan(
   // THIS MONTH - Based on scheme of work and long-term goals
   if (schemeOfWork) {
     thisMonth.push(`Complete ${schemeOfWork.subject} unit: ${schemeOfWork.title}`)
-    
+
     const schemeObjectives = schemeContent.objectives || schemeOfWork.objectives || []
     schemeObjectives.slice(0, 2).forEach((obj: string) => {
       thisMonth.push(`Master: ${obj}`)

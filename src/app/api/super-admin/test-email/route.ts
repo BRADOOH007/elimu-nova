@@ -1,18 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 import { testSmtpConnection } from '@/lib/email'
 import nodemailer from 'nodemailer'
 
-export async function POST(request: NextRequest) {
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const body = await request.json()
+    const body = await req.json()
 
     // Save SMTP settings to system_settings table
     if (body.save) {
@@ -27,8 +21,8 @@ export async function POST(request: NextRequest) {
       for (const entry of entries) {
         await prisma.systemSettings.upsert({
           where: { key: entry.key },
-          update: { value: entry.value, description: entry.description, updatedBy: session.user.id },
-          create: { ...entry, isPublic: false, updatedBy: session.user.id },
+          update: { value: entry.value, description: entry.description, updatedBy: user.id },
+          create: { ...entry, isPublic: false, updatedBy: user.id },
         })
       }
 
@@ -67,4 +61,4 @@ export async function POST(request: NextRequest) {
     console.error('Error in test-email:', error)
     return NextResponse.json({ error: 'Failed to process request' }, { status: 500 })
   }
-}
+})

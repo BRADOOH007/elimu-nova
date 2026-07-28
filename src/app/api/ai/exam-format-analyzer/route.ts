@@ -2,22 +2,11 @@
  * POST /api/ai/exam-format-analyzer
  * Exam Format Analyzer — Upload past KCSE/KCPE paper → AI analyses question patterns
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id || !['TEACHER','SCHOOL_ADMIN','SUPER_ADMIN'].includes(session.user.role)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) return NextResponse.json({ error: `Rate limit. Retry in ${rl.resetInSec}s` }, { status: 429 })
-
+export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const { examText, subject, grade, examYear, examType = 'KCSE' } = await request.json()
     if (!examText) return NextResponse.json({ error: 'examText required' }, { status: 400 })
 
@@ -69,8 +58,4 @@ Analyse this exam and return ONLY valid JSON:
     if (start === -1 || end <= start) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
 
     return NextResponse.json({ analysis: JSON.parse(raw.slice(start, end + 1)), subject, grade, examType, examYear })
-  } catch (e: any) {
-    console.error('[EXAM_FORMAT_ANALYZER]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

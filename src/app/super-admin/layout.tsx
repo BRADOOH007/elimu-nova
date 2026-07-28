@@ -1,12 +1,23 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
-import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, Globe } from 'lucide-react'
+import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, ShieldAlert, Globe, MessageSquare, Inbox } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
+  const [unread, setUnread] = useState(0)
+
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch('/api/contact-messages?limit=1&read=false', { signal: controller.signal })
+      .then(r => r.json())
+      .then(d => setUnread(d.unread || 0))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
 
   const sidebarItems = [
     { icon: BarChart3,  label: "Overview",    href: "/super-admin/dashboard"      },
@@ -15,10 +26,13 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { icon: CreditCard, label: "Billing",     href: "/super-admin/billing"        },
     { icon: Brain,        label: "AI Config",   href: "/super-admin/ai-config"      },
     { icon: FlaskConical, label: "AI Test Lab",  href: "/super-admin/ai-test"        },
+    { icon: Inbox,        label: "Messages",    href: "/super-admin/messages",      badge: unread },
     { icon: Settings,     label: "Settings",     href: "/super-admin/system-settings"},
     { icon: FileText,     label: "Reports",     href: "/super-admin/reports"        },
     { icon: Shield,       label: "Security",    href: "/super-admin/security"       },
+    { icon: ShieldAlert,  label: "AI Safety",   href: "/super-admin/ai-safety"      },
     { icon: Globe,        label: "Global",      href: "/super-admin/global"         },
+    { icon: MessageSquare, label: "Broadcast",   href: "/super-admin/broadcast"      },
   ]
 
   if (!session) return <DashboardLoading />

@@ -19,15 +19,17 @@ export class OpenAIAI {
   }
 
   static async generateLessonContent(lessonPlan: any, studentLevel: string, learningStyle: string): Promise<string> {
-    const systemPrompt = `You are an AI tutor for EduGenius, an educational platform. Your role is to create personalized, engaging lesson content based on teacher lesson plans and student profiles.
+    const systemPrompt = `You are an AI tutor for the Kenyan CBC curriculum. Your role is to create personalized, engaging lesson content based on teacher lesson plans and student profiles.
 
 Key principles:
 - Adapt content to the student's learning level (${studentLevel})
 - Use the student's preferred learning style (${learningStyle})
 - Make content interactive and engaging
-- Include clear learning objectives
-- Provide practical examples and exercises
+- Include clear CBC learning objectives
+- Provide practical examples and exercises using Kenyan contexts
 - Use appropriate language for the grade level
+- Reference CBC core competencies (communication and collaboration, critical thinking and problem solving, creativity and imagination, citizenship, digital literacy, learning to learn)
+- Include CBC values (respect, responsibility, love, peace, unity, patriotism, integrity, honesty)
 
 Learning Styles:
 - Visual: Use diagrams, charts, visual examples, and structured layouts
@@ -66,15 +68,17 @@ Format the response in markdown with clear headings and structure.`
   }
 
   static async generateAILesson(subject: string, topic: string, grade: string, difficulty: string, learningStyle: string): Promise<any> {
-    const systemPrompt = `You are an AI tutor for EduGenius. Create a comprehensive AI-generated lesson that adapts to the student's learning style and level.
+    const systemPrompt = `You are an AI tutor for the Kenyan CBC curriculum. Create a comprehensive AI-generated lesson that adapts to the student's learning style and level.
 
 Key requirements:
-- Create engaging, educational content
+- Create engaging, educational content aligned to CBC core competencies
 - Adapt to learning style: ${learningStyle}
 - Match difficulty level: ${difficulty}
 - Appropriate for grade: ${grade}
-- Include learning objectives, activities, and assessments
+- Include CBC learning objectives (using "By the end of the lesson, the learner should be able to...")
+- Include activities, assessments and Kenyan examples
 - Make it interactive and personalized
+- Reference CBC values (respect, responsibility, love, peace, unity, patriotism, integrity, honesty)
 
 Return your response as a JSON object with this structure:
 {
@@ -134,7 +138,8 @@ Make it comprehensive, engaging, and educational. Include practical examples, in
       }
     } catch (error) {
       console.error('Failed to parse AI response as JSON:', error)
-      console.log('Raw response:', response.substring(0, 500))
+
+
     }
 
     // Fallback if JSON parsing fails
@@ -221,7 +226,8 @@ Return as JSON with this structure:
       }
     } catch (error) {
       console.error('Failed to parse assessment response as JSON:', error)
-      console.log('Raw response:', response.substring(0, 500))
+
+
     }
 
     // Fallback assessment
@@ -332,7 +338,8 @@ Provide personalized recommendations based on their learning patterns and perfor
       }
     } catch (error) {
       console.error('Failed to parse insights response as JSON:', error)
-      console.log('Raw response:', response.substring(0, 500))
+
+
     }
 
     // Fallback insights
@@ -461,7 +468,8 @@ Remember: Be warm, encouraging, and make the student feel supported!`
       }
     } catch (error) {
       console.error('Failed to parse AI response as JSON:', error)
-      console.log('Raw response:', response.substring(0, 500))
+
+
     }
 
     // Fallback if JSON parsing fails
@@ -569,7 +577,8 @@ As the AI Teacher, analyze this data and provide comprehensive insights in the f
       }
     } catch (error) {
       console.error('Failed to parse AI response as JSON:', error)
-      console.log('Raw response:', response.substring(0, 500))
+
+
     }
 
     // Fallback if JSON parsing fails
@@ -876,7 +885,8 @@ Make the content:
       }
     } catch (error) {
       console.error('Failed to parse AI response as JSON:', error)
-      console.log('Raw response:', response.substring(0, 500))
+
+
     }
 
     // Fallback if JSON parsing fails

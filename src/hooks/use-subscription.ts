@@ -36,7 +36,7 @@ export function useSubscription() {
     try {
       setLoading(true)
       const response = await fetch('/api/subscription/status')
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch subscription status')
       }
@@ -64,7 +64,6 @@ export function useSubscription() {
         throw new Error(error.error || 'Failed to start trial')
       }
 
-      // Refresh subscription status
       await fetchSubscription()
       return true
     } catch (err) {
@@ -93,12 +92,11 @@ export function useSubscription() {
       }
 
       const data = await response.json()
-      
-      // Redirect to Stripe Checkout
+
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl
       }
-      
+
       return data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create checkout')

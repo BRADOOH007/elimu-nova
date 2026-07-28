@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 import { 
   Search,
   Plus,
@@ -460,7 +461,7 @@ export default function SchoolAdminSecurityPage() {
 
   // Delete security log
   const handleDeleteLog = async (logId: string) => {
-    if (!confirm('Delete this security log? This cannot be undone.')) return
+    if (!(await confirmToast({ title: 'Delete this security log? This cannot be undone.' }))) return
     try {
       const response = await fetch(`/api/school-admin/security/logs/${logId}`, {
         method: 'DELETE',
@@ -583,7 +584,7 @@ export default function SchoolAdminSecurityPage() {
 
   // Delete security policy
   const handleDeletePolicy = async (policyId: string) => {
-    if (!confirm('Delete this security policy? This cannot be undone.')) return
+    if (!(await confirmToast({ title: 'Delete this security policy? This cannot be undone.' }))) return
     try {
       const response = await fetch(`/api/school-admin/security/policies/${policyId}`, {
         method: 'DELETE',

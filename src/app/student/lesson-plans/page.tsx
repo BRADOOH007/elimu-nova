@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -238,6 +239,7 @@ export default function StudentLessonPlansPage() {
       setIsGenerating(true)
       
       // Start study session
+      const now = new Date()
       const sessionResponse = await fetch('/api/student/study-sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -245,7 +247,9 @@ export default function StudentLessonPlansPage() {
           lessonId: lesson.id,
           subject: lesson.subject,
           topic: lesson.title,
-          startTime: new Date().toISOString()
+          duration: lesson.duration || 30,
+          startTime: now.toISOString(),
+          endTime: new Date(now.getTime() + (lesson.duration || 30) * 60000).toISOString()
         })
       })
 
@@ -545,18 +549,7 @@ export default function StudentLessonPlansPage() {
               <Wand2 className="w-4 h-4 mr-2" />
               Custom AI Lesson
             </Button>
-            <Button 
-              onClick={() => handleGenerateAILesson('Mathematics', 'Algebra')}
-              disabled={isGenerating}
-              variant="outline"
-            >
-              {isGenerating ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Zap className="w-4 h-4 mr-2" />
-              )}
-              Quick Generate
-            </Button>
+
           </div>
         </div>
 
@@ -983,7 +976,7 @@ export default function StudentLessonPlansPage() {
                 <div 
                   className="whitespace-pre-wrap text-sm leading-relaxed"
                   dangerouslySetInnerHTML={{ 
-                    __html: selectedLessonPlan.lessonPlan.content.generatedContent.replace(/\n/g, '<br>') 
+                    __html: sanitizeHtml(selectedLessonPlan.lessonPlan.content.generatedContent.replace(/\n/g, '<br>')) 
                   }}
                 />
               </div>

@@ -1,18 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const ip = getIP(request)
-    const { success } = await checkRateLimit(rateLimitAI, ip)
-    if (!success) return NextResponse.json({ error: 'Too many requests. Try again shortly.' }, { status: 429 })
-
+export const POST = route({}, async (request, { user }) => {
     const { lessonTitle, subject, grade, learningOutcomes, content, topic, subStrand } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
@@ -50,11 +40,17 @@ Keep language simple and appropriate for ${grade}.`
     const start = raw.indexOf('['); const end = raw.lastIndexOf(']')
     if (start === -1 || end <= start) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
 
+    let jsonStr = raw.slice(start, end + 1).trim()
+    if (jsonStr.startsWith('```')) jsonStr = jsonStr.replace(/```(?:json)?\n?/g, '').trim()
+    if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3).trim()
+
+    const questions = JSON.parse(jsonStr)
+
     const { stripLatex } = await import('@/lib/clean-ai-text')
-    const questions = JSON.parse(stripLatex(raw.slice(start, end + 1)))
+    for (const q of questions) {
+      for (const key of Object.keys(q)) {
+        if (typeof q[key] === 'string') q[key] = stripLatex(q[key])
+      }
+    }
     return NextResponse.json({ questions, lessonTitle, totalPoints: questions.reduce((s: number, q: any) => s + (q.points || 2), 0) })
-  } catch (e: any) {
-    console.error('[CHECKPOINT_QUIZ]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

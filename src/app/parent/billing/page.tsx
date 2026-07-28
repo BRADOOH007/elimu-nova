@@ -50,14 +50,60 @@ export default function ParentBillingPage() {
           setBilling(data.billing)
           setInvoices(data.invoices || [])
         }
-      } catch {} finally {
+      } catch (e) { console.warn('[ParentBilling] fetch billing error:', e) } finally {
         setLoading(false)
       }
     }
     load()
   }, [])
 
-  if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>
+  if (loading) return (
+    <div className="space-y-6 animate-pulse">
+      <div className="space-y-2">
+        <div className="h-7 w-48 bg-slate-200 rounded" />
+        <div className="h-4 w-64 bg-slate-200 rounded" />
+      </div>
+      <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+        <div className="h-5 w-24 bg-slate-200 rounded" />
+        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+          <div className="space-y-2">
+            <div className="h-5 w-32 bg-slate-200 rounded" />
+            <div className="h-4 w-20 bg-slate-200 rounded" />
+          </div>
+          <div className="h-7 w-20 bg-slate-200 rounded-full" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-3 bg-slate-50 rounded-lg space-y-1">
+            <div className="h-3 w-16 bg-slate-200 rounded" />
+            <div className="h-6 w-12 bg-slate-200 rounded" />
+          </div>
+          <div className="p-3 bg-slate-50 rounded-lg space-y-1">
+            <div className="h-3 w-16 bg-slate-200 rounded" />
+            <div className="h-6 w-12 bg-slate-200 rounded" />
+          </div>
+        </div>
+      </div>
+      <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+        <div className="h-5 w-28 bg-slate-200 rounded" />
+        <div className="space-y-3">
+          <div className="flex gap-4 pb-2 border-b border-slate-200">
+            <div className="h-4 w-1/5 bg-slate-200 rounded" />
+            <div className="h-4 w-1/5 bg-slate-200 rounded" />
+            <div className="h-4 w-1/5 bg-slate-200 rounded" />
+            <div className="h-4 w-1/5 bg-slate-200 rounded" />
+          </div>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-4 py-2">
+              <div className="h-4 w-1/5 bg-slate-200 rounded" />
+              <div className="h-4 w-1/5 bg-slate-200 rounded" />
+              <div className="h-4 w-1/5 bg-slate-200 rounded" />
+              <div className="h-4 w-1/5 bg-slate-200 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 
   const fmtCurr = (n: number) => new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 0 }).format(n)
   const fmtDate = (iso: string) => iso ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'

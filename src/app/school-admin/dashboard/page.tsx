@@ -11,6 +11,7 @@ import SchoolInfoPanel from "@/components/school-admin/school-info-panel"
 import PersonList from "@/components/school-admin/person-list"
 import SchoolOverview from "@/components/school-admin/school-overview"
 import { EnrollTeacherModal } from "@/components/modals/enroll-teacher-modal"
+import { confirmToast } from '@/lib/confirm-toast'
 import EnrollStudentModal from "@/components/modals/enroll-student-modal"
 import CreateClassModal from "@/components/modals/create-class-modal"
 import { ScheduleMeetingModal } from "@/components/modals/schedule-meeting-modal"
@@ -123,12 +124,12 @@ export default function SchoolAdminDashboard() {
           onEditTeacher={(t) => { setSelectedTeacher(t); setEditTeacherOpen(true) }}
           onEditStudent={(s) => { setSelectedStudent(s); setEditStudentOpen(true) }}
           onDeleteTeacher={async (id) => {
-            if (!confirm('Delete this teacher?')) return
+            if (!(await confirmToast({ title: 'Delete this teacher?' }))) return
             try { await fetch(`/api/school-admin/teachers/${id}`, { method: "DELETE" }); setRecentTeachers(prev => prev.filter(t => t.id !== id)) }
             catch (e) { console.error("Error deleting teacher:", e) }
           }}
           onDeleteStudent={async (id) => {
-            if (!confirm('Delete this student?')) return
+            if (!(await confirmToast({ title: 'Delete this student?' }))) return
             try { await fetch(`/api/school-admin/students/${id}`, { method: "DELETE" }); setRecentStudents(prev => prev.filter(s => s.id !== id)) }
             catch (e) { console.error("Error deleting student:", e) }
           }}

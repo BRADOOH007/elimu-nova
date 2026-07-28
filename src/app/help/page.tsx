@@ -14,6 +14,7 @@ const FAQS = [
 
 const RESOURCES = [
   { icon: BookOpen,      title: 'Getting Started Guide', description: 'Learn the basics of using ElimuNova AI',        type: 'Guide',     href: '/help/getting-started'   },
+  { icon: BookOpen,      title: 'Complete Feature Guide',description: 'Role-based guide to all platform features',      type: 'Guide',     href: '/help/feature-guide'     },
   { icon: Video,         title: 'Video Tutorials',       description: 'Watch step-by-step video tutorials',            type: 'Video',     href: '/help/video-tutorials'   },
   { icon: FileText,      title: 'Best Practices',        description: 'Tips and tricks for effective teaching',        type: 'Article',   href: '/help/best-practices'    },
   { icon: MessageCircle, title: 'Community Forum',       description: 'Connect with other educators',                  type: 'Community', href: '/help/community'         },
@@ -128,7 +129,7 @@ export default function HelpPage() {
                   Contact Support <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white rounded-full px-8" onClick={() => window.open('https://wa.me/254791269918?text=Hello! I need help with ElimuNova AI platform.', '_blank')}>
+              <Button size="lg" variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white rounded-full px-8" onClick={() => window.open('https://wa.me/254706719388?text=Hello! I need help with ElimuNova AI platform.', '_blank')}>
                 Start Live Chat
               </Button>
             </div>

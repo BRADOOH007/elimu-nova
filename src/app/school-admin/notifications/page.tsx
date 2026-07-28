@@ -25,7 +25,7 @@ export default function SchoolAdminNotificationsPage() {
     try {
       const res = await fetch('/api/notifications?limit=50')
       if (res.ok) setHistory((await res.json()).notifications || [])
-    } catch {} finally { setLoading(false) }
+    } catch (e) { console.warn('[SchoolAdminNotifications] fetchHistory error:', e) } finally { setLoading(false) }
   }
 
   const handleSend = async () => {

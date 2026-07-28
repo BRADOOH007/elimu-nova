@@ -143,7 +143,7 @@ export default function SystemSettingsPage() {
             smtp_from: map.get('smtp_from') || '',
           })
         }
-      } catch {}
+      } catch (e) { console.warn('[SuperAdminSystemSettings] loadSmtp error:', e) }
     }
     loadSmtp()
   }, [])

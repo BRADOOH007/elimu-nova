@@ -1,20 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(request: NextRequest) {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
     console.log('📅 Fetching teacher meetings...')
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user || session.user.role !== 'TEACHER') {
-      console.log('❌ Unauthorized - not a teacher')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
 
     const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: { school: true }
     });
 
@@ -23,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get query parameters
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(req.url);
     const limit = parseInt(searchParams.get('limit') || '10');
     const includePast = searchParams.get('includePast') === 'true';
 
@@ -149,4 +142,4 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching teacher meetings:', error);
     return NextResponse.json({ error: 'Failed to fetch meetings' }, { status: 500 });
   }
-}
+});

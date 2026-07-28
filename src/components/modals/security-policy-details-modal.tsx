@@ -11,6 +11,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
 import { Loader2, Edit, Trash2, Save, X, Shield, CheckCircle, XCircle } from 'lucide-react'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface SecurityPolicy {
   id: string
@@ -141,7 +142,7 @@ export default function SecurityPolicyDetailsModal({
 
   const handleDelete = async () => {
     if (!policy) return
-    if (!confirm(`Delete security policy "${policy.name}"? This cannot be undone.`)) return
+    if (!(await confirmToast({ title: `Delete security policy "${policy.name}"? This cannot be undone.`, variant: 'destructive' }))) return
 
     setLoading(true)
     try {

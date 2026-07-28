@@ -1,22 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (session.user.role !== 'SCHOOL_ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({ where: { userId: session.user.id } })
+export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({ where: { userId: user.id } })
     if (!schoolAdmin) return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
 
     const cls = await prisma.class.findFirst({ where: { id, schoolId: schoolAdmin.schoolId } })
     if (!cls) return NextResponse.json({ error: 'Class not found' }, { status: 404 })
 
-    const body = await request.json()
+    const body = await req.json()
     const { name, description, subject, grade, teacherId } = body
 
     const updated = await prisma.class.update({
@@ -41,20 +35,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       teacherId: updated.teacherId,
       createdAt: updated.createdAt
     })
-  } catch (error) {
-    console.error('Error updating class:', error)
-    return NextResponse.json({ error: 'Failed to update class' }, { status: 500 })
-  }
-}
+})
 
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    if (session.user.role !== 'SCHOOL_ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({ where: { userId: session.user.id } })
+export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({ where: { userId: user.id } })
     if (!schoolAdmin) return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
 
     const cls = await prisma.class.findFirst({ where: { id, schoolId: schoolAdmin.schoolId } })
@@ -62,8 +47,4 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     await prisma.class.delete({ where: { id } })
     return NextResponse.json({ message: 'Class deleted successfully' })
-  } catch (error) {
-    console.error('Error deleting class:', error)
-    return NextResponse.json({ error: 'Failed to delete class' }, { status: 500 })
-  }
-}
+})

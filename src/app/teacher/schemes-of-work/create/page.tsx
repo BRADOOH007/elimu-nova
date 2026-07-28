@@ -69,25 +69,48 @@ export default function CreateSchemePage() {
   // Batch generation
   const [generatingAll, setGeneratingAll] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 })
-  // Load CBC strands when subject+grade changes
+  // Load CBC strands when subject+grade changes — try API first, fall back to local data
   useEffect(() => {
-    if (!subject || !grade) return
-    // Parse term number: 'Term 1' → 1, 'Term 2' → 2, 'Term 3' → 3
+    if (!subject || !grade) { setAvailableStrands([]); setTitle(''); return }
+
     const termNum = parseInt(term.replace('Term ', '')) as 1 | 2 | 3
-    const gradeData = grades1to9CurriculumByTerm.find(
-      g => g.grade === grade && g.term === termNum
-    ) || grades1to9CurriculumByTerm.find(g => g.grade === grade) // fallback to any term
-    
-    const subjectLower = subject.toLowerCase()
-    const subjectData = gradeData?.learningAreas.find(la => {
-      const laName = la.name.toLowerCase()
-      // Exact match first, then word-boundary match
-      return laName === subjectLower ||
-             laName.includes(subjectLower) ||
-             subjectLower.includes(laName.split(' ')[0]) && laName.split(' ')[0].length > 3
-    })
-    setAvailableStrands(subjectData?.strands || [])
     setTitle(`${subject} - ${grade} - ${term}`)
+
+    const loadFromApi = async () => {
+      try {
+        const res = await fetch('/api/curriculum/auto-populate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ grade, subject, term: termNum }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (data.topics && data.topics.length > 0) {
+            // Convert API response to the strand format the UI expects
+            const strands = data.topics.map((t: any) => ({
+              name: t.strandName,
+              subStrands: t.substrands.map((s: any) => ({ name: s.name })),
+            }))
+            setAvailableStrands(strands)
+            return
+          }
+        }
+      } catch (e) { console.warn('[SchemeCreate] Failed to fetch curriculum:', e) }
+      // Fallback: local data file for Grades 1-9
+      const gradeData = grades1to9CurriculumByTerm.find(
+        g => g.grade === grade && g.term === termNum
+      ) || grades1to9CurriculumByTerm.find(g => g.grade === grade)
+
+      const subjectLower = subject.toLowerCase()
+      const subjectData = gradeData?.learningAreas.find(la => {
+        const laName = la.name.toLowerCase()
+        return laName === subjectLower ||
+               laName.includes(subjectLower) ||
+               (subjectLower.includes(laName.split(' ')[0]) && laName.split(' ')[0].length > 3)
+      })
+      setAvailableStrands(subjectData?.strands || [])
+    }
+    loadFromApi()
   }, [subject, grade, term])
 
   const toggleSubStrand = (strand: string, subStrand: string) => {

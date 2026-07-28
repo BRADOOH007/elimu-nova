@@ -24,10 +24,19 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 
+export interface AIGeneratorResult {
+  title: string
+  content: string
+  type: string
+  subject: string
+  grade: string
+  topic: string
+}
+
 interface AIGeneratorModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess: (content: any) => void
+  onSuccess: (result: AIGeneratorResult) => void
 }
 
 interface GeneratedContent {
@@ -40,6 +49,7 @@ interface GeneratedContent {
 export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGeneratorModalProps) {
   const [activeTab, setActiveTab] = useState('rubric')
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
   const [formData, setFormData] = useState({
     subject: '',
@@ -91,42 +101,51 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
   }
 
   const handleSave = async () => {
-    if (generatedContent) {
-      try {
-        // Save the generated content to the database
-        const response = await fetch('/api/ai-content', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            title: generatedContent.title,
-            content: generatedContent.content,
-            type: generatedContent.type,
-            subject: formData.subject,
-            grade: formData.grade,
-            topic: formData.topic,
-            metadata: {
-              difficulty: formData.difficulty,
-              duration: formData.duration,
-              format: formData.format,
-              objectives: formData.objectives,
-              requirements: formData.requirements,
-              generatedAt: new Date().toISOString()
-            }
-          })
+    if (!generatedContent || saving) return
+    setSaving(true)
+    try {
+      // Save the generated content to the database
+      const response = await fetch('/api/ai-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: generatedContent.title,
+          content: generatedContent.content,
+          type: generatedContent.type,
+          subject: formData.subject,
+          grade: formData.grade,
+          topic: formData.topic,
+          metadata: {
+            difficulty: formData.difficulty,
+            duration: formData.duration,
+            format: formData.format,
+            objectives: formData.objectives,
+            requirements: formData.requirements,
+            generatedAt: new Date().toISOString()
+          }
         })
+      })
 
-        if (response.ok) {
-          const data = await response.json()
-          onSuccess(data.content)
-          onClose()
-        } else {
-          console.error('Failed to save generated content')
-        }
-      } catch (error) {
-        console.error('Error saving generated content:', error)
+      if (response.ok) {
+        const data = await response.json()
+        onSuccess({
+          title: generatedContent.title,
+          content: generatedContent.content,
+          type: generatedContent.type,
+          subject: formData.subject,
+          grade: formData.grade,
+          topic: formData.topic,
+        })
+        onClose()
+      } else {
+        console.error('Failed to save generated content')
       }
+    } catch (error) {
+      console.error('Error saving generated content:', error)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -152,7 +171,9 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
       objectives: '',
       requirements: '',
       difficulty: 'medium',
-      format: 'detailed'
+      format: 'detailed',
+      country: '',
+      curriculum: ''
     })
     onClose()
   }
@@ -786,11 +807,12 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                     </Button>
                     <Button
                       onClick={handleSave}
+                      disabled={saving}
                       size="sm"
                       className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
                     >
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Save as Assignment
+                      {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Share2 className="w-4 h-4 mr-2" />}
+                      {saving ? 'Saving...' : 'Save as Assignment'}
                     </Button>
                   </div>
                 </div>

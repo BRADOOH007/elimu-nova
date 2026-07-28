@@ -1,22 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 // POST /api/packages/cleanup
 // Keeps only three default packages (by name), dedupes by keeping the most recently created,
 // creates any missing defaults with USD pricing, and deletes the rest if they have no subscriptions.
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+export const POST = route({ auth: 'SUPER_ADMIN' }, async () => {
 
     // Allowed/default package names and their default USD pricing
     const defaults = [
@@ -135,10 +124,4 @@ export async function POST(request: NextRequest) {
       protectedCount: protectedPackages.length,
       protectedPackages: protectedPackages.map((p) => ({ id: p.id, name: p.name, subscriptions: p._count.subscriptions })),
     })
-  } catch (error) {
-    console.error('Error during packages cleanup:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-
+})

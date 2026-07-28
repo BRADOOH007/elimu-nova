@@ -100,9 +100,9 @@ export default function StudentCodingDetailPage() {
       </Card>
 
       <Tabs defaultValue="content">
-        <TabsList>
-          <TabsTrigger value="content"><Code2 className="w-4 h-4 mr-2" />Lesson</TabsTrigger>
-          <TabsTrigger value="playground"><Play className="w-4 h-4 mr-2" />Playground</TabsTrigger>
+        <TabsList className="w-full overflow-x-auto flex gap-1.5 px-2">
+          <TabsTrigger value="content" className="shrink-0 whitespace-nowrap"><Code2 className="w-4 h-4 mr-2" />Lesson</TabsTrigger>
+          <TabsTrigger value="playground" className="shrink-0 whitespace-nowrap"><Play className="w-4 h-4 mr-2" />Playground</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content">

@@ -61,6 +61,7 @@ export default function DocumentUploadButton({
       setUploaded(doc)
       onUploaded?.(doc)
     } catch (err) {
+      console.warn('[Upload] Document upload failed:', err)
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
       setUploading(false)

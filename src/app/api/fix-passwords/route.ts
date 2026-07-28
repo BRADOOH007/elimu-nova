@@ -1,18 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextResponse } from 'next/server';
 import { fixPlainTextPasswords } from '@/lib/fix-passwords';
+import { route } from '@/lib/api-middleware';
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
 
     // Only allow in development or for super admin
-    if (process.env.NODE_ENV !== 'development' && session.user.role !== 'SUPER_ADMIN') {
+    if (process.env.NODE_ENV !== 'development' && user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
     }
 
@@ -20,11 +13,4 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ message: 'Passwords fixed successfully' });
 
-  } catch (error) {
-    console.error('Error fixing passwords:', error);
-    return NextResponse.json(
-      { error: 'Failed to fix passwords' },
-      { status: 500 }
-    );
-  }
-}
+})

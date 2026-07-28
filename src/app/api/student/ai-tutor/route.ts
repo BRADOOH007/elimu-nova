@@ -1,212 +1,181 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { NotificationGenerator } from '@/lib/notification-generator'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
 // POST - Create AI tutor session
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session || session.user.role !== 'STUDENT') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
+  const body = await request.json()
+  const { 
+    sessionType, 
+    subject, 
+    topic, 
+    question, 
+    context 
+  } = body
+
+  // Validate required fields
+  if (!sessionType || !question) {
+    return NextResponse.json({ 
+      error: 'Missing required fields: sessionType, question' 
+    }, { status: 400 })
+  }
+
+  // Get or create student profile
+  let student = await prisma.student.findUnique({
+    where: { userId: user.id },
+    include: {
+      user: true,
+      school: true,
+      teacher: {
+        include: {
+          user: true
+        }
+      },
+      analytics: true
     }
+  })
 
-    const body = await request.json()
-    const { 
-      sessionType, 
-      subject, 
-      topic, 
-      question, 
-      context 
-    } = body
-
-    // Validate required fields
-    if (!sessionType || !question) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: sessionType, question' 
-      }, { status: 400 })
-    }
-
-    // Get or create student profile
-    let student = await prisma.student.findUnique({
-      where: { userId: session.user.id },
+  if (!student) {
+    student = await prisma.student.create({
+      data: { userId: user.id },
       include: {
         user: true,
         school: true,
-        teacher: {
-          include: {
-            user: true
-          }
-        },
+        teacher: { include: { user: true } },
         analytics: true
       }
     })
-
-    if (!student) {
-      student = await prisma.student.create({
-        data: { userId: session.user.id },
-        include: {
-          user: true,
-          school: true,
-          teacher: { include: { user: true } },
-          analytics: true
-        }
-      })
-    }
-
-    // Get recent assignments and study sessions for context
-    const recentAssignments = await prisma.assignment.findMany({
-      where: {
-        students: {
-          some: {
-            id: student.id
-          }
-        }
-      },
-      include: {
-        submissions: {
-          where: {
-            studentId: student.id
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 5
-    })
-
-    const recentStudySessions = await prisma.studySession.findMany({
-      where: {
-        studentId: student.id
-      },
-      orderBy: {
-        startTime: 'desc'
-      },
-      take: 5
-    })
-
-    // Build context for AI
-    const aiContext = {
-      student: {
-        name: `${student.user.firstName} ${student.user.lastName}`,
-        grade: (student as any).class?.grade || 'Unknown',
-        school: student.school?.name ?? '',
-        teacher: student.teacher ? `${student.teacher.user.firstName} ${student.teacher.user.lastName}` : 'Unknown'
-      },
-      analytics: student.analytics,
-      recentAssignments: recentAssignments.map(assignment => ({
-        title: assignment.title,
-        subject: (assignment as any).lessonPlan?.subject || 'General',
-        dueDate: assignment.dueDate,
-        status: assignment.submissions.length > 0 ? 
-          assignment.submissions[0].status : 'PENDING',
-        grade: assignment.submissions.find(s => s.grade !== null)?.grade || null
-      })),
-      recentStudySessions: recentStudySessions.map(session => ({
-        subject: session.subject,
-        topic: session.topic,
-        duration: session.duration,
-        startTime: session.startTime
-      })),
-      providedContext: context
-    }
-
-    // Generate AI response using OpenAI AI
-    const aiResponse = await generateAIResponse({
-      sessionType,
-      subject,
-      topic,
-      question,
-      context: aiContext,
-      student: student
-    })
-
-    // Create AI tutor session record
-    const aiTutorSession = await prisma.aITutorSession.create({
-      data: {
-        studentId: student.id,
-        sessionType,
-        subject: subject || null,
-        topic: topic || null,
-        question,
-        response: aiResponse,
-        context: JSON.stringify(aiContext)
-      }
-    })
-
-    // Generate notification for teacher
-    await NotificationGenerator.aiTutorHelpRequested(student.id, question, subject || undefined)
-
-    return NextResponse.json({
-      success: true,
-      session: aiTutorSession,
-      response: aiResponse
-    }, { status: 201 })
-
-  } catch (error) {
-    console.error('Error creating AI tutor session:', error)
-    return NextResponse.json({ 
-      error: 'Failed to create AI tutor session',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
   }
-}
+
+  // Get recent assignments and study sessions for context
+  const recentAssignments = await prisma.assignment.findMany({
+    where: {
+      students: {
+        some: {
+          id: student.id
+        }
+      }
+    },
+    include: {
+      submissions: {
+        where: {
+          studentId: student.id
+        }
+      }
+    },
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: 5
+  })
+
+  const recentStudySessions = await prisma.studySession.findMany({
+    where: {
+      studentId: student.id
+    },
+    orderBy: {
+      startTime: 'desc'
+    },
+    take: 5
+  })
+
+  // Build context for AI
+  const aiContext = {
+    student: {
+      name: `${student.user.firstName} ${student.user.lastName}`,
+      grade: (student as any).class?.grade || 'Unknown',
+      school: student.school?.name ?? '',
+      teacher: student.teacher ? `${student.teacher.user.firstName} ${student.teacher.user.lastName}` : 'Unknown'
+    },
+    analytics: student.analytics,
+    recentAssignments: recentAssignments.map(assignment => ({
+      title: assignment.title,
+      subject: (assignment as any).lessonPlan?.subject || 'General',
+      dueDate: assignment.dueDate,
+      status: assignment.submissions.length > 0 ? 
+        assignment.submissions[0].status : 'PENDING',
+      grade: assignment.submissions.find(s => s.grade !== null)?.grade || null
+    })),
+    recentStudySessions: recentStudySessions.map(session => ({
+      subject: session.subject,
+      topic: session.topic,
+      duration: session.duration,
+      startTime: session.startTime
+    })),
+    providedContext: context
+  }
+
+  // Generate AI response using OpenAI AI
+  const aiResponse = await generateAIResponse({
+    sessionType,
+    subject,
+    topic,
+    question,
+    context: aiContext,
+    student: student
+  })
+
+  // Create AI tutor session record
+  const aiTutorSession = await prisma.aITutorSession.create({
+    data: {
+      studentId: student.id,
+      sessionType,
+      subject: subject || null,
+      topic: topic || null,
+      question,
+      response: aiResponse,
+      context: JSON.stringify(aiContext)
+    }
+  })
+
+  // Generate notification for teacher
+  await NotificationGenerator.aiTutorHelpRequested(student.id, question, subject || undefined)
+
+  return NextResponse.json({
+    success: true,
+    session: aiTutorSession,
+    response: aiResponse
+  }, { status: 201 })
+})
 
 // GET - Fetch AI tutor sessions
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session || session.user.role !== 'STUDENT') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
+  const { searchParams } = new URL(request.url)
+  const limit = parseInt(searchParams.get('limit') || '10')
+  const sessionType = searchParams.get('sessionType')
 
-    const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '10')
-    const sessionType = searchParams.get('sessionType')
+  // Get student profile
+  const student = await prisma.student.findUnique({
+    where: { userId: user.id }
+  })
 
-    // Get student profile
-    const student = await prisma.student.findUnique({
-      where: { userId: session.user.id }
-    })
-
-    if (!student) {
-      return NextResponse.json({ error: 'Student profile not found' }, { status: 404 })
-    }
-
-    // Build where clause
-    const whereClause: any = {
-      studentId: student.id
-    }
-
-    if (sessionType) {
-      whereClause.sessionType = sessionType
-    }
-
-    const aiTutorSessions = await prisma.aITutorSession.findMany({
-      where: whereClause,
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: limit
-    })
-
-    return NextResponse.json({
-      sessions: aiTutorSessions
-    })
-
-  } catch (error) {
-    console.error('Error fetching AI tutor sessions:', error)
-    return NextResponse.json({ 
-      error: 'Failed to fetch AI tutor sessions',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 })
+  if (!student) {
+    return NextResponse.json({ error: 'Student profile not found' }, { status: 404 })
   }
-}
+
+  // Build where clause
+  const whereClause: any = {
+    studentId: student.id
+  }
+
+  if (sessionType) {
+    whereClause.sessionType = sessionType
+  }
+
+  const aiTutorSessions = await prisma.aITutorSession.findMany({
+    where: whereClause,
+    orderBy: {
+      createdAt: 'desc'
+    },
+    take: limit
+  })
+
+  return NextResponse.json({
+    sessions: aiTutorSessions
+  })
+})
 
 // Helper function to generate AI response
 async function generateAIResponse({
@@ -371,7 +340,7 @@ Be encouraging, clear, and use Kenyan examples. Give step-by-step guidance. Sess
 
   } catch (error) {
     console.error('Error generating AI response:', error)
-    
+
     // Fallback response
     const responses = {
       lesson: `Based on your question about ${topic || subject || 'the topic'}, let me help you understand this concept. ${question} is a great question that shows you're thinking critically about the material.`,
@@ -381,7 +350,7 @@ Be encouraging, clear, and use Kenyan examples. Give step-by-step guidance. Sess
     }
 
     const baseResponse = responses[sessionType as keyof typeof responses] || responses.general_help
-    
+
     return `${baseResponse}\n\nYour question: "${question}"\n\nI'll provide you with a detailed explanation and some practice exercises to help you master this concept. Remember, learning is a process, and it's okay to ask questions and seek help when you need it.`
   }
 }

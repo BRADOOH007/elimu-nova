@@ -1,178 +1,115 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
+  const { id } = params
 
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { id } = await params
-
-    const policy = await prisma.securityPolicy.findUnique({
-      where: { id },
-      include: {
-        createdByUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        updatedByUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
+  const policy = await prisma.securityPolicy.findUnique({
+    where: { id },
+    include: {
+      createdByUser: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true
         }
-      }
-    })
-
-    if (!policy) {
-      return NextResponse.json({ error: 'Policy not found' }, { status: 404 })
-    }
-
-    return NextResponse.json(policy)
-  } catch (error) {
-    console.error('Error fetching security policy:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
-}
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    const { id } = await params
-    const body = await request.json()
-    const { 
-      name,
-      description,
-      policyType,
-      rules,
-      isActive,
-      priority
-    } = body
-
-    // Check if policy exists
-    const existingPolicy = await prisma.securityPolicy.findUnique({
-      where: { id }
-    })
-
-    if (!existingPolicy) {
-      return NextResponse.json({ error: 'Policy not found' }, { status: 404 })
-    }
-
-    // Validate rules JSON if provided
-    if (rules) {
-      try {
-        JSON.parse(rules)
-      } catch {
-        return NextResponse.json({ error: 'Invalid rules JSON format' }, { status: 400 })
-      }
-    }
-
-    // Update security policy
-    const policy = await prisma.securityPolicy.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(description !== undefined && { description }),
-        ...(policyType !== undefined && { policyType }),
-        ...(rules !== undefined && { rules }),
-        ...(isActive !== undefined && { isActive }),
-        ...(priority !== undefined && { priority }),
-        updatedBy: session.user.id
       },
-      include: {
-        createdByUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
-        },
-        updatedByUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true
-          }
+      updatedByUser: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true
         }
       }
-    })
+    }
+  })
 
-    return NextResponse.json(policy)
-  } catch (error) {
-    console.error('Error updating security policy:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  if (!policy) {
+    return NextResponse.json({ error: 'Policy not found' }, { status: 404 })
   }
-}
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  return NextResponse.json(policy)
+})
 
-    // Check if user is super admin
-    if (session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params, user }) => {
+  const { id } = params
+  const body = await req.json()
+  const { 
+    name,
+    description,
+    policyType,
+    rules,
+    isActive,
+    priority
+  } = body
 
-    const { id } = await params
+  const existingPolicy = await prisma.securityPolicy.findUnique({
+    where: { id }
+  })
 
-    // Check if policy exists
-    const existingPolicy = await prisma.securityPolicy.findUnique({
-      where: { id }
-    })
-
-    if (!existingPolicy) {
-      return NextResponse.json({ error: 'Policy not found' }, { status: 404 })
-    }
-
-    // Delete security policy
-    await prisma.securityPolicy.delete({
-      where: { id }
-    })
-
-    return NextResponse.json({ message: 'Policy deleted successfully' })
-  } catch (error) {
-    console.error('Error deleting security policy:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  if (!existingPolicy) {
+    return NextResponse.json({ error: 'Policy not found' }, { status: 404 })
   }
-}
+
+  if (rules) {
+    try {
+      JSON.parse(rules)
+    } catch {
+      return NextResponse.json({ error: 'Invalid rules JSON format' }, { status: 400 })
+    }
+  }
+
+  const policy = await prisma.securityPolicy.update({
+    where: { id },
+    data: {
+      ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
+      ...(policyType !== undefined && { policyType }),
+      ...(rules !== undefined && { rules }),
+      ...(isActive !== undefined && { isActive }),
+      ...(priority !== undefined && { priority }),
+      updatedBy: user.id
+    },
+    include: {
+      createdByUser: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true
+        }
+      },
+      updatedByUser: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true
+        }
+      }
+    }
+  })
+
+  return NextResponse.json(policy)
+})
+
+export const DELETE = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
+  const { id } = params
+
+  const existingPolicy = await prisma.securityPolicy.findUnique({
+    where: { id }
+  })
+
+  if (!existingPolicy) {
+    return NextResponse.json({ error: 'Policy not found' }, { status: 404 })
+  }
+
+  await prisma.securityPolicy.delete({
+    where: { id }
+  })
+
+  return NextResponse.json({ message: 'Policy deleted successfully' })
+})

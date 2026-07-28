@@ -30,15 +30,17 @@ export default function StudentMessagesPage() {
   const [showCompose, setShowCompose] = useState(false)
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
   const replyRef = useRef<HTMLTextAreaElement>(null)
 
-  useEffect(() => { fetchMessages() }, [])
+  useEffect(() => { fetchMessages() }, [page])
 
   const fetchMessages = async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/student/messages')
-      if (r.ok) { const d = await r.json(); setMessages(d.messages || []) }
+      const r = await fetch(`/api/student/messages?page=${page}&limit=25`)
+      if (r.ok) { const d = await r.json(); setMessages(d.messages || []); setTotalPages(d.pagination?.totalPages || 1) }
     } catch { toast({ variant: 'destructive', title: 'Failed to load messages' }) }
     finally { setLoading(false) }
   }
@@ -179,6 +181,14 @@ export default function StudentMessagesPage() {
                 ))
               )}
             </div>
+
+            {!loading && totalPages > 1 && (
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-white shrink-0">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+                <span className="text-xs text-slate-500">Page {page} of {totalPages}</span>
+                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
+            )}
           </div>
 
           {/* ── Right: Full message + inline reply ── */}

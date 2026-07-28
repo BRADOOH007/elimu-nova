@@ -2,20 +2,11 @@
  * POST /api/ai/explain-question
  * AI Explain Question — step-by-step explanation for any exam question
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) return NextResponse.json({ error: `Rate limit. Retry in ${rl.resetInSec}s` }, { status: 429 })
-
+export const POST = route({}, async (request, { user }) => {
     const { question, subject, grade, selectedAnswer, correctAnswer, context } = await request.json()
     if (!question) return NextResponse.json({ error: 'question required' }, { status: 400 })
 
@@ -58,8 +49,4 @@ Rules:
     if (start === -1 || end <= start) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
 
     return NextResponse.json(JSON.parse(raw.slice(start, end + 1)))
-  } catch (e: any) {
-    console.error('[EXPLAIN_QUESTION]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

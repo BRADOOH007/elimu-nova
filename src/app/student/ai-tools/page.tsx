@@ -18,20 +18,20 @@ export default function StudentAIToolsPage() {
       </div>
 
       <Tabs defaultValue="diagrams" className="w-full">
-        <TabsList className="w-full overflow-x-auto flex max-w-2xl">
-          <TabsTrigger value="diagrams" className="flex items-center space-x-2 shrink-0">
+        <TabsList className="w-full overflow-x-auto flex gap-1.5 px-2">
+          <TabsTrigger value="diagrams" className="flex items-center space-x-2 shrink-0 whitespace-nowrap">
             <Microscope className="w-4 h-4" />
             <span>Diagrams</span>
           </TabsTrigger>
-          <TabsTrigger value="images" className="flex items-center space-x-2 shrink-0">
+          <TabsTrigger value="images" className="flex items-center space-x-2 shrink-0 whitespace-nowrap">
             <Image className="w-4 h-4" />
             <span>Images</span>
           </TabsTrigger>
-          <TabsTrigger value="presentations" className="flex items-center space-x-2 shrink-0">
+          <TabsTrigger value="presentations" className="flex items-center space-x-2 shrink-0 whitespace-nowrap">
             <Presentation className="w-4 h-4" />
             <span>Presentations</span>
           </TabsTrigger>
-          <TabsTrigger value="gallery" className="flex items-center space-x-2 shrink-0">
+          <TabsTrigger value="gallery" className="flex items-center space-x-2 shrink-0 whitespace-nowrap">
             <Images className="w-4 h-4" />
             <span>Gallery</span>
           </TabsTrigger>

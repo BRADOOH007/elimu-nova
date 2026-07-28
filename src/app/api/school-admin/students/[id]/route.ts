@@ -1,29 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { stripPasswordFromAddress, extractEncryptedPassword } from '@/lib/password-encryption'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -84,43 +68,20 @@ export async function GET(
     }
 
     return NextResponse.json({ student: formattedStudent })
+})
 
-  } catch (error) {
-    console.error('Error fetching student:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch student' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
     }
 
-    const body = await request.json()
-    const { firstName, lastName, email, phone, address, isActive } = body
+    const body = await req.json()
+    const { firstName, lastName, email, phone, address, classId, subjects, isActive } = body
 
     // Check if student exists and belongs to the school
     const existingStudent = await prisma.student.findFirst({
@@ -139,12 +100,14 @@ export async function PUT(
     const updatedStudent = await prisma.student.update({
       where: { id },
       data: {
+        classId: classId !== undefined ? (classId || null) : existingStudent.classId,
+        subjects: subjects !== undefined ? subjects : existingStudent.subjects,
         user: {
           update: {
             firstName: firstName || existingStudent.user.firstName,
             lastName: lastName || existingStudent.user.lastName,
             email: email || existingStudent.user.email,
-            phone: phone || existingStudent.user.phone,
+            phone: phone !== undefined ? phone : existingStudent.user.phone,
             address: address !== undefined
               ? (existingStudent.user.address?.startsWith('PWD_ENC:')
                 ? existingStudent.user.address.split('\n---\n')[0] + '\n---\n' + address
@@ -203,36 +166,13 @@ export async function PUT(
       message: 'Student updated successfully',
       student: formattedStudent
     })
+})
 
-  } catch (error) {
-    console.error('Error updating student:', error)
-    return NextResponse.json(
-      { error: 'Failed to update student' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const session = await getServerSession(authOptions)
-    
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    if (session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // Get school admin's school ID
-    const schoolAdmin = await prisma.schoolAdmin.findUnique({
-      where: { userId: session.user.id }
-    })
+export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
+  const { id } = await params
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id }
+  })
 
     if (!schoolAdmin) {
       return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
@@ -256,12 +196,4 @@ export async function DELETE(
     })
 
     return NextResponse.json({ message: 'Student deleted successfully' })
-
-  } catch (error) {
-    console.error('Error deleting student:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete student' },
-      { status: 500 }
-    )
-  }
-}
+})

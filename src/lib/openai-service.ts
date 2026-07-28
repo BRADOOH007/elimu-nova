@@ -4,7 +4,7 @@
  * Drop-in replacement — all existing callers work unchanged.
  */
 
-import { callAI, type AIMessage } from '@/lib/ai-provider'
+import { callAI, getKey, type AIMessage } from '@/lib/ai-provider'
 
 export interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant'
@@ -150,8 +150,8 @@ Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1
     size?:    '1024x1024' | '1792x1024' | '1024x1792' | '512x512'
     quality?: 'standard' | 'hd'
   }): Promise<ImageGenerationResult> {
-    const dalleKey = process.env.OPENAI_DALLE_API_KEY || ''
-    const openaiKey = process.env.OPENAI_API_KEY || ''
+    const dalleKey  = await getKey('OPENAI_DALLE_API_KEY') || ''
+    const openaiKey = await getKey('OPENAI_API_KEY') || ''
     // Use DALLE key if available and not an OpenRouter key
     const apiKey = (dalleKey && !dalleKey.startsWith('sk-or-')) ? dalleKey
                  : (openaiKey && !openaiKey.startsWith('sk-or-')) ? openaiKey
@@ -180,7 +180,7 @@ Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1
 
     // Fallback: try Stability AI
     try {
-      const stabilityKey = process.env.STABILITY_API_KEY
+      const stabilityKey = await getKey('STABILITY_API_KEY')
       if (stabilityKey) {
         const formData = new FormData()
         formData.append('prompt', options.prompt)

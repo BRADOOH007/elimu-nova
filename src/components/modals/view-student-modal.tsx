@@ -22,6 +22,7 @@ import {
   BookOpen
 } from 'lucide-react'
 import GeneratePasswordModal from './generate-password-modal'
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface ViewStudentModalProps {
   isOpen: boolean
@@ -82,8 +83,8 @@ export default function ViewStudentModal({ isOpen, onClose, student, onEdit, onD
     handleClose()
   }
 
-  const handleDelete = () => {
-    if (!student || !confirm(`Delete "${student.firstName} ${student.lastName}"? This cannot be undone.`)) return
+  const handleDelete = async () => {
+    if (!student || !(await confirmToast({ title: `Delete "${student.firstName} ${student.lastName}"? This cannot be undone.`, variant: 'destructive' }))) return
     onDelete(student.id)
     handleClose()
   }

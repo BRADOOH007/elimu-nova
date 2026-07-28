@@ -1,204 +1,79 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
+import { NextResponse } from 'next/server'
+import { prisma, withRetry } from '@/lib/prisma'
+import { stripPasswordFromAddress } from '@/lib/password-encryption'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const PUT = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+  const { id } = params
+  const teacher = await withRetry(() => prisma.teacher.findUnique({ where: { userId: user.id } }))
+  if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    })
+  const body = await req.json()
+  const { firstName, lastName, email, phone, address, classId, isActive, subjects } = body
 
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
-    }
+  const existingStudent = await prisma.student.findFirst({
+    where: { id, teacherId: teacher.id, deletedAt: null },
+    include: { user: true }
+  })
+  if (!existingStudent) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
 
-    // Get the student with full details
-    const student = await prisma.student.findUnique({
-      where: { id: (await params).id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            address: true,
-            isActive: true,
-            createdAt: true
-          }
-        },
-        class: {
-          select: {
-            id: true,
-            name: true,
-            grade: true,
-            subject: true
-          }
+  const updatedStudent = await prisma.student.update({
+    where: { id },
+    data: {
+      classId: classId !== undefined ? (classId || null) : existingStudent.classId,
+      subjects: subjects !== undefined ? subjects : existingStudent.subjects,
+      user: {
+        update: {
+          firstName: firstName || existingStudent.user.firstName,
+          lastName: lastName || existingStudent.user.lastName,
+          email: email || existingStudent.user.email,
+          phone: phone !== undefined ? phone : existingStudent.user.phone,
+          address: address !== undefined
+            ? (existingStudent.user.address?.startsWith('PWD_ENC:')
+              ? existingStudent.user.address.split('\n---\n')[0] + '\n---\n' + address
+              : address)
+            : existingStudent.user.address,
+          isActive: isActive !== undefined ? isActive : existingStudent.user.isActive,
         }
       }
-    })
-
-    if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+    },
+    include: {
+      user: { select: { firstName: true, lastName: true, email: true, phone: true, address: true, isActive: true, createdAt: true } },
+      class: { select: { id: true, name: true, subject: true, grade: true } }
     }
+  })
 
-    if (student.schoolId !== teacher.schoolId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  return NextResponse.json({
+    message: 'Student updated successfully',
+    student: {
+      id: updatedStudent.id,
+      name: `${updatedStudent.user.firstName} ${updatedStudent.user.lastName}`,
+      email: updatedStudent.user.email,
+      phone: updatedStudent.user.phone,
+      address: stripPasswordFromAddress(updatedStudent.user.address),
+      classId: updatedStudent.classId,
+      class: updatedStudent.class,
+      status: updatedStudent.user.isActive ? 'Active' : 'Inactive',
+      joinDate: updatedStudent.user.createdAt.toISOString(),
+      subjects: updatedStudent.subjects,
     }
+  })
+})
 
-    return NextResponse.json({
-      student: {
-        id: student.id,
-        name: `${student.user.firstName} ${student.user.lastName}`,
-        email: student.user.email,
-        phone: student.user.phone,
-        address: student.user.address,
-        status: student.user.isActive ? 'Active' : 'Inactive',
-        joinDate: student.user.createdAt.toISOString(),
-        class: student.class,
-        subjects: student.subjects
-      }
-    })
-  } catch (error) {
-    console.error('Error fetching student details:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch student details' },
-      { status: 500 }
-    )
-  }
-}
+export const DELETE = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+  const { id } = params
+  const teacher = await withRetry(() => prisma.teacher.findUnique({ where: { userId: user.id } }))
+  if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const existingStudent = await prisma.student.findFirst({
+    where: { id, teacherId: teacher.id, deletedAt: null }
+  })
+  if (!existingStudent) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
 
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    })
+  await prisma.student.update({
+    where: { id },
+    data: { deletedAt: new Date() }
+  })
 
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
-    }
-
-    const body = await request.json()
-    const { firstName, lastName, email, phone, address, classId, isActive, subjects } = body
-
-    // Get the student to verify it belongs to this teacher's school
-    const student = await prisma.student.findUnique({
-      where: { id: (await params).id },
-      include: { user: true }
-    })
-
-    if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
-    }
-
-    if (student.schoolId !== teacher.schoolId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    // Update user and student in a transaction
-    await prisma.$transaction(async (tx) => {
-      // Update user
-      await tx.user.update({
-        where: { id: student.userId },
-        data: {
-          firstName,
-          lastName,
-          email,
-          phone: phone || null,
-          address: address || null,
-          isActive
-        }
-      })
-
-      // Update student
-      await tx.student.update({
-        where: { id: (await params).id },
-        data: {
-          classId: classId || null,
-          ...(subjects !== undefined ? { subjects } : {})
-        }
-      })
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: 'Student updated successfully'
-    })
-  } catch (error) {
-    console.error('Error updating student:', error)
-    return NextResponse.json(
-      { error: 'Failed to update student' },
-      { status: 500 }
-    )
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const session = await getServerSession(authOptions)
-    
-    if (!session?.user?.id || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    })
-
-    if (!teacher) {
-      return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
-    }
-
-    // Get the student to verify it belongs to this teacher's school
-    const student = await prisma.student.findUnique({
-      where: { id: (await params).id }
-    })
-
-    if (!student) {
-      return NextResponse.json({ error: 'Student not found' }, { status: 404 })
-    }
-
-    if (student.schoolId !== teacher.schoolId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    // Delete student (will cascade delete user due to onDelete: Cascade)
-    await prisma.student.delete({
-      where: { id: (await params).id }
-    })
-
-    return NextResponse.json({
-      success: true,
-      message: 'Student deleted successfully'
-    })
-  } catch (error) {
-    console.error('Error deleting student:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete student' },
-      { status: 500 }
-    )
-  }
-}
+  return NextResponse.json({ message: 'Student deleted successfully' })
+})

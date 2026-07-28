@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,19 +18,55 @@ import {
 
 type Mode = 'single' | 'term'
 
+interface KICDOrganisationStep {
+  duration: number
+  teacherActivity: string
+  learnerActivity: string
+}
+
+interface KICDOrganisation {
+  introduction: KICDOrganisationStep
+  step1: KICDOrganisationStep
+  step2: KICDOrganisationStep
+  step3: KICDOrganisationStep
+  conclusion: KICDOrganisationStep
+}
+
+interface KICDLessonHeader {
+  school?: string
+  teacher?: string
+  learningArea?: string
+  grade?: string
+  term?: string
+  week?: number
+  lesson?: number
+  date?: string
+  duration?: number
+  enrolment?: number
+}
+
 interface LessonPlanData {
   title?: string
   duration?: number
+  // New KICD 11-section format
+  lessonHeader?: KICDLessonHeader
   strand?: string
   subStrand?: string
-  specificLearningOutcomes?: string
+  specificLearningOutcomes?: string | string[]
   keyInquiryQuestions?: string[]
+  coreCompetencies?: string[]
+  values?: string[]
+  pcis?: string[]
+  learningResources?: string[]
+  organisationOfLearning?: KICDOrganisation
+  assessment?: string
+  extendedActivities?: string
+  reflection?: string
+  // Legacy fields for backward compat
   introduction?: { duration?: number; activity?: string; teacherActions?: string; studentActions?: string }
   mainActivity?: { duration?: number; activity?: string; teacherActions?: string; studentActions?: string; coreCompetencies?: string[] }
   practiceActivity?: { duration?: number; activity?: string }
   conclusion?: { duration?: number; activity?: string; assessment?: string }
-  learningResources?: string[]
-  assessment?: string
   differentiation?: { support?: string; extension?: string }
   homework?: string
   teacherReflection?: string
@@ -95,6 +131,38 @@ export default function CreateLessonPlan() {
   const [expandedLesson, setExpandedLesson] = useState<string | null>(null)
   const [documentContext, setDocumentContext] = useState<string | null>(null)
 
+  // Auto-populate state
+  const [availableTopics, setAvailableTopics] = useState<{ strandName: string; substrands: { name: string; learningOutcomes: string[]; activities: string[] }[] }[]>([])
+  const [loadingTopics, setLoadingTopics] = useState(false)
+
+  // Fetch CBC topics when subject + grade changes
+  useEffect(() => {
+    const curSubject = mode === 'single' ? formData.subject : termData.subject
+    const curGrade = mode === 'single' ? formData.grade : termData.grade
+    const curTerm = mode === 'single' ? null : termData.term
+    if (!curSubject || !curGrade) { setAvailableTopics([]); return }
+
+    const fetchTopics = async () => {
+      setLoadingTopics(true)
+      try {
+        const termNum = curTerm ? parseInt(curTerm.replace('Term ', '')) : undefined
+        const res = await fetch('/api/curriculum/auto-populate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ grade: curGrade, subject: curSubject, term: termNum }),
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setAvailableTopics(data.topics || [])
+        } else {
+          setAvailableTopics([])
+        }
+      } catch { setAvailableTopics([]) }
+      finally { setLoadingTopics(false) }
+    }
+    fetchTopics()
+  }, [mode, formData.subject, formData.grade, termData.subject, termData.grade, termData.term])
+
   const currentSubject = mode === 'single' ? formData.subject : termData.subject
   const currentGrade = mode === 'single' ? formData.grade : termData.grade
 
@@ -133,7 +201,7 @@ export default function CreateLessonPlan() {
   const handleDocUploaded = async (doc: { name: string; url: string; docType: string; extractedText?: string | null }) => {
     if (doc.extractedText) {
       setDocumentContext(doc.extractedText)
-      toast({ title: 'Document loaded as reference', variant: 'success' as any })
+      toast({ title: 'Document loaded as reference', variant: 'success' })
     } else {
       toast({ variant: 'destructive', title: 'Could not extract text from document' })
     }
@@ -221,7 +289,7 @@ export default function CreateLessonPlan() {
       })
 
       if (res.ok) {
-        toast({ title: 'Saved successfully', variant: 'success' as any })
+        toast({ title: 'Saved successfully', variant: 'success' })
         router.push('/teacher/lesson-plans')
       } else {
         const err = await res.json()
@@ -244,56 +312,152 @@ export default function CreateLessonPlan() {
     </div>
   )
 
-  const renderLessonCard = (lesson: LessonPlanData, index?: number) => (
+  const isKICDFormat = (lesson: LessonPlanData) => lesson.organisationOfLearning || lesson.coreCompetencies
+
+  const renderStep = (label: string, step: KICDOrganisationStep) => (
+    <SectionBlock label={label}>
+      <p className="text-xs text-slate-500 mb-0.5">{step.duration} min</p>
+      <div className="text-xs mb-1"><span className="font-medium text-blue-700">Teacher:</span> {step.teacherActivity}</div>
+      <div className="text-xs"><span className="font-medium text-green-700">Learner:</span> {step.learnerActivity}</div>
+    </SectionBlock>
+  )
+
+  const renderLessonCard = (lesson: LessonPlanData, index?: number) => {
+    const useKICD = isKICDFormat(lesson)
+
+    return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" key={index || 0}>
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3">
         <h3 className="text-white font-bold text-sm">{lesson.title || 'Lesson Plan'}</h3>
-        {lesson.duration && <p className="text-blue-100 text-xs mt-0.5"><Clock className="w-3 h-3 inline mr-1" />{lesson.duration} minutes</p>}
+        <div className="flex flex-wrap gap-2 mt-1">
+          {lesson.duration && <span className="text-blue-100 text-xs"><Clock className="w-3 h-3 inline mr-1" />{lesson.duration} min</span>}
+          {useKICD && lesson.strand && <span className="text-blue-100 text-xs"><BookOpen className="w-3 h-3 inline mr-1" />{lesson.strand}</span>}
+        </div>
       </div>
       <div className="p-4 space-y-3">
-        {lesson.specificLearningOutcomes && (
-          <SectionBlock label="Learning Outcomes">
-            <p>{lesson.specificLearningOutcomes}</p>
+        {/* ── KICD Header row ── */}
+        {useKICD && lesson.lessonHeader && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2 text-xs bg-slate-50 rounded-lg p-3 border border-slate-100">
+            {lesson.lessonHeader.school && <div><span className="font-medium">School:</span> {lesson.lessonHeader.school}</div>}
+            {lesson.lessonHeader.grade && <div><span className="font-medium">Grade:</span> {lesson.lessonHeader.grade}</div>}
+            {lesson.lessonHeader.term && <div><span className="font-medium">Term:</span> {lesson.lessonHeader.term}</div>}
+            {lesson.lessonHeader.week && <div><span className="font-medium">Week:</span> {lesson.lessonHeader.week}</div>}
+            {lesson.lessonHeader.lesson && <div><span className="font-medium">Lesson:</span> {lesson.lessonHeader.lesson}</div>}
+            {lesson.lessonHeader.duration && <div><span className="font-medium">Duration:</span> {lesson.lessonHeader.duration} min</div>}
+            {lesson.lessonHeader.date && <div><span className="font-medium">Date:</span> {lesson.lessonHeader.date}</div>}
+            {lesson.lessonHeader.enrolment ? <div><span className="font-medium">Enrolment:</span> {lesson.lessonHeader.enrolment}</div> : null}
+          </div>
+        )}
+
+        {/* ── Strand / Sub-Strand ── */}
+        {(lesson.strand || lesson.subStrand) && (
+          <SectionBlock label="Strand / Sub-Strand">
+            <p>{lesson.strand}{lesson.strand && lesson.subStrand ? ' → ' : ''}{lesson.subStrand}</p>
           </SectionBlock>
         )}
+
+        {/* ── SLOs ── */}
+        {lesson.specificLearningOutcomes && (Array.isArray(lesson.specificLearningOutcomes) ? (
+          <SectionBlock label="Specific Learning Outcomes">
+            {lesson.specificLearningOutcomes.map((slo, i) => (
+              <p key={i} className="mb-0.5">{i + 1}. {slo}</p>
+            ))}
+          </SectionBlock>
+        ) : (
+          <SectionBlock label="Learning Outcomes">
+            <p>{lesson.specificLearningOutcomes as string}</p>
+          </SectionBlock>
+        ))}
+
+        {/* ── KIQs ── */}
         {lesson.keyInquiryQuestions && lesson.keyInquiryQuestions.length > 0 && (
-          <SectionBlock label="Key Inquiry Questions">
+          <SectionBlock label="Key Inquiry Question(s)">
             <ul className="list-disc list-inside space-y-0.5">
               {lesson.keyInquiryQuestions.map((q, i) => <li key={i}>{q}</li>)}
             </ul>
           </SectionBlock>
         )}
-        {lesson.introduction && (
-          <SectionBlock label="Introduction">
-            <p className="text-xs text-slate-500 mb-0.5">{lesson.introduction.duration} min</p>
-            <p>{lesson.introduction.activity}</p>
+
+        {/* ── Core Competencies (KICD) ── */}
+        {lesson.coreCompetencies && lesson.coreCompetencies.length > 0 && (
+          <SectionBlock label="Core Competencies">
+            <div className="flex flex-wrap gap-1">
+              {lesson.coreCompetencies.map((c, i) => (
+                <span key={i} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">{c}</span>
+              ))}
+            </div>
           </SectionBlock>
         )}
-        {lesson.mainActivity && (
-          <SectionBlock label="Main Activity">
-            <p className="text-xs text-slate-500 mb-0.5">{lesson.mainActivity.duration} min</p>
-            <p>{lesson.mainActivity.activity}</p>
-            {lesson.mainActivity.coreCompetencies && lesson.mainActivity.coreCompetencies.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {lesson.mainActivity.coreCompetencies.map((c, i) => (
-                  <span key={i} className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">{c}</span>
-                ))}
-              </div>
+
+        {/* ── Values (KICD) ── */}
+        {lesson.values && lesson.values.length > 0 && (
+          <SectionBlock label="Values">
+            <div className="flex flex-wrap gap-1">
+              {lesson.values.map((v, i) => (
+                <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{v}</span>
+              ))}
+            </div>
+          </SectionBlock>
+        )}
+
+        {/* ── PCIs (KICD) ── */}
+        {lesson.pcis && lesson.pcis.length > 0 && (
+          <SectionBlock label="Pertinent & Contemporary Issues">
+            <div className="flex flex-wrap gap-1">
+              {lesson.pcis.map((p, i) => (
+                <span key={i} className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{p}</span>
+              ))}
+            </div>
+          </SectionBlock>
+        )}
+
+        {/* ── Organisation of Learning (KICD) ── */}
+        {lesson.organisationOfLearning ? (
+          <>
+            {lesson.organisationOfLearning.introduction && renderStep('Introduction', lesson.organisationOfLearning.introduction)}
+            {lesson.organisationOfLearning.step1 && renderStep('Step 1', lesson.organisationOfLearning.step1)}
+            {lesson.organisationOfLearning.step2 && renderStep('Step 2', lesson.organisationOfLearning.step2)}
+            {lesson.organisationOfLearning.step3 && renderStep('Step 3', lesson.organisationOfLearning.step3)}
+            {lesson.organisationOfLearning.conclusion && renderStep('Conclusion', lesson.organisationOfLearning.conclusion)}
+          </>
+        ) : (
+          <>
+            {/* ── Legacy structure (backward compat) ── */}
+            {lesson.introduction && (
+              <SectionBlock label="Introduction">
+                <p className="text-xs text-slate-500 mb-0.5">{lesson.introduction.duration} min</p>
+                <p>{lesson.introduction.activity}</p>
+              </SectionBlock>
             )}
-          </SectionBlock>
+            {lesson.mainActivity && (
+              <SectionBlock label="Main Activity">
+                <p className="text-xs text-slate-500 mb-0.5">{lesson.mainActivity.duration} min</p>
+                <p>{lesson.mainActivity.activity}</p>
+                {lesson.mainActivity.coreCompetencies && lesson.mainActivity.coreCompetencies.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {lesson.mainActivity.coreCompetencies.map((c, i) => (
+                      <span key={i} className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">{c}</span>
+                    ))}
+                  </div>
+                )}
+              </SectionBlock>
+            )}
+            {lesson.practiceActivity && (
+              <SectionBlock label="Practice">
+                <p className="text-xs text-slate-500 mb-0.5">{lesson.practiceActivity.duration} min</p>
+                <p>{lesson.practiceActivity.activity}</p>
+              </SectionBlock>
+            )}
+            {lesson.conclusion && (
+              <SectionBlock label="Conclusion">
+                <p className="text-xs text-slate-500 mb-0.5">{lesson.conclusion.duration} min</p>
+                <p>{lesson.conclusion.activity}</p>
+              </SectionBlock>
+            )}
+          </>
         )}
-        {lesson.practiceActivity && (
-          <SectionBlock label="Practice">
-            <p className="text-xs text-slate-500 mb-0.5">{lesson.practiceActivity.duration} min</p>
-            <p>{lesson.practiceActivity.activity}</p>
-          </SectionBlock>
-        )}
-        {lesson.conclusion && (
-          <SectionBlock label="Conclusion">
-            <p className="text-xs text-slate-500 mb-0.5">{lesson.conclusion.duration} min</p>
-            <p>{lesson.conclusion.activity}</p>
-          </SectionBlock>
-        )}
+
+        {/* ── Learning Resources ── */}
         {lesson.learningResources && lesson.learningResources.length > 0 && (
           <SectionBlock label="Resources">
             <ul className="list-disc list-inside space-y-0.5">
@@ -301,30 +465,39 @@ export default function CreateLessonPlan() {
             </ul>
           </SectionBlock>
         )}
+
+        {/* ── Assessment ── */}
         {lesson.assessment && (
           <SectionBlock label="Assessment">
             <p>{lesson.assessment}</p>
           </SectionBlock>
         )}
+
+        {/* ── Extended Activities (KICD) / Legacy fields ── */}
+        {(lesson.extendedActivities || lesson.homework) && (
+          <SectionBlock label={lesson.extendedActivities ? 'Extended Activities' : 'Homework'}>
+            <p>{lesson.extendedActivities || lesson.homework}</p>
+          </SectionBlock>
+        )}
+
+        {/* ── Differentiation (legacy) ── */}
         {lesson.differentiation && (
           <SectionBlock label="Differentiation">
             {lesson.differentiation.support && <p className="mb-0.5"><span className="font-medium">Support:</span> {lesson.differentiation.support}</p>}
             {lesson.differentiation.extension && <p><span className="font-medium">Extension:</span> {lesson.differentiation.extension}</p>}
           </SectionBlock>
         )}
-        {lesson.homework && (
-          <SectionBlock label="Homework">
-            <p>{lesson.homework}</p>
-          </SectionBlock>
-        )}
-        {lesson.teacherReflection && (
+
+        {/* ── Reflection ── */}
+        {(lesson.reflection || lesson.teacherReflection) && (
           <SectionBlock label="Teacher Reflection">
-            <p className="italic text-slate-500">{lesson.teacherReflection}</p>
+            <p className="italic text-slate-500">{lesson.reflection || lesson.teacherReflection}</p>
           </SectionBlock>
         )}
       </div>
     </div>
   )
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
@@ -389,7 +562,36 @@ export default function CreateLessonPlan() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Topic</label>
-                <Input name="topic" value={formData.topic} onChange={handleSingleChange} placeholder="e.g. Addition of Fractions" className="h-10" required />
+                {loadingTopics ? (
+                  <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-400">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading topics...
+                  </div>
+                ) : availableTopics.length > 0 ? (
+                  <Select name="topic" value={formData.topic} onValueChange={(v) => {
+                    setFormData(prev => ({ ...prev, topic: v }))
+                    // Auto-populate learning outcomes from selected substrand
+                    for (const strand of availableTopics) {
+                      const sub = strand.substrands.find(s => s.name === v)
+                      if (sub && sub.learningOutcomes.length > 0) {
+                        setFormData(prev => ({ ...prev, objectives: sub.learningOutcomes }))
+                      }
+                    }
+                  }}>
+                    <SelectTrigger><SelectValue placeholder="Select a topic from CBC curriculum..." /></SelectTrigger>
+                    <SelectContent>
+                      {availableTopics.map(strand => (
+                        <div key={strand.strandName}>
+                          <div className="px-2 py-1 text-xs font-bold text-slate-400 uppercase tracking-wide">{strand.strandName}</div>
+                          {strand.substrands.map(sub => (
+                            <SelectItem key={sub.name} value={sub.name}>{sub.name}</SelectItem>
+                          ))}
+                        </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input name="topic" value={formData.topic} onChange={handleSingleChange} placeholder="e.g. Addition of Fractions" className="h-10" required />
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Duration (minutes)</label>
@@ -481,13 +683,43 @@ export default function CreateLessonPlan() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Topics to Cover ({termData.topics.filter(t => t.trim()).length})</label>
-                {termData.topics.map((t, i) => (
-                  <div key={i} className="flex gap-2 mb-2">
-                    <Input value={t} onChange={e => handleTermTopicChange(i, e.target.value)} placeholder="e.g. Algebra, Geometry, Statistics" className="h-10" />
-                    {termData.topics.length > 1 && <Button variant="outline" size="sm" onClick={() => removeTermTopic(i)}><Trash2 className="w-4 h-4" /></Button>}
+                {loadingTopics ? (
+                  <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-400">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading topics...
                   </div>
-                ))}
-                <Button variant="ghost" size="sm" onClick={addTermTopic} className="mt-1"><Plus className="w-4 h-4 mr-1" />Add Topic</Button>
+                ) : availableTopics.length > 0 ? (
+                  <>
+                    {termData.topics.map((t, i) => (
+                      <div key={i} className="flex gap-2 mb-2">
+                        <Select value={t} onValueChange={v => handleTermTopicChange(i, v)}>
+                          <SelectTrigger><SelectValue placeholder="Select topic..." /></SelectTrigger>
+                          <SelectContent>
+                            {availableTopics.map(strand => (
+                              <div key={strand.strandName}>
+                                <div className="px-2 py-1 text-xs font-bold text-slate-400 uppercase tracking-wide">{strand.strandName}</div>
+                                {strand.substrands.map(sub => (
+                                  <SelectItem key={`${strand.strandName}-${sub.name}`} value={sub.name}>{sub.name}</SelectItem>
+                                ))}
+                              </div>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {termData.topics.length > 1 && <Button variant="outline" size="sm" onClick={() => removeTermTopic(i)}><Trash2 className="w-4 h-4" /></Button>}
+                      </div>
+                    ))}
+                    <Button variant="ghost" size="sm" onClick={addTermTopic} className="mt-1"><Plus className="w-4 h-4 mr-1" />Add Topic</Button>
+                  </>
+                ) : (
+                  <>
+                    {termData.topics.map((t, i) => (
+                      <div key={i} className="flex gap-2 mb-2">
+                        <Input value={t} onChange={e => handleTermTopicChange(i, e.target.value)} placeholder="e.g. Algebra, Geometry, Statistics" className="h-10" />
+                        {termData.topics.length > 1 && <Button variant="outline" size="sm" onClick={() => removeTermTopic(i)}><Trash2 className="w-4 h-4" /></Button>}
+                      </div>
+                    ))}
+                    <Button variant="ghost" size="sm" onClick={addTermTopic} className="mt-1"><Plus className="w-4 h-4 mr-1" />Add Topic</Button>
+                  </>
+                )}
               </div>
               <p className="text-xs text-slate-500">Total lessons: {termData.weeksCount * termData.lessonsPerWeek}</p>
             </>

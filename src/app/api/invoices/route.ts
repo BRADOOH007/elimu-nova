@@ -1,19 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is super admin or school admin
-    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'SCHOOL_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+export const GET = route({ auth: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] }, async (req, { user }) => {
 
     const { searchParams } = new URL(req.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -30,10 +19,10 @@ export async function GET(req: NextRequest) {
     const where: any = {}
     
     // For school admins, filter by their school
-    if (session.user.role === 'SCHOOL_ADMIN') {
+    if (user.role === 'SCHOOL_ADMIN') {
       // Get the school admin's school ID
       const schoolAdmin = await prisma.schoolAdmin.findFirst({
-        where: { userId: session.user.id },
+        where: { userId: user.id },
         select: { schoolId: true }
       })
       
@@ -113,21 +102,9 @@ export async function GET(req: NextRequest) {
         hasPrev: page > 1
       }
     })
-  } catch (error) {
-    console.error('Error fetching invoices:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch invoices' },
-      { status: 500 }
-    )
-  }
-}
+})
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+export const POST = route({ auth: 'SUPER_ADMIN' }, async (req) => {
 
     const body = await req.json()
     const { 
@@ -211,11 +188,4 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json(invoice, { status: 201 })
-  } catch (error) {
-    console.error('Error creating invoice:', error)
-    return NextResponse.json(
-      { error: 'Failed to create invoice' },
-      { status: 500 }
-    )
-  }
-}
+})

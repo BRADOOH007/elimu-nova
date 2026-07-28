@@ -304,31 +304,31 @@ export default function HopePage() {
   return (
     <div className="max-w-6xl mx-auto h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="mb-4 flex-shrink-0">
-        <div className="flex items-center space-x-4 mb-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0">
-            <Brain className="w-6 h-6 text-white" />
+      <div className="flex-shrink-0">
+        <div className="flex items-center space-x-3 mb-2">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+            <Brain className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Hope AI Assistant</h1>
-            <p className="text-sm text-gray-600">Your intelligent teaching companion</p>
+            <h1 className="text-xl font-bold text-gray-900">Hope AI Assistant</h1>
+            <p className="text-xs text-gray-600">Your intelligent teaching companion</p>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 overflow-hidden min-h-0">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 overflow-hidden min-h-0">
         {/* Chat Interface */}
-        <div className="lg:col-span-3 xl:col-span-4 overflow-hidden min-h-0 flex flex-col">
+        <div className="lg:col-span-3 overflow-hidden min-h-0 flex flex-col">
           <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0 flex flex-col flex-1 overflow-hidden min-h-0">
-            <CardHeader className="border-0 flex-shrink-0">
+            <CardHeader className="border-0 flex-shrink-0 py-2 px-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-5 h-5 text-white" />
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="text-lg">Chat with Hope</CardTitle>
-                    <CardDescription>AI-powered teaching assistance</CardDescription>
+                    <CardTitle className="text-sm">Chat with Hope</CardTitle>
+                    <CardDescription className="text-xs">AI-powered teaching assistance</CardDescription>
                   </div>
                 </div>
                 <Button
@@ -439,7 +439,7 @@ export default function HopePage() {
               )}
 
               {/* Input Area */}
-              <div className="border-0 p-4 flex-shrink-0">
+              <div className="border-0 p-3 flex-shrink-0">
                 <div className="flex items-center space-x-3">
                   <div className="flex-1 relative">
                     <Input
@@ -493,7 +493,7 @@ export default function HopePage() {
         </div>
 
         {/* Sidebar */}
-        <div className="hidden lg:flex lg:col-span-2 xl:col-span-1 flex-col gap-4 overflow-y-auto min-h-0">
+        <div className="hidden lg:flex lg:col-span-1 flex-col gap-4 overflow-y-auto min-h-0">
           {/* Quick Actions */}
           <Card className="bg-gradient-to-br from-white via-green-50 to-emerald-50 shadow-lg backdrop-blur-sm border-0 flex-shrink-0">
             <CardHeader className="pb-3">

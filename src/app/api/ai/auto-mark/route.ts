@@ -2,21 +2,12 @@
  * POST /api/ai/auto-mark
  * AI Auto-Mark Assignment — grades student submission against rubric
  */
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { rateLimitAI, getIP, checkRateLimit } from '@/lib/rate-limit'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
+import { route } from '@/lib/api-middleware'
 
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const rl = await checkRateLimit(session.user.id || getIP(request), rateLimitAI)
-    if (!rl.allowed) return NextResponse.json({ error: `Rate limit. Retry in ${rl.resetInSec}s` }, { status: 429 })
-
+export const POST = route({}, async (request, { user }) => {
     const { submissionId, assignmentTitle, submissionText, rubric, totalMarks = 100 } = await request.json()
     if (!submissionText) return NextResponse.json({ error: 'submissionText required' }, { status: 400 })
 
@@ -86,8 +77,4 @@ Be encouraging but honest. Use Kenyan educational context.`
     }
 
     return NextResponse.json({ result, submissionId })
-  } catch (e: any) {
-    console.error('[AUTO_MARK]', e)
-    return NextResponse.json({ error: e.message }, { status: 500 })
-  }
-}
+})

@@ -1,96 +1,67 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { 
-  Loader2, 
-  CreditCard, 
-  School, 
-  Package, 
-  Calendar,
-  DollarSign,
-  Edit,
-  Trash2,
-  Save,
-  X,
-  Clock,
-  User,
-  Phone,
-  Mail,
-  MapPin
+  Loader2, CreditCard, Calendar, DollarSign,
+  Edit, Trash2, Save, X, Clock, User, Phone, Mail, MapPin, RefreshCw, Package,
+  Building2, Tag, Hash, Receipt, CheckCircle, AlertCircle, Ban
 } from "lucide-react"
+import { confirmToast } from '@/lib/confirm-toast'
 
 interface School {
-  id: string
-  name: string
+  id: string; name: string
 }
 
 interface Package {
-  id: string
-  name: string
-  price: number
-  duration: number
-  isActive: boolean
+  id: string; name: string; price: number; duration: number; isActive: boolean
 }
 
 interface Billing {
-  id: string
-  startDate: string
-  endDate: string
-  amount: number
-  status: string
-  type: string
-  paymentMethod: string
-  transactionId?: string
-  notes?: string
-  createdAt: string
-  updatedAt: string
-  school: {
-    id: string
-    name: string
-    address: string
-    phone?: string
-    email?: string
-    schoolAdmin?: {
-      user: {
-        firstName: string
-        lastName: string
-        email: string
-      }
-    }
-  }
-  package: {
-    id: string
-    name: string
-    description?: string
-    price: number
-    duration: number
-    features?: string[]
-  }
+  id: string; startDate: string; endDate: string; amount: number
+  status: string; type: string; paymentMethod: string
+  transactionId?: string; notes?: string; createdAt: string; updatedAt: string
+  school: { id: string; name: string; address: string; phone?: string; email?: string; schoolAdmin?: { user: { firstName: string; lastName: string; email: string } } } | null
+  user?: { id: string; firstName: string; lastName: string; email: string } | null
+  package: { id: string; name: string; description?: string; price: number; duration: number; features?: string[] }
 }
 
 interface BillingDetailsModalProps {
-  isOpen: boolean
-  onClose: () => void
-  billingId: string | null
-  onBillingUpdated: (billing: Billing) => void
-  onBillingDeleted: (billingId: string) => void
+  isOpen: boolean; onClose: () => void; billingId: string | null
+  onBillingUpdated: (billing: Billing) => void; onBillingDeleted: (billingId: string) => void
 }
 
-export function BillingDetailsModal({ 
-  isOpen, 
-  onClose, 
-  billingId, 
-  onBillingUpdated, 
-  onBillingDeleted 
-}: BillingDetailsModalProps) {
+function StatusBadge({ status }: { status: string }) {
+  const config: Record<string, { bg: string; text: string; dot: string; icon: any }> = {
+    ACTIVE:    { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700', dot: 'bg-emerald-500', icon: CheckCircle },
+    PENDING:   { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700', dot: 'bg-amber-500', icon: Clock },
+    CANCELLED: { bg: 'bg-red-50 border-red-200', text: 'text-red-700', dot: 'bg-red-500', icon: Ban },
+    EXPIRED:   { bg: 'bg-slate-50 border-slate-200', text: 'text-slate-600', dot: 'bg-slate-400', icon: AlertCircle },
+  }
+  const c = config[status] || config.EXPIRED
+  const Icon = c.icon
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${c.bg} ${c.text}`}>
+      <Icon className="w-3.5 h-3.5" />
+      {status}
+    </span>
+  )
+}
+
+function formatDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function formatCurrency(n: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+}
+
+export function BillingDetailsModal({ isOpen, onClose, billingId, onBillingUpdated, onBillingDeleted }: BillingDetailsModalProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -99,634 +70,469 @@ export function BillingDetailsModal({
   const [billing, setBilling] = useState<Billing | null>(null)
   const [schools, setSchools] = useState<School[]>([])
   const [packages, setPackages] = useState<Package[]>([])
+  const [renewing, setRenewing] = useState(false)
+  const [renewPackageId, setRenewPackageId] = useState('')
+  const [renewLoading, setRenewLoading] = useState(false)
   const [formData, setFormData] = useState({
-    schoolId: '',
-    packageId: '',
-    startDate: '',
-    endDate: '',
-    amount: '',
-    status: '',
-    type: '',
-    paymentMethod: '',
-    transactionId: '',
-    notes: ''
+    schoolId: '', packageId: '', startDate: '', endDate: '', amount: '',
+    status: '', type: '', paymentMethod: '', transactionId: '', notes: ''
   })
 
-  // Fetch billing data
   const fetchBilling = async () => {
     if (!billingId) return
-
     setLoading(true)
     try {
-      const response = await fetch(`/api/billing/${billingId}`)
-      if (response.ok) {
-        const billingData = await response.json()
-        setBilling(billingData)
+      const res = await fetch(`/api/billing/${billingId}`)
+      if (res.ok) {
+        const d = await res.json()
+        setBilling(d)
         setFormData({
-          schoolId: billingData.school.id,
-          packageId: billingData.package.id,
-          startDate: billingData.startDate.split('T')[0],
-          endDate: billingData.endDate.split('T')[0],
-          amount: billingData.amount.toString(),
-          status: billingData.status,
-          type: billingData.type,
-          paymentMethod: billingData.paymentMethod,
-          transactionId: billingData.transactionId || '',
-          notes: billingData.notes || ''
+          schoolId: d.school?.id || '', packageId: d.package.id,
+          startDate: d.startDate.split('T')[0], endDate: d.endDate.split('T')[0],
+          amount: d.amount.toString(), status: d.status, type: d.type,
+          paymentMethod: d.paymentMethod, transactionId: d.transactionId || '', notes: d.notes || ''
         })
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to fetch billing details",
-        })
-      }
-    } catch (error) {
-      console.error('Error fetching billing:', error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to fetch billing details",
-      })
-    } finally {
-      setLoading(false)
-    }
+      } else { toast({ variant: "destructive", title: "Error", description: "Failed to fetch billing details" }) }
+    } catch {
+      toast({ variant: "destructive", title: "Error", description: "Failed to fetch billing details" })
+    } finally { setLoading(false) }
   }
 
-  // Fetch schools and packages
   const fetchData = async () => {
     try {
-      const [schoolsResponse, packagesResponse] = await Promise.all([
-        fetch('/api/schools?limit=100'),
-        fetch('/api/packages')
+      const [sr, pr] = await Promise.all([
+        fetch('/api/schools?limit=100'), fetch('/api/packages')
       ])
-
-      if (schoolsResponse.ok) {
-        const schoolsData = await schoolsResponse.json()
-        setSchools(schoolsData.schools || [])
-      }
-
-      if (packagesResponse.ok) {
-        const packagesData = await packagesResponse.json()
-        setPackages(packagesData.packages || [])
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    }
+      if (sr.ok) { const d = await sr.json(); setSchools(d.schools || []) }
+      if (pr.ok) { const d = await pr.json(); setPackages(d.packages || []) }
+    } catch { /* ignore */ }
   }
 
   useEffect(() => {
-    if (isOpen && billingId) {
-      fetchBilling()
-      fetchData()
-    }
+    if (isOpen && billingId) { fetchBilling(); fetchData() }
   }, [isOpen, billingId])
 
   const handleSave = async () => {
     if (!billingId) return
-
     setSaving(true)
     try {
-      const response = await fetch(`/api/billing/${billingId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          amount: parseFloat(formData.amount)
-        }),
+      const res = await fetch(`/api/billing/${billingId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, amount: parseFloat(formData.amount) }),
       })
-
-      if (response.ok) {
-        const updatedBilling = await response.json()
-        setBilling(updatedBilling)
-        onBillingUpdated(updatedBilling)
-        setEditing(false)
-        toast({
-          variant: "default",
-          title: "Billing Updated",
-          description: "Billing information has been updated successfully!",
-        })
+      if (res.ok) {
+        const updated = await res.json()
+        setBilling(updated); onBillingUpdated(updated); setEditing(false)
+        toast({ title: "Billing Updated", description: "Billing information has been updated successfully!" })
       } else {
-        const error = await response.json()
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.error || "Failed to update billing",
-        })
+        const err = await res.json()
+        toast({ variant: "destructive", title: "Error", description: err.error || "Failed to update billing" })
       }
-    } catch (error) {
-      console.error('Error updating billing:', error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to update billing",
-      })
-    } finally {
-      setSaving(false)
-    }
+    } catch { toast({ variant: "destructive", title: "Error", description: "Failed to update billing" }) }
+    finally { setSaving(false) }
   }
 
   const handleDelete = async () => {
     if (!billingId) return
-
-    if (!confirm('Delete this billing record? This cannot be undone.')) return
-
+    if (!(await confirmToast({ title: 'Delete this billing record? This cannot be undone.', variant: 'destructive' }))) return
     setDeleting(true)
     try {
-      const response = await fetch(`/api/billing/${billingId}`, {
-        method: 'DELETE',
+      const res = await fetch(`/api/billing/${billingId}`, { method: 'DELETE' })
+      if (res.ok) { onBillingDeleted(billingId); onClose(); toast({ title: "Deleted", description: "Billing record deleted successfully!" }) }
+      else { const err = await res.json(); toast({ variant: "destructive", title: "Error", description: err.error || "Failed to delete" }) }
+    } catch { toast({ variant: "destructive", title: "Error", description: "Failed to delete" }) }
+    finally { setDeleting(false) }
+  }
+
+  const handleRenew = async () => {
+    if (!billingId || !renewPackageId) return
+    setRenewLoading(true)
+    try {
+      const res = await fetch('/api/billing/renew', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriptionId: billingId, packageId: renewPackageId })
       })
-
-      if (response.ok) {
-        onBillingDeleted(billingId)
-        onClose()
-        toast({
-          variant: "default",
-          title: "Billing Deleted",
-          description: "Billing record has been deleted successfully!",
-        })
-      } else {
-        const error = await response.json()
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.error || "Failed to delete billing record",
-        })
-      }
-    } catch (error) {
-      console.error('Error deleting billing:', error)
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to delete billing record",
-      })
-    } finally {
-      setDeleting(false)
-    }
+      if (res.ok) {
+        const data = await res.json()
+        onBillingUpdated(data.subscription); setRenewing(false); setRenewPackageId('')
+        toast({ title: 'Renewed', description: 'Subscription renewed successfully!' })
+        fetchBilling()
+      } else { const err = await res.json(); toast({ variant: 'destructive', title: 'Error', description: err.error || 'Failed to renew' }) }
+    } catch { toast({ variant: 'destructive', title: 'Error', description: 'Failed to renew' }) }
+    finally { setRenewLoading(false) }
   }
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
+  const handleInputChange = (field: string, value: string) => setFormData(prev => ({ ...prev, [field]: value }))
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'bg-green-100 text-green-800'
-      case 'EXPIRED':
-        return 'bg-red-100 text-red-800'
-      case 'CANCELLED':
-        return 'bg-gray-100 text-gray-800'
-      case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
+  if (loading) return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-white">
+        <DialogHeader><DialogTitle className="text-slate-800 flex items-center gap-2"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> Loading</DialogTitle></DialogHeader>
+        <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-slate-300" /></div>
+      </DialogContent>
+    </Dialog>
+  )
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'SUBSCRIPTION':
-        return 'bg-blue-100 text-blue-800'
-      case 'ONE_TIME':
-        return 'bg-purple-100 text-purple-800'
-      case 'RENEWAL':
-        return 'bg-green-100 text-green-800'
-      case 'UPGRADE':
-        return 'bg-orange-100 text-orange-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
+  if (!billing) return null
 
-  const isExpired = billing ? new Date(billing.endDate) < new Date() : false
-  const daysRemaining = billing ? Math.ceil((new Date(billing.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
+  const isExpired = new Date(billing.endDate) < new Date()
+  const isCancelled = billing.status === 'CANCELLED'
+  const canRenew = isExpired || isCancelled
+  const daysRemaining = Math.ceil((new Date(billing.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 
-  if (loading) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
-          <DialogHeader>
-            <DialogTitle className="edugenius-text-gradient-blue">Loading Billing Details</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-            <span className="ml-3 text-gray-500">Loading billing details...</span>
-          </div>
-        </DialogContent>
-      </Dialog>
-    )
-  }
+  const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value: string }) => (
+    <div className="flex items-center gap-2.5 text-sm">
+      <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+        <Icon className="w-3.5 h-3.5 text-slate-500" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-slate-400">{label}</p>
+        <p className="text-sm font-medium text-slate-800 truncate">{value}</p>
+      </div>
+    </div>
+  )
 
-  if (!billing) {
-    return null
-  }
+  const schoolInitials = billing.school?.name?.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || '??'
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
-        <DialogHeader className="sticky top-0 bg-gradient-to-br from-white via-blue-50 to-purple-50 z-10 pb-4">
-          <DialogTitle className="edugenius-text-gradient-blue flex items-center justify-between">
-            <div className="flex items-center">
-              <CreditCard className="w-5 h-5 mr-2" />
-              Billing Details
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto bg-white p-0 gap-0">
+        {/* ── Header ── */}
+        <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-sm">
+                <CreditCard className="w-4 h-4" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-semibold text-slate-800 m-0">Billing Details</DialogTitle>
+                <DialogDescription className="text-xs text-slate-400 m-0">View and manage subscription billing information</DialogDescription>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-2">
               {editing ? (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditing(false)}
-                    disabled={saving}
-                    className="edugenius-glass"
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="edugenius-button"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4 mr-1" />
-                    )}
-                    Save
-                  </Button>
+                  <button onClick={() => setEditing(false)} disabled={saving}
+                    className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-60">
+                    <X className="w-4 h-4" /> Cancel
+                  </button>
+                  <button onClick={handleSave} disabled={saving}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-60 shadow-sm">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
+                  </button>
                 </>
               ) : (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditing(true)}
-                    className="edugenius-glass"
-                  >
-                    <Edit className="w-4 h-4 mr-1" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    className="edugenius-glass text-red-600 hover:text-red-700"
-                  >
-                    {deleting ? (
-                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-4 h-4 mr-1" />
-                    )}
-                    Delete
-                  </Button>
+                  <button onClick={() => setEditing(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">
+                    <Edit className="w-4 h-4" /> Edit
+                  </button>
+                  <button onClick={handleDelete} disabled={deleting}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-60 shadow-sm">
+                    {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete
+                  </button>
                 </>
               )}
             </div>
-          </DialogTitle>
-          <DialogDescription>
-            View and manage billing information and subscription details
-          </DialogDescription>
-        </DialogHeader>
+          </div>
+        </div>
 
-        <div className="space-y-6 pb-4">
-          {/* Billing Information */}
-          <Card className="bg-gradient-to-br from-white/70 to-blue-50/70 backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="edugenius-text-gradient-blue">Billing Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="schoolId">School</Label>
-                  {editing ? (
-                    <Select value={formData.schoolId} onValueChange={(value) => handleInputChange('schoolId', value)}>
-                      <SelectTrigger className="edugenius-glass">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {schools && schools.length > 0 ? (
-                          schools.map((school) => (
-                            <SelectItem key={school.id} value={school.id}>
-                              {school.name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-schools" disabled>
-                            No schools available
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="flex items-center text-sm text-gray-900">
-                      <School className="w-4 h-4 mr-2 text-gray-400" />
-                      {billing.school.name}
+        <div className="p-6 space-y-6">
+          {/* ── Summary Bar ── */}
+          <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold shrink-0 shadow-sm ${
+                billing.status === 'ACTIVE' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' :
+                billing.status === 'PENDING' ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
+                billing.status === 'CANCELLED' ? 'bg-gradient-to-br from-red-500 to-rose-600' :
+                'bg-gradient-to-br from-slate-400 to-slate-500'
+              }`}>
+                {schoolInitials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800 truncate">
+                  {billing.school?.name || (billing.user ? `${billing.user.firstName} ${billing.user.lastName}` : 'Independent')}
+                </p>
+                <p className="text-xs text-slate-400">{billing.package.name}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="text-right">
+                <p className="text-xs text-slate-400">Amount</p>
+                <p className="text-sm font-bold text-slate-800">{formatCurrency(billing.amount)}</p>
+              </div>
+              <div className="w-px h-8 bg-slate-200" />
+              <div className="text-right">
+                <p className="text-xs text-slate-400">{isExpired ? 'Ended' : 'Remaining'}</p>
+                <p className={`text-sm font-bold ${isExpired ? 'text-red-600' : daysRemaining < 30 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {isExpired ? 'Expired' : `${daysRemaining}d`}
+                </p>
+              </div>
+              <div className="w-px h-8 bg-slate-200" />
+              <StatusBadge status={billing.status} />
+            </div>
+          </div>
+
+          {/* ── Two-column layout ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left column */}
+            <div className="space-y-6">
+              {/* Billing Information */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                    <Receipt className="w-4 h-4 text-indigo-500" /> Billing Information
+                  </h3>
+                </div>
+                <div className="px-5 py-4 space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-400 font-medium">School</Label>
+                    {editing ? (
+                      <Select value={formData.schoolId} onValueChange={v => handleInputChange('schoolId', v)}>
+                        <SelectTrigger className="h-10 border-slate-200 rounded-xl bg-slate-50">
+                          <SelectValue placeholder="Select school" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {schools.length ? schools.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>) : <SelectItem value="-" disabled>No schools</SelectItem>}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <InfoRow icon={Building2} label="School" value={billing.school?.name || (billing.user ? `${billing.user.firstName} ${billing.user.lastName}` : 'N/A')} />
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-slate-400 font-medium">Package</Label>
+                    {editing ? (
+                      <Select value={formData.packageId} onValueChange={v => handleInputChange('packageId', v)}>
+                        <SelectTrigger className="h-10 border-slate-200 rounded-xl bg-slate-50">
+                          <SelectValue placeholder="Select package" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {packages.filter(p => p.isActive).map(p => <SelectItem key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <InfoRow icon={Package} label="Package" value={billing.package.name} />
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-400 font-medium">Start Date</Label>
+                      {editing ? (
+                        <Input type="date" value={formData.startDate} onChange={e => handleInputChange('startDate', e.target.value)} className="h-10 border-slate-200 rounded-xl bg-slate-50" />
+                      ) : (
+                        <InfoRow icon={Calendar} label="Start" value={formatDate(billing.startDate)} />
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-400 font-medium">End Date</Label>
+                      {editing ? (
+                        <Input type="date" value={formData.endDate} onChange={e => handleInputChange('endDate', e.target.value)} className="h-10 border-slate-200 rounded-xl bg-slate-50" />
+                      ) : (
+                        <InfoRow icon={Calendar} label="End" value={formatDate(billing.endDate)} />
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-400 font-medium">Amount</Label>
+                      {editing ? (
+                        <Input type="number" step="0.01" value={formData.amount} onChange={e => handleInputChange('amount', e.target.value)} className="h-10 border-slate-200 rounded-xl bg-slate-50" />
+                      ) : (
+                        <InfoRow icon={DollarSign} label="Amount" value={formatCurrency(billing.amount)} />
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-400 font-medium">Status</Label>
+                      {editing ? (
+                        <Select value={formData.status} onValueChange={v => handleInputChange('status', v)}>
+                          <SelectTrigger className="h-10 border-slate-200 rounded-xl bg-slate-50">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['ACTIVE', 'PENDING', 'EXPIRED', 'CANCELLED'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <StatusBadge status={billing.status} />
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-400 font-medium">Type</Label>
+                      {editing ? (
+                        <Select value={formData.type} onValueChange={v => handleInputChange('type', v)}>
+                          <SelectTrigger className="h-10 border-slate-200 rounded-xl bg-slate-50">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['SUBSCRIPTION', 'ONE_TIME', 'RENEWAL', 'UPGRADE'].map(t => <SelectItem key={t} value={t}>{t.replace('_', ' ')}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <InfoRow icon={Tag} label="Type" value={billing.type.replace('_', ' ')} />
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-400 font-medium">Payment Method</Label>
+                      {editing ? (
+                        <Select value={formData.paymentMethod} onValueChange={v => handleInputChange('paymentMethod', v)}>
+                          <SelectTrigger className="h-10 border-slate-200 rounded-xl bg-slate-50">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['MANUAL', 'MPESA', 'BANK_TRANSFER', 'CREDIT_CARD', 'CASH'].map(p => <SelectItem key={p} value={p}>{p.replace('_', ' ')}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <InfoRow icon={CreditCard} label="Payment" value={billing.paymentMethod.replace('_', ' ')} />
+                      )}
+                    </div>
+                  </div>
+                  {billing.transactionId && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-400 font-medium">Transaction ID</Label>
+                      {editing ? (
+                        <Input value={formData.transactionId} onChange={e => handleInputChange('transactionId', e.target.value)} className="h-10 border-slate-200 rounded-xl bg-slate-50 font-mono text-xs" />
+                      ) : (
+                        <InfoRow icon={Hash} label="Transaction" value={billing.transactionId} />
+                      )}
+                    </div>
+                  )}
+                  {billing.notes && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-slate-400 font-medium">Notes</Label>
+                      {editing ? (
+                        <Textarea value={formData.notes} onChange={e => handleInputChange('notes', e.target.value)} className="border-slate-200 rounded-xl bg-slate-50" rows={3} />
+                      ) : (
+                        <p className="text-sm text-slate-700 bg-slate-50 rounded-xl px-3 py-2">{billing.notes}</p>
+                      )}
                     </div>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="packageId">Package</Label>
-                  {editing ? (
-                    <Select value={formData.packageId} onValueChange={(value) => handleInputChange('packageId', value)}>
-                      <SelectTrigger className="edugenius-glass">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {packages && packages.length > 0 ? (
-                          packages.filter(pkg => pkg.isActive).map((pkg) => (
-                            <SelectItem key={pkg.id} value={pkg.id}>
-                              {pkg.name} - ${pkg.price.toLocaleString()}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-packages" disabled>
-                            No packages available
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Package className="w-4 h-4 mr-2 text-gray-400" />
-                      {billing.package.name}
+              </div>
+            </div>
+
+            {/* Right column */}
+            <div className="space-y-6">
+              {/* School / User Info */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-indigo-500" /> {billing.school ? 'School Information' : 'User Information'}
+                  </h3>
+                </div>
+                <div className="px-5 py-4 space-y-3">
+                  {billing.school ? (
+                    <>
+                      <InfoRow icon={Building2} label="School" value={billing.school.name} />
+                      <InfoRow icon={MapPin} label="Address" value={billing.school.address} />
+                      {billing.school.phone && <InfoRow icon={Phone} label="Phone" value={billing.school.phone} />}
+                      {billing.school.email && <InfoRow icon={Mail} label="Email" value={billing.school.email} />}
+                      {billing.school.schoolAdmin && (
+                        <InfoRow icon={User} label="Admin" value={`${billing.school.schoolAdmin.user.firstName} ${billing.school.schoolAdmin.user.lastName} (${billing.school.schoolAdmin.user.email})`} />
+                      )}
+                    </>
+                  ) : billing.user ? (
+                    <>
+                      <InfoRow icon={User} label="Name" value={`${billing.user.firstName} ${billing.user.lastName}`} />
+                      <InfoRow icon={Mail} label="Email" value={billing.user.email} />
+                    </>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Package Info */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                    <Package className="w-4 h-4 text-indigo-500" /> Package Details
+                  </h3>
+                </div>
+                <div className="px-5 py-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-800">{billing.package.name}</span>
+                    <span className="text-sm font-bold text-indigo-600">{formatCurrency(billing.package.price)}</span>
+                  </div>
+                  {billing.package.description && <p className="text-xs text-slate-500">{billing.package.description}</p>}
+                  <InfoRow icon={Clock} label="Duration" value={`${billing.package.duration} months`} />
+                  {billing.package.features && billing.package.features.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 mb-2">Features</p>
+                      <div className="space-y-1.5">
+                        {billing.package.features.map((f, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-slate-600">
+                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                            {f}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  {editing ? (
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) => handleInputChange('startDate', e.target.value)}
-                      className="edugenius-glass"
-                    />
-                  ) : (
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                      {new Date(billing.startDate).toLocaleDateString()}
-                    </div>
-                  )}
+              {/* Subscription Status */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-indigo-500" /> Subscription Status
+                  </h3>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">End Date</Label>
-                  {editing ? (
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) => handleInputChange('endDate', e.target.value)}
-                      className="edugenius-glass"
-                    />
-                  ) : (
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                      {new Date(billing.endDate).toLocaleDateString()}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount</Label>
-                  {editing ? (
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      value={formData.amount}
-                      onChange={(e) => handleInputChange('amount', e.target.value)}
-                      className="edugenius-glass"
-                    />
-                  ) : (
-                    <div className="flex items-center text-sm text-gray-900">
-                      <DollarSign className="w-4 h-4 mr-2 text-gray-400" />
-                      ${billing.amount.toLocaleString()}
-                    </div>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="status">Status</Label>
-                  {editing ? (
-                    <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-                      <SelectTrigger className="edugenius-glass">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ACTIVE">Active</SelectItem>
-                        <SelectItem value="PENDING">Pending</SelectItem>
-                        <SelectItem value="EXPIRED">Expired</SelectItem>
-                        <SelectItem value="CANCELLED">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(billing.status)}`}>
-                      {billing.status}
+                <div className="px-5 py-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Status</span>
+                    <StatusBadge status={billing.status} />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Days Remaining</span>
+                    <span className={`text-sm font-semibold ${isExpired ? 'text-red-600' : daysRemaining < 30 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {isExpired ? 'Expired' : `${daysRemaining} days`}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Created</span>
+                    <span className="text-sm text-slate-700">{formatDate(billing.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">Last Updated</span>
+                    <span className="text-sm text-slate-700">{formatDate(billing.updatedAt)}</span>
+                  </div>
+
+                  {canRenew && !renewing && (
+                    <div className="pt-3 border-t border-slate-100">
+                      <button onClick={() => setRenewing(true)}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">
+                        <RefreshCw className="w-4 h-4" /> Renew Subscription
+                      </button>
+                    </div>
+                  )}
+
+                  {renewing && (
+                    <div className="pt-3 border-t border-slate-100 space-y-3">
+                      <p className="text-xs font-medium text-slate-600">Select a plan to renew:</p>
+                      <select value={renewPackageId} onChange={e => setRenewPackageId(e.target.value)}
+                        className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="">Choose a package...</option>
+                        {packages.filter(p => p.isActive).map(p => <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)}/mo</option>)}
+                      </select>
+                      <div className="flex gap-2">
+                        <button onClick={handleRenew} disabled={!renewPackageId || renewLoading}
+                          className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-60 shadow-sm">
+                          {renewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Confirm Renewal
+                        </button>
+                        <button onClick={() => { setRenewing(false); setRenewPackageId('') }} disabled={renewLoading}
+                          className="px-5 py-2.5 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-60">
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
-                  {editing ? (
-                    <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                      <SelectTrigger className="edugenius-glass">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="SUBSCRIPTION">Subscription</SelectItem>
-                        <SelectItem value="ONE_TIME">One-time Payment</SelectItem>
-                        <SelectItem value="RENEWAL">Renewal</SelectItem>
-                        <SelectItem value="UPGRADE">Upgrade</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${getTypeColor(billing.type)}`}>
-                      {billing.type.replace('_', ' ')}
-                    </span>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="paymentMethod">Payment Method</Label>
-                  {editing ? (
-                    <Select value={formData.paymentMethod} onValueChange={(value) => handleInputChange('paymentMethod', value)}>
-                      <SelectTrigger className="edugenius-glass">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="MANUAL">Manual Entry</SelectItem>
-                        <SelectItem value="MPESA">M-Pesa</SelectItem>
-                        <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                        <SelectItem value="CREDIT_CARD">Credit Card</SelectItem>
-                        <SelectItem value="CASH">Cash</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <span className="text-sm text-gray-900">
-                      {billing.paymentMethod.replace('_', ' ')}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {billing.transactionId && (
-                <div className="space-y-2">
-                  <Label htmlFor="transactionId">Transaction ID</Label>
-                  {editing ? (
-                    <Input
-                      id="transactionId"
-                      value={formData.transactionId}
-                      onChange={(e) => handleInputChange('transactionId', e.target.value)}
-                      className="edugenius-glass"
-                    />
-                  ) : (
-                    <span className="text-sm text-gray-900 font-mono">
-                      {billing.transactionId}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {billing.notes && (
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  {editing ? (
-                    <Textarea
-                      id="notes"
-                      value={formData.notes}
-                      onChange={(e) => handleInputChange('notes', e.target.value)}
-                      className="edugenius-glass"
-                      rows={3}
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-900">{billing.notes}</p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* School Information */}
-          <Card className="bg-gradient-to-br from-white/70 to-green-50/70 backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="edugenius-text-gradient-green flex items-center">
-                <School className="w-5 h-5 mr-2" />
-                School Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center text-sm text-gray-900">
-                <School className="w-4 h-4 mr-2 text-gray-400" />
-                <span className="font-medium">{billing.school.name}</span>
-              </div>
-              <div className="flex items-center text-sm text-gray-600">
-                <MapPin className="w-4 h-4 mr-2 text-gray-400" />
-                {billing.school.address}
-              </div>
-              {billing.school.phone && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                  {billing.school.phone}
-                </div>
-              )}
-              {billing.school.email && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <Mail className="w-4 h-4 mr-2 text-gray-400" />
-                  {billing.school.email}
-                </div>
-              )}
-              {billing.school.schoolAdmin && (
-                <div className="flex items-center text-sm text-gray-600">
-                  <User className="w-4 h-4 mr-2 text-gray-400" />
-                  Admin: {billing.school.schoolAdmin.user.firstName} {billing.school.schoolAdmin.user.lastName}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Package Information */}
-          <Card className="bg-gradient-to-br from-white/70 to-purple-50/70 backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="edugenius-text-gradient-purple flex items-center">
-                <Package className="w-5 h-5 mr-2" />
-                Package Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-900">{billing.package.name}</span>
-                <span className="text-sm font-bold text-gray-900">${billing.package.price.toLocaleString()}</span>
-              </div>
-              {billing.package.description && (
-                <p className="text-sm text-gray-600">{billing.package.description}</p>
-              )}
-              <div className="flex items-center text-sm text-gray-600">
-                <Clock className="w-4 h-4 mr-2 text-gray-400" />
-                Duration: {billing.package.duration} months
-              </div>
-              {billing.package.features && billing.package.features.length > 0 && (
-                <div>
-                  <p className="text-sm font-medium text-gray-900 mb-2">Features:</p>
-                  <ul className="text-sm text-gray-600 space-y-1">
-                    {billing.package.features.map((feature, index) => (
-                      <li key={index} className="flex items-center">
-                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></div>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Subscription Status */}
-          <Card className="bg-gradient-to-br from-white/70 to-orange-50/70 backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="edugenius-text-gradient-orange flex items-center">
-                <Clock className="w-5 h-5 mr-2" />
-                Subscription Status
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Status:</span>
-                <span className={`inline-flex px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(billing.status)}`}>
-                  {billing.status}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Days Remaining:</span>
-                <span className={`text-sm font-medium ${isExpired ? 'text-red-600' : daysRemaining < 30 ? 'text-yellow-600' : 'text-green-600'}`}>
-                  {isExpired ? 'Expired' : `${daysRemaining} days`}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Created:</span>
-                <span className="text-sm text-gray-900">{new Date(billing.createdAt).toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Last Updated:</span>
-                <span className="text-sm text-gray-900">{new Date(billing.updatedAt).toLocaleDateString()}</span>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -1,18 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
-import { v2 as cloudinary } from 'cloudinary'
+import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
+import { supabaseAdmin } from '@/lib/supabase'
 import { PDFParse } from 'pdf-parse'
 import * as mammoth from 'mammoth'
 
 export const dynamic = 'force-dynamic'
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -24,14 +17,10 @@ const ALLOWED_TYPES = [
 ]
 
 const MAX_SIZE_MB = 20
+const BUCKET = 'teacher-documents'
 
-export async function POST(req: NextRequest) {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session || session.user.role !== 'TEACHER') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     let formData: FormData
     try {
       formData = await req.formData()
@@ -41,7 +30,6 @@ export async function POST(req: NextRequest) {
 
     const file = formData.get('file') as File | null
     const docType = (formData.get('docType') as string) || 'general'
-    // docType can be: 'lesson-plan', 'scheme-of-work', 'curriculum', 'general'
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 })
@@ -49,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json(
-        { error: `File type not allowed. Accepted: PDF, Word (.doc/.docx), plain text, images` },
+        { error: 'File type not allowed. Accepted: PDF, Word (.doc/.docx), plain text, images' },
         { status: 400 }
       )
     }
@@ -63,27 +51,26 @@ export async function POST(req: NextRequest) {
 
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const isImage = file.type.startsWith('image/')
 
-    // Upload to Cloudinary
-    const uploadResult = await new Promise<any>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder: `elimunova/teacher-documents/${docType}`,
-          resource_type: isImage ? 'image' : 'raw',
-          public_id: `teacher_${session.user.id}_${docType}_${Date.now()}`,
-          use_filename: true,
-          unique_filename: true,
-        },
-        (error, result) => {
-          if (error) reject(error)
-          else resolve(result)
-        }
-      )
-      stream.end(buffer)
-    })
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Storage service not configured' }, { status: 500 })
+    }
 
-    // Extract text content so AI can use it without seeing the raw file
+    // Upload to Supabase Storage
+    const path = `${user.id}/${docType}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .upload(path, buffer, { contentType: file.type, upsert: true })
+
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError)
+      return NextResponse.json({ error: `Failed to upload document: ${uploadError.message}` }, { status: 500 })
+    }
+
+    const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(uploadData.path)
+    const publicUrl = urlData.publicUrl
+
+    // Extract text content for AI context
     let extractedText: string | null = null
     if (file.type === 'text/plain') {
       extractedText = buffer.toString('utf-8').slice(0, 8000)
@@ -94,24 +81,21 @@ export async function POST(req: NextRequest) {
         extractedText = result.text.slice(0, 8000)
       } catch (parseErr) {
         console.warn('PDF text extraction failed:', parseErr)
-        extractedText = null
       }
-    } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.type === 'application/msword') {
+    } else if (
+      file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      file.type === 'application/msword'
+    ) {
       try {
         const { value } = await mammoth.extractRawText({ buffer })
         extractedText = value.slice(0, 8000)
       } catch (parseErr) {
         console.warn('Word document extraction failed:', parseErr)
-        extractedText = null
       }
     }
 
-    // Store the document reference in SystemSettings so AI can retrieve it per teacher
-    // We use teacher's userId as a namespace key
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: session.user.id }
-    })
-
+    // Store extracted text in teacher record for AI context
+    const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
     if (teacher && extractedText) {
       const updateData: any = {}
       if (docType === 'lesson-plan')       updateData.lessonPlanTemplate = extractedText
@@ -129,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      url: uploadResult.secure_url,
+      url: publicUrl,
       name: file.name,
       type: file.type,
       docType,
@@ -144,4 +128,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
-}
+})

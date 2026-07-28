@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Loader2, Mail, MessageSquare, Plus, Edit, Trash2, CheckCircle, XCircle, Globe } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { confirmToast } from '@/lib/confirm-toast'
 
 export default function CommunicationServicesPage() {
   const [services, setServices] = useState<any[]>([])
@@ -27,7 +28,7 @@ export default function CommunicationServicesPage() {
     try {
       const res = await fetch('/api/system-settings?category=communication')
       if (res.ok) setServices((await res.json()).settings || [])
-    } catch {} finally { setLoading(false) }
+    } catch (e) { console.warn('[SuperAdminComms] fetchServices error:', e) } finally { setLoading(false) }
   }
 
   const handleCreate = async () => {
@@ -45,16 +46,16 @@ export default function CommunicationServicesPage() {
         })
       })
       if (res.ok) { toast({ title: 'Service added' }); setShowDialog(false); fetchServices() }
-      else toast({ title: 'Error', variant: 'destructive' })
-    } catch {} finally { setSaving(false) }
+      else toast({ title: 'Error' })
+    } catch (e) { console.warn('[SuperAdminComms] handleCreate error:', e) } finally { setSaving(false) }
   }
 
   const handleDelete = async (key: string) => {
-    if (!confirm('Remove this service?')) return
+    if (!(await confirmToast({ title: 'Remove this service?' }))) return
     try {
       await fetch(`/api/system-settings?key=${key}`, { method: 'DELETE' })
       toast({ title: 'Removed' }); fetchServices()
-    } catch {}
+    } catch (e) { console.warn('[SuperAdminComms] handleDelete error:', e) }
   }
 
   const providers = type === 'EMAIL'
