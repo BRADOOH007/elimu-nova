@@ -7,7 +7,7 @@ import {
   Presentation, Loader2, Download, ChevronLeft, ChevronRight,
   Sparkles, Image as ImageIcon, SkipBack, SkipForward, Maximize2,
   BookOpen, GraduationCap, Zap, Search, Plus, Trash2, Calendar,
-  Eye, MoreHorizontal
+  Eye, MoreHorizontal, ExternalLink
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -701,9 +701,25 @@ export default function PowerPointPage() {
                                 <p className="text-xs text-gray-400 text-center leading-relaxed max-w-[200px]">
                                   {slide.imagePrompt.slice(0, 100)}
                                 </p>
-                                <div className="mt-3 flex items-center gap-1.5">
-                                  <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${style.accentBg}`} />
-                                  <span className="text-[10px] text-gray-400 font-medium">Generating image…</span>
+                                <div className="mt-3 flex items-center gap-1.5 flex-wrap justify-center">
+                                  <span className="text-[10px] text-gray-400 font-medium">AI unavailable — find on:</span>
+                                  {[{
+                                    name: 'Google', url: `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(slide.imagePrompt)}`,
+                                    bg: '#e8f0fe', color: '#1a73e8'
+                                  }, {
+                                    name: 'Pinterest', url: `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(slide.imagePrompt)}`,
+                                    bg: '#fce4ec', color: '#c2185b'
+                                  }, {
+                                    name: 'Unsplash', url: `https://unsplash.com/s/photos/${encodeURIComponent(slide.imagePrompt)}`,
+                                    bg: '#e0f2f1', color: '#00796b'
+                                  }].map(s => (
+                                    <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold rounded-lg hover:shadow-sm transition-all"
+                                      style={{ backgroundColor: s.bg, color: s.color }}
+                                    >
+                                      <ExternalLink className="h-2.5 w-2.5" /> {s.name}
+                                    </a>
+                                  ))}
                                 </div>
                               </div>
                             )}

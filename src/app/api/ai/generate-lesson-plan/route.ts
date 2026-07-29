@@ -109,7 +109,7 @@ Use local examples. Each activity should have clear timing and instructions.`
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        { maxTokens: 2000, temperature: 0.5 }
+        { maxTokens: 6000, temperature: 0.5 }
       )
 
       let lessonData: any = {}
@@ -182,7 +182,7 @@ Return ONLY valid JSON. No markdown or explanation.`
         { role: 'system', content: systemPrompt.replace('Return ONLY valid JSON.', 'Return the full term plan as valid JSON.') },
         { role: 'user', content: termPrompt },
       ],
-      { maxTokens: 4000, temperature: 0.5 }
+      { maxTokens: 8000, temperature: 0.5 }
     )
 
     let termData: any = {}

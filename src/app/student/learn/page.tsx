@@ -11,11 +11,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   BookOpen, Brain, ClipboardList, NotebookPen, CheckCircle, AlertCircle,
   Send, Loader2, RefreshCw, Play, Target, Clock, Upload, X, File,
-  ChevronDown, ChevronRight, ChevronLeft, Award, Star, Zap, Paperclip, Eye, Download
+  ChevronDown, ChevronRight, ChevronLeft, Award, Star, Zap, Paperclip, Eye, Download,
+  Compass, Trophy, MessagesSquare, Wand2, LayoutGrid, TrendingUp
 } from 'lucide-react'
 import ChatContainer from '@/components/chat/chat-container'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { ClientDate } from '@/components/ui/client-date'
+import { CurriculumBrowser } from '@/components/student/curriculum-browser'
+import { ProgressDashboard } from '@/components/student/progress-dashboard'
+import { Recommendations } from '@/components/student/recommendations'
+import { CareerAssessment } from '@/components/student/career-assessment'
+import { Achievements } from '@/components/student/achievements'
+import { AIWhiteboard } from '@/components/student/ai-whiteboard'
+import { StudyGroups } from '@/components/student/study-groups'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface Assignment {
@@ -65,9 +73,9 @@ export default function LearnPage() {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search)
       const t = p.get('tab')
-      if (t === 'quiz' || t === 'study' || t === 'assignments' || t === 'tutor') return t
+      if (t === 'quiz' || t === 'study' || t === 'assignments' || t === 'tutor' || t === 'explore' || t === 'progress' || t === 'achievements' || t === 'career' || t === 'whiteboard' || t === 'groups') return t
     }
-    return 'study'
+    return 'explore'
   })
 
   // ── STUDY state ──────────────────────────────────────────────────────
@@ -115,6 +123,39 @@ export default function LearnPage() {
   const [attachments,  setAttachments]  = useState<Array<{url:string;name:string}>>([])
   const [uploading,    setUploading]    = useState(false)
   const [result,       setResult]       = useState<{grade?:number;feedback?:string}|null>(null)
+
+  // ── Shared progress state for achievements ────────────────────────────
+  const [progressData, setProgressData] = useState({ xp: 0, streak: 0, masteryScore: 0, totalStudyTime: 0, completedAssignments: 0, accuracy: 0, totalQuestions: 0 })
+
+  useEffect(() => {
+    fetch('/api/student/dashboard')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d) {
+          const p = d.progress || {}
+          const a = d.analytics || {}
+          const totalQ = p.totalQuestions || 0
+          const correct = p.correctAnswers || 0
+          setProgressData({
+            xp: p.xp || 0,
+            streak: p.streak || a.streakDays || 0,
+            masteryScore: p.masteryScore || 0,
+            totalStudyTime: a.totalStudyTime || 0,
+            completedAssignments: a.completedAssignments || 0,
+            accuracy: totalQ > 0 ? Math.round((correct / totalQ) * 100) : 0,
+            totalQuestions: totalQ,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  // ── Callback from CurriculumBrowser to start studying a topic ──────────
+  const handleExploreTopic = (subject: string, topic: string) => {
+    setStudySubject(subject)
+    setStudyTopic(topic)
+    setTab('study')
+  }
 
   // Fetch topic strands for study
   useEffect(() => {
@@ -461,16 +502,22 @@ export default function LearnPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="w-full overflow-x-auto flex gap-1.5 px-2">
-          <TabsTrigger value="study" className="shrink-0 whitespace-nowrap"><BookOpen className="w-4 h-4 mr-1.5"/>Study</TabsTrigger>
-          <TabsTrigger value="quiz" className="shrink-0 whitespace-nowrap"><Target className="w-4 h-4 mr-1.5"/>Quiz</TabsTrigger>
-          <TabsTrigger value="assignments" className="shrink-0 whitespace-nowrap"><ClipboardList className="w-4 h-4 mr-1.5"/>
+        <TabsList className="w-full overflow-x-auto flex gap-1 px-2 bg-slate-100/80 p-1.5 rounded-2xl">
+          <TabsTrigger value="explore" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><LayoutGrid className="w-4 h-4 mr-1.5"/>Explore</TabsTrigger>
+          <TabsTrigger value="study" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><BookOpen className="w-4 h-4 mr-1.5"/>Study</TabsTrigger>
+          <TabsTrigger value="quiz" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Target className="w-4 h-4 mr-1.5"/>Quiz</TabsTrigger>
+          <TabsTrigger value="assignments" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><ClipboardList className="w-4 h-4 mr-1.5"/>
             Assignments{assignments.filter(a=>a.status==='PENDING'||a.status==='OVERDUE').length > 0 &&
               <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 whitespace-nowrap">
                 {assignments.filter(a=>a.status==='PENDING'||a.status==='OVERDUE').length}
               </span>}
           </TabsTrigger>
-          <TabsTrigger value="tutor" className="shrink-0 whitespace-nowrap"><Brain className="w-4 h-4 mr-1.5"/>AI Tutor</TabsTrigger>
+          <TabsTrigger value="tutor" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Brain className="w-4 h-4 mr-1.5"/>AI Tutor</TabsTrigger>
+          <TabsTrigger value="progress" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><TrendingUp className="w-4 h-4 mr-1.5"/>Progress</TabsTrigger>
+          <TabsTrigger value="achievements" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Trophy className="w-4 h-4 mr-1.5"/>Badges</TabsTrigger>
+          <TabsTrigger value="career" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Compass className="w-4 h-4 mr-1.5"/>Career</TabsTrigger>
+          <TabsTrigger value="whiteboard" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Wand2 className="w-4 h-4 mr-1.5"/>Whiteboard</TabsTrigger>
+          <TabsTrigger value="groups" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><MessagesSquare className="w-4 h-4 mr-1.5"/>Groups</TabsTrigger>
         </TabsList>
 
         {/* ── STUDY TAB ───────────────────────────────────────────── */}
@@ -497,7 +544,7 @@ export default function LearnPage() {
                   </datalist>
                 </div>
               </div>
-              <Button onClick={generateLesson} disabled={studying||!studyTopic.trim()} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90">
+              <Button onClick={generateLesson} disabled={studying||!studyTopic.trim()} className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-emerald-200 transition-all duration-300">
                 {studying ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Generating…</> : <><Play className="h-4 w-4 mr-2"/>Study This Topic</>}
               </Button>
             </CardContent>
@@ -505,7 +552,7 @@ export default function LearnPage() {
 
           {lessonMd && (
             <Card className="border-0 shadow-xl bg-white overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white pb-4">
+              <CardHeader className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white pb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-semibold text-blue-200 uppercase tracking-widest mb-1">AI Lesson</p>
@@ -709,14 +756,14 @@ export default function LearnPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  {(['blooms','checkpoint'] as const).map(t=>(
-                    <button key={t} onClick={()=>setQuizType(t)}
-                      className={`flex-1 h-9 text-sm font-semibold rounded-lg border transition-all ${quizType===t?'bg-purple-600 text-white border-transparent':'border-slate-200 text-slate-600 hover:border-purple-300'}`}>
-                      {t==='blooms'?'Bloom\'s (6 levels)':'Checkpoint (5 quick)'}
-                    </button>
-                  ))}
+              {(['blooms','checkpoint'] as const).map(t=>(
+                <button key={t} onClick={()=>setQuizType(t)}
+                  className={`flex-1 h-9 text-sm font-semibold rounded-xl border transition-all ${quizType===t?'bg-indigo-600 text-white border-transparent shadow-md':'border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-indigo-50'}`}>
+                  {t==='blooms'?'Bloom\'s (6 levels)':'Checkpoint (5 quick)'}
+                </button>
+              ))}
                 </div>
-                <Button onClick={generateQuiz} disabled={genQuiz||!quizTopic.trim()} className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90">
+                <Button onClick={generateQuiz} disabled={genQuiz||!quizTopic.trim()} className="w-full bg-gradient-to-r from-indigo-500 to-violet-600 hover:shadow-lg hover:shadow-indigo-200 transition-all duration-300">
                   {genQuiz ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Generating…</> : <><Zap className="h-4 w-4 mr-2"/>Generate Quiz</>}
                 </Button>
               </CardContent>
@@ -838,11 +885,11 @@ export default function LearnPage() {
                   <ChevronLeft className="h-4 w-4"/>Prev
                 </Button>
                 {qIndex<questions.length-1 ? (
-                  <Button onClick={()=>setQIndex(i=>i+1)} size="sm" className="bg-blue-600 hover:bg-blue-700">
+                  <Button onClick={()=>setQIndex(i=>i+1)} size="sm" className="bg-teal-600 hover:bg-teal-700 hover:shadow-md transition-all">
                     Next<ChevronRight className="h-4 w-4"/>
                   </Button>
                 ) : !submitted ? (
-                  <Button onClick={handleSubmitQuiz} size="sm" className="bg-green-600 hover:bg-green-700">
+                  <Button onClick={handleSubmitQuiz} size="sm" className="bg-emerald-600 hover:bg-emerald-700 hover:shadow-md transition-all">
                     <CheckCircle className="h-4 w-4 mr-1.5"/>Submit Quiz
                   </Button>
                 ) : (
@@ -967,6 +1014,49 @@ export default function LearnPage() {
             placeholder="Ask anything — explain, practice, quiz me…"
             icon="brain"
           />
+        </TabsContent>
+
+        {/* ── EXPLORE TAB (Curriculum Browser) ─────────────────── */}
+        <TabsContent value="explore" className="mt-4 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Explore the Curriculum</h2>
+            <p className="text-sm text-slate-500">Browse CBC topics by grade and subject. Click <strong>Study</strong> to start learning.</p>
+          </div>
+          <CurriculumBrowser onSelectTopic={handleExploreTopic} />
+          <Recommendations onStudy={handleExploreTopic} />
+        </TabsContent>
+
+        {/* ── PROGRESS TAB ──────────────────────────────────────── */}
+        <TabsContent value="progress" className="mt-4">
+          <ProgressDashboard />
+        </TabsContent>
+
+        {/* ── ACHIEVEMENTS TAB ──────────────────────────────────── */}
+        <TabsContent value="achievements" className="mt-4">
+          <Achievements
+            xp={progressData.xp}
+            streak={progressData.streak}
+            masteryScore={progressData.masteryScore}
+            totalStudyTime={progressData.totalStudyTime}
+            completedAssignments={progressData.completedAssignments}
+            accuracy={progressData.accuracy}
+            totalQuestions={progressData.totalQuestions}
+          />
+        </TabsContent>
+
+        {/* ── CAREER TAB ────────────────────────────────────────── */}
+        <TabsContent value="career" className="mt-4">
+          <CareerAssessment />
+        </TabsContent>
+
+        {/* ── WHITEBOARD TAB ────────────────────────────────────── */}
+        <TabsContent value="whiteboard" className="mt-4">
+          <AIWhiteboard />
+        </TabsContent>
+
+        {/* ── STUDY GROUPS TAB ──────────────────────────────────── */}
+        <TabsContent value="groups" className="mt-4">
+          <StudyGroups />
         </TabsContent>
       </Tabs>
     </div>

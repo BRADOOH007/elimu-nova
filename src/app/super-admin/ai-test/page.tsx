@@ -106,7 +106,7 @@ export default function AITestPage() {
           response = await fetch('/api/ai/generate-exam', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ subject: 'English', grade: 'Grade 8', topic: 'Comprehension', questionCount: 5 }),
+            body: JSON.stringify({ examTitle: 'Comprehension Test', subject: 'English', gradeLevel: 'Grade 8', topic: 'Comprehension', numberOfQuestions: 5 }),
           })
           const data = await response.json()
           result = {

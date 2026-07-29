@@ -322,14 +322,18 @@ export default function PresentationGenerator() {
       const data = await response.json()
       
       if (data.success && data.imageUrl) {
-        // Update the slide with the generated image
+        const isPlaceholder = data.source === 'placeholder' || data.imageUrl.startsWith('data:image/svg+xml')
         const newSlides = [...slides]
-        newSlides[slideIndex] = { 
-          ...newSlides[slideIndex], 
-          image: data.imageUrl 
+        newSlides[slideIndex] = {
+          ...newSlides[slideIndex],
+          image: isPlaceholder ? '' : data.imageUrl
         }
         setSlides(newSlides)
-        toast.success('Image generated successfully!')
+        if (isPlaceholder) {
+          toast.error('AI image generation unavailable — use search links below')
+        } else {
+          toast.success('Image generated successfully!')
+        }
       } else {
         throw new Error('Invalid response from image generation')
       }

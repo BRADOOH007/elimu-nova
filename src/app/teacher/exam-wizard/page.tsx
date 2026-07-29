@@ -142,7 +142,7 @@ export default function ExamWizardPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'exam_questions',
+          type: 'exam',
           title: form.title,
           subject: form.subject,
           grade: form.grade,
@@ -153,10 +153,10 @@ export default function ExamWizardPage() {
       })
       if (res.ok) {
         const data = await res.json()
-        if (data.questions) {
+        if (data.content) {
+          toast({ title:'AI content generated', description:'The exam has been generated. Please review the content and add questions manually.' })
+        } else if (data.questions) {
           setQuestions(data.questions.map((q: any) => ({ ...createQuestion(q.type || 'multiple_choice'), ...q })))
-        } else if (data.content) {
-          toast({ title:'AI content generated', description:'Please review and adjust the questions.' })
         }
       } else {
         const err = await res.json()

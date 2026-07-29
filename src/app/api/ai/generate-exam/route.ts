@@ -6,9 +6,12 @@ import { route } from '@/lib/api-middleware'
 export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const examData = await request.json()
     const { documentContext } = examData
-    if (!examData.examTitle || !examData.subject || !examData.gradeLevel) {
+    if (!examData.examTitle || !examData.subject || (!examData.gradeLevel && !examData.grade)) {
       return NextResponse.json({ error: 'Exam title, subject, and grade level are required' }, { status: 400 })
     }
+
+    // Normalize grade field
+    if (!examData.gradeLevel) examData.gradeLevel = examData.grade
 
     // Fetch teacher's saved exam template if no explicit context provided
     let templateText = documentContext

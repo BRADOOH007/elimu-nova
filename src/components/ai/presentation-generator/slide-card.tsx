@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Plus, Trash2, X } from 'lucide-react'
+import { Sparkles, Plus, Trash2, X, Search, ExternalLink } from 'lucide-react'
 
 interface Slide {
   id?: string
@@ -177,12 +177,37 @@ export function SlideCard({
                   </Button>
                 </div>
               ) : (
-                <div className="w-full max-w-md h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center text-gray-500">
-                  <div className="text-center">
-                    <Sparkles className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-sm">No image generated yet</p>
-                    <p className="text-xs">Click &ldquo;Generate Image&rdquo; to create one</p>
+                <div className="w-full max-w-md border-2 border-dashed border-gray-300 rounded-lg">
+                  <div className="h-32 flex items-center justify-center text-gray-500">
+                    <div className="text-center">
+                      <Sparkles className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                      <p className="text-sm">No image generated yet</p>
+                      <p className="text-xs">Click &ldquo;Generate Image&rdquo; to create one</p>
+                    </div>
                   </div>
+                  {(slide.imagePrompt || slide.imageDescription) && (
+                    <div className="px-3 pb-3">
+                      <div className="flex gap-1.5 flex-wrap justify-center">
+                        {[{
+                          name: 'Google', url: `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(slide.imagePrompt || slide.imageDescription || '')}`,
+                          bg: '#e8f0fe', color: '#1a73e8'
+                        }, {
+                          name: 'Pinterest', url: `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(slide.imagePrompt || slide.imageDescription || '')}`,
+                          bg: '#fce4ec', color: '#c2185b'
+                        }, {
+                          name: 'Unsplash', url: `https://unsplash.com/s/photos/${encodeURIComponent(slide.imagePrompt || slide.imageDescription || '')}`,
+                          bg: '#e0f2f1', color: '#00796b'
+                        }].map(s => (
+                          <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg hover:shadow-sm transition-all"
+                            style={{ backgroundColor: s.bg, color: s.color }}
+                          >
+                            <ExternalLink className="h-2.5 w-2.5" /> {s.name}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
