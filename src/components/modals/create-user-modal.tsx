@@ -151,6 +151,8 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
         return <GraduationCap className="w-4 h-4" />
       case 'STUDENT':
         return <User className="w-4 h-4" />
+      case 'PARENT':
+        return <User className="w-4 h-4" />
       default:
         return <UserPlus className="w-4 h-4" />
     }
@@ -162,6 +164,7 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
       case 'SCHOOL_ADMIN': return 'School Admin'
       case 'TEACHER': return 'Teacher'
       case 'STUDENT': return 'Student'
+      case 'PARENT': return 'Parent'
       default: return role
     }
   }
@@ -348,11 +351,17 @@ export function CreateUserModal({ isOpen, onClose, onUserCreated }: CreateUserMo
                       Student
                     </div>
                   </SelectItem>
+                  <SelectItem value="PARENT">
+                    <div className="flex items-center">
+                      <User className="w-4 h-4 mr-2" />
+                      Parent
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {['TEACHER', 'STUDENT', 'SCHOOL_ADMIN'].includes(formData.role) && (
+            {['STUDENT', 'SCHOOL_ADMIN'].includes(formData.role) && (
               <div className="space-y-2">
                 <Label htmlFor="school" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
                   <School className="w-4 h-4" />

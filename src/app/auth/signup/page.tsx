@@ -110,42 +110,42 @@ export default function SignUpPage() {
             backgroundSize: '60px 60px',
           }}
         />
-        {/* Glow orbs */}
-        <div className="absolute top-1/4 right-0 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-blue-500/15 rounded-full blur-3xl" />
+        {/* Animated glow orbs */}
+        <div className="absolute top-1/4 right-0 w-80 h-80 bg-purple-500/15 rounded-full blur-3xl animate-orb-drift animate-orb-pulse" />
+        <div className="absolute bottom-1/4 left-0 w-64 h-64 bg-blue-500/15 rounded-full blur-3xl animate-orb-drift-slow animate-orb-pulse" />
 
         <div className="relative z-10">
           {/* Logo + accent line */}
-          <div className="mb-14">
+          <div className="mb-14 animate-signup-fade-up signup-stagger-1">
             <Logo size="xl" variant="black" />
             <div className="mt-4 h-px w-12 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full" />
           </div>
 
           {/* Platform badge */}
-          <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
+          <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 animate-signup-fade-up signup-stagger-2">
             <Zap className="w-3 h-3" />
             AI-Powered Cloud School Platform
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">
+          <h1 className="text-4xl font-extrabold text-white leading-tight mb-4 animate-signup-fade-up signup-stagger-3">
             Start your journey with{' '}
-            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent animate-text-shimmer">
               Elimu Nova.
             </span>
           </h1>
-          <p className="text-slate-400 text-base leading-relaxed mb-8">
+          <p className="text-slate-400 text-base leading-relaxed mb-8 animate-signup-fade-up signup-stagger-4">
             Join thousands of students, teachers and schools already using AI to transform learning.
           </p>
 
           {/* Role-specific perks — dynamically updates based on selected role */}
-          <div className="mb-3">
+          <div className="mb-3 animate-signup-fade-up signup-stagger-5" key={formData.role}>
             <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
               {formData.role === 'STUDENT' ? 'For Students' : formData.role === 'TEACHER' ? 'For Teachers' : formData.role === 'PARENT' ? 'For Parents' : 'For Schools'}
             </p>
             <ul className="space-y-3">
-              {perks.map(p => (
-                <li key={p} className="flex items-center gap-3 text-slate-300 text-sm">
+              {perks.map((p, i) => (
+                <li key={p} className="flex items-center gap-3 text-slate-300 text-sm animate-perks-fade-in" style={{ animationDelay: `${i * 0.08}s` }}>
                   <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
                   {p}
                 </li>
@@ -155,7 +155,7 @@ export default function SignUpPage() {
         </div>
 
         {/* Bottom testimonial */}
-        <div className="relative z-10 border-t border-white/10 pt-6">
+        <div className="relative z-10 border-t border-white/10 pt-6 animate-signup-fade-up" style={{ animationDelay: '0.8s' }}>
           <blockquote className="text-slate-300 text-sm italic leading-relaxed mb-3">
             "Setting up our school on Elimu Nova took less than a day. Our teachers love it."
           </blockquote>

@@ -72,7 +72,7 @@ export default function ExamBankPage() {
       subject: exam.subject,
       grade: exam.grade,
     })
-    router.push("/teacher/assignments?${params}")
+    router.push(`/teacher/assignments?${params}`)
   }
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })

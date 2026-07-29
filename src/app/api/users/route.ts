@@ -145,7 +145,7 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req) => {
     return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
   }
 
-  const schoolRoles = ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT']
+  const schoolRoles = ['SCHOOL_ADMIN', 'STUDENT']
   if (schoolRoles.includes(role) && !schoolId) {
     return NextResponse.json({ error: 'School selection is required for this role' }, { status: 400 })
   }

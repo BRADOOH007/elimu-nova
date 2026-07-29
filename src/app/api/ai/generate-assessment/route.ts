@@ -32,15 +32,9 @@ Content: ${(lessonPlan.content?.generatedContent || lessonPlan.content || '').to
       const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
       if (start !== -1 && end > start) assessmentData = JSON.parse(raw.slice(start, end + 1))
       else throw new Error('No JSON found')
-    } catch {
-      assessmentData = {
-        title:        `Assessment for ${lessonPlan.title}`,
-        description:  'AI-generated assessment',
-        questions:    [],
-        instructions: 'Complete all questions to the best of your ability',
-        timeLimit:    '30 minutes',
-        rawResponse:  raw,
-      }
+    } catch (e) {
+      console.error('[GenerateAssessment] JSON parse failed:', e)
+      return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })
     }
 
     return NextResponse.json({ assessment: assessmentData })

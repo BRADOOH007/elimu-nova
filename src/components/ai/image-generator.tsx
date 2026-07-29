@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Image as ImageIcon, Download, Loader2, Sparkles, Database, BookOpen, GraduationCap } from 'lucide-react'
+import { Image as ImageIcon, Download, Loader2, Sparkles, Database, BookOpen, GraduationCap, Search, ExternalLink } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { safeApiRequest } from '@/lib/api-utils'
 import ImagePicker from './image-picker'
@@ -354,6 +354,32 @@ export default function ImageGenerator() {
                     <Download className="w-4 h-4 mr-2" />
                     Download Image
                   </Button>
+
+                  {imageMetadata?.source === 'placeholder' && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-xs font-semibold text-amber-800 mb-2 flex items-center gap-1.5">
+                        <Search className="h-3.5 w-3.5" /> AI image generation unavailable — find real images instead:
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        {Object.entries({
+                          google: `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(prompt)}`,
+                          pinterest: `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(prompt)}`,
+                          unsplash: `https://unsplash.com/s/photos/${encodeURIComponent(prompt)}`,
+                        }).map(([name, url]) => (
+                          <a key={name} href={url} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all hover:shadow-md"
+                            style={{
+                              backgroundColor: name === 'google' ? '#e8f0fe' : name === 'pinterest' ? '#fce4ec' : '#e0f2f1',
+                              color: name === 'google' ? '#1a73e8' : name === 'pinterest' ? '#c2185b' : '#00796b',
+                            }}
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            {name === 'google' ? 'Google Images' : name === 'pinterest' ? 'Pinterest' : 'Unsplash'}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

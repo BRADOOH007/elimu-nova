@@ -110,22 +110,29 @@ export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
 
   const user = await prisma.$transaction(async (tx) => {
     if (role && role !== currentUser.role) {
-      // Role changed — delete old role-specific record and create new one
-      // SUPER_ADMIN and PARENT have no role record to create; just keep existing data
+      // Role changed — don't delete old role record (FK constraints on related data).
+      // Just update the user's role and create/update the new role record if needed.
+      // Old role data stays orphaned, which is safe and non-destructive.
 
-      const needsNewRecord = schoolId && ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT'].includes(role)
-
-      if (needsNewRecord) {
-        if (currentUser.schoolAdmin) await tx.schoolAdmin.delete({ where: { userId: id } })
-        if (currentUser.teacher) await tx.teacher.delete({ where: { userId: id } })
-        if (currentUser.student) await tx.student.delete({ where: { userId: id } })
-
+      if (schoolId && ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT'].includes(role)) {
         if (role === 'SCHOOL_ADMIN') {
-          await tx.schoolAdmin.create({ data: { userId: id, schoolId } })
+          if (currentUser.schoolAdmin) {
+            await tx.schoolAdmin.update({ where: { userId: id }, data: { schoolId } })
+          } else {
+            await tx.schoolAdmin.create({ data: { userId: id, schoolId } })
+          }
         } else if (role === 'TEACHER') {
-          await tx.teacher.create({ data: { userId: id, schoolId } })
+          if (currentUser.teacher) {
+            await tx.teacher.update({ where: { userId: id }, data: { schoolId } })
+          } else {
+            await tx.teacher.create({ data: { userId: id, schoolId } })
+          }
         } else if (role === 'STUDENT') {
-          await tx.student.create({ data: { userId: id, schoolId } })
+          if (currentUser.student) {
+            await tx.student.update({ where: { userId: id }, data: { schoolId } })
+          } else {
+            await tx.student.create({ data: { userId: id, schoolId } })
+          }
         }
       }
     } else if (schoolId) {

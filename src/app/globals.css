@@ -382,6 +382,49 @@ button, a {
 .signin-stagger-4 { animation-delay: 0.55s; }
 .signin-stagger-5 { animation-delay: 0.7s; }
 
+/* ── Sign-up page animations ── */
+@keyframes signup-fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-signup-fade-up {
+  animation: signup-fade-up 0.7s cubic-bezier(0.16, 1, 0.25, 1) forwards;
+}
+.signup-stagger-1 { animation-delay: 0.05s; }
+.signup-stagger-2 { animation-delay: 0.2s; }
+.signup-stagger-3 { animation-delay: 0.35s; }
+.signup-stagger-4 { animation-delay: 0.5s; }
+.signup-stagger-5 { animation-delay: 0.65s; }
+
+/* Role perks fade transition */
+@keyframes perks-fade-in {
+  from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.animate-perks-fade-in {
+  animation: perks-fade-in 0.4s cubic-bezier(0.16, 1, 0.25, 1) forwards;
+}
+
+/* Gradient text shimmer for Elimu Nova. */
+@keyframes text-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-text-shimmer {
+  background-size: 200% 200%;
+  animation: text-shimmer 6s ease infinite;
+}
+
+/* Floating orb slow pulse */
+@keyframes orb-pulse {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.05); }
+}
+.animate-orb-pulse {
+  animation: orb-pulse 8s ease-in-out infinite;
+}
+
 /* Page transition */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
