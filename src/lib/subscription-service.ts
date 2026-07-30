@@ -30,6 +30,19 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
     })
 
     if (!subscription) {
+      // School-affiliated users with no explicit subscription row:
+      // Grant access — the school admin manages the school-level subscription.
+      // Only independent users (userId only, no schoolId) need to subscribe themselves.
+      if (schoolId && !userId) {
+        return {
+          isActive: true,
+          isTrial: false,
+          isExpired: false,
+          daysRemaining: 9999,
+          status: 'SCHOOL_MANAGED',
+          packageName: 'School Plan'
+        }
+      }
       return {
         isActive: false,
         isTrial: false,
@@ -69,13 +82,14 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
     }
   } catch (error) {
     console.error('Error in getSubscriptionStatus:', error)
+    // On error, grant access rather than blocking users — fail open for non-billing errors
     return {
-      isActive: false,
+      isActive: true,
       isTrial: false,
-      isExpired: true,
-      daysRemaining: 0,
-      status: 'ERROR',
-      packageName: 'Error'
+      isExpired: false,
+      daysRemaining: 9999,
+      status: 'UNKNOWN',
+      packageName: 'Unknown'
     }
   }
 }

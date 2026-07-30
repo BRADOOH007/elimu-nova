@@ -134,7 +134,6 @@ export function ProfessionalDashboardLayout({
         setUserProfile({ firstName: p.firstName, lastName: p.lastName, avatar: p.avatar })
       }
     } catch (e) { console.warn('[Dashboard] Profile fetch failed:', e) }
-    // Always dismiss splash after profile attempt
     setShowSplash(false)
     sessionStorage.setItem(`splash-shown-${userRole}`, '1')
   }
@@ -144,6 +143,36 @@ export function ProfessionalDashboardLayout({
       fetchUserProfile()
     }
   }, [session?.user?.id])
+
+  /* ── Broadcast banner ── */
+  const [broadcasts, setBroadcasts] = useState<Array<{ id: string; title: string; message: string; type: string; createdAt: string }>>([])
+  const [dismissedBroadcasts, setDismissedBroadcasts] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    try { return new Set(JSON.parse(localStorage.getItem('dismissed-broadcasts') || '[]')) }
+    catch { return new Set() }
+  })
+
+  useEffect(() => {
+    // Fetch latest unread notifications — broadcasts from super admin
+    if (!session?.user?.id) return
+    fetch('/api/notifications?unreadOnly=true&limit=5')
+      .then(r => r.ok ? r.json() : [])
+      .then((data: any[]) => {
+        const arr = Array.isArray(data) ? data : (data.notifications || [])
+        setBroadcasts(arr.filter((n: any) => n.senderId && n.senderId !== session.user.id))
+      })
+      .catch(() => {})
+  }, [session?.user?.id])
+
+  const dismissBroadcast = (id: string) => {
+    const next = new Set([...dismissedBroadcasts, id])
+    setDismissedBroadcasts(next)
+    localStorage.setItem('dismissed-broadcasts', JSON.stringify([...next]))
+    // Mark as read
+    fetch(`/api/notifications/${id}/read`, { method: 'PATCH' }).catch(() => {})
+  }
+
+  const visibleBroadcasts = broadcasts.filter(b => !dismissedBroadcasts.has(b.id))
 
   /* ── Helpers ── */
   const getRoleDisplayName = (role: string) => {
@@ -163,6 +192,41 @@ export function ProfessionalDashboardLayout({
 
       {/* ── TOUR INFRASTRUCTURE ── */}
       <TourCompletionMonitor userRole={userRole} />
+
+      {/* ── BROADCAST BANNERS — shown to all roles when super admin sends a message ── */}
+      {visibleBroadcasts.length > 0 && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9998] w-full max-w-xl px-4 space-y-2 pointer-events-none">
+          {visibleBroadcasts.slice(0, 2).map(b => {
+            const colors: Record<string, string> = {
+              info:    'bg-blue-600 border-blue-500',
+              warning: 'bg-amber-600 border-amber-500',
+              success: 'bg-green-600 border-green-500',
+              error:   'bg-red-600 border-red-500',
+            }
+            const color = colors[b.type] || colors.info
+            return (
+              <div key={b.id}
+                className={`pointer-events-auto w-full ${color} text-white rounded-2xl shadow-2xl border px-5 py-4 flex items-start gap-4 animate-in slide-in-from-top-2 duration-300`}>
+                <Bell className="w-5 h-5 shrink-0 mt-0.5 opacity-90" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm leading-tight">{b.title}</p>
+                  <p className="text-xs text-white/80 mt-1 line-clamp-2 leading-relaxed">{b.message}</p>
+                  <p className="text-[10px] text-white/60 mt-1.5">
+                    {new Date(b.createdAt).toLocaleString()} · From ElimuNova Admin
+                  </p>
+                </div>
+                <button
+                  onClick={() => dismissBroadcast(b.id)}
+                  className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center shrink-0 transition-colors mt-0.5"
+                  title="Dismiss"
+                >
+                  <X className="w-3.5 h-3.5 text-white" />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
       <TourOverlay />
       <TourTooltip role={userRole} />
       <TourLauncher />

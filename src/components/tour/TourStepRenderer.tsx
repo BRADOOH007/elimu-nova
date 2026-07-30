@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Sparkles, SkipForward } from 'lucide-react'
 
 interface Props {
   step: { title: string; content: string }
@@ -12,6 +12,7 @@ interface Props {
   onNext: () => void
   onPrev: () => void
   onEnd: () => void
+  onSkipAll: () => void  // Skip entire tour permanently
 }
 
 function renderContent(text: string) {
@@ -71,7 +72,7 @@ function renderContent(text: string) {
   return elements
 }
 
-export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, onPrev, onEnd }: Props) {
+export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, onPrev, onEnd, onSkipAll }: Props) {
   const progress = ((stepIndex + 1) / totalSteps) * 100
   const isFirst = stepIndex === 0
   const isLast = stepIndex === totalSteps - 1
@@ -92,9 +93,10 @@ export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, 
           <h3 className="text-lg font-bold text-slate-900 leading-tight">{step.title}</h3>
         </div>
         <button
-          onClick={onEnd}
+          onClick={onSkipAll}
           className="p-1.5 rounded-xl hover:bg-slate-100 transition-colors shrink-0 -mr-1 -mt-1"
-          aria-label="Close tour"
+          aria-label="Skip tour"
+          title="Skip tour"
         >
           <X className="w-4 h-4 text-slate-400" />
         </button>
@@ -134,16 +136,26 @@ export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, 
 
       {/* Navigation */}
       <div className="flex items-center justify-between gap-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onPrev}
-          disabled={isFirst}
-          className="text-xs h-9 px-4 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-        >
-          <ChevronLeft className="w-3.5 h-3.5 mr-1.5" />
-          Back
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onPrev}
+            disabled={isFirst}
+            className="text-xs h-9 px-4 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+          >
+            <ChevronLeft className="w-3.5 h-3.5 mr-1.5" />
+            Back
+          </Button>
+          {!isLast && (
+            <button
+              onClick={onSkipAll}
+              className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2"
+            >
+              Skip tour
+            </button>
+          )}
+        </div>
 
         {isLast ? (
           <Button
