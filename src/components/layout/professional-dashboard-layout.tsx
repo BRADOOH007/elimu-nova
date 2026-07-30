@@ -153,15 +153,24 @@ export function ProfessionalDashboardLayout({
   })
 
   useEffect(() => {
-    // Fetch latest unread notifications — broadcasts from super admin
     if (!session?.user?.id) return
-    fetch('/api/notifications?unreadOnly=true&limit=5')
-      .then(r => r.ok ? r.json() : [])
-      .then((data: any[]) => {
-        const arr = Array.isArray(data) ? data : (data.notifications || [])
-        setBroadcasts(arr.filter((n: any) => n.senderId && n.senderId !== session.user.id))
-      })
-      .catch(() => {})
+
+    const fetchBroadcasts = () => {
+      fetch('/api/notifications?unreadOnly=true&limit=5')
+        .then(r => r.ok ? r.json() : [])
+        .then((data: any[]) => {
+          const arr = Array.isArray(data) ? data : (data.notifications || [])
+          setBroadcasts(arr.filter((n: any) => n.senderId && n.senderId !== session.user.id))
+        })
+        .catch(() => {})
+    }
+
+    // Fetch immediately on mount
+    fetchBroadcasts()
+
+    // Poll every 60 seconds for new broadcasts
+    const iv = setInterval(fetchBroadcasts, 60000)
+    return () => clearInterval(iv)
   }, [session?.user?.id])
 
   const dismissBroadcast = (id: string) => {

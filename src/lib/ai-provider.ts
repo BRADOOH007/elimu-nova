@@ -38,6 +38,12 @@ const DB_KEY_MAP: Record<string, string> = {
 let dbKeysCache: Record<string, string> | null = null
 let dbKeysCacheTime = 0
 
+/** Force the DB key cache to refresh on next AI call — call after saving new keys in admin UI */
+export function invalidateAIKeyCache(): void {
+  dbKeysCache = null
+  dbKeysCacheTime = 0
+}
+
 const ALL_DB_KEYS = [
   ...Object.values(DB_KEY_MAP),
   'ai_premium_enabled',

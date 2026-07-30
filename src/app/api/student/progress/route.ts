@@ -10,9 +10,7 @@ export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
     include: {
       user: true,
       teacher: {
-        include: {
-          user: true
-        }
+        include: { user: true }
       },
       class: true,
       school: true,
@@ -24,18 +22,14 @@ export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
       submissions: {
         include: {
           assignment: {
-            include: {
-              lessonPlan: true
-            }
+            include: { lessonPlan: { select: { subject: true, title: true } } }
           }
         },
         orderBy: { submittedAt: 'desc' },
         take: 50
       },
       assignments: {
-        include: {
-          lessonPlan: true
-        },
+        select: { id: true, dueDate: true, title: true },
         orderBy: { dueDate: 'desc' }
       },
       aiTutorSessions: {
@@ -240,61 +234,54 @@ function analyzeLearningPatterns(studySessions: any[], submissions: any[]): any 
 }
 
 async function generateAIProgressInsights(data: any): Promise<any> {
+  const fallback = {
+    analysis: 'Keep up the great work! Your learning progress is being tracked. Complete more assignments and study sessions to see detailed AI insights.',
+    recommendations: ['Set a daily study goal of at least 30 minutes', 'Ask the AI tutor when you get stuck', 'Review completed assignments before tests'],
+    strengths: ['Consistent engagement', 'Using AI tools for learning'],
+    areasForImprovement: ['Study more consistently', 'Complete pending assignments on time']
+  }
+
   try {
-    const context = {
-      student: data.student,
-      metrics: {
-        weeklyStudyTime: data.weeklyStudyTime,
-        monthlyStudyTime: data.monthlyStudyTime,
-        averageGrade: data.averageGrade,
-        completedAssignments: data.completedAssignments,
-        pendingAssignments: data.pendingAssignments,
-        overdueAssignments: data.overdueAssignments,
-        studyStreak: data.studyStreak,
-        aiHelpRequests: data.aiHelpRequests
-      },
-      subjectPerformance: data.subjectPerformance,
-      learningPatterns: data.learningPatterns,
-      recentAISessions: data.recentAISessions
+    // Only call AI if student has meaningful data to analyse
+    if (data.completedAssignments === 0 && data.totalStudyTime === 0) {
+      return fallback
     }
 
-    const aiResponse = await OpenAIService.generateText([
-      {
-        role: 'system',
-        content: `You are an AI educational analyst for ElimuNova. Analyse this student's progress data and provide concise insights and recommendations. Student: ${JSON.stringify(context.student)}. Metrics: ${JSON.stringify(context.metrics)}. Return a helpful paragraph with specific, actionable advice.`,
-      },
-      {
-        role: 'user',
-        content: 'Please provide comprehensive progress analysis and personalised recommendations for this student based on their metrics.',
-      },
-    ], { maxTokens: 500, temperature: 0.7 })
+    const summary = `Student metrics: weeklyStudy=${data.weeklyStudyTime}min, avgGrade=${data.averageGrade?.toFixed(1)||'N/A'}%, completed=${data.completedAssignments}, pending=${data.pendingAssignments}, overdue=${data.overdueAssignments}, streak=${data.studyStreak}days`
+
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+
+    const aiResponse = await Promise.race([
+      OpenAIService.generateText([
+        {
+          role: 'system',
+          content: 'You are an AI educational analyst for ElimuNova. Analyse this student\'s data and give concise, encouraging insights in 2-3 sentences. Be specific and actionable.',
+        },
+        { role: 'user', content: summary },
+      ], { maxTokens: 300, temperature: 0.7 }),
+      new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 8000))
+    ])
+
+    clearTimeout(timeout)
 
     return {
-      analysis: aiResponse,
+      analysis: aiResponse as string,
       recommendations: [
-        'Focus on improving study consistency',
-        'Set specific daily study goals',
-        'Use AI tutor for difficult topics',
-        'Review completed assignments regularly'
+        data.pendingAssignments > 0 ? `Complete ${data.pendingAssignments} pending assignment${data.pendingAssignments > 1 ? 's' : ''}` : 'Keep submitting assignments on time',
+        data.weeklyStudyTime < 120 ? 'Increase weekly study time to at least 2 hours' : 'Maintain your current study rhythm',
+        'Use the AI tutor for subjects you find challenging',
       ],
       strengths: [
-        'Good study streak',
-        'Active AI tutor usage',
-        'Consistent assignment completion'
+        data.studyStreak > 3 ? `${data.studyStreak}-day study streak — great consistency!` : 'Engaged with the platform',
+        data.completedAssignments > 0 ? `${data.completedAssignments} assignment${data.completedAssignments > 1 ? 's' : ''} completed` : 'Starting your learning journey',
       ],
       areasForImprovement: [
-        'Time management',
-        'Subject balance',
-        'Study technique optimization'
+        data.overdueAssignments > 0 ? `${data.overdueAssignments} overdue assignment${data.overdueAssignments > 1 ? 's' : ''} need attention` : 'Keep assignments on track',
+        data.weeklyStudyTime < 60 ? 'Increase daily study time' : 'Maintain your study schedule',
       ]
     }
   } catch (error) {
-    console.error('Error generating AI insights:', error)
-    return {
-      analysis: 'AI analysis temporarily unavailable. Your progress looks good overall!',
-      recommendations: ['Continue your current study routine', 'Ask AI tutor for help when needed'],
-      strengths: ['Consistent learning', 'Good engagement'],
-      areasForImprovement: ['Keep up the great work!']
-    }
+    return fallback
   }
 }
