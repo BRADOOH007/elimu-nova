@@ -18,6 +18,7 @@ async function main() {
       password: hashedPassword,
       firstName: 'Super',
       lastName: 'Admin',
+      username: 'super.admin',
       role: 'SUPER_ADMIN',
       isActive: true,
     },
@@ -49,6 +50,7 @@ async function main() {
       password: hashedPassword,
       firstName: 'School',
       lastName: 'Admin',
+      username: 'school.admin',
       role: 'SCHOOL_ADMIN',
       isActive: true,
     },
@@ -72,6 +74,7 @@ async function main() {
       password: hashedPassword,
       firstName: 'John',
       lastName: 'Teacher',
+      username: 'john.teacher',
       role: 'TEACHER',
       isActive: true,
     },
@@ -95,6 +98,7 @@ async function main() {
       password: hashedPassword,
       firstName: 'Jane',
       lastName: 'Student',
+      username: 'jane.student',
       role: 'STUDENT',
       isActive: true,
     },
@@ -150,6 +154,7 @@ async function main() {
     const email = `${first.toLowerCase()}.${last.toLowerCase()}@demoschool.edu`
     const hashedPassword = await bcrypt.hash('password123', 12)
     
+    const username = `${first.toLowerCase()}.${last.toLowerCase()}`
     const stuUser = await prisma.user.upsert({
       where: { email },
       update: {},
@@ -158,6 +163,7 @@ async function main() {
         password: hashedPassword,
         firstName: first,
         lastName: last,
+        username,
         role: 'STUDENT',
         isActive: true,
       },

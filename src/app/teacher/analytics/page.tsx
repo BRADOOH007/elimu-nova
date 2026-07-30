@@ -102,18 +102,13 @@ export default function AnalyticsPage() {
       const response = await fetch(`/api/teacher/analytics?${params}`)
       
       if (!response.ok) {
-        const errorText = await response.text()
-        
-        if (response.headers.get('content-type')?.includes('application/json')) {
-          try {
-            const errorData = JSON.parse(errorText)
-            throw new Error(errorData.error || `HTTP ${response.status}`)
-          } catch (parseError) {
-            throw new Error(`Server returned non-JSON response: ${errorText.substring(0, 100)}...`)
-          }
-        } else {
-          throw new Error(`Server returned non-JSON response: ${errorText.substring(0, 100)}...`)
+        const isJson = response.headers.get('content-type')?.includes('application/json')
+        if (isJson) {
+          const errorData = await response.json().catch(() => null)
+          throw new Error(errorData?.error || `HTTP ${response.status}`)
         }
+        const text = await response.text().catch(() => '')
+        throw new Error(text ? `Server error: ${text.substring(0, 100)}` : `HTTP ${response.status}`)
       }
       
       const data = await response.json()

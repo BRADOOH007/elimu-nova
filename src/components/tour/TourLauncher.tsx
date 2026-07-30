@@ -28,8 +28,7 @@ export function TourLauncher() {
     const config = TOUR_CONFIGS[role]
     if (!config) return
 
-    const storageKey = `tour-${role.toLowerCase()}-completed`
-    if (isCompleted(role) || localStorage.getItem(storageKey)) return
+    if (isCompleted(role)) return
 
     const resumeRaw = sessionStorage.getItem('tour-resume-active')
     if (resumeRaw) {
@@ -46,10 +45,20 @@ export function TourLauncher() {
 
     if (!launchedRef.current) {
       launchedRef.current = true
+      let check: ReturnType<typeof setInterval> | null = null
+      // Wait for splash screen to dismiss before starting tour
       const t = setTimeout(() => {
-        startTour(config.id, config.steps)
-      }, 800)
-      return () => clearTimeout(t)
+        check = setInterval(() => {
+          const splash = document.querySelector('#dashboard-splash')
+          if (!splash || splash.getAttribute('data-gone') === 'true') {
+            if (check) clearInterval(check)
+            startTour(config.id, config.steps)
+          }
+        }, 300)
+        // Safety: start tour regardless after 5s
+        setTimeout(() => { if (check) clearInterval(check); startTour(config.id, config.steps) }, 5000)
+      }, 1000)
+      return () => { clearTimeout(t); if (check) clearInterval(check) }
     }
   }, [session?.user?.role, pathname, isActive, startTour, isCompleted])
 

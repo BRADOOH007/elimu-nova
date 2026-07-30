@@ -27,6 +27,7 @@ interface Billing {
   type: string
   paymentMethod: string
   transactionId?: string
+  isFreemium?: boolean
   notes?: string
   createdAt: string
   updatedAt: string
@@ -885,6 +886,9 @@ export default function BillingPage() {
                               <span className="text-xs text-slate-500 flex items-center gap-1">
                                 <Package className="w-3.5 h-3.5 text-slate-400" />
                                 {sub.package?.name || 'Unknown'}
+                                {sub.type === 'FREEMIUM' && (
+                                  <span className="ml-1 px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 rounded-full">Freemium</span>
+                                )}
                               </span>
                               <span className="text-xs text-slate-600 font-semibold flex items-center gap-1">
                                 <DollarSign className="w-3.5 h-3.5 text-slate-400" />
@@ -895,7 +899,7 @@ export default function BillingPage() {
                                 {formatDate(sub.startDate)} — {formatDate(sub.endDate)}
                               </span>
                               <span className="text-xs text-slate-400">
-                                {sub.paymentMethod} · {sub.type}
+                                {sub.paymentMethod} · {sub.type === 'FREEMIUM' ? 'Freemium' : sub.type.replace('_', ' ')}
                               </span>
                             </div>
                             {sub.school?.schoolAdmin?.user && (

@@ -3,7 +3,7 @@ import { route } from '@/lib/api-middleware'
 import { supabaseAdmin, BUCKETS } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
 
-export const POST = route({}, async (req, { user }) => {
+export const POST = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
   const formData = await req.formData()
   const file = formData.get('file') as File | null
 

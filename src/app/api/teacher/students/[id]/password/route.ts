@@ -49,6 +49,8 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
         hasPassword: !!student.user.password,
         plainPassword: plainPassword
       }
+    }, {
+      headers: { 'Cache-Control': 'no-store, must-revalidate' },
     });
 
   } catch (error) {

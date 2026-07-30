@@ -79,6 +79,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
   const [opacity, setOpacity] = useState(1)
   const [progress, setProgress] = useState(0)
   const [tipIndex, setTipIndex] = useState(0)
+  const [dismissed, setDismissed] = useState(false)
 
   const cfg       = ROLE_CONFIG[role] || ROLE_CONFIG.STUDENT
   const firstName = userName?.split(' ')[0] || 'there'
@@ -100,7 +101,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
     return () => clearInterval(iv)
   }, [cfg.tips.length])
 
-  // Dismiss when visible → false OR after hard 5s timeout
+  // Dismiss when visible → false, user clicks, OR after hard 3s timeout
   useEffect(() => {
     let fadeTimer: NodeJS.Timeout
     let removeTimer: NodeJS.Timeout
@@ -112,29 +113,35 @@ export function DashboardSplash({ role, userName, visible }: Props) {
       removeTimer = setTimeout(() => setGone(true), 600)
     }
 
-    if (!visible) {
+    if (!visible || dismissed) {
       fadeTimer = setTimeout(dismiss, 100)
     }
 
-    // Hard safety: always dismiss within 5 seconds regardless
-    const hardTimer = setTimeout(dismiss, 5000)
+    // Hard safety: always dismiss within 3 seconds regardless
+    const hardTimer = setTimeout(dismiss, 3000)
 
     return () => {
       clearTimeout(fadeTimer)
       clearTimeout(removeTimer)
       clearTimeout(hardTimer)
     }
-  }, [visible])
+  }, [visible, dismissed])
 
-  // Once gone, render nothing — zero DOM presence
-  if (gone) return null
+  // Once gone, keep a hidden sentinel so TourLauncher can detect dismissal
+  if (gone) return <div id="dashboard-splash" data-gone="true" style={{display:'none'}} />
+
+  const handleDismiss = () => {
+    if (!dismissed) setDismissed(true)
+  }
 
   return (
     <div
+      id="dashboard-splash"
+      onClick={handleDismiss}
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: 40,
         opacity,
         // CRITICAL: once fading out, disable ALL pointer events immediately
         pointerEvents: opacity < 1 ? 'none' : 'auto',
@@ -143,6 +150,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        cursor: 'pointer',
       }}
     >
       {/* Grid texture */}

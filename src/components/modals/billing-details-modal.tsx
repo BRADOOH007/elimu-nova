@@ -25,7 +25,7 @@ interface Package {
 interface Billing {
   id: string; startDate: string; endDate: string; amount: number
   status: string; type: string; paymentMethod: string
-  transactionId?: string; notes?: string; createdAt: string; updatedAt: string
+  transactionId?: string; isFreemium?: boolean; notes?: string; createdAt: string; updatedAt: string
   school: { id: string; name: string; address: string; phone?: string; email?: string; schoolAdmin?: { user: { firstName: string; lastName: string; email: string } } } | null
   user?: { id: string; firstName: string; lastName: string; email: string } | null
   package: { id: string; name: string; description?: string; price: number; duration: number; features?: string[] }
@@ -92,6 +92,7 @@ export function BillingDetailsModal({ isOpen, onClose, billingId, onBillingUpdat
           amount: d.amount.toString(), status: d.status, type: d.type,
           paymentMethod: d.paymentMethod, transactionId: d.transactionId || '', notes: d.notes || ''
         })
+
       } else { toast({ variant: "destructive", title: "Error", description: "Failed to fetch billing details" }) }
     } catch {
       toast({ variant: "destructive", title: "Error", description: "Failed to fetch billing details" })
@@ -367,11 +368,17 @@ export function BillingDetailsModal({ isOpen, onClose, billingId, onBillingUpdat
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {['SUBSCRIPTION', 'ONE_TIME', 'RENEWAL', 'UPGRADE'].map(t => <SelectItem key={t} value={t}>{t.replace('_', ' ')}</SelectItem>)}
+                            {['SUBSCRIPTION', 'FREEMIUM', 'ONE_TIME', 'RENEWAL', 'UPGRADE'].map(t => <SelectItem key={t} value={t}>{t === 'FREEMIUM' ? 'Freemium (Free)' : t.replace('_', ' ')}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       ) : (
-                        <InfoRow icon={Tag} label="Type" value={billing.type.replace('_', ' ')} />
+                        <div className="flex items-center gap-2">
+                          {billing.type === 'FREEMIUM' ? (
+                            <span className="px-2.5 py-1 text-xs font-semibold bg-emerald-100 text-emerald-700 rounded-full">Freemium</span>
+                          ) : (
+                            <InfoRow icon={Tag} label="Type" value={billing.type.replace('_', ' ')} />
+                          )}
+                        </div>
                       )}
                     </div>
                     <div className="space-y-1.5">

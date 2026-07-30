@@ -5,7 +5,7 @@ import { route } from '@/lib/api-middleware'
 // We store live sessions in the Schedule table (type=CLASS, status=IN_PROGRESS)
 // and use metadata JSON for session state (board content, chat, participants)
 
-export const GET = route({}, async (req, { user }) => {
+export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
 
     const { searchParams } = new URL(req.url)
     const sessionId = searchParams.get('sessionId')
@@ -53,7 +53,7 @@ export const GET = route({}, async (req, { user }) => {
 })
 
 // POST — teacher starts a new live session
-export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
+export const POST = route({ auth: 'TEACHER', skipSubscriptionCheck: true }, async (req, { user }) => {
 
     const teacher = await prisma.teacher.findUnique({
       where: { userId: user.id },
@@ -94,7 +94,7 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
 })
 
 // PATCH — update session state (board, chat, end session)
-export const PATCH = route({}, async (req, { user }) => {
+export const PATCH = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
 
     const { sessionId, action, data } = await req.json()
 
@@ -124,7 +124,21 @@ export const PATCH = route({}, async (req, { user }) => {
     if (action === 'join') {
       if (!meta.participants) meta.participants = []
       const already = meta.participants.find((p: any) => p.userId === data.userId)
-      if (!already) meta.participants.push({ userId: data.userId, name: data.name, joinedAt: new Date().toISOString() })
+      if (!already) meta.participants.push({ userId: data.userId, name: data.name, joinedAt: new Date().toISOString(), handRaised: false })
+    }
+
+    if (action === 'raiseHand') {
+      if (!meta.participants) meta.participants = []
+      const existing = meta.participants.find((p: any) => p.userId === data.userId)
+      if (existing) existing.handRaised = true
+      else meta.participants.push({ userId: data.userId, name: data.name, joinedAt: new Date().toISOString(), handRaised: true })
+    }
+
+    if (action === 'lowerHand') {
+      if (meta.participants) {
+        const existing = meta.participants.find((p: any) => p.userId === data.userId)
+        if (existing) existing.handRaised = false
+      }
     }
 
     const updated = await prisma.schedule.update({

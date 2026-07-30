@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookOpen, ChevronRight, ChevronDown, Loader2, Play } from 'lucide-react'
+import { BookOpen, ChevronRight, ChevronDown, ExternalLink, Loader2, Play } from 'lucide-react'
+import { getKECWorkbook, getKECCategoryUrl } from '@/data/kec-workbooks'
 
 interface Strand {
   id: string
@@ -117,6 +118,43 @@ export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
             className="w-full h-9 px-3 border border-slate-200 rounded-2xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-500">
             {SUBJECTS.map(s => <option key={s}>{s}</option>)}
           </select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-400">
+          {strands.length > 0 ? `${strands.length} strands available` : ''}
+        </p>
+        <div className="flex gap-2">
+          {(() => {
+            const kec = getKECWorkbook(grade, subject)
+            const catUrl = getKECCategoryUrl(grade)
+            if (kec?.pageUrl || kec?.courseUrl) {
+              return (
+                <a
+                  href={kec.pageUrl || kec.courseUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-full px-3 py-1.5 transition-all"
+                >
+                  <ExternalLink className="h-3 w-3" /> KEC Workbook
+                </a>
+              )
+            }
+            if (catUrl) {
+              return (
+                <a
+                  href={catUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5 transition-all"
+                >
+                  <ExternalLink className="h-3 w-3" /> KEC Resources
+                </a>
+              )
+            }
+            return null
+          })()}
         </div>
       </div>
 

@@ -20,7 +20,8 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       prisma.school.count(),
       prisma.subscription.count(),
       prisma.subscription.aggregate({
-        _sum: { amount: true }
+        _sum: { amount: true },
+        where: { isFreemium: { not: true } }
       }),
       prisma.user.count({
         where: { isActive: true }

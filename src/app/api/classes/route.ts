@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { route } from '@/lib/api-middleware';
 
-export const GET = route({}, async (req, { user }) => {
+export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
   const teacher = await prisma.teacher.findFirst({
     where: { userId: user.id }
   });

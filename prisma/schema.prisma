@@ -395,6 +395,7 @@ model Subscription {
   stripeCustomerId     String? // Stripe customer ID
   isTrial              Boolean            @default(false)
   trialEndsAt          DateTime?
+  isFreemium           Boolean            @default(false)
   notes                String?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt

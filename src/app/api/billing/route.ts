@@ -119,7 +119,7 @@ export const GET = route({ auth: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] }, async (req, 
   if (user.role === 'SUPER_ADMIN') {
     const totalRevenue = await prisma.subscription.aggregate({
       _sum: { amount: true },
-      where: { status: 'ACTIVE' as any }
+      where: { status: 'ACTIVE' as any, isFreemium: { not: true } }
     })
 
     const currentMonth = new Date()
@@ -128,14 +128,16 @@ export const GET = route({ auth: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] }, async (req, 
       _sum: { amount: true },
       where: {
         status: 'ACTIVE' as any,
+        isFreemium: { not: true },
         createdAt: { gte: monthStart }
       }
     })
 
+    const payingWhere = { isFreemium: { not: true } } as any
     const [activeSubscriptions, trialSubscriptions, totalSubscriptions] = await Promise.all([
-      prisma.subscription.count({ where: { status: 'ACTIVE' as any } }),
-      prisma.subscription.count({ where: { status: 'TRIAL' as any } }),
-      prisma.subscription.count()
+      prisma.subscription.count({ where: { status: 'ACTIVE' as any, ...payingWhere } }),
+      prisma.subscription.count({ where: { status: 'TRIAL' as any, ...payingWhere } }),
+      prisma.subscription.count({ where: payingWhere })
     ])
 
     const conversionRate = (activeSubscriptions + trialSubscriptions) > 0
@@ -192,6 +194,8 @@ export const POST = route({ auth: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] }, async (req,
     notes
   } = body
 
+  const isFreemium = type === 'FREEMIUM'
+
   if (user.role === 'SCHOOL_ADMIN') {
     const schoolAdmin = await prisma.schoolAdmin.findFirst({
       where: { userId: user.id },
@@ -236,6 +240,7 @@ export const POST = route({ auth: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] }, async (req,
       type,
       paymentMethod,
       transactionId,
+      isFreemium,
       notes
     },
     include: {

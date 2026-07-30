@@ -19,7 +19,7 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
         include: {
           schoolAdmin: { include: { user: true } },
           _count: { select: { teachers: true, students: true } },
-          subscriptions: { where: { status: 'ACTIVE' }, take: 1 },
+          subscriptions: { where: { status: 'ACTIVE' }, take: 1, select: { id: true, status: true, startDate: true, endDate: true, isFreemium: true, package: { select: { name: true, price: true } } } },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

@@ -19,24 +19,43 @@ const TOUR_ACCENTS: Record<string, string> = {
   PARENT: 'from-rose-500 to-pink-600',
 }
 
+const PLACEMENT_ATTRIBUTION: Record<TourPlacement, string> = {
+  top: 'bottom',
+  bottom: 'top',
+  left: 'right',
+  right: 'left',
+  center: 'none',
+}
+
 export function TourTooltip({ role }: { role?: string }) {
-  const { isActive, currentStep, stepIndex, totalSteps, nextStep, prevStep, endTour, activeTourId } = useTour()
+  const { isActive, currentStep, stepIndex, totalSteps, nextStep, prevStep, endTour } = useTour()
   const [position, setPosition] = useState({ top: 0, left: 0 })
+  const [ready, setReady] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
-  const padding = currentStep?.highlightPadding ?? 8
+  const mountedRef = useRef(false)
 
   useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
+
+  useEffect(() => {
+    setReady(false)
     if (!isActive || !currentStep) return
 
-    if (!currentStep.target || currentStep.placement === 'center') {
+    const isCentered = !currentStep.target || currentStep.placement === 'center'
+
+    if (isCentered) {
       setPosition({
-        top: Math.max(24, window.innerHeight / 2 - 180),
-        left: Math.max(16, window.innerWidth / 2 - 200),
+        top: Math.max(24, window.innerHeight / 2 - 200),
+        left: Math.max(16, window.innerWidth / 2 - 220),
       })
+      setReady(true)
       return
     }
 
     const pos = () => {
+      if (!mountedRef.current) return
       const el = document.querySelector(currentStep.target!)
       if (!el) return
       const rect = el.getBoundingClientRect()
@@ -48,17 +67,18 @@ export function TourTooltip({ role }: { role?: string }) {
       let top = 0, left = 0
       switch (currentStep.placement) {
         case 'top':
-          top = rect.top - th - 12; left = rect.left + rect.width / 2 - tw / 2; break
+          top = rect.top - th - 14; left = rect.left + rect.width / 2 - tw / 2; break
         case 'bottom':
-          top = rect.bottom + 12; left = rect.left + rect.width / 2 - tw / 2; break
+          top = rect.bottom + 14; left = rect.left + rect.width / 2 - tw / 2; break
         case 'left':
-          top = rect.top + rect.height / 2 - th / 2; left = rect.left - tw - 12; break
+          top = rect.top + rect.height / 2 - th / 2; left = rect.left - tw - 14; break
         case 'right':
-          top = rect.top + rect.height / 2 - th / 2; left = rect.right + 12; break
+          top = rect.top + rect.height / 2 - th / 2; left = rect.right + 14; break
       }
-      top = Math.max(16, Math.min(top, window.innerHeight - th - 16))
-      left = Math.max(16, Math.min(left, window.innerWidth - tw - 16))
+      top = Math.max(20, Math.min(top, window.innerHeight - th - 20))
+      left = Math.max(20, Math.min(left, window.innerWidth - tw - 20))
       setPosition({ top, left })
+      setReady(true)
     }
 
     pos()
@@ -97,9 +117,10 @@ export function TourTooltip({ role }: { role?: string }) {
     return () => tooltip.removeEventListener('keydown', handleTab)
   }, [isActive, stepIndex])
 
-  if (!isActive || !currentStep) return null
+  if (!isActive || !currentStep || !ready) return null
 
-  const showArrow = currentStep.placement !== 'center'
+  const isCentered = !currentStep.target || currentStep.placement === 'center'
+  const showArrow = !isCentered
   const accent = (role && TOUR_ACCENTS[role]) || 'from-blue-500 to-purple-600'
 
   return (
@@ -108,12 +129,19 @@ export function TourTooltip({ role }: { role?: string }) {
       role="dialog"
       aria-label={`Tour step ${stepIndex + 1} of ${totalSteps}: ${currentStep.title}`}
       aria-modal="true"
-      className="fixed z-[10000] animate-tour-tooltip-in"
-      style={{ top: position.top, left: position.left }}
+      className="fixed z-[10000]"
+      style={{
+        top: position.top,
+        left: position.left,
+        opacity: ready ? 1 : 0,
+        transform: ready ? 'translateY(0)' : 'translateY(8px)',
+        transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+      }}
     >
+      {/* Arrow */}
       {showArrow && (
         <div
-          className="absolute w-3 h-3 bg-white rotate-45 border border-slate-200"
+          className="absolute w-3 h-3 bg-white rotate-45 border border-slate-200/80"
           style={{
             [ARROW_MAP[currentStep.placement]]: -6,
             left: ['top', 'bottom'].includes(currentStep.placement) ? '50%' : undefined,
@@ -123,7 +151,18 @@ export function TourTooltip({ role }: { role?: string }) {
           }}
         />
       )}
-      <div className="bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden min-w-[280px] max-w-[400px]">
+
+      {/* Main card — premium glassmorphism */}
+      <div
+        className={`
+          bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl
+          border border-white/20 overflow-hidden
+          ${isCentered ? 'min-w-[340px] max-w-[460px] shadow-blue-500/10' : 'min-w-[300px] max-w-[420px]'}
+        `}
+      >
+        {/* Accent bar */}
+        <div className={`h-1 w-full bg-gradient-to-r ${accent}`} />
+
         <TourStepRenderer
           step={currentStep}
           stepIndex={stepIndex}

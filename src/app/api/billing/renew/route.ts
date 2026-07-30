@@ -41,6 +41,7 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       endDate,
       amount: newPackage.price,
       isTrial: false,
+      isFreemium: oldSubscription.isFreemium ?? false,
       type: 'RENEWAL',
       paymentMethod: 'MANUAL',
     },

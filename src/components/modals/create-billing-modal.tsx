@@ -24,10 +24,12 @@ interface Package {
 }
 
 interface CreateBillingModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onBillingCreated: (billing: any) => void
-}
+    isOpen: boolean
+    onClose: () => void
+    onBillingCreated: (billing: any) => void
+  }
+
+
 
 export function CreateBillingModal({ isOpen, onClose, onBillingCreated }: CreateBillingModalProps) {
   const { toast } = useToast()
@@ -126,7 +128,7 @@ export function CreateBillingModal({ isOpen, onClose, onBillingCreated }: Create
         },
         body: JSON.stringify({
           ...formData,
-          amount: parseFloat(formData.amount)
+          amount: parseFloat(formData.amount),
         }),
       })
 
@@ -366,6 +368,7 @@ export function CreateBillingModal({ isOpen, onClose, onBillingCreated }: Create
                   <SelectItem value="ONE_TIME">One-time Payment</SelectItem>
                   <SelectItem value="RENEWAL">Renewal</SelectItem>
                   <SelectItem value="UPGRADE">Upgrade</SelectItem>
+                  <SelectItem value="FREEMIUM">Freemium (Free)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

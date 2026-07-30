@@ -22,9 +22,11 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       prisma.subscription.count(),
     ])
 
-    // Revenue summary
+    const payingWhere = { isFreemium: { not: true } } as any
+
+    // Revenue summary (exclude freemium)
     const activeRevenue = await prisma.subscription.aggregate({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', ...payingWhere },
       _sum: { amount: true },
     })
 
@@ -33,7 +35,7 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       packages,
       pagination: { page, limit, total, pages: Math.ceil(total / limit) },
       summary: {
-        totalActive: await prisma.subscription.count({ where: { status: 'ACTIVE' } }),
+        totalActive: await prisma.subscription.count({ where: { status: 'ACTIVE', ...payingWhere } }),
         monthlyRevenue: activeRevenue._sum.amount || 0,
       },
     })
