@@ -99,7 +99,7 @@ export function ProfessionalDashboardLayout({
     const key = `splash-shown-${userRole}`
     return !sessionStorage.getItem(key)
   })
-  const { unreadCount, refetch: refetchUnread } = useUnreadMessages()
+   const { unreadCount, notificationUnread, refetch: refetchUnread } = useUnreadMessages()
   const { subscription, hasAccess } = useSubscription()
   const daysLeft = subscription?.daysRemaining ?? 0
   const [userProfile, setUserProfile] = useState<{
@@ -218,9 +218,9 @@ export function ProfessionalDashboardLayout({
               aria-label="Notifications"
             >
               <Bell className="w-4 h-4 sm:w-5 sm:h-5 text-slate-600" />
-              {unreadCount > 0 && (
+              {notificationUnread > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                  {notificationUnread > 99 ? '99+' : notificationUnread}
                 </span>
               )}
             </button>

@@ -72,5 +72,5 @@ export function useUnreadMessages() {
     }
   }, [fetchCount, fetchNotificationCount])
 
-  return { unreadCount, loading, refetch: fetchNotificationCount }
+   return { unreadCount, notificationUnread, loading, refetch: fetchNotificationCount }
 }
