@@ -51,8 +51,8 @@ export function PricingPlans() {
     fetch('/api/packages/public')
       .then(r => r.json())
       .then(data => {
-        if (data?.packages?.length >= 3) {
-          setPlans(data.packages.slice(0, 3))
+        if (data?.packages?.length > 0) {
+          setPlans(data.packages)
         }
       })
       .catch(() => {})

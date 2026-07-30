@@ -85,9 +85,22 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
           phone: data.phone || '',
           address: data.address || ''
         })
+      } else {
+        const err = await response.json().catch(() => ({ error: 'Unknown error' }))
+        console.error('Failed to load profile:', err.error)
+        toast({
+          variant: "destructive",
+          title: "Failed to Load Profile",
+          description: err.error || 'An error occurred while loading your profile',
+        })
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
+      toast({
+        variant: "destructive",
+        title: "Failed to Load Profile",
+        description: "Network error. Please try again.",
+      })
     } finally {
       setLoading(false)
     }
@@ -216,7 +229,7 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
       })
 
       if (!res.ok) {
-        const err = await res.json()
+        const err = await res.json().catch(() => ({ error: 'Upload failed' }))
         throw new Error(err.error || 'Upload failed')
       }
 
@@ -227,7 +240,7 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
       toast({
         variant: "destructive",
         title: "Upload Failed",
-        description: "Failed to upload avatar. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload avatar. Please try again.",
       })
       setPreviewAvatar(null)
     } finally {

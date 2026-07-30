@@ -6,9 +6,10 @@ import { useSession } from 'next-auth/react'
 import {
   Radio, Square, Send, Users, MessageSquare, Pen, Eraser,
   Minus, Circle, Loader2, ChevronRight, Copy, CheckCircle,
-  Sparkles, BookOpen, RotateCcw, Download, Plus, Video, Link
+  Sparkles, BookOpen, RotateCcw, Download, Plus, Video, Link, Hand
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from '@/hooks/use-toast'
 import { confirmToast } from '@/lib/confirm-toast'
 
 const DiscussTab = dynamic(() => import('@/app/teacher/discussions/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
@@ -22,13 +23,14 @@ interface LiveSession {
   class?: { name: string; grade: string }
 }
 interface ChatMsg { userId: string; name: string; message: string; ts: string; isAI?: boolean }
-interface Participant { userId: string; name: string; joinedAt: string }
+interface Participant { userId: string; name: string; joinedAt: string; handRaised?: boolean }
 interface ClassInfo { id: string; name: string; grade: string; subject: string }
 
 type Tool = 'pen' | 'eraser' | 'line' | 'circle' | 'text'
 
 export default function LiveClassPage() {
   const { data: session } = useSession()
+  const { toast } = useToast()
   const [step, setStep] = useState<'setup' | 'live'>('setup')
   const [classes, setClasses] = useState<ClassInfo[]>([])
   const [selectedClass, setSelectedClass] = useState('')
@@ -50,6 +52,7 @@ export default function LiveClassPage() {
   // Chat
   const [chatInput, setChatInput] = useState('')
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([])
+  const [participants, setParticipants] = useState<Participant[]>([])
   const [aiLoading, setAiLoading] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
@@ -78,7 +81,7 @@ export default function LiveClassPage() {
       if (data.session) {
         const meta = data.session.metadata || {}
         setChatMessages(meta.chat || [])
-        // Update canvas if board changed externally
+        setParticipants(meta.participants || [])
       }
     } catch { /* silent */ }
   }
@@ -86,15 +89,22 @@ export default function LiveClassPage() {
   const startSession = async () => {
     setLoading(true)
     try {
-      const res  = await fetch('/api/live-session', {
+      const res = await fetch('/api/live-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, classId: selectedClass, subject, meetingLink }),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Failed to start session' }))
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
       const data = await res.json()
       setLiveSession(data.session)
       setChatMessages(data.session.metadata?.chat || [])
+      setParticipants(data.session.metadata?.participants || [])
       setStep('live')
+    } catch (e) {
+      toast({ title: 'Failed to start', description: e instanceof Error ? e.message : 'Unknown error', variant: 'destructive' })
     } finally { setLoading(false) }
   }
 
@@ -165,6 +175,11 @@ export default function LiveClassPage() {
     ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
   }
 
+  const openMeetingPopup = (url: string) => {
+    const w = 800, h = 700
+    window.open(url, 'meeting-popup', `width=${w},height=${h},left=${(screen.width-w)/2},top=${(screen.height-h)/2},menubar=no,toolbar=no,location=yes`)
+  }
+
   const copyCode = () => {
     if (liveSession?.metadata?.sessionCode) {
       navigator.clipboard.writeText(liveSession.metadata.sessionCode)
@@ -173,7 +188,7 @@ export default function LiveClassPage() {
     }
   }
 
-  // Canvas drawing
+  // Canvas drawing (mouse + touch)
   const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
@@ -183,13 +198,15 @@ export default function LiveClassPage() {
     return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) }
   }
 
-  const startDraw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault()
     setDrawing(true)
     lastPos.current = getPos(e)
   }
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!drawing || !canvasRef.current) return
+    e.preventDefault()
     const ctx = canvasRef.current.getContext('2d')
     if (!ctx) return
     const pos = getPos(e)
@@ -205,7 +222,7 @@ export default function LiveClassPage() {
     lastPos.current = pos
   }
 
-  const stopDraw = () => { setDrawing(false); lastPos.current = null; saveBoard() }
+  const handlePointerUp = () => { setDrawing(false); lastPos.current = null; saveBoard() }
 
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
@@ -293,10 +310,10 @@ export default function LiveClassPage() {
         </div>
         <div className="flex items-center gap-3">
           {liveSession?.metadata?.meetingLink && (
-            <a href={liveSession.metadata.meetingLink} target="_blank" rel="noopener noreferrer"
+            <button onClick={() => openMeetingPopup(liveSession.metadata.meetingLink!)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
               <Video className="h-3 w-3" /> Join Video
-            </a>
+            </button>
           )}
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
             <span className="text-xs text-slate-500">Code:</span>
@@ -305,9 +322,18 @@ export default function LiveClassPage() {
               {copied ? <CheckCircle className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
           </div>
-          <div className="flex items-center gap-1 text-xs text-slate-500">
-            <Users className="h-3.5 w-3.5" />
-            {liveSession?.metadata?.participants?.length || 0}
+          <div className="flex items-center gap-3">
+            {participants.filter(p => p.handRaised).length > 0 && (
+              <span className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-xs font-medium text-amber-700 shadow-sm">
+                <Hand className="h-3.5 w-3.5 fill-amber-500" />
+                {participants.filter(p => p.handRaised).length}
+                <span className="hidden sm:inline">{participants.filter(p => p.handRaised).length === 1 ? ' hand raised' : ' hands raised'}</span>
+              </span>
+            )}
+            <span className="flex items-center gap-1 text-xs text-slate-500">
+              <Users className="h-3.5 w-3.5" />
+              {participants.length}
+            </span>
           </div>
           <button onClick={endSession}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition-colors">
@@ -355,10 +381,13 @@ export default function LiveClassPage() {
               width={1200} height={800}
               className="w-full h-full cursor-crosshair"
               style={{ touchAction: 'none' }}
-              onMouseDown={startDraw}
-              onMouseMove={draw}
-              onMouseUp={stopDraw}
-              onMouseLeave={stopDraw}
+              onMouseDown={handlePointerDown}
+              onMouseMove={handlePointerMove}
+              onMouseUp={handlePointerUp}
+              onMouseLeave={handlePointerUp}
+              onTouchStart={handlePointerDown}
+              onTouchMove={handlePointerMove}
+              onTouchEnd={handlePointerUp}
             />
             <div className="absolute bottom-3 left-3 text-xs text-slate-400 bg-white/80 px-2 py-1 rounded">
               Students see this board (refreshes every 3s)

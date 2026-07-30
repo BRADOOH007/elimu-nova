@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast'
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { Radio, MessageSquare, Send, Users, Loader2, Sparkles, Eye, Video } from 'lucide-react'
+import { Radio, MessageSquare, Send, Users, Loader2, Sparkles, Eye, Video, Hand, HandMetal } from 'lucide-react'
 
 interface LiveSession {
   id: string; title: string; subject: string; status: string
@@ -12,7 +12,7 @@ interface LiveSession {
   teacher?: { user: { firstName: string; lastName: string } }
 }
 interface ChatMsg { userId: string; name: string; message: string; ts: string; isAI?: boolean }
-interface Participant { userId: string; name: string; joinedAt: string }
+interface Participant { userId: string; name: string; joinedAt: string; handRaised?: boolean }
 
 export default function StudentLiveClass() {
   const { toast } = useToast()
@@ -24,8 +24,14 @@ export default function StudentLiveClass() {
   const [loading, setLoading] = useState(true)
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([])
   const [boardImg, setBoardImg] = useState('')
+  const [handRaised, setHandRaised] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const pollRef = useRef<NodeJS.Timeout>(null)
+
+  const openMeetingPopup = (url: string) => {
+    const w = 800, h = 700
+    window.open(url, 'meeting-popup', `width=${w},height=${h},left=${(screen.width-w)/2},top=${(screen.height-h)/2},menubar=no,toolbar=no,location=yes`)
+  }
 
   useEffect(() => {
     loadActiveSessions()
@@ -88,6 +94,17 @@ export default function StudentLiveClass() {
     const found = activeSessions.find(s => s.metadata?.sessionCode === code)
     if (found) { joinSession(found); return }
     toast({ variant:'destructive', title:'Session not found', description:'Ask your teacher to share the session code.' })
+  }
+
+  const toggleHand = async () => {
+    if (!joinedSession) return
+    const action = handRaised ? 'lowerHand' : 'raiseHand'
+    await fetch('/api/live-session', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: joinedSession.id, action, data: { userId: session?.user?.id, name: session?.user?.name || 'Student' } }),
+    })
+    setHandRaised(!handRaised)
   }
 
   const sendChat = async () => {
@@ -160,10 +177,10 @@ export default function StudentLiveClass() {
                 </div>
                 <div className="flex items-center gap-2">
                   {s.metadata?.meetingLink && (
-                    <a href={s.metadata.meetingLink} target="_blank" rel="noopener noreferrer"
+                    <button onClick={() => openMeetingPopup(s.metadata.meetingLink!)}
                       className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
                       <Video className="h-4 w-4" /> Join Video
-                    </a>
+                    </button>
                   )}
                   <button onClick={() => joinSession(s)}
                     className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
@@ -191,11 +208,20 @@ export default function StudentLiveClass() {
         </div>
         <div className="flex items-center gap-2">
           {joinedSession.metadata?.meetingLink && (
-            <a href={joinedSession.metadata.meetingLink} target="_blank" rel="noopener noreferrer"
+            <button onClick={() => openMeetingPopup(joinedSession.metadata.meetingLink!)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
               <Video className="h-3.5 w-3.5" /> Join Video
-            </a>
+            </button>
           )}
+          <button onClick={toggleHand}
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 ${
+              handRaised
+                ? 'bg-amber-50 text-amber-700 border border-amber-200 shadow-sm'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700 border border-transparent'
+            }`}>
+            <Hand className={`h-3.5 w-3.5 transition-transform duration-300 ${handRaised ? 'scale-110 fill-amber-500' : ''}`} />
+            {handRaised ? 'Lower hand' : 'Raise hand'}
+          </button>
           <span className="text-xs text-slate-500 flex items-center gap-1">
             <Users className="h-3.5 w-3.5" />
             {joinedSession.metadata?.participants?.length || 0} joined

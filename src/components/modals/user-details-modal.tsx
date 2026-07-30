@@ -117,16 +117,20 @@ export function UserDetailsModal({
   const [pwRevealed, setPwRevealed] = useState(false)
   const [pwCopied, setPwCopied] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pendingPassword, setPendingPassword] = useState<string | null>(null)
 
   const fetchPassword = async () => {
     if (!userId) return
     setPwLoading(true)
     setPasswordData(null)
     setPwRevealed(false)
+    setPendingPassword(null)
     try {
-      const res = await fetch(`/api/users/${userId}/password`)
+      const res = await fetch(`/api/users/${userId}/password?_=${Date.now()}`, { cache: 'no-store' })
       if (res.ok) {
-        setPasswordData(await res.json())
+        const data = await res.json()
+        setPasswordData(data)
       } else {
         setPasswordData({ password: null, hasStoredPassword: false })
       }
@@ -136,10 +140,66 @@ export function UserDetailsModal({
   }
 
   const handleCopyPassword = async () => {
-    if (!passwordData?.password) return
-    await navigator.clipboard.writeText(passwordData.password)
+    if (!passwordData?.password && !pendingPassword) return
+    const pwd = passwordData?.password || pendingPassword
+    if (!pwd) return
+    await navigator.clipboard.writeText(pwd)
     setPwCopied(true)
     setTimeout(() => setPwCopied(false), 2000)
+  }
+
+  const handleGenerateAndSave = async () => {
+    if (!userId) return
+    setRegenerating(true)
+    try {
+      const res = await fetch(`/api/users/${userId}/regenerate-password`, { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setPendingPassword(data.password)
+        setPwRevealed(true)
+        // Immediately verify the save
+        const verify = await fetch(`/api/users/${userId}/password?_=${Date.now()}`, { cache: 'no-store' })
+        if (verify.ok) {
+          const verified = await verify.json()
+          if (verified.hasStoredPassword) {
+            setPasswordData(verified)
+            setPendingPassword(null)
+            toast({ title: 'Password saved' })
+            return
+          }
+        }
+        toast({ title: 'Password generated — click Save to persist' })
+      } else {
+        const err = await res.json()
+        toast({ variant: 'destructive', title: 'Error', description: err.error })
+      }
+    } catch {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate password' })
+    } finally { setRegenerating(false) }
+  }
+
+  const handleSavePassword = async () => {
+    if (!userId || !pendingPassword) return
+    setPwSaving(true)
+    try {
+      // Retry verification with backoff — the password is already saved by regenerate-password
+      for (let attempt = 0; attempt < 5; attempt++) {
+        await new Promise(r => setTimeout(r, 300 * (attempt + 1)))
+        const verify = await fetch(`/api/users/${userId}/password?_=${Date.now()}`, { cache: 'no-store' })
+        if (verify.ok) {
+          const verified = await verify.json()
+          if (verified.hasStoredPassword) {
+            setPasswordData(verified)
+            setPendingPassword(null)
+            toast({ title: 'Password saved' })
+            return
+          }
+        }
+      }
+      toast({ variant: 'destructive', title: 'Error', description: 'Save verification failed — please try again' })
+    } catch {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save password' })
+    } finally { setPwSaving(false) }
   }
 
   const handleRegenerate = async () => {
@@ -678,14 +738,42 @@ export function UserDetailsModal({
                 </div>
               ) : !passwordData ? (
                 <p className="text-sm text-gray-500">Could not load password.</p>
-              ) : !passwordData.hasStoredPassword ? (
+              ) : !passwordData.hasStoredPassword && !pendingPassword ? (
                 <div>
                   <p className="text-sm text-gray-500 mb-3">No stored password found. Generate one for this user.</p>
-                  <Button variant="outline" size="sm" onClick={handleRegenerate}
+                  <Button variant="outline" size="sm" onClick={handleGenerateAndSave}
                     disabled={regenerating} className="text-xs">
                     <RefreshCw className={`w-3.5 h-3.5 mr-1 ${regenerating ? 'animate-spin' : ''}`} />
                     Generate Password
                   </Button>
+                </div>
+              ) : pendingPassword ? (
+                <div>
+                  <div className="flex items-center gap-2 text-sm mb-3">
+                    <span className="text-gray-500 font-medium min-w-[80px]">Password</span>
+                    <div className="flex items-center gap-2 flex-1">
+                      <code className="flex-1 px-3 py-2 rounded-lg bg-white/80 border border-amber-200 text-sm font-mono text-gray-900 select-none">
+                        {pwRevealed ? pendingPassword : '••••••••••••'}
+                      </code>
+                      <button onClick={handleCopyPassword}
+                        className="shrink-0 p-2 rounded-lg hover:bg-white/80 text-gray-500 hover:text-gray-700 transition-colors" title="Copy">
+                        {pwCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-amber-600 mb-3">Password generated but not yet saved.</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSavePassword}
+                      disabled={pwSaving} className="text-xs bg-amber-600 hover:bg-amber-700">
+                      {pwSaving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+                      Save
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleGenerateAndSave}
+                      disabled={regenerating} className="text-xs">
+                      <RefreshCw className={`w-3.5 h-3.5 mr-1 ${regenerating ? 'animate-spin' : ''}`} />
+                      Regenerate
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div>

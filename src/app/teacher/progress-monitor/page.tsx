@@ -41,9 +41,15 @@ export default function ProgressMonitorPage() {
 
   useEffect(() => {
     fetch('/api/teacher/student-progress-monitor')
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ error: 'Failed to load' }))
+          throw new Error(err.error || `HTTP ${r.status}`)
+        }
+        return r.json()
+      })
       .then(d => setData(d))
-      .catch(console.error)
+      .catch(e => console.error('Progress monitor error:', e))
       .finally(() => setLoading(false))
   }, [])
 

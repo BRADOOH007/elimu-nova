@@ -4,6 +4,8 @@ import { route } from '@/lib/api-middleware'
 import { extractEncryptedPassword } from '@/lib/password-encryption'
 import { generatePassword } from '@/lib/bulk-import'
 
+export const dynamic = 'force-dynamic'
+
 // Reveal the stored password (decrypted from the address field)
 export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
   const { id } = params
@@ -27,6 +29,8 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
     username: user.username,
     password: password || null,
     hasStoredPassword: !!password,
+  }, {
+    headers: { 'Cache-Control': 'no-store, must-revalidate' },
   })
 })
 

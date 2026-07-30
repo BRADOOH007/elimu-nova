@@ -132,7 +132,7 @@ export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
       ...(endDate && { endDate: new Date(endDate) }),
       ...(amount && { amount }),
       ...(status && { status }),
-      ...(type && { type }),
+      ...(type && { type, isFreemium: type === 'FREEMIUM' }),
       ...(paymentMethod && { paymentMethod }),
       ...(transactionId && { transactionId }),
       ...(notes !== undefined && { notes })

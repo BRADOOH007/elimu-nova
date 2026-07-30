@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
+export const GET = route({ auth: 'TEACHER', skipSubscriptionCheck: true }, async (req, { user }) => {
   try {
     // Get teacher's school ID
     const teacher = await prisma.teacher.findUnique({

@@ -130,7 +130,7 @@ export default function SuperAdminUserDetailPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div
-                className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 text-xl font-semibold overflow-hidden cursor-pointer ring-1 ring-slate-300 hover:ring-2 hover:ring-slate-400 transition-all"
                 onClick={() => user.avatar && setShowAvatar(true)}
                 title={user.avatar ? 'Click to enlarge' : undefined}
               >

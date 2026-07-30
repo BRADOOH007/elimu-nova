@@ -58,6 +58,7 @@ interface School {
     status: string
     startDate: string
     endDate: string
+    isFreemium: boolean
     package: {
       name: string
       price: number
@@ -207,7 +208,7 @@ export default function SchoolsPage() {
   // Calculate total students and revenue
   const totalStudents = schools.reduce((sum, school) => sum + (school.students?.length || 0), 0)
   const totalRevenue = schools.reduce((sum, school) => {
-    return sum + (school.subscriptions?.reduce((subSum, sub) => subSum + sub.package.price, 0) || 0)
+    return sum + (school.subscriptions?.filter(sub => !sub.isFreemium).reduce((subSum, sub) => subSum + sub.package.price, 0) || 0)
   }, 0)
 
   return (
@@ -416,7 +417,7 @@ export default function SchoolsPage() {
                       </div>
                       <div className="text-center">
                         <p className="text-lg font-bold text-gray-900">
-                          ${school.subscriptions?.reduce((sum, sub) => sum + sub.package.price, 0).toLocaleString() || 0}
+                          ${school.subscriptions?.filter(sub => !sub.isFreemium).reduce((sum, sub) => sum + sub.package.price, 0).toLocaleString() || 0}
                         </p>
                         <p className="text-xs text-gray-500">Revenue</p>
                       </div>
@@ -450,9 +451,15 @@ export default function SchoolsPage() {
                         {school.subscriptions.map((subscription) => (
                           <span 
                             key={subscription.id}
-                            className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full"
+                            className={`inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-full ${
+                              subscription.isFreemium ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'
+                            }`}
                           >
-                            {subscription.package.name} - ${subscription.package.price.toLocaleString()}
+                            {subscription.package.name}
+                            {subscription.isFreemium
+                              ? <span className="text-[10px] px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded-full">Freemium</span>
+                              : <span>- ${subscription.package.price.toLocaleString()}</span>
+                            }
                           </span>
                         ))}
                       </div>

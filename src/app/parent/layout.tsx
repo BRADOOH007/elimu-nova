@@ -34,11 +34,12 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       label: 'Messages',
       href: '/parent/messages',
       badge: unreadCount > 0 ? unreadCount : undefined,
+      tourId: 'parent-messages',
     },
     ...(!isSchoolParent
       ? [{ icon: CreditCard, label: 'Billing', href: '/parent/billing' as const, tourId: 'parent-billing' }]
       : []),
-    { icon: Settings, label: 'Settings', href: '/parent/settings' },
+    { icon: Settings, label: 'Settings', href: '/parent/settings', tourId: 'parent-settings' },
   ]
 
   if (status === 'loading' && !timedOut) return <DashboardLoading />

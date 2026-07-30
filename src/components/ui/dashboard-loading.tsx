@@ -42,7 +42,7 @@ export function DashboardLoading() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
+      className="fixed inset-0 z-40 flex items-center justify-center"
       style={{ background: 'linear-gradient(135deg, #060918 0%, #0d1230 40%, #0a0e1f 100%)' }}
     >
       {/* Grid texture */}

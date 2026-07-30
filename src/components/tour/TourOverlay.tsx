@@ -7,10 +7,12 @@ export function TourOverlay() {
   const { isActive, currentStep } = useTour()
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null)
   const rafRef = useRef<number>(0)
+  const targetFound = useRef(false)
 
   useEffect(() => {
     if (!isActive || !currentStep?.target || currentStep.placement === 'center') {
       setTargetRect(null)
+      targetFound.current = false
       return
     }
 
@@ -19,6 +21,7 @@ export function TourOverlay() {
       if (el) {
         const rect = el.getBoundingClientRect()
         setTargetRect(rect)
+        targetFound.current = true
       }
     }
 
@@ -44,6 +47,10 @@ export function TourOverlay() {
 
   const padding = currentStep?.highlightPadding ?? 8
   const isCentered = !currentStep?.target || currentStep.placement === 'center'
+
+  if (isCentered) return null
+  // Don't render a full-black overlay if the target element wasn't found
+  if (!targetFound.current) return null
 
   return (
     <div className="fixed inset-0 z-[9999] pointer-events-none" aria-hidden="true">

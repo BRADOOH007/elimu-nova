@@ -34,6 +34,22 @@ import { TourHelpButton } from '@/components/tour/TourHelpButton'
 import { useTour } from '@/components/tour/TourProvider'
 import { useTourState } from '@/components/tour/useTourState'
 
+function TourCompletionMonitor({ userRole }: { userRole: string }) {
+  const { isActive, activeTourId } = useTour()
+  const { markCompleted } = useTourState()
+  const prevActiveRef = React.useRef(false)
+
+  useEffect(() => {
+    if (prevActiveRef.current && !isActive && activeTourId) {
+      markCompleted(userRole)
+      localStorage.setItem(`tour-${userRole.toLowerCase()}-completed`, new Date().toISOString())
+    }
+    prevActiveRef.current = isActive
+  }, [isActive, activeTourId, userRole, markCompleted])
+
+  return null
+}
+
 interface DashboardLayoutProps {
   children: React.ReactNode
   userRole: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
@@ -141,31 +157,12 @@ export function ProfessionalDashboardLayout({
     }
   }
 
-  /* ── Tour completion monitor ── */
-  const { markCompleted } = useTourState()
-  const prevActiveRef = React.useRef(false)
-
-  function TourInner() {
-    const { isActive, activeTourId } = useTour()
-
-    useEffect(() => {
-      if (prevActiveRef.current && !isActive && activeTourId) {
-        markCompleted(userRole)
-        const key = `tour-${userRole.toLowerCase()}-completed`
-        localStorage.setItem(key, new Date().toISOString())
-      }
-      prevActiveRef.current = isActive
-    }, [isActive])
-
-    return null
-  }
-
   return (
     <TourProvider>
     <div className="min-h-screen bg-slate-50">
 
       {/* ── TOUR INFRASTRUCTURE ── */}
-      <TourInner />
+      <TourCompletionMonitor userRole={userRole} />
       <TourOverlay />
       <TourTooltip role={userRole} />
       <TourLauncher />
@@ -258,12 +255,12 @@ export function ProfessionalDashboardLayout({
               </div>
               <button
                 onClick={() => setProfileOpen(true)}
-                className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center overflow-hidden hover:opacity-90 transition-opacity shrink-0"
+                className="w-7 h-7 sm:w-8 sm:h-8 bg-slate-200 rounded-full flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-slate-400 transition-all shrink-0 ring-1 ring-slate-300"
                 aria-label="Profile"
               >
                 {userProfile.avatar
                   ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
-                  : <User className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                  : <span className="text-xs font-semibold text-slate-600">{(userProfile.firstName || userName).slice(0, 1).toUpperCase()}</span>
                 }
               </button>
               <button
@@ -287,10 +284,10 @@ export function ProfessionalDashboardLayout({
       >
         {/* User strip */}
         <div className={`flex items-center gap-3 px-3 py-3 sm:py-4 border-b border-white/5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shrink-0 overflow-hidden">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-700 flex items-center justify-center shrink-0 overflow-hidden ring-1 ring-white/10">
             {userProfile.avatar
               ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
-              : <span className="text-white font-bold text-xs sm:text-sm">{(userProfile.firstName || userName).slice(0, 2).toUpperCase()}</span>
+              : <span className="text-slate-300 font-semibold text-xs sm:text-sm">{(userProfile.firstName || userName).slice(0, 2).toUpperCase()}</span>
             }
           </div>
           {!sidebarCollapsed && (
@@ -393,11 +390,13 @@ export function ProfessionalDashboardLayout({
           />
           <UserProfileModal
             isOpen={profileOpen}
-            onClose={() => setProfileOpen(false)}
+            onClose={() => {
+              setProfileOpen(false)
+              fetchUserProfile()
+            }}
             userId={session.user.id}
             onProfileUpdate={(profile) => {
               setUserProfile({ firstName: profile.firstName, lastName: profile.lastName, avatar: profile.avatar })
-              setTimeout(fetchUserProfile, 500)
             }}
           />
         </>

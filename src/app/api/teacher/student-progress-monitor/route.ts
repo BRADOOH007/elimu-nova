@@ -3,7 +3,7 @@ import { prisma, withRetry } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
 // Student progress monitor — fixed 2024
-export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
+export const GET = route({ auth: 'TEACHER', skipSubscriptionCheck: true }, async (req, { user }) => {
   try {
     // Get teacher data
     const teacher = await withRetry(() => prisma.teacher.findUnique({

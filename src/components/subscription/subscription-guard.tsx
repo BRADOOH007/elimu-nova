@@ -26,7 +26,7 @@ export function SubscriptionGuard({
   fallback,
   requiresPremium = true
 }: SubscriptionGuardProps) {
-  const { subscription, loading, hasAccess } = useSubscription()
+  const { subscription, loading, hasAccess, error } = useSubscription()
 
   if (loading) {
     return (
@@ -35,6 +35,11 @@ export function SubscriptionGuard({
         <span className="ml-2 text-gray-600">Loading subscription status...</span>
       </div>
     )
+  }
+
+  // If subscription check failed (error), allow access rather than blocking
+  if (!loading && !subscription && error) {
+    return <>{children}</>
   }
 
   if (hasAccess) {

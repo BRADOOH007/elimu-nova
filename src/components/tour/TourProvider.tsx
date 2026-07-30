@@ -66,11 +66,18 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     if (!currentStep) return
 
     if (currentStep.beforeNext === 'navigateToPage' && currentStep.navigateTo) {
-      sessionStorage.setItem('tour-resume', JSON.stringify({
-        tourId: activeTourId,
-        stepIndex: stepIndex + 1,
-      }))
-      router.push(currentStep.navigateTo)
+      const nextIdx = stepIndex + 1
+      if (nextIdx < totalSteps) {
+        sessionStorage.setItem('tour-resume', JSON.stringify({
+          tourId: activeTourId,
+          stepIndex: nextIdx,
+        }))
+        setStepIndex(nextIdx)
+        router.push(currentStep.navigateTo)
+      } else {
+        endTour()
+        router.push(currentStep.navigateTo)
+      }
       return
     }
 

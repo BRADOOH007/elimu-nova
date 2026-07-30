@@ -15,7 +15,7 @@ export async function GET() {
       prisma.school.count(),
       prisma.user.count(),
       prisma.user.count({ where: { createdAt: { gte: new Date(Date.now() - 86400000) } } }),
-      prisma.subscription.aggregate({ _sum: { amount: true } }),
+      prisma.subscription.aggregate({ _sum: { amount: true }, where: { isFreemium: { not: true } } }),
       prisma.invoice.count({ where: { status: 'PENDING' } }),
     ])
 

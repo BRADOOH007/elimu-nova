@@ -130,7 +130,7 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req) => {
   const { encryptPassword } = await import('@/lib/password-encryption')
   const finalPassword = password || genPwd()
   const hashedPassword = await bcrypt.hash(finalPassword, 12)
-  const encryptedPwd = !password ? encryptPassword(finalPassword) : undefined
+  const encryptedPwd = encryptPassword(finalPassword)
 
   // Generate unique username
   let username = generateUsername(firstName, lastName)
@@ -160,7 +160,7 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req) => {
       role,
       isActive,
       password: hashedPassword,
-      ...(encryptedPwd ? { address: encryptedPwd } : {}),
+      address: encryptedPwd,
       ...(role === 'SCHOOL_ADMIN' && schoolId && {
         schoolAdmin: {
           create: {
