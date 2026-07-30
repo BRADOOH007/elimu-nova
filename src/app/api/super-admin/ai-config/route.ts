@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { invalidateAIKeyCache } from '@/lib/ai-provider'
 
 const AI_CONFIG_KEYS = [
   'ai_provider_cerebras_key',
@@ -69,14 +70,18 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
 
     for (const [key, value] of Object.entries(updates)) {
       if (!AI_CONFIG_KEYS.includes(key)) continue
-      if (!value) continue
+      if (!value || value.trim() === '') continue
+
+      // Skip masked values — if the value ends with '****', the user didn't change it
+      // Saving a masked value would corrupt the stored key
+      if (value.endsWith('****')) continue
 
       await (prisma as any).systemSettings.upsert({
         where:  { key },
-        update: { value, updatedBy: user.id },
+        update: { value: value.trim(), updatedBy: user.id },
         create: {
           key,
-          value,
+          value:       value.trim(),
           type:        'string',
           category:    'ai',
           description: `AI configuration: ${key}`,
@@ -84,6 +89,9 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
         },
       })
     }
+
+    // Invalidate the in-memory DB key cache so the next AI call picks up new keys immediately
+    invalidateAIKeyCache()
 
     return NextResponse.json({ success: true })
   } catch (error) {
