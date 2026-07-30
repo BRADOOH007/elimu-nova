@@ -92,7 +92,8 @@ interface SentBroadcast {
   title: string
   message: string
   type: string
-  count: number
+  recipientCount?: number
+  count?: number
   createdAt: string
 }
 
@@ -116,11 +117,10 @@ export default function BroadcastPage() {
   const fetchHistory = async () => {
     setHistoryLoading(true)
     try {
-      const res = await fetch('/api/notifications?limit=50&countOnly=false')
+      const res = await fetch('/api/notifications/sent?limit=20')
       if (res.ok) {
         const data = await res.json()
-        // Filter to only notifications sent by this admin (broadcasts)
-        setHistory(Array.isArray(data) ? data.filter((n: any) => n.senderId && n.type !== 'single') : [])
+        setHistory(data.broadcasts || [])
       }
     } catch (e) { console.warn('[SuperAdminBroadcast] fetchHistory error:', e) } finally { setHistoryLoading(false) }
   }
@@ -497,7 +497,7 @@ export default function BroadcastPage() {
                         <div className="text-right shrink-0 ml-4">
                           <Badge variant="secondary" className="mb-1">
                             <Users className="w-3 h-3 mr-1" />
-                            {item.count || 'N/A'} recipients
+                            {item.recipientCount ?? item.count ?? 0} recipients
                           </Badge>
                           <p className="text-xs text-gray-400 mt-1">
                             {new Date(item.createdAt).toLocaleDateString()}

@@ -32,7 +32,12 @@ export function SubscriptionAlert() {
   const billingPath = useBillingPath()
   const [dismissed, setDismissed] = useState(false)
 
-  if (dismissed || (hasAccess && !subscription?.isTrial) || !subscription) return null
+  // Never show to: dismissed, school-managed users, or fully active non-trial users
+  if (dismissed) return null
+  if (!subscription) return null
+  if (subscription.status === 'SCHOOL_MANAGED') return null
+  if (subscription.status === 'UNKNOWN') return null
+  if (hasAccess && !subscription.isTrial) return null
 
   // ── Trial expiring ≤ 3 days ──
   if (subscription.isTrial && subscription.daysRemaining <= 3 && subscription.daysRemaining > 0) {

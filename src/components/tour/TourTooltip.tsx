@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react'
 import { useTour, type TourPlacement } from './TourProvider'
 import { TourStepRenderer } from './TourStepRenderer'
+import { useTourState } from './useTourState'
+import { useSession } from 'next-auth/react'
 
 const ARROW_MAP: Record<TourPlacement, string> = {
   top: 'bottom',
@@ -29,6 +31,15 @@ const PLACEMENT_ATTRIBUTION: Record<TourPlacement, string> = {
 
 export function TourTooltip({ role }: { role?: string }) {
   const { isActive, currentStep, stepIndex, totalSteps, nextStep, prevStep, endTour } = useTour()
+  const { markCompleted } = useTourState()
+  const { data: session } = useSession()
+
+  // Skip entire tour and mark permanently complete
+  const handleSkipAll = () => {
+    const r = role || session?.user?.role || ''
+    if (r) markCompleted(r)
+    endTour()
+  }
   const [position, setPosition] = useState({ top: 0, left: 0 })
   const [ready, setReady] = useState(false)
   const tooltipRef = useRef<HTMLDivElement>(null)
@@ -170,7 +181,8 @@ export function TourTooltip({ role }: { role?: string }) {
           accent={accent}
           onNext={nextStep}
           onPrev={prevStep}
-          onEnd={endTour}
+          onEnd={handleSkipAll}
+          onSkipAll={handleSkipAll}
         />
       </div>
     </div>
