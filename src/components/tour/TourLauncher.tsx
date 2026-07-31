@@ -47,12 +47,13 @@ export function TourLauncher() {
     if (!launchedRef.current) {
       launchedRef.current = true
 
-      // Only show tour once — mark complete right away so closing or finishing both work
-      // The tour is purely informational, not a gate
+      // Mark completed immediately — synchronously — so even if the user
+      // navigates away before the setTimeout fires, the tour won't re-show
+      localStorage.setItem(`tour-${role.toLowerCase()}-completed`, new Date().toISOString())
+      markCompleted(role)
+
       const t = setTimeout(() => {
         startTour(config.id, config.steps)
-        // Mark completed immediately so it won't re-show even if user closes early
-        markCompleted(role)
       }, 1500)
       return () => clearTimeout(t)
     }
