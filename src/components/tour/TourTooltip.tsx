@@ -30,7 +30,7 @@ const PLACEMENT_ATTRIBUTION: Record<TourPlacement, string> = {
 }
 
 export function TourTooltip({ role }: { role?: string }) {
-  const { isActive, currentStep, stepIndex, totalSteps, nextStep, prevStep, endTour } = useTour()
+  const { isActive, currentStep, stepIndex, totalSteps, nextStep, prevStep, endTour, goToStep } = useTour()
   const { markCompleted } = useTourState()
   const { data: session } = useSession()
 
@@ -123,9 +123,19 @@ export function TourTooltip({ role }: { role?: string }) {
       }
     }
 
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { handleSkipAll(); return }
+      if (e.key === 'Enter' || e.key === 'ArrowRight') { nextStep(); return }
+      if (e.key === 'ArrowLeft') { prevStep(); return }
+    }
+
     tooltip.addEventListener('keydown', handleTab)
+    tooltip.addEventListener('keydown', handleKey)
     first?.focus()
-    return () => tooltip.removeEventListener('keydown', handleTab)
+    return () => {
+      tooltip.removeEventListener('keydown', handleTab)
+      tooltip.removeEventListener('keydown', handleKey)
+    }
   }, [isActive, stepIndex])
 
   if (!isActive || !currentStep || !ready) return null
@@ -183,6 +193,7 @@ export function TourTooltip({ role }: { role?: string }) {
           onPrev={prevStep}
           onEnd={handleSkipAll}
           onSkipAll={handleSkipAll}
+          onGoToStep={goToStep}
         />
       </div>
     </div>

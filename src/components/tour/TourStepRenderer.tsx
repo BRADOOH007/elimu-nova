@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { Button } from '@/components/ui/button'
-import { X, ChevronLeft, ChevronRight, Sparkles, SkipForward } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 
 interface Props {
   step: { title: string; content: string }
@@ -12,7 +12,8 @@ interface Props {
   onNext: () => void
   onPrev: () => void
   onEnd: () => void
-  onSkipAll: () => void  // Skip entire tour permanently
+  onSkipAll: () => void
+  onGoToStep?: (index: number) => void
 }
 
 function renderContent(text: string) {
@@ -72,7 +73,7 @@ function renderContent(text: string) {
   return elements
 }
 
-export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, onPrev, onEnd, onSkipAll }: Props) {
+export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, onPrev, onEnd, onSkipAll, onGoToStep }: Props) {
   const progress = ((stepIndex + 1) / totalSteps) * 100
   const isFirst = stepIndex === 0
   const isLast = stepIndex === totalSteps - 1
@@ -94,11 +95,11 @@ export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, 
         </div>
         <button
           onClick={onSkipAll}
-          className="p-1.5 rounded-xl hover:bg-slate-100 transition-colors shrink-0 -mr-1 -mt-1"
+          className="p-1.5 rounded-xl hover:bg-slate-100 transition-colors shrink-0 -mr-1 -mt-1 group"
           aria-label="Skip tour"
           title="Skip tour"
         >
-          <X className="w-4 h-4 text-slate-400" />
+          <X className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
         </button>
       </div>
 
@@ -117,32 +118,34 @@ export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, 
         </div>
       </div>
 
-      {/* Step dots */}
+      {/* Step dots — clickable */}
       <div className="flex justify-center gap-1.5 mb-5">
         {Array.from({ length: totalSteps }).map((_, i) => (
           <button
             key={i}
-            onClick={() => {}}
+            onClick={() => onGoToStep?.(i)}
+            disabled={i > stepIndex}
             className={`rounded-full transition-all duration-300 ${
               i === stepIndex
-                ? 'bg-blue-600 w-6 h-1.5'
+                ? `bg-gradient-to-r ${grad} w-6 h-1.5 shadow-sm`
                 : i < stepIndex
-                ? 'bg-blue-300 w-1.5 h-1.5'
-                : 'bg-slate-300 w-1.5 h-1.5'
+                ? 'bg-slate-300 w-1.5 h-1.5 hover:bg-slate-400 cursor-pointer'
+                : 'bg-slate-200 w-1.5 h-1.5 cursor-not-allowed opacity-50'
             }`}
+            title={i < stepIndex ? `Go back to step ${i + 1}` : i === stepIndex ? `Current step` : `Step ${i + 1}`}
           />
         ))}
       </div>
 
       {/* Navigation */}
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={onPrev}
             disabled={isFirst}
-            className="text-xs h-9 px-4 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            className="text-xs h-9 px-4 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 disabled:opacity-30"
           >
             <ChevronLeft className="w-3.5 h-3.5 mr-1.5" />
             Back
@@ -177,6 +180,11 @@ export function TourStepRenderer({ step, stepIndex, totalSteps, accent, onNext, 
           </Button>
         )}
       </div>
+
+      {/* Keyboard hint */}
+      <p className="text-center text-[10px] text-slate-300 mt-3">
+        Press <kbd className="px-1 py-0.5 bg-slate-100 rounded text-[9px] font-mono">Enter</kbd> to continue · <kbd className="px-1 py-0.5 bg-slate-100 rounded text-[9px] font-mono">Esc</kbd> to skip
+      </p>
     </div>
   )
 }

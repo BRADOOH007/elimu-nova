@@ -35,17 +35,17 @@ import { useTour } from '@/components/tour/TourProvider'
 import { useTourState } from '@/components/tour/useTourState'
 
 function TourCompletionMonitor({ userRole }: { userRole: string }) {
-  const { isActive, activeTourId } = useTour()
+  const { isActive } = useTour()
   const { markCompleted } = useTourState()
   const prevActiveRef = React.useRef(false)
 
   useEffect(() => {
-    if (prevActiveRef.current && !isActive && activeTourId) {
+    if (prevActiveRef.current && !isActive) {
       markCompleted(userRole)
       localStorage.setItem(`tour-${userRole.toLowerCase()}-completed`, new Date().toISOString())
     }
     prevActiveRef.current = isActive
-  }, [isActive, activeTourId, userRole, markCompleted])
+  }, [isActive, userRole, markCompleted])
 
   return null
 }
@@ -157,8 +157,8 @@ export function ProfessionalDashboardLayout({
 
     const fetchBroadcasts = () => {
       fetch('/api/notifications?unreadOnly=true&limit=5')
-        .then(r => r.ok ? r.json() : [])
-        .then((data: any[]) => {
+        .then(r => r.ok ? r.json() as Promise<any> : [])
+        .then((data: any) => {
           const arr = Array.isArray(data) ? data : (data.notifications || [])
           setBroadcasts(arr.filter((n: any) => n.senderId && n.senderId !== session.user.id))
         })
