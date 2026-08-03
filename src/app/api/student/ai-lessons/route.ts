@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { OpenAIService } from '@/lib/openai-service'
+import { OpenAIAI } from '@/lib/openrouter-ai'
 import { route } from '@/lib/api-middleware'
 
 export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
@@ -65,14 +65,14 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
         const learningStyle = 'visual' // Could be determined from analytics in the future
 
         // Generate AI-powered content based on the lesson plan
-        const aiContent = await (OpenAIService as any).generateLessonContent(
+        const aiContent = await OpenAIAI.generateLessonContent(
           shared.lessonPlan,
           studentLevel,
           learningStyle
         )
 
         // Generate AI insights for this specific lesson
-        const aiInsights = await (OpenAIService as any).generateStudentInsights({
+        const aiInsights = await OpenAIAI.generateStudentInsights({
           ...student,
           currentLesson: shared.lessonPlan
         })
@@ -160,36 +160,57 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
   const body = await req.json()
   const { subject, topic, grade, difficulty, learningStyle } = body
 
-  // Generate AI lesson content
-  const aiLesson = {
-    id: `ai-lesson-${Date.now()}`,
-    title: `${topic} - ${subject}`,
-    subject,
-    grade: grade || 'Grade 8',
-    difficulty: difficulty || 'intermediate',
-    duration: Math.floor(Math.random() * 60) + 30, // 30-90 minutes
-    type: learningStyle === 'visual' ? 'video' : learningStyle === 'kinesthetic' ? 'interactive' : 'reading',
-    aiGenerated: true,
-    personalized: true,
-    progress: 0,
-    completed: false,
-    rating: 0,
-    estimatedTime: `${Math.floor(Math.random() * 60) + 30} min`,
-    learningObjectives: [
-      `Understand key concepts in ${topic}`,
-      `Apply ${topic} knowledge to solve problems`,
-      `Analyze and evaluate ${topic} scenarios`
-    ],
-    prerequisites: [
-      'Basic understanding of the subject',
-      'Willingness to learn and practice'
-    ],
-    aiInsights: {
-      strengths: ['Eager to learn', 'Good problem solving'],
-      areasForImprovement: ['Need more practice', 'Focus on fundamentals'],
-      recommendedFocus: [`Master ${topic} basics`, 'Practice regularly'],
-      nextSteps: ['Complete exercises', 'Take assessment']
+  if (!topic || !subject) {
+    return NextResponse.json({ error: 'Topic and subject required' }, { status: 400 })
+  }
+
+  let aiLesson: any
+  try {
+    const generated = await OpenAIAI.generateAILesson(
+      subject,
+      topic,
+      grade || 'Grade 8',
+      difficulty || 'intermediate',
+      learningStyle || 'reading'
+    )
+
+    aiLesson = {
+      id: `ai-lesson-${Date.now()}`,
+      title: generated.title || `${topic} - ${subject}`,
+      subject,
+      grade: generated.grade || grade || 'Grade 8',
+      difficulty: generated.difficulty || difficulty || 'intermediate',
+      duration: generated.duration || 45,
+      type: generated.type || (learningStyle === 'visual' ? 'video' : learningStyle === 'kinesthetic' ? 'interactive' : 'reading'),
+      aiGenerated: true,
+      personalized: true,
+      progress: 0,
+      completed: false,
+      rating: 0,
+      estimatedTime: generated.estimatedTime || `${generated.duration || 45} min`,
+      learningObjectives: generated.objectives || [
+        `Understand key concepts in ${topic}`,
+        `Apply ${topic} knowledge to solve problems`,
+        `Analyze and evaluate ${topic} scenarios`
+      ],
+      prerequisites: generated.prerequisites || [
+        'Basic understanding of the subject',
+        'Willingness to learn and practice'
+      ],
+      aiInsights: generated.insights || {
+        strengths: ['Eager to learn', 'Good problem solving'],
+        areasForImprovement: ['Need more practice', 'Focus on fundamentals'],
+        recommendedFocus: [`Master ${topic} basics`, 'Practice regularly'],
+        nextSteps: ['Complete exercises', 'Take assessment']
+      },
+      generatedContent: generated.content,
     }
+  } catch (error) {
+    console.error('Failed to generate AI lesson:', error)
+    return NextResponse.json(
+      { error: 'Failed to generate lesson. Please try again.' },
+      { status: 500 }
+    )
   }
 
   return NextResponse.json({

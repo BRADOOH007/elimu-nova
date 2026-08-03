@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
+export const GET = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'PARENT'], skipSubscriptionCheck: true }, async (req, { user }) => {
   const { searchParams } = new URL(req.url)
   const userId = searchParams.get('userId')
 
@@ -39,7 +39,7 @@ export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) 
   return NextResponse.json(foundUser)
 })
 
-export const PATCH = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
+export const PATCH = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'PARENT'], skipSubscriptionCheck: true }, async (req, { user }) => {
   const body = await req.json()
   const { userId, firstName, lastName, avatar, phone, address } = body
 
@@ -69,9 +69,9 @@ export const PATCH = route({ skipSubscriptionCheck: true }, async (req, { user }
     data: {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
-      avatar: avatar || null,
-      phone: phone?.trim() || null,
-      address: address?.trim() || null,
+      ...(avatar !== undefined && { avatar: avatar || null }),
+      ...(phone !== undefined && { phone: phone?.trim() || null }),
+      ...(address !== undefined && { address: address?.trim() || null }),
     },
     select: {
       id: true,

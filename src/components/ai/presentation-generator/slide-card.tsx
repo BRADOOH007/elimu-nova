@@ -1,12 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Plus, Trash2, X, Search, ExternalLink } from 'lucide-react'
+import { Sparkles, Plus, Trash2, X, Search } from 'lucide-react'
+import StockImagePicker from '@/components/ai/stock-image-picker'
 
 interface Slide {
   id?: string
@@ -38,6 +40,8 @@ export function SlideCard({
   onUpdateSlide, onRemoveSlide, onAddContentPoint,
   onUpdateContentPoint, onRemoveContentPoint, onGenerateImage,
 }: SlideCardProps) {
+  const [pickerOpen, setPickerOpen] = useState(false)
+
   return (
     <Card className="bg-gradient-to-br from-gray-50 to-white border-0 shadow-md">
       <CardContent className="pt-6 space-y-4">
@@ -187,25 +191,15 @@ export function SlideCard({
                   </div>
                   {(slide.imagePrompt || slide.imageDescription) && (
                     <div className="px-3 pb-3">
-                      <div className="flex gap-1.5 flex-wrap justify-center">
-                        {[{
-                          name: 'Google', url: `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(slide.imagePrompt || slide.imageDescription || '')}`,
-                          bg: '#e8f0fe', color: '#1a73e8'
-                        }, {
-                          name: 'Pinterest', url: `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(slide.imagePrompt || slide.imageDescription || '')}`,
-                          bg: '#fce4ec', color: '#c2185b'
-                        }, {
-                          name: 'Unsplash', url: `https://unsplash.com/s/photos/${encodeURIComponent(slide.imagePrompt || slide.imageDescription || '')}`,
-                          bg: '#e0f2f1', color: '#00796b'
-                        }].map(s => (
-                          <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg hover:shadow-sm transition-all"
-                            style={{ backgroundColor: s.bg, color: s.color }}
-                          >
-                            <ExternalLink className="h-2.5 w-2.5" /> {s.name}
-                          </a>
-                        ))}
-                      </div>
+                      <Button
+                        onClick={() => setPickerOpen(true)}
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-rose-600 border-rose-200 hover:bg-rose-50"
+                      >
+                        <Search className="w-3 h-3 mr-1" />
+                        Search Real Images
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -214,6 +208,16 @@ export function SlideCard({
           </div>
         )}
       </CardContent>
+
+      <StockImagePicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        initialQuery={slide.imagePrompt || slide.imageDescription || ''}
+        onSelect={(url) => {
+          onUpdateSlide(slideIndex, 'image', url)
+          setPickerOpen(false)
+        }}
+      />
     </Card>
   )
 }

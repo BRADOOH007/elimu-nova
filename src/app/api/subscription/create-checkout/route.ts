@@ -5,7 +5,7 @@ import { route } from '@/lib/api-middleware'
 
 export const POST = route({}, async (req, { user }) => {
   const body = await req.json()
-  const { packageId, successUrl, cancelUrl } = body
+  const { packageId, successUrl, cancelUrl, currency } = body
 
   if (!packageId || !successUrl || !cancelUrl) {
     return NextResponse.json(
@@ -65,7 +65,8 @@ export const POST = route({}, async (req, { user }) => {
     successUrl,
     cancelUrl,
     userId,
-    schoolId
+    schoolId,
+    currency
   )
 
   return NextResponse.json({

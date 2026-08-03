@@ -90,7 +90,14 @@ function createRedisClient(): CacheClient {
     ...(isTLS ? { tls: {} } : {}),
   } as any)
 
-  client.connect()
+  // Never let a dead Redis crash the process — log and fall back silently.
+  client.on('error', (err: Error) => {
+    console.warn(`[cache] Redis unavailable (${err.message}) — using degraded in-memory behavior for this call.`)
+  })
+
+  client.connect().catch((err: Error) => {
+    console.warn(`[cache] Redis connect failed (${err.message}) — falling back to in-memory cache.`)
+  })
 
   return {
     async get(key: string) {

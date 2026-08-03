@@ -39,7 +39,7 @@ export function useUnreadMessages() {
   const fetchNotificationCount = useCallback(async () => {
     if (!session?.user?.id) return
     try {
-      const res = await fetch(`/api/notifications?countOnly=true`)
+      const res = await fetch(`/api/notifications?countOnly=true&unreadOnly=true`)
       if (res.ok) {
         const d = await res.json()
         setNotificationUnread(d.count || 0)
@@ -72,5 +72,5 @@ export function useUnreadMessages() {
     }
   }, [fetchCount, fetchNotificationCount])
 
-   return { unreadCount, notificationUnread, loading, refetch: fetchNotificationCount }
+   return { unreadCount, notificationUnread, totalUnread: unreadCount + notificationUnread, loading, refetch: fetchNotificationCount }
 }

@@ -4,9 +4,10 @@ import { logger } from '@/lib/logger'
 import { requireAuth, requireTeacher, requireSuperAdmin, requireRole } from '@/lib/with-auth'
 import { validate } from '@/lib/validate'
 import { handleApiError } from '@/lib/api-errors'
-import { checkRateLimit, getClientIdentifier, rateLimitAPI } from '@/lib/rate-limit'
+import { checkRateLimit, getClientIdentifier, rateLimitAPI, rateLimitAI } from '@/lib/rate-limit'
 import { cache } from '@/lib/redis'
 import { prisma } from '@/lib/prisma'
+import { checkAIUsageAllowed, recordAIUsage } from '@/lib/ai-usage'
 
 type Role = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
 type UserInfo = { id: string; email: string; role: string; name: string; avatar?: string | null; studentId?: string; teacherId?: string; schoolAdminId?: string }
@@ -74,24 +75,27 @@ async function checkSubscriptionAccess(user: UserInfo, path: string): Promise<{ 
   let schoolId: string | undefined
 
   try {
-    if (user.role === 'TEACHER' && user.teacherId) {
+    // resolve the school/independent user via DB lookup by user.id.
+    // requireAuth() only exposes id/email/role/name, so we can't rely on
+    // session-provided role ids here.
+    if (user.role === 'TEACHER') {
       const teacher = await prisma.teacher.findUnique({
-        where: { id: user.teacherId },
+        where: { userId: user.id },
         select: { schoolId: true }
       })
       if (teacher?.schoolId) schoolId = teacher.schoolId
       else userId = user.id
-    } else if (user.role === 'STUDENT' && user.studentId) {
+    } else if (user.role === 'STUDENT') {
       const student = await prisma.student.findUnique({
-        where: { id: user.studentId },
+        where: { userId: user.id },
         select: { schoolId: true, teacher: { select: { schoolId: true, userId: true } } }
       })
       if (student?.schoolId) schoolId = student.schoolId
       else if (student?.teacher && !student.teacher.schoolId) userId = student.teacher.userId
       else userId = user.id
-    } else if (user.role === 'SCHOOL_ADMIN' && user.schoolAdminId) {
+    } else if (user.role === 'SCHOOL_ADMIN') {
       const sa = await prisma.schoolAdmin.findUnique({
-        where: { id: user.schoolAdminId },
+        where: { userId: user.id },
         select: { schoolId: true }
       })
       schoolId = sa?.schoolId
@@ -155,7 +159,10 @@ export function route<T = unknown>(config: RouteConfig<T>, handler: Handler<T>) 
       }
 
       if (config.rateLimit !== false) {
-        const rlConfig = config.rateLimit || rateLimitAPI
+        // Auto-apply stricter rate limiting for AI routes
+        const path = request.nextUrl?.pathname || ''
+        const isAIPath = path.startsWith('/api/ai/') || path.includes('/generate-') || path.includes('/auto-mark') || path.includes('/grade-')
+        const rlConfig = config.rateLimit || (isAIPath ? rateLimitAI : rateLimitAPI)
         const rlKey = user?.id || getClientIdentifier(request)
         const rl = await checkRateLimit(rlKey, rlConfig)
         if (!rl.allowed) {
@@ -164,6 +171,21 @@ export function route<T = unknown>(config: RouteConfig<T>, handler: Handler<T>) 
             { status: 429, headers: { 'Retry-After': String(rl.resetInSec) } }
           )
           auditLog(request.method, request.nextUrl?.pathname || '/', user?.id, 429, Date.now() - start)
+          return resp
+        }
+      }
+
+      // AI usage limits — enforce per-user daily/monthly caps
+      const aiPath = request.nextUrl?.pathname || ''
+      const isAIEndpoint = aiPath.startsWith('/api/ai/') || aiPath.includes('/generate-') || aiPath.includes('/auto-mark') || aiPath.includes('/grade-')
+      if (isAIEndpoint && user?.id && request.method === 'POST') {
+        const usageCheck = await checkAIUsageAllowed(user.id)
+        if (!usageCheck.allowed) {
+          const resp = NextResponse.json(
+            { error: usageCheck.reason, code: 'AI_USAGE_LIMIT_EXCEEDED', limits: { daily: usageCheck.limits.dailyCalls, monthly: usageCheck.limits.monthlyCalls } },
+            { status: 429 }
+          )
+          auditLog(request.method, aiPath, user.id, 429, Date.now() - start)
           return resp
         }
       }
@@ -195,6 +217,11 @@ export function route<T = unknown>(config: RouteConfig<T>, handler: Handler<T>) 
       }
 
       const response = await handler(request, { user: user!, body, params: resolvedParams, session: user ? { user } : undefined })
+
+      // Record AI usage on successful calls
+      if (isAIEndpoint && user?.id && request.method === 'POST' && response.status < 400) {
+        recordAIUsage(user.id).catch(() => {})
+      }
 
       if ((request.method === 'POST' || request.method === 'PUT') && user?.id && response.status < 500) {
         const idempotencyKey = request.headers.get('Idempotency-Key')

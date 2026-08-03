@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { BookOpen, ChevronRight, ChevronDown, ExternalLink, Loader2, Play } from 'lucide-react'
+import { BookOpen, ChevronRight, ChevronDown, ExternalLink, Loader2, Play, CheckCircle2, RefreshCw } from 'lucide-react'
 import { getKECWorkbook, getKECCategoryUrl } from '@/data/kec-workbooks'
 
 interface Strand {
@@ -19,11 +19,17 @@ interface Substrand {
 }
 
 interface CurriculumBrowserProps {
-  onSelectTopic: (subject: string, topic: string) => void
+  onSelectTopic: (subject: string, topic: string, learningOutcomes?: string[]) => void
 }
 
 const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
 const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','Physics','Chemistry','Biology','History','Geography','Agriculture','Business Studies','Computer Studies']
+
+const STATUS_STYLE: Record<string, string> = {
+  COMPLETED: 'bg-green-100 text-green-700 border-green-200',
+  IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',
+  NOT_STARTED: 'bg-slate-100 text-slate-500 border-slate-200',
+}
 
 export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
   const [grade, setGrade] = useState('Grade 4')
@@ -33,10 +39,41 @@ export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
   const [substrands, setSubstrands] = useState<Record<string, Substrand[]>>({})
   const [loading, setLoading] = useState(false)
   const [loadingSubstrands, setLoadingSubstrands] = useState<string | null>(null)
+  const [statusMap, setStatusMap] = useState<Record<string, { status: string; lastContent: string | null }>>({})
 
   useEffect(() => {
     fetchStrands()
   }, [grade, subject])
+
+  useEffect(() => {
+    fetchStatuses()
+  }, [grade, subject])
+
+  const fetchStatuses = async () => {
+    try {
+      const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`)
+      if (res.ok) {
+        const data = await res.json()
+        const map: Record<string, { status: string; lastContent: string | null }> = {}
+        ;(data.topics || []).forEach((t: any) => {
+          map[t.topicName] = { status: t.status, lastContent: t.lastContent || null }
+        })
+        setStatusMap(map)
+      }
+    } catch { /* ignore */ }
+  }
+
+  const statusBadge = (name: string) => {
+    const s = statusMap[name]?.status
+    if (!s || s === 'NOT_STARTED') return null
+    const label = s === 'COMPLETED' ? 'Done' : 'In progress'
+    return (
+      <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold border rounded-full px-1.5 py-0.5 ${STATUS_STYLE[s] || ''}`}>
+        {s === 'COMPLETED' ? <CheckCircle2 className="h-2.5 w-2.5" /> : <RefreshCw className="h-2.5 w-2.5" />}
+        {label}
+      </span>
+    )
+  }
 
   const fetchStrands = async () => {
     setLoading(true)
@@ -97,9 +134,16 @@ export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
     }
   }
 
-  const handleStudy = (strandName: string, substrandName?: string) => {
+  const handleStudy = (strandName: string, substrandName?: string, learningOutcomes?: string[]) => {
     const topic = substrandName || strandName
-    onSelectTopic(subject, topic)
+    onSelectTopic(subject, topic, learningOutcomes)
+  }
+
+  const studyLabel = (name: string) => {
+    const s = statusMap[name]?.status
+    if (s === 'COMPLETED') return <><RefreshCw className="h-3 w-3" /> Review</>
+    if (s === 'IN_PROGRESS') return <><RefreshCw className="h-3 w-3" /> Continue</>
+    return <><Play className="h-3 w-3" /> Study</>
   }
 
   return (
@@ -173,13 +217,14 @@ export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
                 <div className="flex items-center gap-2.5">
                   <BookOpen className="h-4 w-4 text-teal-500 shrink-0" />
                   <span className="text-sm font-medium text-slate-800">{strand.name}</span>
+                  {statusBadge(strand.name)}
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={e => { e.stopPropagation(); handleStudy(strand.name) }}
                     className="text-xs font-semibold text-teal-600 hover:text-white bg-teal-50 hover:bg-teal-500 px-2.5 py-1 rounded-full transition-all flex items-center gap-1 hover:shadow-md"
                   >
-                    <Play className="h-3 w-3" /> Study
+                    {studyLabel(strand.name)}
                   </button>
                   {expandedStrand === strand.id ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
                 </div>
@@ -198,12 +243,15 @@ export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
                               <p className="text-[10px] text-slate-400 truncate mt-0.5">{sub.learningOutcomes[0]}</p>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleStudy(strand.name, sub.name)}
-                            className="text-xs font-semibold text-teal-600 hover:text-white bg-teal-50 hover:bg-teal-500 px-2.5 py-1 rounded-full transition-all shrink-0 ml-2 opacity-0 group-hover:opacity-100 flex items-center gap-1 hover:shadow-md"
-                          >
-                            <Play className="h-3 w-3" /> Study
-                          </button>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            {statusBadge(sub.name)}
+                            <button
+                              onClick={() => handleStudy(strand.name, sub.name, sub.learningOutcomes)}
+                              className="text-xs font-semibold text-teal-600 hover:text-white bg-teal-50 hover:bg-teal-500 px-2.5 py-1 rounded-full transition-all opacity-0 group-hover:opacity-100 flex items-center gap-1 hover:shadow-md"
+                            >
+                              {studyLabel(sub.name)}
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>

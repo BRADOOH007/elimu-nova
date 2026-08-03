@@ -165,6 +165,23 @@ export default function AssessmentsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // "Use Exam" from Exam Bank: prefill the create modal from sessionStorage
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (!params.get('fromBank')) return
+    let prefill: Record<string, unknown> | null = null
+    try { prefill = JSON.parse(sessionStorage.getItem('examBankSelection') || 'null') } catch {}
+    if (prefill) {
+      setCreateInitialData(prefill)
+      setShowCreateModal(true)
+      setActiveTab('exams')
+    }
+    try { sessionStorage.removeItem('examBankSelection') } catch {}
+    const url = new URL(window.location.href)
+    url.searchParams.delete('fromBank')
+    window.history.replaceState({}, '', url)
+  }, [])
+
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {

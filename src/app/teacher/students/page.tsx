@@ -491,24 +491,24 @@ export default function TeacherStudentsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="w-full overflow-x-auto flex bg-gradient-to-r from-blue-50 to-purple-50">
-          <TabsTrigger value="students" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
+        <TabsList className="w-full overflow-x-auto flex gap-2 bg-slate-100/80 p-1.5 rounded-xl h-12 border-0 mx-1">
+          <TabsTrigger value="students" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="mr-2 h-4 w-4" />
             Students
           </TabsTrigger>
-          <TabsTrigger value="classes" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
+          <TabsTrigger value="classes" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <School className="mr-2 h-4 w-4" />
             Classes
           </TabsTrigger>
-          <TabsTrigger value="attendance" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
+          <TabsTrigger value="attendance" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <CheckCircle className="mr-2 h-4 w-4" />
             Attendance
           </TabsTrigger>
-          <TabsTrigger value="progress" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
+          <TabsTrigger value="progress" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Activity className="mr-2 h-4 w-4" />
             Progress
           </TabsTrigger>
-          <TabsTrigger value="parents" className="data-[state=active]:bg-white data-[state=active]:shadow-sm shrink-0">
+          <TabsTrigger value="parents" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <User className="mr-2 h-4 w-4" />
             Parents
           </TabsTrigger>

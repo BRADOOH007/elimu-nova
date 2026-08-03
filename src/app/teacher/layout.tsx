@@ -15,7 +15,7 @@ import { DashboardLoading } from '@/components/ui/dashboard-loading'
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const { schoolInfo } = useSchoolInfo()
-  const { unreadCount } = useUnreadMessages()
+  const { totalUnread } = useUnreadMessages()
   // Hard timeout — never show loading screen for more than 4 seconds
   const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       icon: Mail,
       label: 'Messages',
       href: '/teacher/messages',
-      badge: unreadCount > 0 ? unreadCount : undefined,
+      badge: totalUnread > 0 ? totalUnread : undefined,
       tourId: 'teacher-messages',
     },
     ...(!isSchoolTeacher

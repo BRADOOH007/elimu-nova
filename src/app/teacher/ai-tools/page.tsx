@@ -25,27 +25,27 @@ export default function AIToolsPage() {
               <h1 className="text-lg font-bold text-gray-900">AI Tools</h1>
             </div>
           </div>
-          <TabsList className="w-full justify-start gap-0 h-auto bg-transparent p-0 rounded-none border-0">
-            <TabsTrigger value="hope" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
-              <Brain className="w-3.5 h-3.5 mr-1.5" />Hope AI
+          <TabsList className="w-full justify-start gap-2 h-12 bg-slate-100/80 p-1.5 rounded-xl border-0 mx-1">
+            <TabsTrigger value="hope" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-lg px-5 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <Brain className="w-4 h-4 mr-2" />Hope AI
             </TabsTrigger>
-            <TabsTrigger value="powerpoint" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
-              <MonitorPlay className="w-3.5 h-3.5 mr-1.5" />PowerPoint
+            <TabsTrigger value="powerpoint" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-lg px-5 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <MonitorPlay className="w-4 h-4 mr-2" />PowerPoint
             </TabsTrigger>
-            <TabsTrigger value="exams" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
-              <BookOpen className="w-3.5 h-3.5 mr-1.5" />Exams
+            <TabsTrigger value="exams" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-lg px-5 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <BookOpen className="w-4 h-4 mr-2" />Exams
             </TabsTrigger>
-            <TabsTrigger value="blooms" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
-              <GraduationCap className="w-3.5 h-3.5 mr-1.5" />Bloom's
+            <TabsTrigger value="blooms" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-lg px-5 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <GraduationCap className="w-4 h-4 mr-2" />Bloom's
             </TabsTrigger>
-            <TabsTrigger value="diagrams" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
-              <Microscope className="w-3.5 h-3.5 mr-1.5" />Diagrams
+            <TabsTrigger value="diagrams" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-lg px-5 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <Microscope className="w-4 h-4 mr-2" />Diagrams
             </TabsTrigger>
-            <TabsTrigger value="images" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
-              <Image className="w-3.5 h-3.5 mr-1.5" />Images
+            <TabsTrigger value="images" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-lg px-5 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <Image className="w-4 h-4 mr-2" />Images
             </TabsTrigger>
-            <TabsTrigger value="gallery" className="data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none border-b-2 border-transparent pb-2 pt-0 text-xs font-medium data-[state=active]:text-blue-700 text-gray-500 hover:text-gray-700">
-              <Images className="w-3.5 h-3.5 mr-1.5" />Gallery
+            <TabsTrigger value="gallery" className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700 rounded-lg px-5 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white/60 transition-all">
+              <Images className="w-4 h-4 mr-2" />Gallery
             </TabsTrigger>
           </TabsList>
         </div>

@@ -216,52 +216,17 @@ export default function StudentAssignmentDetailPage() {
     setExamSubmitted(true)
     setIsSubmitting(true)
 
-    // Build answer key comparison results
-    const qs: Record<string, { correct: boolean; studentAnswer: string; correctAnswer: string; marks: number }> = {}
-    let score = 0
-    let totalMarks = 0
-    const shortAnswerQuestions: { id: number; text: string; studentAnswer: string; correctAnswer: string; marks: number }[] = []
+    // Build the grading payload WITHOUT the answer key (never sent to the client).
+    // The server grades securely using the stored answerKey + AI.
+    const shortAnswerQuestions: { id: number; text: string; studentAnswer: string; correctAnswer?: string; marks: number }[] = []
     for (const q of questions) {
-      totalMarks += q.marks || 1
       const studentAns = examAnswers[String(q.id)] || ''
-      const correctAns = answerKey[String(q.id)] || ''
-      const correct = studentAns.toLowerCase().trim() === correctAns.toLowerCase().trim()
-      if (correct) score += q.marks || 1
-      qs[String(q.id)] = { correct, studentAnswer: studentAns, correctAnswer: correctAns, marks: q.marks || 1 }
-      if (q.type === 'short_answer' && studentAns.trim() && correctAns) {
-        shortAnswerQuestions.push({ id: q.id, text: q.text, studentAnswer: studentAns, correctAnswer: correctAns, marks: q.marks || 1 })
+      if (q.type === 'short_answer' && studentAns.trim()) {
+        shortAnswerQuestions.push({ id: q.id, text: q.text, studentAnswer: studentAns, marks: q.marks || 1 })
       }
     }
 
     try {
-      // For short answer questions, call AI grading
-      let aiFeedback = ''
-      if (shortAnswerQuestions.length > 0) {
-        try {
-          const aiRes = await fetch('/api/ai/grade-short-answer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              subject: assignment?.subject || '',
-              grade: assignment?.lessonPlan?.grade || '',
-              questions: shortAnswerQuestions,
-            }),
-          })
-          if (aiRes.ok) {
-            const aiData = await aiRes.json()
-            if (aiData.results) {
-              for (const r of aiData.results) {
-                if (qs[String(r.questionId)]) {
-                  qs[String(r.questionId)].correct = r.isCorrect
-                  if (r.isCorrect) score += qs[String(r.questionId)].marks
-                }
-              }
-            }
-            aiFeedback = aiData.feedback || ''
-          }
-        } catch (e) { console.warn('[StudentAssignment] fetch AI feedback error:', e) }
-      }
-
       const res = await fetch(`/api/assignments/${assignmentId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -278,14 +243,18 @@ export default function StudentAssignmentDetailPage() {
       const sub = data.submission
       setSubmissionResult({
         id: sub.id,
-        grade: sub.grade ?? score,
-        feedback: sub.feedback || aiFeedback || `You scored ${score}/${totalMarks}`,
-        questionScores: sub.questionScores || qs,
-        needsRevision: sub.needsRevision ?? score < totalMarks,
+        grade: sub.grade ?? undefined,
+        feedback: sub.feedback || undefined,
+        questionScores: sub.questionScores || undefined,
+        needsRevision: sub.needsRevision,
         revisionNotes: sub.revisionNotes,
         isAiGraded: sub.isAiGraded ?? true,
       })
-      setSubmitMessage(`Exam submitted! Score: ${score}/${totalMarks}`)
+      if (sub.grade !== null && sub.grade !== undefined) {
+        setSubmitMessage(`Exam submitted! Score: ${sub.grade}%`)
+      } else {
+        setSubmitMessage('Exam submitted! Awaiting grading.')
+      }
     } catch (e) {
       setSubmitMessage(e instanceof Error ? e.message : 'Submission failed')
     } finally {
@@ -308,8 +277,9 @@ export default function StudentAssignmentDetailPage() {
   }
 
   const handleRevisionChat = () => {
+    const qs = submissionResult?.questionScores || {}
     const wrongQuestions = questions.filter(q => {
-      const s = submissionResult?.questionScores?.[String(q.id)]
+      const s = qs[String(q.id)]
       return s && !s.correct
     })
     const context = encodeURIComponent(JSON.stringify({
@@ -319,8 +289,8 @@ export default function StudentAssignmentDetailPage() {
       wrongQuestions: wrongQuestions.map(q => ({
         text: q.text,
         options: q.options,
-        correctAnswer: answerKey[String(q.id)] || '',
-        studentAnswer: answers[String(q.id)] || '',
+        correctAnswer: qs[String(q.id)]?.correctAnswer || '',
+        studentAnswer: qs[String(q.id)]?.studentAnswer || answers[String(q.id)] || '',
       })),
     }))
     window.open(`/student/ai-tutor?examRevision=${context}`, '_blank')
@@ -394,7 +364,21 @@ export default function StudentAssignmentDetailPage() {
               const s = qs[String(q.id)]
               const isCorrect = s?.correct
               const studentAns = s?.studentAnswer || answers[String(q.id)] || '(not answered)'
-              const correctAns = s?.correctAnswer || answerKey[String(q.id)] || ''
+              const correctAns = s?.correctAnswer || ''
+              // If we have no per-question grading data, show a neutral card
+              if (isCorrect === undefined) {
+                return (
+                  <div key={q.id} className="p-4 rounded-lg border border-slate-200 bg-slate-50">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-800">Question {i + 1}</p>
+                        <p className="text-sm text-gray-600 mt-1">{q.text}</p>
+                        <p className="text-xs text-gray-400 mt-2">Your answer: {studentAns}</p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
               return (
                 <div key={q.id} className={`p-4 rounded-lg border ${isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
                   <div className="flex items-start justify-between">

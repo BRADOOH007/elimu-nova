@@ -11,7 +11,7 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
     const [settings, total] = await Promise.all([
       (prisma as any).systemSettings.findMany({
         include: {
-          updatedBy: { select: { firstName: true, lastName: true, email: true } },
+          updatedByUser: { select: { firstName: true, lastName: true, email: true } },
         },
         orderBy: { category: 'asc' },
         skip: (page - 1) * limit,

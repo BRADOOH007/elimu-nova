@@ -119,11 +119,25 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
       computedStatus = 'OVERDUE';
     }
 
+    // Strip any embedded answer key / marking scheme from student-visible content
+    let safeContent = assignment.content || '';
+    if (typeof safeContent === 'string') {
+      safeContent = safeContent
+        .replace(/##\s*Answer\s*Key[\s\S]*/i, '')
+        .replace(/###\s*Answer\s*Key[\s\S]*/i, '')
+        .replace(/📝\s*ANSWER\s*KEY[\s\S]*/i, '')
+        .replace(/ANSWER\s*KEY[\s\S]*?(?=##|\n\n#|$)/i, '')
+        .replace(/##\s*Marking\s*Scheme[\s\S]*/i, '')
+        .replace(/MARKING\s*SCHEME[\s\S]*?(?=##|\n\n#|$)/i, '')
+        .replace(/Correct\s*Answers?\s*[:：][\s\S]*?(?=\n\n##|\n\n#|$)/i, '')
+        .trim();
+    }
+
     return {
       id: assignment.id,
       title: assignment.title,
       description: assignment.description,
-      content: assignment.content,
+      content: safeContent,
       dueDate: assignment.dueDate,
       status: computedStatus,
       createdAt: assignment.createdAt,

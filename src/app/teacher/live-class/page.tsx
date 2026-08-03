@@ -14,6 +14,8 @@ import { confirmToast } from '@/lib/confirm-toast'
 
 const DiscussTab = dynamic(() => import('@/app/teacher/discussions/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
+const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE','Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies','Computer Studies','Home Science','Art & Design']
+
 interface LiveSession {
   id: string; title: string; subject: string; status: string
   metadata: {
@@ -103,6 +105,11 @@ export default function LiveClassPage() {
       setChatMessages(data.session.metadata?.chat || [])
       setParticipants(data.session.metadata?.participants || [])
       setStep('live')
+      // Auto-open Jitsi popup for teacher — first to join = moderator
+      if (data.session.metadata?.meetingLink) {
+        const teacherName = session?.user?.name || 'Teacher'
+        openMeetingPopup(getJitsiUrl(data.session.metadata.meetingLink, teacherName))
+      }
     } catch (e) {
       toast({ title: 'Failed to start', description: e instanceof Error ? e.message : 'Unknown error', variant: 'destructive' })
     } finally { setLoading(false) }
@@ -180,6 +187,13 @@ export default function LiveClassPage() {
     window.open(url, 'meeting-popup', `width=${w},height=${h},left=${(screen.width-w)/2},top=${(screen.height-h)/2},menubar=no,toolbar=no,location=yes`)
   }
 
+  const getJitsiUrl = (baseUrl: string, displayName: string) => {
+    // First to join = moderator automatically on meet.jit.si (no auth required)
+    // Use simple key=value format for URL hash params
+    const encodedName = encodeURIComponent(displayName)
+    return `${baseUrl}#config.prejoinPageEnabled=false&userInfo.displayName="${encodedName}"`
+  }
+
   const copyCode = () => {
     if (liveSession?.metadata?.sessionCode) {
       navigator.clipboard.writeText(liveSession.metadata.sessionCode)
@@ -188,23 +202,25 @@ export default function LiveClassPage() {
     }
   }
 
-  // Canvas drawing (mouse + touch)
-  const getPos = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  // Canvas drawing (pointer events — works for both mouse and touch)
+  const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
     const rect = canvas.getBoundingClientRect()
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY
-    return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) }
+    return {
+      x: (e.clientX - rect.left) * (canvas.width / rect.width),
+      y: (e.clientY - rect.top) * (canvas.height / rect.height),
+    }
   }
 
-  const handlePointerDown = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     e.preventDefault()
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     setDrawing(true)
     lastPos.current = getPos(e)
   }
 
-  const handlePointerMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!drawing || !canvasRef.current) return
     e.preventDefault()
     const ctx = canvasRef.current.getContext('2d')
@@ -222,16 +238,20 @@ export default function LiveClassPage() {
     lastPos.current = pos
   }
 
-  const handlePointerUp = () => { setDrawing(false); lastPos.current = null; saveBoard() }
+  const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    setDrawing(false)
+    lastPos.current = null
+    saveBoard()
+  }
 
   const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
 
   /* ── SETUP SCREEN ── */
   if (step === 'setup') return (
     <Tabs defaultValue="live">
-      <TabsList className="mb-4 ml-6 mt-4">
-        <TabsTrigger value="live"><Radio className="w-4 h-4 mr-2"/>Live Teaching</TabsTrigger>
-        <TabsTrigger value="discussions"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
+      <TabsList className="overflow-x-auto flex gap-2 bg-slate-100/80 p-1.5 rounded-xl h-12 border-0 ml-6 mt-4 mb-4">
+        <TabsTrigger value="live" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm"><Radio className="w-4 h-4 mr-2"/>Live Teaching</TabsTrigger>
+        <TabsTrigger value="discussions" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
       </TabsList>
       <TabsContent value="live">
     <div className="p-6 max-w-2xl mx-auto space-y-6">
@@ -249,21 +269,25 @@ export default function LiveClassPage() {
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Subject</label>
-          <input value={subject} onChange={e => setSubject(e.target.value)}
-            placeholder="e.g. Mathematics"
-            className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <select value={subject} onChange={e => setSubject(e.target.value)}
+            className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="">Select subject</option>
+            {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
-            <Video className="h-3.5 w-3.5 text-blue-500" /> Meeting Link <span className="text-slate-400 font-normal">(optional)</span>
+            <Video className="h-3.5 w-3.5 text-blue-500" /> Video Link <span className="text-slate-400 font-normal">(optional)</span>
           </label>
-          <div className="relative">
-            <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <input value={meetingLink} onChange={e => setMeetingLink(e.target.value)}
-              placeholder="https://zoom.us/j/... or https://meet.google.com/..."
-              className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <input value={meetingLink} onChange={e => setMeetingLink(e.target.value)}
+                placeholder="Paste Zoom/Meet link, or leave empty for auto-generated Jitsi room"
+                className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
           </div>
-          <p className="text-xs text-slate-400 mt-1">Paste a Zoom, Google Meet, or Teams link — students will see a <strong>Join Video</strong> button</p>
+          <p className="text-xs text-slate-400 mt-1">Leave empty to auto-create a free <strong>Jitsi Meet</strong> room — no account needed for you or students</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">Class</label>
@@ -284,7 +308,8 @@ export default function LiveClassPage() {
         <p className="text-sm font-semibold text-blue-800 mb-1">How it works</p>
         <ul className="space-y-1 text-xs text-blue-700">
           <li>• A session code is generated — students enter it at <strong>/student/schedule</strong> to join</li>
-          <li>• Add a Zoom/Meet/Teams link and students get a <strong>Join Video</strong> button</li>
+          <li>• A free <strong>Jitsi Meet</strong> video room is auto-created — students get a <strong>Join Class</strong> button</li>
+          <li>• Or paste your own Zoom/Google Meet/Teams link if you prefer</li>
           <li>• Draw on the whiteboard — students see it live (3-second refresh)</li>
           <li>• Ask Hope AI questions mid-lesson and broadcast answers to students</li>
           <li>• Chat messages are visible to all participants</li>
@@ -310,7 +335,7 @@ export default function LiveClassPage() {
         </div>
         <div className="flex items-center gap-3">
           {liveSession?.metadata?.meetingLink && (
-            <button onClick={() => openMeetingPopup(liveSession.metadata.meetingLink!)}
+            <button onClick={() => openMeetingPopup(getJitsiUrl(liveSession.metadata.meetingLink!, session?.user?.name || 'Teacher'))}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
               <Video className="h-3 w-3" /> Join Video
             </button>
@@ -381,13 +406,10 @@ export default function LiveClassPage() {
               width={1200} height={800}
               className="w-full h-full cursor-crosshair"
               style={{ touchAction: 'none' }}
-              onMouseDown={handlePointerDown}
-              onMouseMove={handlePointerMove}
-              onMouseUp={handlePointerUp}
-              onMouseLeave={handlePointerUp}
-              onTouchStart={handlePointerDown}
-              onTouchMove={handlePointerMove}
-              onTouchEnd={handlePointerUp}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
             />
             <div className="absolute bottom-3 left-3 text-xs text-slate-400 bg-white/80 px-2 py-1 rounded">
               Students see this board (refreshes every 3s)

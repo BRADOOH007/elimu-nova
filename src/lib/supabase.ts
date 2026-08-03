@@ -52,8 +52,37 @@ export const BUCKETS = {
 } as const
 
 /**
+ * Ensure a storage bucket exists (idempotent).
+ */
+export async function ensureBucket(
+  bucket: string,
+  opts: {
+    public?: boolean
+    allowedMimeTypes?: string[]
+    fileSizeLimit?: number
+  } = {},
+): Promise<void> {
+  if (!supabaseAdmin) return
+
+  try {
+    const { data: buckets } = await supabaseAdmin.storage.listBuckets()
+    if (buckets?.some((b) => b.name === bucket)) return
+  } catch { /* list failed, fall through to create attempt */ }
+
+  const { error } = await supabaseAdmin.storage.createBucket(bucket, {
+    public: opts.public ?? true,
+    ...(opts.allowedMimeTypes ? { allowedMimeTypes: opts.allowedMimeTypes } : {}),
+    ...(opts.fileSizeLimit ? { fileSizeLimit: opts.fileSizeLimit } : {}),
+  })
+  if (error && !String(error.message).toLowerCase().includes('already')) {
+    console.warn('[Supabase ensureBucket]', bucket, error.message)
+  }
+}
+
+/**
  * Upload a file to Supabase Storage.
  * Returns the public URL or null if Supabase isn't configured.
+ * Lazily creates the bucket on first upload if it doesn't exist.
  */
 export async function uploadFile(
   bucket: string,
@@ -63,17 +92,59 @@ export async function uploadFile(
 ): Promise<string | null> {
   if (!supabaseAdmin) return null
 
-  const { data, error } = await supabaseAdmin.storage
+  let { data, error } = await supabaseAdmin.storage
     .from(bucket)
     .upload(path, file, { contentType, upsert: true })
+
+  if (error) {
+    // Self-heal: missing bucket is the most common first-time failure
+    await ensureBucket(bucket)
+    const retry = await supabaseAdmin.storage
+      .from(bucket)
+      .upload(path, file, { contentType, upsert: true })
+    data  = retry.data
+    error = retry.error
+  }
 
   if (error) {
     console.error('[Supabase upload]', error.message)
     return null
   }
 
-  const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(data.path)
+  const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(data!.path)
   return urlData.publicUrl
+}
+
+/**
+ * Delete a file from storage given its public URL.
+ * Returns true if the file was removed from Supabase.
+ */
+export async function removeFileByUrl(publicUrl: string): Promise<boolean> {
+  if (!supabaseAdmin || !publicUrl) return false
+
+  const marker = '/storage/v1/object/public/'
+  const idx = publicUrl.indexOf(marker)
+  if (idx === -1) return false
+
+  const rest = publicUrl.slice(idx + marker.length)
+  const slash = rest.indexOf('/')
+  if (slash === -1) return false
+
+  const bucket = rest.slice(0, slash)
+  const filePath = rest.slice(slash + 1)
+  if (!bucket || !filePath) return false
+
+  try {
+    const { error } = await supabaseAdmin.storage.from(bucket).remove([filePath])
+    if (error) {
+      console.warn('[Supabase remove]', error.message)
+      return false
+    }
+    return true
+  } catch (e) {
+    console.warn('[Supabase remove]', e)
+    return false
+  }
 }
 
 /**

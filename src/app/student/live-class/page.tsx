@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast'
 
 import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
+import { useSearchParams } from 'next/navigation'
 import { Radio, MessageSquare, Send, Users, Loader2, Sparkles, Eye, Video, Hand, HandMetal } from 'lucide-react'
 
 interface LiveSession {
@@ -17,6 +18,7 @@ interface Participant { userId: string; name: string; joinedAt: string; handRais
 export default function StudentLiveClass() {
   const { toast } = useToast()
   const { data: session } = useSession()
+  const searchParams = useSearchParams()
   const [activeSessions, setActiveSessions] = useState<LiveSession[]>([])
   const [joinedSession, setJoinedSession] = useState<LiveSession | null>(null)
   const [codeInput, setCodeInput] = useState('')
@@ -28,14 +30,37 @@ export default function StudentLiveClass() {
   const chatEndRef = useRef<HTMLDivElement>(null)
   const pollRef = useRef<NodeJS.Timeout>(null)
 
+  // Auto-fill code from URL and auto-join
+  useEffect(() => {
+    const urlCode = searchParams.get('code')
+    if (urlCode) {
+      setCodeInput(urlCode.toUpperCase())
+    }
+  }, [searchParams])
+
   const openMeetingPopup = (url: string) => {
     const w = 800, h = 700
     window.open(url, 'meeting-popup', `width=${w},height=${h},left=${(screen.width-w)/2},top=${(screen.height-h)/2},menubar=no,toolbar=no,location=yes`)
   }
 
+  const getJitsiUrl = (baseUrl: string, displayName: string) => {
+    const encodedName = encodeURIComponent(displayName)
+    return `${baseUrl}#config.prejoinPageEnabled=false&userInfo.displayName="${encodedName}"`
+  }
+
   useEffect(() => {
     loadActiveSessions()
+    const listPoll = setInterval(loadActiveSessions, 10000)
+    return () => clearInterval(listPoll)
   }, [])
+
+  // Auto-join when URL has code and sessions are loaded
+  useEffect(() => {
+    const urlCode = searchParams.get('code')
+    if (!urlCode || activeSessions.length === 0 || joinedSession) return
+    const found = activeSessions.find(s => s.metadata?.sessionCode === urlCode.toUpperCase())
+    if (found) joinSession(found)
+  }, [activeSessions, searchParams, joinedSession])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -51,7 +76,7 @@ export default function StudentLiveClass() {
     try {
       const res  = await fetch('/api/live-session')
       const data = await res.json()
-      setActiveSessions(data.sessions || [])
+      setActiveSessions((data.sessions || []).filter((s: LiveSession) => s.status !== 'COMPLETED'))
     } finally { setLoading(false) }
   }
 
@@ -86,6 +111,10 @@ export default function StudentLiveClass() {
     setJoinedSession(sess)
     setChatMessages(sess.metadata?.chat || [])
     setBoardImg(sess.metadata?.boardContent || '')
+    // Auto-open Jitsi popup with student's name
+    if (sess.metadata?.meetingLink) {
+      openMeetingPopup(getJitsiUrl(sess.metadata.meetingLink, session?.user?.name || 'Student'))
+    }
   }
 
   const joinByCode = async () => {
@@ -144,7 +173,7 @@ export default function StudentLiveClass() {
           />
           <button onClick={joinByCode} disabled={!codeInput.trim()}
             className="px-6 h-11 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl disabled:opacity-50 transition-all">
-            Join
+            Join Class
           </button>
         </div>
       </div>
@@ -175,18 +204,10 @@ export default function StudentLiveClass() {
                     <p className="text-xs text-slate-400">{s.subject} · {s.metadata?.participants?.length || 0} joined</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {s.metadata?.meetingLink && (
-                    <button onClick={() => openMeetingPopup(s.metadata.meetingLink!)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                      <Video className="h-4 w-4" /> Join Video
-                    </button>
-                  )}
-                  <button onClick={() => joinSession(s)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                    Join Now
-                  </button>
-                </div>
+                <button onClick={() => joinSession(s)}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">
+                  <Video className="h-4 w-4" /> Join Class
+                </button>
               </div>
             ))}
           </div>
@@ -208,9 +229,9 @@ export default function StudentLiveClass() {
         </div>
         <div className="flex items-center gap-2">
           {joinedSession.metadata?.meetingLink && (
-            <button onClick={() => openMeetingPopup(joinedSession.metadata.meetingLink!)}
+            <button onClick={() => openMeetingPopup(getJitsiUrl(joinedSession.metadata.meetingLink!, session?.user?.name || 'Student'))}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors">
-              <Video className="h-3.5 w-3.5" /> Join Video
+              <Video className="h-3.5 w-3.5" /> Open Video
             </button>
           )}
           <button onClick={toggleHand}

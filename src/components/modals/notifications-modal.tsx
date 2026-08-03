@@ -1,19 +1,19 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Bell, 
-  X, 
-  Check, 
-  AlertCircle, 
-  Info, 
-  CheckCircle, 
+import {
+  Bell,
+  X,
+  Check,
+  AlertCircle,
+  Info,
+  CheckCircle,
   AlertTriangle,
   Trash2,
-  CheckCheck
+  CheckCheck,
+  MessageSquare
 } from "lucide-react"
 
 interface Notification {
@@ -25,82 +25,167 @@ interface Notification {
   createdAt: string
 }
 
+interface RawMessage {
+  id: string
+  subject: string
+  content: string
+  read: boolean
+  isSent: boolean
+  createdAt: string
+  sender?: { name: string; role?: string } | null
+  senderType?: string
+}
+
+interface ActivityItem {
+  id: string
+  type: 'notification' | 'message'
+  title: string
+  description: string
+  timestamp: string
+  isRead: boolean
+  notificationType?: string
+  senderName?: string
+}
+
 interface NotificationsModalProps {
   isOpen: boolean
   onClose: () => void
   userId: string
+  role?: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
   onUnreadChanged?: () => void
 }
 
-export function NotificationsModal({ isOpen, onClose, userId, onUnreadChanged }: NotificationsModalProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+export function NotificationsModal({ isOpen, onClose, userId, role, onUnreadChanged }: NotificationsModalProps) {
+  const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications()
-    }
-  }, [isOpen, userId])
-
-  const fetchNotifications = async () => {
+  const fetchActivities = useCallback(async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/notifications?userId=${userId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setNotifications(data)
+
+      const messagesEndpoint =
+        role === 'TEACHER'  ? '/api/teacher/messages' :
+        role === 'STUDENT'  ? '/api/student/messages' :
+        role === 'PARENT'   ? '/api/parent/messages'  :
+        null
+
+      const [notifRes, msgRes] = await Promise.all([
+        fetch(`/api/notifications?userId=${userId}`),
+        messagesEndpoint ? fetch(messagesEndpoint) : Promise.resolve(null),
+      ])
+
+      const notifData = notifRes.ok ? await notifRes.json() : []
+      const notifications: Notification[] = Array.isArray(notifData) ? notifData : (notifData.notifications || [])
+
+      let messages: RawMessage[] = []
+      if (msgRes && msgRes.ok) {
+        const msgData = await msgRes.json()
+        messages = msgData.messages || []
       }
+
+      const unreadMessages = messages.filter(m => !m.read && !m.isSent)
+
+      const notifItems: ActivityItem[] = notifications.map(n => ({
+        id: n.id,
+        type: 'notification' as const,
+        title: n.title,
+        description: n.message,
+        timestamp: n.createdAt,
+        isRead: n.isRead,
+        notificationType: n.type,
+      }))
+
+      const msgItems: ActivityItem[] = unreadMessages.map(m => ({
+        id: m.id,
+        type: 'message' as const,
+        title: m.subject || 'New Message',
+        description: m.content,
+        timestamp: m.createdAt,
+        isRead: m.read,
+        senderName: m.sender?.name,
+      }))
+
+      const combined = [...notifItems, ...msgItems].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+
+      setActivities(combined)
     } catch (error) {
-      console.error('Error fetching notifications:', error)
+      console.error('Error fetching activities:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [userId, role])
 
-  const markAsRead = async (notificationId: string) => {
+  useEffect(() => {
+    if (isOpen) fetchActivities()
+  }, [isOpen, fetchActivities])
+
+  const markAsRead = async (item: ActivityItem) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}`, {
-        method: 'PATCH'
-      })
-      if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notif => 
-            notif.id === notificationId ? { ...notif, isRead: true } : notif
-          )
-        )
-        onUnreadChanged?.()
+      if (item.type === 'notification') {
+        await fetch(`/api/notifications/${item.id}`, { method: 'PATCH' })
+      } else {
+        const endpoint =
+          role === 'TEACHER'  ? '/api/teacher/messages' :
+          role === 'STUDENT'  ? '/api/student/messages' :
+          role === 'PARENT'   ? '/api/parent/messages'  :
+          null
+        if (endpoint) {
+          await fetch(endpoint, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId: item.id }),
+          })
+        }
       }
+      setActivities(prev => prev.map(a => a.id === item.id ? { ...a, isRead: true } : a))
+      onUnreadChanged?.()
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+      console.error('Error marking as read:', error)
     }
   }
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch(`/api/notifications/mark-all-read`, {
+      await fetch('/api/notifications/mark-all-read', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
+        body: JSON.stringify({ userId }),
       })
-      if (response.ok) {
-        setNotifications(prev => 
-          prev.map(notif => ({ ...notif, isRead: true }))
+
+      const unreadMsgs = activities.filter(a => a.type === 'message' && !a.isRead)
+      const endpoint =
+        role === 'TEACHER'  ? '/api/teacher/messages' :
+        role === 'STUDENT'  ? '/api/student/messages' :
+        role === 'PARENT'   ? '/api/parent/messages'  :
+        null
+      if (endpoint && unreadMsgs.length > 0) {
+        await Promise.all(
+          unreadMsgs.map(m =>
+            fetch(endpoint, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messageId: m.id }),
+            })
+          )
         )
-        onUnreadChanged?.()
       }
+
+      setActivities(prev => prev.map(a => ({ ...a, isRead: true })))
+      onUnreadChanged?.()
     } catch (error) {
-      console.error('Error marking all notifications as read:', error)
+      console.error('Error marking all as read:', error)
     }
   }
 
-  const deleteNotification = async (notificationId: string) => {
+  const deleteNotification = async (item: ActivityItem) => {
+    if (item.type !== 'notification') return
     try {
-      const response = await fetch(`/api/notifications/${notificationId}`, {
-        method: 'DELETE'
-      })
+      const response = await fetch(`/api/notifications/${item.id}`, { method: 'DELETE' })
       if (response.ok) {
-        setNotifications(prev => prev.filter(notif => notif.id !== notificationId))
+        setActivities(prev => prev.filter(a => a.id !== item.id))
       }
     } catch (error) {
       console.error('Error deleting notification:', error)
@@ -116,6 +201,11 @@ export function NotificationsModal({ isOpen, onClose, userId, onUnreadChanged }:
     }
   }
 
+  const getItemIcon = (item: ActivityItem) => {
+    if (item.type === 'message') return <MessageSquare className="w-5 h-5 text-purple-500" />
+    return getNotificationIcon(item.notificationType || 'info')
+  }
+
   const getNotificationBadgeColor = (type: string) => {
     switch (type) {
       case 'success': return 'bg-green-100 text-green-800'
@@ -125,11 +215,13 @@ export function NotificationsModal({ isOpen, onClose, userId, onUnreadChanged }:
     }
   }
 
-  const filteredNotifications = notifications.filter(notif => 
-    filter === 'all' || !notif.isRead
-  )
+  const getTypeBadge = (item: ActivityItem) => {
+    if (item.type === 'message') return <Badge className="bg-purple-100 text-purple-800">message</Badge>
+    return <Badge className={getNotificationBadgeColor(item.notificationType || 'info')}>{item.notificationType}</Badge>
+  }
 
-  const unreadCount = notifications.filter(notif => !notif.isRead).length
+  const filteredActivities = activities.filter(a => filter === 'all' || !a.isRead)
+  const unreadCount = activities.filter(a => !a.isRead).length
 
   if (!isOpen) return null
 
@@ -144,7 +236,7 @@ export function NotificationsModal({ isOpen, onClose, userId, onUnreadChanged }:
             </div>
             <div>
               <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Notifications
+                Notifications & Messages
               </h2>
               {unreadCount > 0 && (
                 <Badge variant="destructive" className="mt-1">
@@ -167,7 +259,7 @@ export function NotificationsModal({ isOpen, onClose, userId, onUnreadChanged }:
               onClick={() => setFilter('all')}
               className={filter === 'all' ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-md' : 'bg-white border-gray-200'}
             >
-              All ({notifications.length})
+              All ({activities.length})
             </Button>
             <Button
               variant={filter === 'unread' ? 'default' : 'outline'}
@@ -191,71 +283,72 @@ export function NotificationsModal({ isOpen, onClose, userId, onUnreadChanged }:
           </div>
         </div>
 
-        {/* Notifications List */}
+        {/* Activity List */}
         <div className="overflow-y-auto max-h-[50vh]">
           {loading ? (
             <div className="p-12 text-center">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600 font-medium">Loading notifications...</p>
+              <p className="mt-4 text-gray-600 font-medium">Loading activity...</p>
             </div>
-          ) : filteredNotifications.length === 0 ? (
+          ) : filteredActivities.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto mb-4">
                 <Bell className="w-8 h-8 text-gray-400" />
               </div>
-              <p className="text-gray-600 font-medium">No notifications found</p>
-              <p className="text-sm text-gray-400 mt-1">You're all caught up!</p>
+              <p className="text-gray-600 font-medium">No activity found</p>
+              <p className="text-sm text-gray-400 mt-1">You&apos;re all caught up!</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {filteredNotifications.map((notification) => (
+              {filteredActivities.map((item) => (
                 <div
-                  key={notification.id}
+                  key={`${item.type}-${item.id}`}
                   className={`p-5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 ${
-                    !notification.isRead ? 'bg-gradient-to-r from-blue-50/50 to-purple-50/50 border-l-4 border-blue-500' : ''
+                    !item.isRead ? 'bg-gradient-to-r from-blue-50/50 to-purple-50/50 border-l-4 border-blue-500' : ''
                   }`}
                 >
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0 mt-1">
-                      {getNotificationIcon(notification.type)}
+                      {getItemIcon(item)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <h3 className={`text-sm font-medium ${
-                            !notification.isRead ? 'text-gray-900' : 'text-gray-700'
+                            !item.isRead ? 'text-gray-900' : 'text-gray-700'
                           }`}>
-                            {notification.title}
+                            {item.title}
                           </h3>
-                          <Badge className={getNotificationBadgeColor(notification.type)}>
-                            {notification.type}
-                          </Badge>
-                          {!notification.isRead && (
+                          {getTypeBadge(item)}
+                          {!item.isRead && (
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                           )}
                         </div>
                         <div className="flex items-center space-x-2">
                           <span className="text-xs text-gray-500">
-                            {new Date(notification.createdAt).toLocaleDateString()}
+                            {new Date(item.timestamp).toLocaleDateString()}
                           </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteNotification(notification.id)}
-                            className="text-gray-400 hover:text-red-500"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {item.type === 'notification' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteNotification(item)}
+                              className="text-gray-400 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {notification.message}
-                      </p>
-                      {!notification.isRead && (
+                      {item.senderName && (
+                        <p className="text-xs text-purple-600 mt-1 font-medium">From: {item.senderName}</p>
+                      )}
+                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
+                      {!item.isRead && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => markAsRead(notification.id)}
+                          onClick={() => markAsRead(item)}
                           className="mt-3 bg-white border-gray-200 hover:bg-gray-50"
                         >
                           <Check className="w-4 h-4 mr-2" />

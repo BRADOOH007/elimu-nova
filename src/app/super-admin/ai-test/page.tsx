@@ -73,10 +73,10 @@ export default function AITestPage() {
           })
           const data = await response.json()
           result = {
-            testType, success: response.ok && !!data.content,
+            testType, success: response.ok && !!data.lesson,
             provider: data.metadata?.model || 'unknown', model: data.metadata?.model || 'unknown',
             latencyMs: Date.now() - start,
-            output: data.content ? data.content.substring(0, 500) + '...' : data.error || 'No content',
+            output: data.lesson ? JSON.stringify(data.lesson).substring(0, 500) + '...' : data.error || 'No content',
             error: !response.ok ? data.error : undefined,
           }
           break

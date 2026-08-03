@@ -44,22 +44,57 @@ export function PrintExportButton({
       })
 
       if (res.ok) {
-        // For HTML responses (print-ready), open in new tab
         const contentType = res.headers.get('content-type') || ''
-        if (contentType.includes('text/html')) {
-          const html = await res.text()
-          const blob = new Blob([html], { type: 'text/html' })
-          const url = URL.createObjectURL(blob)
-          window.open(url, '_blank')
-          setTimeout(() => URL.revokeObjectURL(url), 60000)
-        } else if (contentType.includes('application/msword')) {
-          // For Word docs, trigger download
+        // Try to extract filename from Content-Disposition
+        const disposition = res.headers.get('content-disposition') || ''
+        let fileName = ''
+        const fnMatch = disposition.match(/filename="?([^";]+)"?/i)
+        if (fnMatch) fileName = fnMatch[1]
+
+        if (contentType.includes('application/pdf')) {
+          // PDF: trigger direct download
           const blob = await res.blob()
           const url = URL.createObjectURL(blob)
           const a = document.createElement('a')
           a.href = url
-          a.download = 'export.doc'
+          a.download = fileName || 'export.pdf'
+          document.body.appendChild(a)
           a.click()
+          a.remove()
+          URL.revokeObjectURL(url)
+        } else if (contentType.includes('application/msword') || contentType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml')) {
+          // Word docs: trigger direct download
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = fileName || 'export.doc'
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          URL.revokeObjectURL(url)
+        } else if (contentType.includes('text/html')) {
+          // HTML: download as .html file instead of opening a new tab
+          const html = await res.text()
+          const blob = new Blob([html], { type: 'text/html' })
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = fileName || 'export.html'
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
+          URL.revokeObjectURL(url)
+        } else if (contentType.includes('application/vnd.openxmlformats-officedocument.presentationml') || contentType.includes('application/octet-stream')) {
+          // PPTX: trigger download
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = fileName || 'export.pptx'
+          document.body.appendChild(a)
+          a.click()
+          a.remove()
           URL.revokeObjectURL(url)
         } else {
           // JSON response

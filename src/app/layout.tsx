@@ -1,18 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ErrorCatcher } from "@/components/error-catcher";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// System font stack — avoids fetching fonts from Google at build time, so
+// `next build` never fails in restricted/offline networks.
+const geistSans = { variable: '--font-geist-sans' } as const;
+const geistMono = { variable: '--font-geist-mono' } as const;
 
 // viewport must be exported separately in Next.js 15+
 export const viewport: Viewport = {
@@ -42,7 +36,7 @@ export const metadata: Metadata = {
     title: "ElimuNova AI - Intelligent Education Platform",
     description: "Transform education with AI-powered lesson plans, schemes of work, and personalized learning experiences.",
     type: "website",
-    images: ['/logo-black-removebg-preview.png'],
+    images: [{ url: '/logo-black.png', width: 400, height: 400, alt: 'ElimuNova AI Logo' }],
   },
 };
 

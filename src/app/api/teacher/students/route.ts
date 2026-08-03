@@ -61,19 +61,33 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
 
   const { searchParams } = new URL(req.url)
   const pg = parsePagination(searchParams)
+  const classId = searchParams.get('classId')
+  const search = searchParams.get('search')?.trim()
+
+  const where: any = { teacherId: teacher.id, deletedAt: null }
+  if (classId) where.classId = classId
+  if (search) {
+    where.user = {
+      OR: [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName:  { contains: search, mode: 'insensitive' } },
+        { email:     { contains: search, mode: 'insensitive' } },
+      ],
+    }
+  }
 
   const [students, total] = await Promise.all([
     prisma.student.findMany({
-      where: { teacherId: teacher.id, deletedAt: null },
+      where,
       include: { user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, address: true, isActive: true, createdAt: true } }, class: { select: { id: true, name: true, grade: true, subject: true } } },
       orderBy: { user: { firstName: 'asc' } },
       skip: (pg.page - 1) * pg.pageSize,
       take: pg.pageSize,
     }),
-    prisma.student.count({ where: { teacherId: teacher.id, deletedAt: null } }),
+    prisma.student.count({ where }),
   ])
 
-  return NextResponse.json(paginate(
+  const result = paginate(
     students.map(s => ({
       id: s.id, name: `${s.user.firstName} ${s.user.lastName}`, email: s.user.email,
       phone: s.user.phone, address: stripPasswordFromAddress(s.user.address),
@@ -84,7 +98,10 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
     })),
     total,
     pg,
-  ))
+  )
+
+  // Legacy alias so older consumers reading `.students` keep working
+  return NextResponse.json({ ...result, students: result.data })
 })
 
 export const POST = route({ auth: 'TEACHER', schema: CreateStudentSchema }, async (req, { user, body }) => {

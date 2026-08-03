@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,34 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+
+const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE','Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies','Computer Studies','Home Science','Art & Design']
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+
+const TOPIC_SUGGESTIONS: Record<string, string[]> = {
+  'Mathematics': ['Numbers and Operations', 'Fractions', 'Decimals', 'Geometry', 'Measurement', 'Algebra', 'Data Handling', 'Symmetry', 'Pattern and Relationships', 'Probability', 'Statistics'],
+  'English': ['Phonics', 'Reading Comprehension', 'Creative Writing', 'Grammar', 'Vocabulary', 'Speaking and Listening', 'Literature', 'Spelling', 'Punctuation'],
+  'Kiswahili': ['Usomaji', 'Uandishi', 'Sarufi', 'Mada na Maudhui', 'Fasihi', 'Maneno na Msamiati', 'Ufundishaji wa Lugha'],
+  'Science': ['Living Things', 'Plants', 'Animals', 'Human Body', 'Water', 'Air', 'Weather', 'Soil', 'Light and Shadow', 'Sound and Light', 'Force and Energy', 'Simple Machines', 'Matter'],
+  'Social Studies': ['My Family', 'Our Community', 'Kenya and Its Neighbours', 'Agriculture', 'Trade', 'Government', 'Resources', 'Environmental Conservation', 'Cultural Diversity'],
+  'CRE': ['Biblical Stories', 'Prayer', 'The Ten Commandments', 'Jesus Christ', 'Christian Values', 'Worship', 'The Bible'],
+  'IRE': ['Quran and Hadith', 'Islamic Prayer', 'Zakat', 'Fasting', 'Pillars of Islam', 'Prophet Muhammad (SAW)', 'Islamic Values'],
+  'Agriculture': ['Crop Production', 'Soil Conservation', 'Irrigation', 'Livestock Keeping', 'Pests and Diseases', 'Food Processing', 'Farm Tools', 'Agroforestry'],
+  'Physics': ['Forces', 'Motion', 'Energy', 'Waves', 'Electricity', 'Magnetism', 'Heat', 'Light', 'Sound', 'Nuclear Physics'],
+  'Chemistry': ['Acids and Bases', 'Salts', 'Periodic Table', 'Chemical Reactions', 'Organic Chemistry', 'Electrochemistry', 'States of Matter'],
+  'Biology': ['Cell Biology', 'Genetics', 'Ecology', 'Human Physiology', 'Plant Biology', 'Evolution', 'Microbiology', 'Classification'],
+  'History': ['Pre-Colonial Kenya', 'Colonial Period', 'Independence Movement', 'Post-Independence', 'World Wars', 'African History', 'Asian History'],
+  'Geography': ['Map Reading', 'Climate', 'Vegetation', 'Population', 'Trade and Industry', 'Transport', 'Environmental Issues', 'Resources'],
+  'Business Studies': ['Entrepreneurship', 'Marketing', 'Accounting', 'Business Ethics', 'Supply and Demand', 'Profit and Loss'],
+  'Computer Studies': ['Computer Basics', 'Word Processing', 'Spreadsheets', 'Internet Safety', 'Coding Basics', 'Database', 'Networking'],
+  'Home Science': ['Nutrition', 'Food Preparation', 'Clothing and Textiles', 'Housing', 'Family Life', 'Health and Hygiene', 'Child Development'],
+  'Art & Design': ['Drawing', 'Painting', 'Sculpture', 'Printmaking', 'Textile Art', 'Art History', 'Design Principles', 'Color Theory'],
+}
+
+interface Strand {
+  strandName: string
+  substrands: { name: string; description: string; learningOutcomes: string[] }[]
+}
 
 export interface AIGeneratorResult {
   title: string
@@ -63,6 +91,39 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
     country: 'KE',
     curriculum: 'cbc',
   })
+
+  const [availableTopics, setAvailableTopics] = useState<Strand[]>([])
+  const [loadingTopics, setLoadingTopics] = useState(false)
+
+  useEffect(() => {
+    if (!formData.subject || !formData.grade) {
+      setAvailableTopics([])
+      return
+    }
+    setLoadingTopics(true)
+    fetch(`/api/curriculum/strands?subject=${encodeURIComponent(formData.subject)}&grade=${encodeURIComponent(formData.grade)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.strands) setAvailableTopics(data.strands)
+        else {
+          const fallbackTopics = TOPIC_SUGGESTIONS[formData.subject] || []
+          setAvailableTopics([{
+            strandName: 'Suggested Topics',
+            substrands: fallbackTopics.map(name => ({ name, description: name, learningOutcomes: [] }))
+          }])
+        }
+      })
+      .catch(() => {
+        const fallbackTopics = TOPIC_SUGGESTIONS[formData.subject] || []
+        setAvailableTopics([{
+          strandName: 'Suggested Topics',
+          substrands: fallbackTopics.map(name => ({ name, description: name, learningOutcomes: [] }))
+        }])
+      })
+      .finally(() => setLoadingTopics(false))
+  }, [formData.subject, formData.grade])
+
+  const allTopics = availableTopics.flatMap(s => s.substrands.map(sub => sub.name))
 
   const handleGenerate = async () => {
     if (!formData.subject || !formData.grade || !formData.topic) {
@@ -252,26 +313,30 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                     <Label htmlFor="subject" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
                       Subject <span className="text-red-500">*</span>
                     </Label>
-                    <Input
+                    <select
                       id="subject"
                       value={formData.subject}
                       onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                      placeholder="e.g., Mathematics, Science"
-                      className="bg-white border-gray-200 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select subject</option>
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="grade" className="text-sm font-medium text-gray-700">
                       Grade Level *
                     </Label>
-                    <Input
+                    <select
                       id="grade"
                       value={formData.grade}
                       onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                      placeholder="e.g., Grade 7, Grade 10"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select grade</option>
+                      {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -279,13 +344,35 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                   <Label htmlFor="topic" className="text-sm font-medium text-gray-700">
                     Topic/Assignment *
                   </Label>
-                  <Input
-                    id="topic"
-                    value={formData.topic}
-                    onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
-                    placeholder="e.g., Quadratic Equations, Photosynthesis"
-                    className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                  />
+                  {loadingTopics ? (
+                    <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-400">
+                      <Loader2 className="w-4 h-4 animate-spin" /> Loading curriculum topics...
+                    </div>
+                  ) : allTopics.length > 0 ? (
+                    <select
+                      id="topic"
+                      value={formData.topic}
+                      onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a topic</option>
+                      {availableTopics.map(strand => (
+                        <optgroup key={strand.strandName} label={strand.strandName}>
+                          {strand.substrands.map(sub => (
+                            <option key={sub.name} value={sub.name}>{sub.name}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                  ) : (
+                    <Input
+                      id="topic"
+                      value={formData.topic}
+                      onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                      placeholder="e.g., Quadratic Equations, Photosynthesis"
+                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                    />
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -354,26 +441,30 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                     <Label htmlFor="subject" className="text-sm font-medium text-gray-700">
                       Subject *
                     </Label>
-                    <Input
+                    <select
                       id="subject"
                       value={formData.subject}
                       onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                      placeholder="e.g., Mathematics, Science"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select subject</option>
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="grade" className="text-sm font-medium text-gray-700">
                       Grade Level *
                     </Label>
-                    <Input
+                    <select
                       id="grade"
                       value={formData.grade}
                       onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                      placeholder="e.g., Grade 7, Grade 10"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select grade</option>
+                      {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -450,26 +541,30 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                     <Label htmlFor="subject" className="text-sm font-medium text-gray-700">
                       Subject *
                     </Label>
-                    <Input
+                    <select
                       id="subject"
                       value={formData.subject}
                       onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                      placeholder="e.g., Mathematics, Science"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select subject</option>
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="grade" className="text-sm font-medium text-gray-700">
                       Grade Level *
                     </Label>
-                    <Input
+                    <select
                       id="grade"
                       value={formData.grade}
                       onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                      placeholder="e.g., Grade 7, Grade 10"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select grade</option>
+                      {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -546,26 +641,30 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                     <Label htmlFor="subject" className="text-sm font-medium text-gray-700">
                       Subject *
                     </Label>
-                    <Input
+                    <select
                       id="subject"
                       value={formData.subject}
                       onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                      placeholder="e.g., Mathematics, Science"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select subject</option>
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="grade" className="text-sm font-medium text-gray-700">
                       Grade Level *
                     </Label>
-                    <Input
+                    <select
                       id="grade"
                       value={formData.grade}
                       onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                      placeholder="e.g., Grade 7, Grade 10"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select grade</option>
+                      {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -669,26 +768,30 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                     <Label htmlFor="subject" className="text-sm font-medium text-gray-700">
                       Subject *
                     </Label>
-                    <Input
+                    <select
                       id="subject"
                       value={formData.subject}
                       onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                      placeholder="e.g., Mathematics, Science"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select subject</option>
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="grade" className="text-sm font-medium text-gray-700">
                       Grade Level *
                     </Label>
-                    <Input
+                    <select
                       id="grade"
                       value={formData.grade}
                       onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                      placeholder="e.g., Grade 7, Grade 10"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select grade</option>
+                      {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
                   </div>
                 </div>
 

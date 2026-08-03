@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+export const GET = route({ auth: ['TEACHER', 'STUDENT', 'PARENT', 'SCHOOL_ADMIN'] }, async (req, { user, params }) => {
   try {
     const { id } = params
 
@@ -26,14 +26,18 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
     // Role-based access control
     const role = user.role
     if (role === 'TEACHER') {
-      // Teacher can view meetings at their school or meetings they created
       const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
       if (!teacher) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
       if (meeting.createdBy !== user.id && meeting.schoolId !== teacher.schoolId) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
+    } else if (role === 'STUDENT') {
+      const student = await prisma.student.findUnique({ where: { userId: user.id } })
+      if (!student) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+      if (meeting.schoolId !== student.schoolId) {
+        return NextResponse.json({ error: 'Access denied' }, { status: 403 })
+      }
     } else if (role === 'PARENT') {
-      // Parent can view meetings at their child's school or meetings they created
       const parent = await prisma.parent.findUnique({
         where: { userId: user.id },
         include: { students: { include: { student: { select: { schoolId: true } } } } },
@@ -44,7 +48,6 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
       }
     } else if (role === 'SCHOOL_ADMIN') {
-      // School admin can view meetings at their school
       const admin = await prisma.schoolAdmin.findUnique({ where: { userId: user.id } })
       if (!admin || meeting.schoolId !== admin.schoolId) {
         return NextResponse.json({ error: 'Access denied' }, { status: 403 })
@@ -62,6 +65,9 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
         time: meeting.time,
         duration: meeting.duration,
         location: meeting.location,
+        zoomJoinUrl: meeting.zoomJoinUrl,
+        zoomMeetingId: meeting.zoomMeetingId,
+        zoomMeetingPassword: meeting.zoomMeetingPassword,
         status: meeting.status,
         attendees: meeting.attendees,
         createdBy: {

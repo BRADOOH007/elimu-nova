@@ -10,6 +10,8 @@ import QuickActions from "@/components/school-admin/quick-actions"
 import SchoolInfoPanel from "@/components/school-admin/school-info-panel"
 import PersonList from "@/components/school-admin/person-list"
 import SchoolOverview from "@/components/school-admin/school-overview"
+import SchoolAIInsightsPanel from "@/components/school-admin/ai-insights-panel"
+import { AIUsageCard } from "@/components/ai-usage-card"
 import { EnrollTeacherModal } from "@/components/modals/enroll-teacher-modal"
 import { confirmToast } from '@/lib/confirm-toast'
 import EnrollStudentModal from "@/components/modals/enroll-student-modal"
@@ -107,6 +109,14 @@ export default function SchoolAdminDashboard() {
         </div>
 
         <StatsGrid stats={stats} formatCurrency={formatCurrency} />
+
+        {/* AI Insights */}
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2">
+            <SchoolAIInsightsPanel />
+          </div>
+          <AIUsageCard />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8 mb-8">
           <QuickActions

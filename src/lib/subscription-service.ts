@@ -13,6 +13,9 @@ export interface SubscriptionInfo {
 }
 
 const TRIAL_DAYS = 10
+// Grace period after a subscription endDate passes — prevents paid subscribers
+// being locked out due to webhook delays, clock skew, or renewal races.
+const EXPIRY_GRACE_DAYS = 5
 
 export async function getSubscriptionStatus(userId?: string, schoolId?: string): Promise<SubscriptionInfo> {
   if (!userId && !schoolId) {
@@ -54,12 +57,44 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
     }
 
     const now = new Date()
-    const daysRemaining = Math.max(0, Math.ceil((subscription.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
-    const isExpired = subscription.endDate < now
-
     const subscriptionStatus = subscription.status as string
 
-    // Auto-update DB status when expiry is detected
+    // Freemium plans never expire — freemium users always have access.
+    const isFreemium = (subscription as any).isFreemium === true || (subscription as any).type === 'FREEMIUM'
+    if (isFreemium) {
+      return {
+        isActive: true,
+        isTrial: false,
+        isExpired: false,
+        daysRemaining: 9999,
+        status: 'FREEMIUM',
+        packageName: subscription.package?.name || 'Free Plan',
+        endDate: subscription.endDate
+      }
+    }
+
+    // ACTIVE = paid and in good standing (Stripe webhooks flip to INACTIVE/
+    // CANCELLED on payment failure or cancellation). A paid subscriber is never
+    // locked out, even if endDate is momentarily stale — renewals refresh it.
+    if (subscriptionStatus === 'ACTIVE') {
+      return {
+        isActive: true,
+        isTrial: false,
+        isExpired: false,
+        daysRemaining: 9999,
+        status: 'ACTIVE',
+        packageName: subscription.package?.name || 'Paid Plan',
+        endDate: subscription.endDate
+      }
+    }
+
+    // Everything else is time-bound (TRIAL, or a legacy paid plan with endDate).
+    // Apply a grace period so we never lock out a subscriber over webhook/clock skew.
+    const graceEnd = new Date(subscription.endDate.getTime() + (EXPIRY_GRACE_DAYS * 24 * 60 * 60 * 1000))
+    const isExpired = graceEnd < now
+    const daysRemaining = Math.max(0, Math.ceil((subscription.endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+
+    // Auto-update DB status when expiry is detected (outside grace)
     if (isExpired && (subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'TRIAL')) {
       const newStatus = subscriptionStatus === 'TRIAL' ? 'TRIAL_EXPIRED' : 'EXPIRED'
       await prisma.subscription.update({
@@ -190,17 +225,57 @@ export async function startFreeTrial(userId?: string, schoolId?: string): Promis
 
 export async function hasAccess(userId?: string, schoolId?: string): Promise<boolean> {
   const cacheKey = `sub:access:${userId || 'u'}:${schoolId || 's'}`
+
+  // Cache read must NEVER block the user — if Redis is down, fail open.
   try {
     const cached = await cache.get(cacheKey)
     if (cached !== null) return cached === 'true'
+  } catch {
+    // Redis unavailable — continue to evaluate subscription directly.
+  }
 
+  let allowed = false
+  try {
     const subscriptionInfo = await getSubscriptionStatus(userId, schoolId)
-    const allowed = subscriptionInfo.isActive
-    await cache.set(cacheKey, allowed ? 'true' : 'false', 60)
-    return allowed
+    allowed = subscriptionInfo.isActive
   } catch (error) {
     console.error('Error in hasAccess:', error)
-    return false
+    // Fail open: a billing/subscription error should not lock a teacher out.
+    allowed = true
+  }
+
+  // Cache write must never throw either.
+  try {
+    await cache.set(cacheKey, allowed ? 'true' : 'false', 60)
+  } catch { /* Redis unavailable — ignore */ }
+
+  return allowed
+}
+
+/**
+ * Invalidate the cached access decision for a user/school.
+ * Call after subscription status changes (renewal, payment, cancel) so the
+ * new status takes effect immediately instead of after the 60s cache TTL.
+ */
+export async function invalidateSubscriptionCache(userId?: string, schoolId?: string): Promise<void> {
+  if (!userId && !schoolId) return
+  try {
+    await cache.del(`sub:access:${userId || 'u'}:${schoolId || 's'}`)
+  } catch { /* Redis unavailable — ignore */ }
+}
+
+/** Invalidate cache for every subscription row matching a Stripe subscription id. */
+export async function invalidateCacheForStripeSubscription(stripeSubscriptionId: string): Promise<void> {
+  try {
+    const subs = await prisma.subscription.findMany({
+      where: { stripeSubscriptionId },
+      select: { userId: true, schoolId: true },
+    })
+    for (const s of subs) {
+      await invalidateSubscriptionCache(s.userId || undefined, s.schoolId || undefined)
+    }
+  } catch (e) {
+    console.error('Error invalidating subscription cache:', e)
   }
 }
 
@@ -225,7 +300,8 @@ export async function createCheckoutSession(
   successUrl: string,
   cancelUrl: string,
   userId?: string,
-  schoolId?: string
+  schoolId?: string,
+  currency?: string
 ) {
   const { stripe } = await import('@/lib/stripe')
 
@@ -286,18 +362,26 @@ export async function createCheckoutSession(
     localSubId = created.id
   }
 
+  // Determine currency: explicit param > KES for Kenyan schools > USD default
+  const resolvedCurrency = currency || (schoolId ? 'kes' : 'usd')
+  const currencyLower = resolvedCurrency.toLowerCase()
+
+  // Convert price to smallest currency unit (cents for USD, cents for KES via Stripe)
+  // Stripe expects amount in smallest currency unit: USD=cents, KES=cents
+  const unitAmount = Math.round(packageInfo.price * 100)
+
   const session = await stripe.checkout.sessions.create({
     customer: customer.id,
     payment_method_types: ['card'],
     line_items: [
       {
         price_data: {
-          currency: 'usd',
+          currency: currencyLower,
           product_data: {
             name: packageInfo.name,
             description: packageInfo.description || undefined,
           },
-          unit_amount: Math.round(packageInfo.price * 100),
+          unit_amount: unitAmount,
           recurring: {
             interval: 'month',
             interval_count: Math.ceil(packageInfo.duration / 30),
@@ -313,7 +397,8 @@ export async function createCheckoutSession(
       packageId,
       userId: userId || '',
       schoolId: schoolId || '',
-      localSubscriptionId: localSubId
+      localSubscriptionId: localSubId,
+      currency: currencyLower,
     }
   })
 

@@ -15,7 +15,7 @@ import { DashboardLoading } from '@/components/ui/dashboard-loading'
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
   const { schoolInfo } = useSchoolInfo()
-  const { unreadCount } = useUnreadMessages()
+  const { totalUnread } = useUnreadMessages()
   const [timedOut, setTimedOut] = useState(false)
   useEffect(() => {
     const t = setTimeout(() => setTimedOut(true), 4000)
@@ -37,7 +37,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       icon: MessageSquare,
       label: 'Messages',
       href: '/student/messages',
-      badge: unreadCount > 0 ? unreadCount : undefined,
+      badge: totalUnread > 0 ? totalUnread : undefined,
       tourId: 'student-messages',
     },
     ...(!isSchoolStudent

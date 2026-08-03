@@ -10,7 +10,7 @@ import { PrismaClient } from '@prisma/client'
 const localDb = new PrismaClient({
     datasources: {
         db: {
-            url: process.env.LOCAL_DATABASE_URL || 'postgresql://postgres:25801325@localhost:5432/edugenius_ai?schema=public'
+            url: process.env.LOCAL_DATABASE_URL
         }
     }
 })
@@ -19,7 +19,7 @@ const localDb = new PrismaClient({
 const prodDb = new PrismaClient({
     datasources: {
         db: {
-            url: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_4dCrxETYqoX9@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require'
+            url: process.env.DATABASE_URL
         }
     }
 })

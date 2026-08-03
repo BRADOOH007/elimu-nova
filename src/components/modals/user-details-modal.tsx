@@ -308,13 +308,16 @@ export function UserDetailsModal({
 
       if (response.ok) {
         const updatedUser = await response.json()
+        const usernameChanged = updatedUser.username && updatedUser.username !== user?.username
         setUser(updatedUser)
         onUserUpdated(updatedUser)
         setEditing(false)
         toast({
           variant: "default",
           title: "User Updated",
-          description: "User information has been updated successfully!",
+          description: usernameChanged
+            ? `User information updated. New username: @${updatedUser.username}`
+            : "User information has been updated successfully!",
         })
       } else {
         const error = await response.json()

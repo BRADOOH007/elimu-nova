@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { handlePaymentSuccess } from '@/lib/payment-notifications'
+import { invalidateSubscriptionCache } from '@/lib/subscription-service'
 
 export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   const body = await req.json()
@@ -61,6 +63,27 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       }
     }
   })
+
+  // The old subscription is superseded — mark it expired so only the new one
+  // is considered active.
+  await prisma.subscription.update({
+    where: { id: oldSubscription.id },
+    data: { status: 'EXPIRED' },
+  }).catch(() => {})
+
+  // Record the manual payment as a PAID invoice + notify the school admin.
+  try {
+    await invalidateSubscriptionCache(oldSubscription.userId || undefined, oldSubscription.schoolId || undefined)
+    await handlePaymentSuccess({
+      subscriptionId: newSubscription.id,
+      amount: newPackage.price,
+      method: 'MANUAL',
+      receipt: `renew-${newSubscription.id.slice(-8)}`,
+      notes: `MANUAL_RENEWAL:${oldSubscription.id}`,
+    })
+  } catch (err) {
+    console.error('Failed to record renewal invoice/notification:', err)
+  }
 
   return NextResponse.json({
     message: 'Subscription renewed successfully',

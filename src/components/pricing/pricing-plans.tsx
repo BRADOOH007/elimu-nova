@@ -46,6 +46,7 @@ export function PricingPlans() {
   const [loading, setLoading] = useState<string | null>(null)
   const [plans, setPlans] = useState<PackagePlan[]>(FALLBACK_PLANS)
   const [fetching, setFetching] = useState(true)
+  const [currency, setCurrency] = useState<'usd' | 'kes'>('kes')
 
   useEffect(() => {
     fetch('/api/packages/public')
@@ -78,9 +79,14 @@ export function PricingPlans() {
   const handleUpgrade = async (planId: string) => {
     if (!session) { window.location.href = '/auth/signin'; return }
     setLoading(planId)
-    try { await createCheckout(planId) }
+    try { await createCheckout(planId, currency) }
     catch (error) { console.error('Failed to create checkout:', error) }
     finally { setLoading(null) }
+  }
+
+  const formatPrice = (price: number) => {
+    if (currency === 'kes') return `KES ${(price * 150).toLocaleString()}`
+    return usd(price)
   }
 
   const currentPlanName = subscription?.packageName || ''
@@ -122,6 +128,28 @@ export function PricingPlans() {
             )}
           </div>
         )}
+
+        {/* Currency Toggle */}
+        <div className="mt-6 inline-flex items-center gap-1 p-1 bg-slate-800/60 rounded-full border border-slate-700/40">
+          <button
+            type="button"
+            onClick={() => setCurrency('kes')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              currency === 'kes' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            KES
+          </button>
+          <button
+            type="button"
+            onClick={() => setCurrency('usd')}
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              currency === 'usd' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            USD
+          </button>
+        </div>
       </div>
 
       {/* Pricing Cards */}
@@ -180,7 +208,7 @@ export function PricingPlans() {
                             ? 'text-5xl bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent'
                             : 'text-4xl text-white'
                         }`}>
-                          {usd(plan.price)}
+                          {formatPrice(plan.price)}
                         </span>
                         <span className={`${popular ? 'text-slate-400' : 'text-slate-500'} text-sm`}>/month</span>
                       </div>

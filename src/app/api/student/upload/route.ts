@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { route } from '@/lib/api-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
+import { saveFileLocally } from '@/lib/local-storage'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,7 +45,19 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
   }
 
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Storage service not configured' }, { status: 500 })
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+    const localPath = `submissions/${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+    const localUrl = await saveFileLocally(BUCKET, localPath, buffer)
+    if (!localUrl) {
+      return NextResponse.json({ error: 'Upload failed: could not save file' }, { status: 500 })
+    }
+    return NextResponse.json({
+      url: localUrl,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+    })
   }
 
   const bytes = await file.arrayBuffer()

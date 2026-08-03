@@ -35,11 +35,17 @@ export default function ExamSplitPane({
   startedAt, dueDate, subject, grade,
 }: ExamSplitPaneProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(() => {
+    // Resume from the server-side start time so refresh/reload can't reset the clock
+    if (!startedAt) return timeLimit * 60
+    const elapsed = Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
+    return Math.max(0, timeLimit * 60 - elapsed)
+  })
   const [showPreview, setShowPreview] = useState(true)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const hasSubmittedRef = useRef(false)
   const answerPanelRef = useRef<HTMLDivElement>(null)
+  const answersRef = useRef<Record<string, string>>({})
 
   const sectionA = questions.filter(q => q.section !== 'B')
   const sectionB = questions.filter(q => q.section === 'B')
@@ -84,6 +90,7 @@ export default function ExamSplitPane({
   const handleAnswer = (qId: number, value: string) => {
     const updated = { ...answers, [String(qId)]: value }
     setAnswers(updated)
+    answersRef.current = updated
     sessionStorage.setItem(`exam_split_${title}_answers`, JSON.stringify(updated))
   }
 
@@ -91,8 +98,9 @@ export default function ExamSplitPane({
     if (hasSubmittedRef.current) return
     hasSubmittedRef.current = true
     if (timerRef.current) clearInterval(timerRef.current)
+    const finalAnswers = answersRef.current
     const timeSpent = Math.round((Date.now() - startTime) / 1000)
-    onSubmit(answers, timeSpent)
+    onSubmit(finalAnswers, timeSpent)
     sessionStorage.removeItem(`exam_split_${title}_answers`)
   }
 

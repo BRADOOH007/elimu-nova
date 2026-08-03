@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,10 +18,19 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Loader2 } from "lucide-react"
 
+interface PaymentMethodData {
+  id?: string
+  name: string
+  type: string
+  description?: string
+  isActive: boolean
+}
+
 interface CreatePaymentMethodModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  editing?: PaymentMethodData | null
 }
 
 const paymentTypes = [
@@ -36,7 +45,8 @@ const paymentTypes = [
 export function CreatePaymentMethodModal({
   open,
   onOpenChange,
-  onSuccess
+  onSuccess,
+  editing
 }: CreatePaymentMethodModalProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -46,6 +56,19 @@ export function CreatePaymentMethodModal({
     description: '',
     isActive: true
   })
+
+  useEffect(() => {
+    if (open && editing) {
+      setFormData({
+        name: editing.name || '',
+        type: editing.type || '',
+        description: editing.description || '',
+        isActive: editing.isActive
+      })
+    } else if (open) {
+      setFormData({ name: '', type: '', description: '', isActive: true })
+    }
+  }, [open, editing])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -62,40 +85,36 @@ export function CreatePaymentMethodModal({
     try {
       setLoading(true)
       
+      const isEdit = Boolean(editing?.id)
       const response = await fetch('/api/payment-methods', {
-        method: 'POST',
+        method: isEdit ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(isEdit ? { id: editing!.id, ...formData } : formData),
       })
 
       if (response.ok) {
         toast({
           title: "Success",
-          description: "Payment method created successfully",
+          description: isEdit ? "Payment method updated successfully" : "Payment method created successfully",
         })
         onSuccess()
-        setFormData({
-          name: '',
-          type: '',
-          description: '',
-          isActive: true
-        })
+        setFormData({ name: '', type: '', description: '', isActive: true })
       } else {
         const error = await response.json()
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.error || "Failed to create payment method",
+          description: error.error || (isEdit ? "Failed to update payment method" : "Failed to create payment method"),
         })
       }
     } catch (error) {
-      console.error('Error creating payment method:', error)
+      console.error('Error saving payment method:', error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to create payment method",
+        description: "Failed to save payment method",
       })
     } finally {
       setLoading(false)
@@ -113,9 +132,9 @@ export function CreatePaymentMethodModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Payment Method</DialogTitle>
+          <DialogTitle>{editing ? 'Edit Payment Method' : 'Create Payment Method'}</DialogTitle>
           <DialogDescription>
-            Add a new payment method for subscriptions and invoices.
+            {editing ? 'Update this payment method.' : 'Add a new payment method for subscriptions and invoices.'}
           </DialogDescription>
         </DialogHeader>
         
@@ -182,7 +201,7 @@ export function CreatePaymentMethodModal({
             </Button>
             <Button type="submit" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Create Payment Method
+              {editing ? 'Update Payment Method' : 'Create Payment Method'}
             </Button>
           </DialogFooter>
         </form>

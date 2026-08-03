@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 import { testSmtpConnection } from '@/lib/email'
+import { isEmailConfigured } from '@/lib/email-provider'
+import { encryptPassword } from '@/lib/password-encryption'
 import nodemailer from 'nodemailer'
 
 export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
     const body = await req.json()
 
-    // Save SMTP settings to system_settings table
+    // Save SMTP settings + optional Resend API key to system_settings table
     if (body.save) {
       const entries = [
         { key: 'smtp_host', value: body.smtp_host || '', type: 'string', category: 'email', description: 'SMTP server hostname', isEditable: true },
@@ -26,9 +28,21 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
         })
       }
 
+      // Resend API key (encrypted at rest) — Resend takes priority over SMTP.
+      if (body.resend_api_key && !String(body.resend_api_key).endsWith('****')) {
+        const key = String(body.resend_api_key).trim()
+        const toSave = key.startsWith('PWD_ENC:') ? key : (() => { try { return encryptPassword(key) } catch (e) { console.warn('Resend key encryption failed', e); return key } })()
+        await prisma.systemSettings.upsert({
+          where: { key: 'resend_api_key' },
+          update: { value: toSave, description: 'Resend API key', updatedBy: user.id },
+          create: { key: 'resend_api_key', value: toSave, type: 'string', category: 'email', description: 'Resend API key', isPublic: false, updatedBy: user.id },
+        })
+      }
+
       // Test after saving
       const testResult = await testSmtpConnection()
-      return NextResponse.json({ saved: true, test: testResult })
+      const resendConfigured = await isEmailConfigured()
+      return NextResponse.json({ saved: true, test: testResult, resendConfigured })
     }
 
     // Just test the connection without saving

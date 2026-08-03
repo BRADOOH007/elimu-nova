@@ -132,17 +132,36 @@ model SuperAdmin {
 // A school groups Teachers, Students, Classes, and Parents.
 // Nullable schoolId on child models enables school-less independent users.
 
-model School {
+model District {
   id        String   @id @default(cuid())
-  name      String
-  address   String
+  name      String   @unique
+  code      String?  @unique
+  address   String?
   phone     String?
   email     String?
-  website   String?
-  logo      String?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  schools   School[]
+
+  @@map("districts")
+}
+
+model School {
+  id         String    @id @default(cuid())
+  name       String
+  address    String
+  phone      String?
+  email      String?
+  website    String?
+  logo       String?
+  districtId String?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  district   District? @relation(fields: [districtId], references: [id])
 
   // Relationships
   schoolAdmin   SchoolAdmin?
@@ -156,6 +175,7 @@ model School {
   activities    Activity[]
   meetings      Meeting[]
   schedules     Schedule[]
+  academicCalendars AcademicCalendar[]
   settings      SchoolSettings[]
   schemesOfWork SchemeOfWork[]
   sharedSchemes SharedSchemeOfWork[]
@@ -312,6 +332,13 @@ model Student {
 
   // Exam lockdown sessions
   examSessions ExamSession[]
+
+  // Mastery & Spaced Repetition
+  unitMasteries    UnitMastery[]
+  reviewSchedules  ReviewSchedule[]
+  topicProgress    TopicProgress[]
+  courseChallenges CourseChallenge[]
+  writingSubmissions WritingSubmission[]
 
   deletedAt DateTime?
 
@@ -732,6 +759,11 @@ model Assignment {
   classId      String? // Which class this assignment is for
   subject      String?
   grade        String?
+  schoolId     String?
+  // Exam bank + structured exam data
+  metadata     Json? // exam bank flags, term/type/savedAt
+  questions    Json? // structured question array
+  totalMarks   Int? // total possible marks
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
@@ -1141,6 +1173,28 @@ model Schedule {
   class   Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
 
   @@map("schedules")
+}
+
+model AcademicCalendar {
+  id          String   @id @default(cuid())
+  schoolId    String
+  year        Int      // e.g. 2026
+  term        Int      // 1, 2, or 3
+  termName    String   // e.g. "Term 1"
+  startDate   DateTime
+  endDate     DateTime
+  weeksCount  Int      // e.g. 13
+  breaks      Json?    // [{ name: "Midterm Break", start: "...", end: "..." }]
+  holidays    Json?    // [{ name: "National Holiday", date: "..." }]
+  isOpening   Boolean  @default(false) // Is this the opening term?
+  isCurrent   Boolean  @default(false) // Auto-calculated current term
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@unique([schoolId, year, term])
+  @@map("academic_calendars")
 }
 
 model Resource {
@@ -1909,4 +1963,154 @@ model LockdownViolation {
   @@index([sessionId])
   @@index([createdAt])
   @@map("lockdown_violations")
+}
+
+// ============================================
+// MASTERY, SPACED REPETITION & COURSE CHALLENGE
+// ============================================
+
+enum MasteryLevel {
+  NOT_STARTED
+  BEGINNER
+  DEVELOPING
+  PROFICIENT
+  MASTERED
+}
+
+// Per-unit (strand) mastery tracking — Khan Academy style
+model UnitMastery {
+  id              String        @id @default(cuid())
+  studentId       String
+  strandId        String?       // links to CurriculumStrand.id if DB-backed
+  subject         String
+  unitName        String        // strand name or fallback topic name
+  grade           String?
+  masteryScore    Int           @default(0) // 0-100
+  masteryLevel    MasteryLevel  @default(NOT_STARTED)
+  totalQuestions  Int           @default(0)
+  correctAnswers  Int           @default(0)
+  studyTimeMins   Int           @default(0)
+  quizzesTaken    Int           @default(0)
+  lessonsCompleted Int          @default(0)
+  lastPracticedAt DateTime?
+  nextReviewAt    DateTime?     // for spaced repetition
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subject, unitName])
+  @@index([studentId, subject])
+  @@index([studentId, nextReviewAt])
+  @@map("unit_mastery")
+}
+
+// Skill prerequisite graph for knowledge map
+model SkillPrerequisite {
+  id               String  @id @default(cuid())
+  skillName        String
+  subject          String
+  prerequisiteName String  // must learn this before the skill
+  prerequisiteType String  @default("required") // "required", "recommended"
+  order            Int     @default(0)
+
+  @@unique([skillName, subject, prerequisiteName])
+  @@index([subject])
+  @@map("skill_prerequisites")
+}
+
+// Spaced repetition review schedule
+model ReviewSchedule {
+  id              String    @id @default(cuid())
+  studentId       String
+  subject         String
+  topic           String
+  unitName        String?
+  easeFactor      Float     @default(2.5)   // SM-2 ease factor
+  intervalDays    Int       @default(0)     // current interval
+  repetitions     Int       @default(0)     // successful repetitions
+  nextReviewAt    DateTime                // when to review
+  lastReviewAt    DateTime?
+  quality         Int       @default(0)     // last review quality (0-5)
+  totalReviews    Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, subject, topic])
+  @@index([studentId, nextReviewAt])
+  @@index([studentId, subject])
+  @@map("review_schedules")
+}
+
+// Per-topic progress for the sequential "learning path" —
+// tracks where a student left off so they can resume a lesson
+// they didn't finish, and which topics are complete/next.
+model TopicProgress {
+  id          String   @id @default(cuid())
+  studentId   String
+  subject     String
+  grade       String   @default("Grade 4")
+  strandName  String   // parent strand (e.g. "Numbers")
+  topicName   String   // substrand / topic (e.g. "Whole Numbers")
+  order       Int      @default(0) // position within the subject path
+  status      ProgressStatus @default(NOT_STARTED)
+  lastContent String?  // cached generated lesson markdown for instant resume
+  lastPosition Int     @default(0) // approximate scroll/lesson position (0-100)
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, grade, subject, topicName])
+  @@index([studentId, grade, subject, status])
+  @@map("topic_progress")
+}
+
+// Course challenge — comprehensive end-of-unit test
+model CourseChallenge {
+  id              String    @id @default(cuid())
+  studentId       String
+  subject         String
+  unitName        String
+  grade           String?
+  totalQuestions  Int       @default(0)
+  correctAnswers  Int       @default(0)
+  score           Int       @default(0) // 0-100
+  timeTakenMins   Int       @default(0)
+  passed          Boolean   @default(false) // true if score >= 70
+  questions       Json?     // the questions that were asked
+  answers         Json?     // student answers
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, subject])
+  @@index([studentId, unitName])
+  @@map("course_challenges")
+}
+
+// Writing coach submissions
+model WritingSubmission {
+  id              String    @id @default(cuid())
+  studentId       String
+  subject         String
+  topic           String
+  title           String?
+  content         String    @db.Text
+  wordCount       Int       @default(0)
+  feedback        Json?     // { grammar: {...}, structure: {...}, content: {...}, overall: string }
+  score           Int?      // 0-100
+  revisionCount   Int       @default(0)
+  status          String    @default("draft") // "draft", "submitted", "reviewed"
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId, subject])
+  @@map("writing_submissions")
 }

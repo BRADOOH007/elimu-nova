@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { parseCallback } from '@/lib/daraja'
 import { prisma } from '@/lib/prisma'
+import { handlePaymentSuccess, handlePaymentFailure } from '@/lib/payment-notifications'
 
 import { route, apiLogger } from '@/lib/api-middleware'
 const log = apiLogger('billing/mpesa/callback')
@@ -17,56 +18,37 @@ export const POST = route({ auth: 'none' }, async (req, { user, params }) => {
 
     log.info(`M-Pesa callback: ${result.checkoutRequestId} -> ${result.success ? 'SUCCESS' : 'FAILED'} (${result.resultDesc})`)
 
+    // Find subscription by transactionId (CheckoutRequestID)
+    const subscription = await (prisma as any).subscription.findFirst({
+      where: {
+        OR: [
+          { transactionId: result.checkoutRequestId },
+          { notes: { contains: result.checkoutRequestId } },
+        ],
+      },
+    })
+
     if (result.success) {
-      // Find subscription by transactionId (CheckoutRequestID)
-      const subscription = await (prisma as any).subscription.findFirst({
-        where: {
-          OR: [
-            { transactionId: result.checkoutRequestId },
-            { notes: { contains: result.checkoutRequestId } },
-          ],
-        },
-      })
-
       if (subscription) {
-        await (prisma as any).subscription.update({
-          where: { id: subscription.id },
-          data: {
-            status: 'ACTIVE',
-            transactionId: result.mpesaReceiptNumber || result.checkoutRequestId,
-            paymentMethod: 'MPESA',
-            notes: `MPESA:${result.mpesaReceiptNumber}|${result.checkoutRequestId}|${result.phoneNumber}|${result.amount}`,
-          },
+        await handlePaymentSuccess({
+          subscriptionId: subscription.id,
+          amount: result.amount || subscription.amount,
+          method: 'MPESA',
+          receipt: result.mpesaReceiptNumber || result.checkoutRequestId,
+          notes: `MPESA:${result.mpesaReceiptNumber}|${result.checkoutRequestId}|${result.phoneNumber}|${result.amount}`,
         })
-
-        // Create invoice
-        const lastInvoice = await (prisma as any).invoice.findFirst({
-          orderBy: { createdAt: 'desc' },
-        })
-        let nextNum = 1
-        if (lastInvoice?.invoiceNumber) {
-          const num = parseInt(lastInvoice.invoiceNumber.replace('INV-', ''), 10)
-          if (!isNaN(num)) nextNum = num + 1
-        }
-
-        await (prisma as any).invoice.create({
-          data: {
-            invoiceNumber: `INV-${String(nextNum).padStart(6, '0')}`,
-            subscriptionId: subscription.id,
-            amount: result.amount || subscription.amount,
-            taxAmount: 0,
-            totalAmount: result.amount || subscription.amount,
-            status: 'PAID',
-            dueDate: new Date(),
-            paidDate: new Date(),
-            notes: `M-Pesa: ${result.mpesaReceiptNumber || 'N/A'}`,
-          },
-        })
-
         log.info(`Subscription ${subscription.id} activated via M-Pesa ${result.mpesaReceiptNumber}`)
       } else {
         log.info(`No subscription found for CheckoutRequestID ${result.checkoutRequestId}`)
       }
+    } else if (subscription) {
+      await handlePaymentFailure({
+        subscriptionId: subscription.id,
+        method: 'MPESA',
+        checkoutRequestId: result.checkoutRequestId,
+        reason: result.resultDesc,
+      })
+      log.info(`M-Pesa payment failed for subscription ${subscription.id}: ${result.resultDesc}`)
     }
 
     // Daraja expects ResultCode 0 to acknowledge receipt

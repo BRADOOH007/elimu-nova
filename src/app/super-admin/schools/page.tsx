@@ -208,7 +208,7 @@ export default function SchoolsPage() {
   // Calculate total students and revenue
   const totalStudents = schools.reduce((sum, school) => sum + (school.students?.length || 0), 0)
   const totalRevenue = schools.reduce((sum, school) => {
-    return sum + (school.subscriptions?.filter(sub => !sub.isFreemium).reduce((subSum, sub) => subSum + sub.package.price, 0) || 0)
+    return sum + (school.subscriptions?.filter(sub => !sub.isFreemium).reduce((subSum, sub) => subSum + (sub as any).amount || 0, 0) || 0)
   }, 0)
 
   return (
@@ -417,7 +417,7 @@ export default function SchoolsPage() {
                       </div>
                       <div className="text-center">
                         <p className="text-lg font-bold text-gray-900">
-                          ${school.subscriptions?.filter(sub => !sub.isFreemium).reduce((sum, sub) => sum + sub.package.price, 0).toLocaleString() || 0}
+                          ${school.subscriptions?.filter(sub => !sub.isFreemium).reduce((sum, sub) => sum + ((sub as any).amount || 0), 0).toLocaleString() || 0}
                         </p>
                         <p className="text-xs text-gray-500">Revenue</p>
                       </div>

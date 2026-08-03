@@ -192,7 +192,7 @@ function calculateSubjectPerformance(submissions: any[]): any[] {
     const data = subjectMap.get(subject)
     data.totalAssignments++
 
-    if (submission.status === 'submitted') {
+    if (submission.status === 'SUBMITTED' || submission.status === 'GRADED') {
       data.completedAssignments++
     }
 
@@ -203,8 +203,8 @@ function calculateSubjectPerformance(submissions: any[]): any[] {
 
   return Array.from(subjectMap.values()).map(data => ({
     ...data,
-    averageGrade: data.totalGrade > 0 ? data.totalGrade / data.completedAssignments : 0,
-    completionRate: (data.completedAssignments / data.totalAssignments) * 100
+    averageGrade: data.completedAssignments > 0 ? data.totalGrade / data.completedAssignments : 0,
+    completionRate: data.totalAssignments > 0 ? (data.completedAssignments / data.totalAssignments) * 100 : 0
   }))
 }
 
@@ -285,3 +285,43 @@ async function generateAIProgressInsights(data: any): Promise<any> {
     return fallback
   }
 }
+
+// POST — update quiz results for the student
+export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
+  const { subject, topic, totalQuestions, correctAnswers, masteryScore } = await request.json()
+
+  const student = await prisma.student.findUnique({ where: { userId: user.id }, include: { teacher: true } })
+  if (!student?.teacherId) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+
+  // Upsert StudentProgress for this subject+topic
+  const existing = await prisma.studentProgress.findFirst({
+    where: { studentId: student.id, subject: subject || 'General', topic: topic || 'General' },
+  })
+
+  if (existing) {
+    await prisma.studentProgress.update({
+      where: { id: existing.id },
+      data: {
+        totalQuestions: { increment: totalQuestions || 0 },
+        correctAnswers: { increment: correctAnswers || 0 },
+        masteryScore: masteryScore ?? existing.masteryScore,
+        lastPracticedAt: new Date(),
+      },
+    })
+  } else {
+    await prisma.studentProgress.create({
+      data: {
+        studentId: student.id,
+        teacherId: student.teacherId,
+        subject: subject || 'General',
+        topic: topic || 'General',
+        totalQuestions: totalQuestions || 0,
+        correctAnswers: correctAnswers || 0,
+        masteryScore: masteryScore || 0,
+        lastPracticedAt: new Date(),
+      },
+    })
+  }
+
+  return NextResponse.json({ success: true })
+})

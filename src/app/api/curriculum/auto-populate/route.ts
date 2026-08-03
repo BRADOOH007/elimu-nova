@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { route, apiLogger } from '@/lib/api-middleware'
 const log = apiLogger('curriculum/auto-populate')
 
-export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user, params }) => {
+export const POST = route({ skipSubscriptionCheck: true }, async (req, { user, params }) => {
   try {
 
     const { grade, subject, term } = await req.json()

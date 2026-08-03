@@ -22,6 +22,9 @@ import {
 } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 
+const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE','Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies','Computer Studies','Home Science','Art & Design']
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+
 interface EditAssignmentModalProps {
   isOpen: boolean
   onClose: () => void
@@ -351,13 +354,15 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
                 <Label htmlFor="subject" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
                   Subject <span className="text-red-500">*</span>
                 </Label>
-                <Input
+                <select
                   id="subject"
                   value={formData.subject}
                   onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                  placeholder="e.g., Mathematics, Science"
-                  className="bg-white border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
+                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select subject</option>
+                  {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
                 {errors.subject && (
                   <p className="text-sm text-red-600 flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />
@@ -370,13 +375,15 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
                 <Label htmlFor="grade" className="text-sm font-semibold text-gray-700 flex items-center gap-1">
                   Grade Level <span className="text-red-500">*</span>
                 </Label>
-                <Input
+                <select
                   id="grade"
                   value={formData.grade}
                   onChange={(e) => setFormData(prev => ({ ...prev, grade: e.target.value }))}
-                  placeholder="e.g., Grade 7, Grade 10"
-                  className="bg-white border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
+                  className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select grade</option>
+                  {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
                 {errors.grade && (
                   <p className="text-sm text-red-600 flex items-center gap-1">
                     <AlertCircle className="w-4 h-4" />

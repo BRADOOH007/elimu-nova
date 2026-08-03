@@ -11,6 +11,7 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       totalSchools,
       totalSubscriptions,
       totalRevenue,
+      monthlyRevenue,
       activeUsers,
       activeSchools,
       recentUsers,
@@ -22,6 +23,10 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       prisma.subscription.aggregate({
         _sum: { amount: true },
         where: { isFreemium: { not: true } }
+      }),
+      prisma.subscription.aggregate({
+        _sum: { amount: true },
+        where: { isFreemium: { not: true }, createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }
       }),
       prisma.user.count({
         where: { isActive: true }
@@ -78,7 +83,7 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       },
       revenue: {
         total: `$${(totalRevenue._sum.amount || 0).toLocaleString()}`,
-        thisMonth: `$${(totalRevenue._sum.amount || 0).toLocaleString()}`,
+        thisMonth: `$${(monthlyRevenue._sum.amount || 0).toLocaleString()}`,
         change: 0,
         changeText: 'Total revenue'
       }

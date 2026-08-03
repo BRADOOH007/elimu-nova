@@ -41,6 +41,7 @@ export const POST = route({}, async (req, { user }) => {
       title:       s.title || `Slide ${i + 1}`,
       content:     contentArr.length > 0 ? contentArr : ['Content for this slide'],
       imagePrompt,
+      imageUrl:    s.imageUrl || undefined,
       layout,
     }
   })

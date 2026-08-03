@@ -1,10 +1,12 @@
 "use client"
 
-import { BookMarked, Layers, Calendar, BookOpen, CheckCircle } from "lucide-react"
+import { useState, useEffect } from "react"
+import { BookMarked, Layers, Calendar, BookOpen, CheckCircle, Trophy, Star, Target, Lock, Flame } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
 import { useRouter } from "next/navigation"
 
 interface SubStrand {
@@ -26,6 +28,16 @@ interface CurriculumAccordionProps {
   currentTerm: number
 }
 
+interface MasteryData {
+  [unitName: string]: {
+    masteryScore: number
+    masteryLevel: string
+    totalQuestions: number
+    correctAnswers: number
+    nextReviewAt: string | null
+  }
+}
+
 function getSubjectGradient(name: string) {
   const n = name.toLowerCase()
   if (n.includes("math")) return "from-blue-600 via-blue-500 to-cyan-400"
@@ -36,8 +48,69 @@ function getSubjectGradient(name: string) {
   return "from-primary via-primary/80 to-primary/60"
 }
 
+function getMasteryIcon(level: string) {
+  switch (level) {
+    case 'MASTERED': return { icon: Trophy, color: 'text-purple-600', bg: 'bg-purple-100' }
+    case 'PROFICIENT': return { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100' }
+    case 'DEVELOPING': return { icon: Target, color: 'text-amber-600', bg: 'bg-amber-100' }
+    case 'BEGINNER': return { icon: Star, color: 'text-blue-600', bg: 'bg-blue-100' }
+    default: return { icon: Lock, color: 'text-gray-400', bg: 'bg-gray-100' }
+  }
+}
+
+function getMasteryColor(score: number): string {
+  if (score >= 90) return 'bg-purple-500'
+  if (score >= 70) return 'bg-green-500'
+  if (score >= 50) return 'bg-amber-500'
+  if (score > 0) return 'bg-blue-500'
+  return 'bg-gray-300'
+}
+
 export default function CurriculumAccordion({ learningAreas, currentTerm }: CurriculumAccordionProps) {
   const router = useRouter()
+  const [masteryData, setMasteryData] = useState<MasteryData>({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchMastery()
+  }, [])
+
+  const fetchMastery = async () => {
+    try {
+      const r = await fetch('/api/student/mastery')
+      if (r.ok) {
+        const d = await r.json()
+        const map: MasteryData = {}
+        for (const m of d.masteries || []) {
+          map[m.unitName] = {
+            masteryScore: m.masteryScore,
+            masteryLevel: m.masteryLevel,
+            totalQuestions: m.totalQuestions,
+            correctAnswers: m.correctAnswers,
+            nextReviewAt: m.nextReviewAt,
+          }
+        }
+        setMasteryData(map)
+      }
+    } catch { /* ignore */ }
+    finally { setLoading(false) }
+  }
+
+  // Calculate subject-level mastery
+  const getSubjectMastery = (subject: LearningArea) => {
+    let total = 0
+    let count = 0
+    for (const strand of subject.strands) {
+      for (const sub of strand.subStrands) {
+        const m = masteryData[sub.name]
+        if (m) {
+          total += m.masteryScore
+          count++
+        }
+      }
+    }
+    return count > 0 ? Math.round(total / count) : 0
+  }
 
   return (
     <Card className="relative overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-background/95 via-background/90 to-muted/50 mt-8">
@@ -74,6 +147,7 @@ export default function CurriculumAccordion({ learningAreas, currentTerm }: Curr
                   {learningAreas.map((subject) => {
                     const totalAreaStrands = subject.strands.length
                     const totalAreaSubStrands = subject.strands.reduce((acc, s) => acc + s.subStrands.length, 0)
+                    const subjectMastery = getSubjectMastery(subject)
 
                     return (
                       <Card key={subject.name} className="overflow-hidden border-0 shadow-2xl group">
@@ -91,6 +165,11 @@ export default function CurriculumAccordion({ learningAreas, currentTerm }: Curr
                                 <Badge className="bg-white/25 text-white border-white/40 backdrop-blur-md shadow-lg px-3 py-1 font-bold text-xs tracking-wider">
                                   CBC CURRICULUM
                                 </Badge>
+                                {subjectMastery > 0 && (
+                                  <Badge className="bg-white/25 text-white border-white/40 backdrop-blur-md shadow-lg px-3 py-1 font-bold text-xs tracking-wider flex items-center gap-1">
+                                    <Flame className="h-3 w-3" /> {subjectMastery}% Mastery
+                                  </Badge>
+                                )}
                               </div>
 
                               <div className="absolute bottom-0 left-0 right-4 z-30 p-5">
@@ -121,46 +200,90 @@ export default function CurriculumAccordion({ learningAreas, currentTerm }: Curr
                               </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4 bg-gradient-to-b from-background to-gray-50">
-                              {subject.strands.map((strand) => (
-                                <div key={strand.name} className="rounded-xl p-4 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 shadow-sm">
-                                  <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                                      <Layers className="h-4 w-4 text-white" strokeWidth={2.5} />
-                                    </div>
-                                    <h4 className="font-bold text-sm flex-1 text-slate-900">{strand.name}</h4>
-                                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 shadow-sm">
-                                      {strand.subStrands.length} Sub-strands
-                                    </Badge>
-                                  </div>
+                              {subject.strands.map((strand) => {
+                                // Calculate strand-level mastery
+                                let strandTotal = 0
+                                let strandCount = 0
+                                for (const sub of strand.subStrands) {
+                                  const m = masteryData[sub.name]
+                                  if (m) {
+                                    strandTotal += m.masteryScore
+                                    strandCount++
+                                  }
+                                }
+                                const strandMastery = strandCount > 0 ? Math.round(strandTotal / strandCount) : 0
 
-                                  <div className="grid gap-2">
-                                    {strand.subStrands.map((subStrand) => (
-                                      <div
-                                        key={subStrand.name}
-                                        className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all duration-200"
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          <CheckCircle className="h-4 w-4 text-green-600" strokeWidth={2.5} />
-                                          <span className="text-sm font-semibold text-slate-800">{subStrand.name}</span>
-                                        </div>
-                                        <Button
-                                          size="sm"
-                                          className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all"
-                                          onClick={() => {
-                                            sessionStorage.setItem("currentLessonContext", JSON.stringify({
-                                              title: subStrand.name,
-                                              subject: subject.name,
-                                            }))
-                                            router.push("/student/learn")
-                                          }}
-                                        >
-                                          Start Learning
-                                        </Button>
+                                return (
+                                  <div key={strand.name} className="rounded-xl p-4 bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-4">
+                                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                                        <Layers className="h-4 w-4 text-white" strokeWidth={2.5} />
                                       </div>
-                                    ))}
+                                      <h4 className="font-bold text-sm flex-1 text-slate-900">{strand.name}</h4>
+                                      {strandMastery > 0 && (
+                                        <div className="flex items-center gap-2">
+                                          <Progress value={strandMastery} className="w-16 h-1.5" />
+                                          <span className="text-[10px] font-bold text-slate-600">{strandMastery}%</span>
+                                        </div>
+                                      )}
+                                      <Badge variant="secondary" className="bg-blue-100 text-blue-700 shadow-sm">
+                                        {strand.subStrands.length} Sub-strands
+                                      </Badge>
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                      {strand.subStrands.map((subStrand) => {
+                                        const m = masteryData[subStrand.name]
+                                        const masteryLevel = m?.masteryLevel || 'NOT_STARTED'
+                                        const masteryScore = m?.masteryScore || 0
+                                        const hasReview = m?.nextReviewAt && new Date(m.nextReviewAt) <= new Date()
+                                        const masteryIcon = getMasteryIcon(masteryLevel)
+
+                                        return (
+                                          <div
+                                            key={subStrand.name}
+                                            className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all duration-200"
+                                          >
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                              <div className={`w-8 h-8 rounded-lg ${masteryIcon.bg} flex items-center justify-center shrink-0`}>
+                                                <masteryIcon.icon className={`h-4 w-4 ${masteryIcon.color}`} strokeWidth={2.5} />
+                                              </div>
+                                              <div className="flex-1 min-w-0">
+                                                <span className="text-sm font-semibold text-slate-800 block truncate">{subStrand.name}</span>
+                                                {m && (
+                                                  <div className="flex items-center gap-2 mt-0.5">
+                                                    <div className={`h-1 rounded-full ${getMasteryColor(masteryScore)} flex-1 max-w-[80px]`} style={{ width: `${masteryScore}%` }} />
+                                                    <span className="text-[10px] text-gray-500">{masteryScore}%</span>
+                                                    {m.totalQuestions > 0 && (
+                                                      <span className="text-[10px] text-gray-400">({m.correctAnswers}/{m.totalQuestions})</span>
+                                                    )}
+                                                  </div>
+                                                )}
+                                              </div>
+                                              {hasReview && (
+                                                <Flame className="h-3.5 w-3.5 text-orange-500 shrink-0" />
+                                              )}
+                                            </div>
+                                            <Button
+                                              size="sm"
+                                              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md hover:shadow-lg transition-all shrink-0 ml-2"
+                                              onClick={() => {
+                                                sessionStorage.setItem("currentLessonContext", JSON.stringify({
+                                                  title: subStrand.name,
+                                                  subject: subject.name,
+                                                }))
+                                                router.push("/student/learn")
+                                              }}
+                                            >
+                                              {masteryLevel === 'MASTERED' ? 'Review' : masteryLevel === 'NOT_STARTED' ? 'Start' : 'Continue'}
+                                            </Button>
+                                          </div>
+                                        )
+                                      })}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                )
+                              })}
                             </CardContent>
                           </div>
                         </div>

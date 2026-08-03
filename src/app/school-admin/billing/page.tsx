@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 
 import { 
   CreditCard, 
@@ -233,6 +234,24 @@ export default function SchoolAdminBilling() {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Upgrade CTA */}
+      <Card className="bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg border-0 text-white">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-bold mb-1">Need more capacity?</h3>
+              <p className="text-purple-100 text-sm">Upgrade your plan to unlock more teachers, students, and AI features.</p>
+            </div>
+            <Link href="/pricing">
+              <Button className="bg-white text-purple-700 hover:bg-purple-50 font-semibold">
+                <ArrowRight className="w-4 h-4 mr-2" />
+                View Plans
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
 

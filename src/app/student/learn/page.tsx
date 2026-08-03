@@ -12,7 +12,8 @@ import {
   BookOpen, Brain, ClipboardList, NotebookPen, CheckCircle, AlertCircle,
   Send, Loader2, RefreshCw, Play, Target, Clock, Upload, X, File,
   ChevronDown, ChevronRight, ChevronLeft, Award, Star, Zap, Paperclip, Eye, Download,
-  Compass, Trophy, MessagesSquare, Wand2, LayoutGrid, TrendingUp
+  Compass, Trophy, MessagesSquare, Wand2, LayoutGrid, TrendingUp,
+  Swords, PenTool, Repeat, GitBranch, HelpCircle, Flame, ArrowRight
 } from 'lucide-react'
 import ChatContainer from '@/components/chat/chat-container'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
@@ -24,6 +25,12 @@ import { CareerAssessment } from '@/components/student/career-assessment'
 import { Achievements } from '@/components/student/achievements'
 import { AIWhiteboard } from '@/components/student/ai-whiteboard'
 import { StudyGroups } from '@/components/student/study-groups'
+import { MasteryGates } from '@/components/student/mastery-gates'
+import { KnowledgeMap } from '@/components/student/knowledge-map'
+import { SpacedRepetitionWidget } from '@/components/student/spaced-repetition-widget'
+import { CourseChallengeWidget } from '@/components/student/course-challenge-widget'
+import { SocraticTutor } from '@/components/student/socratic-tutor'
+import { WritingCoach } from '@/components/student/writing-coach'
 
 // ── Types ─────────────────────────────────────────────────────────────────
 interface Assignment {
@@ -73,7 +80,7 @@ export default function LearnPage() {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search)
       const t = p.get('tab')
-      if (t === 'quiz' || t === 'study' || t === 'assignments' || t === 'tutor' || t === 'explore' || t === 'progress' || t === 'achievements' || t === 'career' || t === 'whiteboard' || t === 'groups') return t
+      if (t === 'quiz' || t === 'study' || t === 'assignments' || t === 'tutor' || t === 'explore' || t === 'progress' || t === 'achievements' || t === 'career' || t === 'whiteboard' || t === 'groups' || t === 'mastery' || t === 'challenge' || t === 'writing' || t === 'reviews') return t
     }
     return 'explore'
   })
@@ -96,6 +103,11 @@ export default function LearnPage() {
   const [teachingChat,   setTeachingChat]   = useState<ChatMsg[]>([])
   const [teachingInput,  setTeachingInput]  = useState('')
   const [teachingLoading,setTeachingLoading]= useState(false)
+  const [tutorMode,      setTutorMode]      = useState<'chat' | 'socratic'>('chat')
+
+  // ── LEARNING PATH state (continue where you left off) ─────────────────
+  const [pathData, setPathData] = useState<{ topics: any[]; resumeTopic: any; completedCount: number; totalCount: number; percentComplete: number } | null>(null)
+  const [pathLoading, setPathLoading] = useState(false)
 
   // ── QUIZ state ───────────────────────────────────────────────────────
   const [quizSubject,   setQuizSubject]   = useState('Mathematics')
@@ -151,10 +163,110 @@ export default function LearnPage() {
   }, [])
 
   // ── Callback from CurriculumBrowser to start studying a topic ──────────
-  const handleExploreTopic = (subject: string, topic: string) => {
+  const handleExploreTopic = (subject: string, topic: string, learningOutcomes?: string[]) => {
     setStudySubject(subject)
     setStudyTopic(topic)
     setTab('study')
+    generateLesson(subject, topic, learningOutcomes)
+  }
+
+  // ── Learning path: fetch ordered topics + progress for resume ─────────
+  const fetchLearningPath = useCallback(async (subject = studySubject, grade = studyGrade) => {
+    setPathLoading(true)
+    try {
+      const r = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`)
+      if (r.ok) {
+        const d = await r.json()
+        setPathData({
+          topics: d.topics || [],
+          resumeTopic: d.resumeTopic || null,
+          completedCount: d.completedCount || 0,
+          totalCount: d.totalCount || 0,
+          percentComplete: d.percentComplete || 0,
+        })
+      }
+    } catch { /* ignore */ } finally { setPathLoading(false) }
+  }, [studySubject, studyGrade])
+
+  useEffect(() => { fetchLearningPath() }, [studySubject, studyGrade, fetchLearningPath])
+
+  const pathTopicFor = useCallback((topic: string) => {
+    if (!pathData) return undefined
+    return pathData.topics.find((t: any) => t.topicName.toLowerCase() === topic.toLowerCase())
+  }, [pathData])
+
+  // Mark the current topic as started / cache generated content for resume
+  const markTopicStarted = useCallback(async (subject: string, topic: string, content: string) => {
+    const t = pathTopicFor(topic)
+    try {
+      await fetch('/api/student/learning-path', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'start',
+          grade: studyGrade,
+          subject,
+          strandName: t?.strandName || subject,
+          topicName: topic,
+          order: t?.order ?? 0,
+          content,
+        }),
+      })
+    } catch { /* ignore */ }
+  }, [pathTopicFor, studyGrade])
+
+  // Mark current topic complete, then advance to the next unfinished topic
+  const completeAndAdvance = async () => {
+    const subject = studySubject
+    const topic = studyTopic
+    if (!topic) return
+    const t = pathTopicFor(topic)
+    try {
+      await fetch('/api/student/learning-path', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'complete',
+          grade: studyGrade,
+          subject,
+          strandName: t?.strandName || subject,
+          topicName: topic,
+          order: t?.order ?? 0,
+        }),
+      })
+    } catch { /* ignore */ }
+
+    // Find next topic in sequence (first NOT_STARTED/IN_PROGRESS after current)
+    const topics = pathData?.topics || []
+    const idx = topics.findIndex((x: any) => x.topicName.toLowerCase() === topic.toLowerCase())
+    const next = topics.slice(idx + 1).find((x: any) => x.status === 'NOT_STARTED' || x.status === 'IN_PROGRESS')
+      || topics.find((x: any) => x.status === 'NOT_STARTED' || x.status === 'IN_PROGRESS')
+      || null
+
+    if (next) {
+      toast({ title: '✅ Topic completed!', description: `Next: ${next.topicName} — starting automatically…` })
+      await new Promise(res => setTimeout(res, 1200))
+      setStudyTopic(next.topicName)
+      generateLesson(subject, next.topicName)
+      await fetchLearningPath(subject, studyGrade)
+    } else {
+      toast({ title: '🎉 You finished the whole subject path!', description: 'All topics complete. Amazing work!' })
+      await fetchLearningPath(subject, studyGrade)
+    }
+  }
+
+  // Resume a topic from cached content instantly
+  const resumeTopicLesson = (subject: string, topic: string, content?: string) => {
+    setStudySubject(subject)
+    setStudyTopic(topic)
+    setTab('study')
+    if (content) {
+      setLessonMd(content)
+      setStudying(false)
+      handleStartTeaching(content)
+    } else {
+      generateLesson(subject, topic)
+    }
   }
 
   // Fetch topic strands for study
@@ -233,7 +345,9 @@ export default function LearnPage() {
       if (ctx.title) {
         setStudyTopic(ctx.title)
         setStudySubject(ctx.subject || 'Mathematics')
+        setTab('study')
         sessionStorage.removeItem('currentLessonContext')
+        generateLesson(ctx.subject || 'Mathematics', ctx.title)
       }
     } catch (e) { console.error('Failed to restore context:', e) }
   }, [])
@@ -276,6 +390,8 @@ export default function LearnPage() {
     const endTime = new Date()
     const durationSec = Math.floor((endTime.getTime() - sessionStart.getTime()) / 1000)
     const durationMin = Math.max(1, Math.round(durationSec / 60))
+    // Collect all saved notes into a single string
+    const allNotes = savedNotes.map(n => `[${n.topic}]\n${n.text}`).join('\n\n---\n\n')
     try {
       const r = await fetch('/api/student/study-sessions', {
         method: 'POST',
@@ -286,6 +402,7 @@ export default function LearnPage() {
           duration: durationMin,
           startTime: sessionStart.toISOString(),
           endTime: endTime.toISOString(),
+          notes: allNotes || undefined,
         })
       })
       if (r.ok) {
@@ -296,8 +413,9 @@ export default function LearnPage() {
     } catch (e) { console.warn('[StudentLearn] handleCompleteSession error:', e) } finally { setCompleting(false) }
   }
 
-  const handleStartTeaching = async () => {
-    if (!lessonMd) return
+  const handleStartTeaching = async (contentOverride?: string) => {
+    const content = contentOverride || lessonMd
+    if (!content) return
     setTeachingLoading(true)
     setTeachingChat([])
     try {
@@ -306,7 +424,7 @@ export default function LearnPage() {
         body: JSON.stringify({
           context: 'student_tutor',
           autoTeach: true,
-          lessonContent: lessonMd,
+          lessonContent: content,
           subject: studySubject,
           topic: studyTopic,
           message: `Teach me "${studyTopic}" interactively. Explain the key concepts step by step, ask me questions to check understanding, give examples, and adapt based on my responses. Don't lecture — have a conversation with me. Let me know when you're ready and ask me the first question.`
@@ -354,19 +472,22 @@ export default function LearnPage() {
   }
 
   // ── STUDY: generate notes + start teaching ─────────────────────────
-  const generateLesson = async () => {
-    if (!studyTopic.trim()) { toast({ variant:'destructive', title:'Enter a topic first' }); return }
+  const generateLesson = async (subjectArg?: string, topicArg?: string, learningOutcomes?: string[]) => {
+    const subject = subjectArg || studySubject
+    const topic = topicArg || studyTopic
+    if (!topic.trim()) { toast({ variant:'destructive', title:'Enter a topic first' }); return }
     setStudying(true); setLessonMd('')
     try {
       const r = await fetch('/api/ai/generate-lesson-content', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ lesson:{ title:studyTopic, subject:studySubject, grade:studyGrade }, studentLevel:'intermediate', learningStyle:'visual' })
+        body: JSON.stringify({ lesson:{ title:topic, subject, grade:studyGrade }, learningOutcomes, studentLevel:'intermediate', learningStyle:'visual' })
       })
       const d = await r.json()
       if (r.ok) {
         setLessonMd(d.content || '')
-        // Auto-start interactive teaching after notes are ready
-        setTimeout(() => handleStartTeaching(), 300)
+        handleStartTeaching(d.content || '')
+        markTopicStarted(subject, topic, d.content || '')
+        await fetchLearningPath(subject, studyGrade)
       }
       else throw new Error(d.error)
     } catch(e:any) { toast({ variant:'destructive', title:'Could not generate lesson', description:e.message }) }
@@ -449,9 +570,40 @@ export default function LearnPage() {
 
     const totalQuestions = mcqCount + openTotal
     const totalCorrect = mcqCorrect + openCorrect
-    setScore(totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0)
+    const pct = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0
+    setScore(pct)
     setSubmitted(true)
-  }, [questions, answers, quizSubject, quizGrade])
+
+    // Persist quiz results to StudentProgress
+    try {
+      fetch('/api/student/progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: quizSubject,
+          topic: quizTopic,
+          totalQuestions,
+          correctAnswers: totalCorrect,
+          masteryScore: pct,
+        }),
+      }).catch(() => {})
+    } catch { /* non-blocking */ }
+
+    // Update unit mastery
+    try {
+      fetch('/api/student/mastery', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: quizSubject,
+          unitName: quizTopic,
+          correctDelta: totalCorrect,
+          totalDelta: totalQuestions,
+          scoreDelta: pct,
+        }),
+      }).catch(() => {})
+    } catch { /* non-blocking */ }
+  }, [questions, answers, quizSubject, quizGrade, quizTopic])
 
   const fmtTime = (s:number) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`
 
@@ -518,10 +670,36 @@ export default function LearnPage() {
           <TabsTrigger value="career" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Compass className="w-4 h-4 mr-1.5"/>Career</TabsTrigger>
           <TabsTrigger value="whiteboard" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Wand2 className="w-4 h-4 mr-1.5"/>Whiteboard</TabsTrigger>
           <TabsTrigger value="groups" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><MessagesSquare className="w-4 h-4 mr-1.5"/>Groups</TabsTrigger>
+          <TabsTrigger value="mastery" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Trophy className="w-4 h-4 mr-1.5"/>Mastery</TabsTrigger>
+          <TabsTrigger value="challenge" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Swords className="w-4 h-4 mr-1.5"/>Challenge</TabsTrigger>
+          <TabsTrigger value="reviews" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-500 data-[state=active]:to-red-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Repeat className="w-4 h-4 mr-1.5"/>Reviews</TabsTrigger>
+          <TabsTrigger value="writing" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><PenTool className="w-4 h-4 mr-1.5"/>Writing</TabsTrigger>
         </TabsList>
 
         {/* ── STUDY TAB ───────────────────────────────────────────── */}
         <TabsContent value="study" className="space-y-4 mt-4">
+          {pathData && !pathLoading && pathData.resumeTopic && pathData.resumeTopic.topicName !== studyTopic && (
+            <Card className="border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-sm">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shrink-0">
+                  <RefreshCw className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-emerald-900">
+                    Continue where you left off
+                  </p>
+                  <p className="text-xs text-emerald-700 truncate">
+                    {pathData.resumeTopic.topicName} · {pathData.completedCount} of {pathData.totalCount} topics done ({pathData.percentComplete}%)
+                  </p>
+                </div>
+                <Button size="sm" onClick={() => resumeTopicLesson(studySubject, pathData.resumeTopic.topicName, pathData.resumeTopic.lastContent || undefined)}
+                  className="bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-emerald-200 text-white border-0 shrink-0">
+                  <Play className="h-3.5 w-3.5 mr-1.5" />Resume
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4 text-blue-600"/>Generate Study Lesson</CardTitle></CardHeader>
             <CardContent className="space-y-3">
@@ -544,7 +722,7 @@ export default function LearnPage() {
                   </datalist>
                 </div>
               </div>
-              <Button onClick={generateLesson} disabled={studying||!studyTopic.trim()} className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-emerald-200 transition-all duration-300">
+              <Button onClick={() => generateLesson()} disabled={studying||!studyTopic.trim()} className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-emerald-200 transition-all duration-300">
                 {studying ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Generating…</> : <><Play className="h-4 w-4 mr-2"/>Study This Topic</>}
               </Button>
             </CardContent>
@@ -592,6 +770,11 @@ export default function LearnPage() {
                   {completed && (
                     <Button size="sm" onClick={() => { setLessonMd(''); setSessionStart(null); setCompleted(false); setTeachingChat([]) }} variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
                       <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Study Again
+                    </Button>
+                  )}
+                  {completed && (
+                    <Button size="sm" onClick={completeAndAdvance} className="bg-white text-emerald-700 hover:bg-emerald-50 border-0 font-semibold">
+                      <ArrowRight className="h-3.5 w-3.5 mr-1.5" />Complete &amp; Continue →
                     </Button>
                   )}
 
@@ -1005,15 +1188,43 @@ export default function LearnPage() {
         </TabsContent>
 
         {/* ── AI TUTOR TAB ─────────────────────────────────────── */}
-        <TabsContent value="tutor" forceMount className={`mt-4 h-[70vh] ${tab !== 'tutor' ? 'hidden' : ''}`}>
-          <ChatContainer
-            onSend={handleAITutorChat}
-            headerTitle="AI Tutor"
-            headerSubtitle="Ask anything · Get instant explanations"
-            quickPrompts={['Explain simply', 'Practice questions', 'Key formulas', 'Quiz me!', 'Summarise topic']}
-            placeholder="Ask anything — explain, practice, quiz me…"
-            icon="brain"
-          />
+        <TabsContent value="tutor" forceMount className={`mt-4 ${tab !== 'tutor' ? 'hidden' : ''}`}>
+          <div className="space-y-3 mb-3">
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant={tutorMode === 'chat' ? 'default' : 'outline'}
+                className={tutorMode === 'chat' ? 'bg-gradient-to-r from-indigo-500 to-violet-600' : ''}
+                onClick={() => setTutorMode('chat')}
+              >
+                <Brain className="h-3.5 w-3.5 mr-1.5" /> AI Tutor
+              </Button>
+              <Button
+                size="sm"
+                variant={tutorMode === 'socratic' ? 'default' : 'outline'}
+                className={tutorMode === 'socratic' ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : ''}
+                onClick={() => setTutorMode('socratic')}
+              >
+                <HelpCircle className="h-3.5 w-3.5 mr-1.5" /> Socratic Tutor
+              </Button>
+            </div>
+          </div>
+          {tutorMode === 'chat' ? (
+            <div className="h-[65vh]">
+              <ChatContainer
+                onSend={handleAITutorChat}
+                headerTitle="AI Tutor"
+                headerSubtitle="Ask anything · Get instant explanations"
+                quickPrompts={['Explain simply', 'Practice questions', 'Key formulas', 'Quiz me!', 'Summarise topic']}
+                placeholder="Ask anything — explain, practice, quiz me…"
+                icon="brain"
+              />
+            </div>
+          ) : (
+            <div className="h-[65vh]">
+              <SocraticTutor subject={studySubject} topic={studyTopic || 'General'} />
+            </div>
+          )}
         </TabsContent>
 
         {/* ── EXPLORE TAB (Curriculum Browser) ─────────────────── */}
@@ -1057,6 +1268,78 @@ export default function LearnPage() {
         {/* ── STUDY GROUPS TAB ──────────────────────────────────── */}
         <TabsContent value="groups" className="mt-4">
           <StudyGroups />
+        </TabsContent>
+
+        {/* ── MASTERY TAB ──────────────────────────────────────── */}
+        <TabsContent value="mastery" className="mt-4 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Trophy className="h-5 w-5 text-purple-600" /> Mastery Gates</h2>
+            <p className="text-sm text-slate-500">Track your progress across units. Complete quizzes and study sessions to level up.</p>
+          </div>
+          <MasteryGates />
+          <KnowledgeMap subject={studySubject} />
+        </TabsContent>
+
+        {/* ── COURSE CHALLENGE TAB ─────────────────────────────── */}
+        <TabsContent value="challenge" className="mt-4 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Swords className="h-5 w-5 text-amber-600" /> Course Challenge</h2>
+            <p className="text-sm text-slate-500">Comprehensive end-of-unit test. Score 70% or higher to earn mastery credit.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-slate-600 mb-1 block">Subject</label>
+              <select value={quizSubject} onChange={e => setQuizSubject(e.target.value)}
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-slate-600 mb-1 block">Unit/Topic *</label>
+              <input value={quizTopic} onChange={e => setQuizTopic(e.target.value)}
+                placeholder="e.g. Fractions" list="challenge-topics"
+                className="w-full h-9 px-3 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-amber-500" />
+              <datalist id="challenge-topics">
+                {quizStrands.map(s => <option key={s.id} value={s.name} />)}
+              </datalist>
+            </div>
+          </div>
+          {quizTopic.trim() && (
+            <CourseChallengeWidget
+              subject={quizSubject}
+              unitName={quizTopic}
+              grade={quizGrade}
+              onComplete={(score, passed) => {
+                if (passed) toast({ title: '🎉 Challenge passed!', description: `Score: ${score}% — Mastery credit earned!` })
+                else toast({ title: `Score: ${score}%`, description: 'You need 70% to pass. Keep practising!' })
+              }}
+            />
+          )}
+        </TabsContent>
+
+        {/* ── SPACED REPETITION TAB ────────────────────────────── */}
+        <TabsContent value="reviews" className="mt-4 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Repeat className="h-5 w-5 text-orange-600" /> Spaced Repetition</h2>
+            <p className="text-sm text-slate-500">Review topics at optimal intervals to strengthen long-term retention.</p>
+          </div>
+          <SpacedRepetitionWidget
+            subject={studySubject}
+            onStartReview={(topic) => {
+              setStudyTopic(topic)
+              setTab('study')
+              toast({ title: `Reviewing: ${topic}`, description: 'Generate a lesson to review this topic' })
+            }}
+          />
+        </TabsContent>
+
+        {/* ── WRITING COACH TAB ────────────────────────────────── */}
+        <TabsContent value="writing" className="mt-4 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><PenTool className="h-5 w-5 text-pink-600" /> Writing Coach</h2>
+            <p className="text-sm text-slate-500">Get instant AI feedback on your writing. Improve grammar, structure, and content.</p>
+          </div>
+          <WritingCoach subject={studySubject} topic={studyTopic || 'General Writing'} />
         </TabsContent>
       </Tabs>
     </div>

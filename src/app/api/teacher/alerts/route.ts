@@ -81,13 +81,16 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
     for (const student of atRiskStudents) {
       const grades = student.submissions.map(s => s.grade || 0)
       if (grades.length >= 2) {
-        const trend = grades[0] - grades[grades.length - 1]
-        if (trend > 15) {
+        // grades are ordered newest-first (submittedAt: 'desc')
+        const newest = grades[0]
+        const oldest = grades[grades.length - 1]
+        const decline = oldest - newest
+        if (decline > 15) {
           flagged.push({
             studentId: student.id,
             name: `${student.user.firstName} ${student.user.lastName}`,
             recentGrades: grades,
-            decline: trend,
+            decline: Math.round(decline),
           })
         }
       }

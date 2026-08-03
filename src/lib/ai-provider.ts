@@ -72,11 +72,29 @@ async function refreshDbCache(): Promise<void> {
 }
 
 export async function getKey(envVar: string): Promise<string | undefined> {
-  if (process.env[envVar]) return process.env[envVar]
+  if (process.env[envVar]) {
+    const val = process.env[envVar]
+    const parts = val.split(',').map(s => s.trim()).filter(Boolean)
+    return parts[0] || undefined
+  }
   const dbKey = DB_KEY_MAP[envVar]
   if (!dbKey) return undefined
   if (!dbKeysCache || Date.now() - dbKeysCacheTime >= 60_000) await refreshDbCache()
-  return dbKeysCache?.[dbKey]
+  const raw = dbKeysCache?.[dbKey]
+  if (!raw) return undefined
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean)
+  return parts[0] || undefined
+}
+
+/** Get all keys for a provider (comma-separated) — for key rotation */
+export async function getAllKeys(envVar: string): Promise<string[]> {
+  const raw = process.env[envVar] || (() => {
+    const dbKey = DB_KEY_MAP[envVar]
+    if (!dbKey) return undefined
+    return dbKeysCache?.[dbKey]
+  })()
+  if (!raw) return []
+  return raw.split(',').map(s => s.trim()).filter(Boolean)
 }
 
 async function getSetting(key: string): Promise<string | undefined> {
@@ -126,26 +144,37 @@ const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions'
 async function callHTTP(
   url: string, apiKey: string, model: string,
   messages: AIMessage[], maxTokens = 2000, temperature = 0.7,
+  allKeys?: string[],
 ): Promise<{ content: string; tokensUsed?: number }> {
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'https://elimunova.app',
-      'X-Title': 'ElimuNova AI',
-    },
-    body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
-  })
-  if (!res.ok) {
-    const err = await res.text().catch(() => '')
-    throw new Error(`${url} ${res.status}: ${err.slice(0, 200)}`)
+  const keys = allKeys && allKeys.length > 0 ? allKeys : [apiKey]
+  let lastError: string = ''
+  for (const key of keys) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://elimunova.app',
+          'X-Title': 'ElimuNova AI',
+        },
+        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
+      })
+      if (!res.ok) {
+        lastError = `${url} ${res.status}`
+        continue // try next key
+      }
+      const data = await res.json()
+      return {
+        content: data?.choices?.[0]?.message?.content || '',
+        tokensUsed: data?.usage?.total_tokens,
+      }
+    } catch (e: any) {
+      lastError = e.message || 'Network error'
+      continue // try next key
+    }
   }
-  const data = await res.json()
-  return {
-    content: data?.choices?.[0]?.message?.content || '',
-    tokensUsed: data?.usage?.total_tokens,
-  }
+  throw new Error(`All keys failed for ${url}: ${lastError}`)
 }
 
 export async function callAI(opts: AICallOptions): Promise<AICallResult> {
@@ -172,6 +201,15 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     getKey('GROQ_API_KEY'),
     getKey('OPENROUTER_API_KEY'),
     getKey('OPENAI_API_KEY'),
+  ])
+
+  // Get all keys for rotation (comma-separated)
+  const [ALL_GROQ_KEYS, ALL_GEMINI_KEYS, ALL_OPENROUTER_KEYS, ALL_OPENAI_KEYS, ALL_DEEPSEEK_KEYS] = await Promise.all([
+    getAllKeys('GROQ_API_KEY'),
+    getAllKeys('GEMINI_API_KEY'),
+    getAllKeys('OPENROUTER_API_KEY'),
+    getAllKeys('OPENAI_API_KEY'),
+    getAllKeys('DEEPSEEK_API_KEY'),
   ])
 
   if (!CEREBRAS_KEY && !DEEPSEEK_KEY && !GEMINI_KEY && !GROQ_KEY && !OPENROUTER_KEY && !OPENAI_KEY) {
@@ -258,7 +296,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 1. Premium OpenAI (GPT-4o) — best quality (skip if key is OpenRouter)
   if (OPENAI_KEY && !OPENAI_KEY.startsWith('sk-or-') && resolvedPremium) {
     try {
-      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, resolvedPremiumOpenai, safeMessages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, resolvedPremiumOpenai, safeMessages, maxTokens, temperature, ALL_OPENAI_KEYS)
       if (content) return { content, provider: 'premium-openai', model: resolvedPremiumOpenai, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       errors.push(`Premium OpenAI: ${e.message}`); console.warn('[AI] Premium OpenAI:', e.message)
@@ -268,7 +306,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 2. Premium Gemini Pro — second priority
   if (GEMINI_KEY && resolvedPremium) {
     try {
-      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, resolvedPremiumGemini, safeMessages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, resolvedPremiumGemini, safeMessages, maxTokens, temperature, ALL_GEMINI_KEYS)
       if (content) return { content, provider: 'premium-gemini', model: resolvedPremiumGemini, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       errors.push(`Premium Gemini: ${e.message}`); console.warn('[AI] Premium Gemini:', e.message)
@@ -278,7 +316,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 3. Groq — free, ultra-fast
   if (GROQ_KEY && !useReasoner) {
     try {
-      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, effectiveGroqModel, safeMessages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, effectiveGroqModel, safeMessages, maxTokens, temperature, ALL_GROQ_KEYS)
       if (content) return { content, provider: 'groq', model: effectiveGroqModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -311,7 +349,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 5. DeepSeek — best quality (V3 for chat, R1 for reasoning)
   if (DEEPSEEK_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(DEEPSEEK_URL, DEEPSEEK_KEY, effectiveDeepseekModel, safeMessages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(DEEPSEEK_URL, DEEPSEEK_KEY, effectiveDeepseekModel, safeMessages, maxTokens, temperature, ALL_DEEPSEEK_KEYS)
       if (content) return { content, provider: 'deepseek', model: effectiveDeepseekModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -323,7 +361,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 6. Gemini Flash — free quota
   if (GEMINI_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, effectiveGeminiModel, safeMessages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, effectiveGeminiModel, safeMessages, maxTokens, temperature, ALL_GEMINI_KEYS)
       if (content) return { content, provider: 'gemini', model: effectiveGeminiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -339,8 +377,9 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     const isOR  = effectiveORKey.startsWith('sk-or-')
     const url   = isOR ? OPENROUTER_URL : OPENAI_URL
     const model = isOR ? effectiveOpenrouterModel : effectiveOpenaiModel
+    const allORKeys = isOR ? ALL_OPENROUTER_KEYS : ALL_OPENAI_KEYS
     try {
-      const { content, tokensUsed } = await callHTTP(url, effectiveORKey, model, safeMessages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(url, effectiveORKey, model, safeMessages, maxTokens, temperature, allORKeys)
       if (content) return { content, provider: isOR ? 'openrouter' : 'openai', model, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -352,7 +391,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 8. OpenAI direct (only if a different, non-OpenRouter key remains)
   if (OPENAI_KEY && !OPENAI_KEY.startsWith('sk-or-') && OPENAI_KEY !== OPENROUTER_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, effectiveOpenaiModel, safeMessages, maxTokens, temperature)
+      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, effectiveOpenaiModel, safeMessages, maxTokens, temperature, ALL_OPENAI_KEYS)
       if (content) return { content, provider: 'openai', model: effectiveOpenaiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')

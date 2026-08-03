@@ -4,6 +4,7 @@ import { PDFParse } from 'pdf-parse';
 import * as mammoth from 'mammoth';
 import { route } from '@/lib/api-middleware';
 import { supabaseAdmin } from '@/lib/supabase';
+import { saveFileLocally } from '@/lib/local-storage';
 
 const ALLOWED_TYPES = [
   'application/pdf',
@@ -48,19 +49,25 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     const buffer = Buffer.from(bytes);
 
     // Upload to Supabase Storage
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Storage service not configured' }, { status: 500 });
-    }
     const docPath = `exam-documents/${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-    const { data: docUpload, error: docError } = await supabaseAdmin.storage
-      .from('teacher-documents')
-      .upload(docPath, buffer, { contentType: file.type, upsert: true });
-    if (docError) {
-      console.error('Supabase upload error:', docError);
-      return NextResponse.json({ error: `Upload failed: ${docError.message}` }, { status: 500 });
+    let documentUrl: string;
+    if (!supabaseAdmin) {
+      const localUrl = await saveFileLocally('teacher-documents', docPath, buffer);
+      if (!localUrl) {
+        return NextResponse.json({ error: 'Upload failed: could not save file' }, { status: 500 });
+      }
+      documentUrl = localUrl;
+    } else {
+      const { data: docUpload, error: docError } = await supabaseAdmin.storage
+        .from('teacher-documents')
+        .upload(docPath, buffer, { contentType: file.type, upsert: true });
+      if (docError) {
+        console.error('Supabase upload error:', docError);
+        return NextResponse.json({ error: `Upload failed: ${docError.message}` }, { status: 500 });
+      }
+      const { data: docUrlData } = supabaseAdmin.storage.from('teacher-documents').getPublicUrl(docUpload.path);
+      documentUrl = docUrlData.publicUrl;
     }
-    const { data: docUrlData } = supabaseAdmin.storage.from('teacher-documents').getPublicUrl(docUpload.path);
-    const documentUrl = docUrlData.publicUrl;
 
     // Extract text from uploaded document
     let extractedText: string | null = null;

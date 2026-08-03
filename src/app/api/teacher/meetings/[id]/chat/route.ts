@@ -14,6 +14,10 @@ async function canAccessMeeting(userId: string, role: string, meetingId: string)
     const teacher = await prisma.teacher.findUnique({ where: { userId }, select: { schoolId: true } })
     return teacher !== null && meeting.schoolId === teacher.schoolId
   }
+  if (role === 'STUDENT') {
+    const student = await prisma.student.findUnique({ where: { userId }, select: { schoolId: true } })
+    return student !== null && meeting.schoolId === student.schoolId
+  }
   if (role === 'PARENT') {
     const parent = await prisma.parent.findUnique({
       where: { userId },
@@ -29,7 +33,7 @@ async function canAccessMeeting(userId: string, role: string, meetingId: string)
   return false
 }
 
-export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+export const GET = route({ auth: ['TEACHER', 'STUDENT', 'PARENT', 'SCHOOL_ADMIN'] }, async (req, { user, params }) => {
   const { id } = params
 
   const allowed = await canAccessMeeting(user.id, user.role, id)
@@ -40,7 +44,7 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   return NextResponse.json({ messages: getMessages(id) })
 })
 
-export const POST = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+export const POST = route({ auth: ['TEACHER', 'STUDENT', 'PARENT', 'SCHOOL_ADMIN'] }, async (req, { user, params }) => {
   const { id } = params
 
   const allowed = await canAccessMeeting(user.id, user.role, id)

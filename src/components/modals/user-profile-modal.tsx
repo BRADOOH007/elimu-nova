@@ -481,7 +481,10 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
           ) : (
             <div className="text-center py-8">
               <User className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Failed to load profile</p>
+              <p className="text-gray-500 mb-4">Failed to load profile</p>
+              <Button variant="outline" size="sm" onClick={() => fetchProfile()}>
+                Retry
+              </Button>
             </div>
           )}
         </div>

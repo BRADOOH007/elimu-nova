@@ -85,17 +85,14 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         const identifier = credentials?.email || ''
-        logger.debug('Auth attempt:', { identifier })
 
         if (!identifier || !credentials?.password) {
-          logger.warn('Missing credentials')
           return null
         }
 
         const user = await resolveUser(identifier)
 
         if (!user) {
-          logger.warn('User not found:', { identifier })
           return null
         }
 

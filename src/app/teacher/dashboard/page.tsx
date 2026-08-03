@@ -20,6 +20,7 @@ import MessagesOverview from "@/components/teacher/messages-overview"
 import ActivityList from "@/components/teacher/activity-list"
 import MeetingsList from "@/components/teacher/meetings-list"
 import MasteryHeatmap from "@/components/teacher/mastery-heatmap"
+import { AIUsageCard } from "@/components/ai-usage-card"
 
 interface Meeting {
   id: string; title: string; description: string | null; date: string; time: string;
@@ -209,6 +210,9 @@ export default function TeacherDashboard() {
 
       <TeacherLiveMetricsBar />
       <TeacherStatsGrid stats={stats} loading={statsLoading} />
+      <div className="mb-6">
+        <AIUsageCard />
+      </div>
       <QuickActionsGrid />
       <MasteryHeatmap />
 

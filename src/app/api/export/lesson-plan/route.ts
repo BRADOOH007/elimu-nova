@@ -12,7 +12,9 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { uploadFile, BUCKETS } from '@/lib/supabase'
 import { route } from '@/lib/api-middleware'
+import { generateLessonPlanPDF } from '@/lib/kicd-lesson-plan-pdf'
 
 export const POST = route({}, async (req, { user }) => {
   const body = await req.json()
@@ -44,29 +46,64 @@ export const POST = route({}, async (req, { user }) => {
     }
   } catch { /* non-fatal */ }
 
-  const html = buildLessonPlanHTML(content, title, subject, grade, topic, duration, teacherName)
   const safeName = (title || topic || 'LessonPlan').replace(/[^a-z0-9]/gi, '_').toLowerCase()
-
   const format = body.format || 'pdf'
 
   if (format === 'word') {
+    const html = buildLessonPlanHTML(content, title, subject, grade, topic, duration, teacherName)
     const wordHtml = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="UTF-8"><title>${safeName}</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>90</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>body{font-family:Arial,sans-serif;font-size:10pt;}table{border-collapse:collapse;width:100%;}td,th{border:1px solid #999;padding:4px 8px;}</style>
 </head><body>${html.replace(/<html[^>]*>|<\/html>|<head>[\s\S]*<\/head>|<body>|<\/body>|<!DOCTYPE[^>]*>/gi, '').replace(/<script[\s\S]*?<\/script>/gi, '')}</body></html>`
-    return new NextResponse(Buffer.from(wordHtml, 'utf-8'), {
+    const wordBuffer = Buffer.from(wordHtml, 'utf-8')
+    let wordUrl = ''
+    try {
+      wordUrl = await uploadFile(BUCKETS.LESSON_PLANS, `${user.id}/lesson-${safeName}.doc`, wordBuffer, 'application/msword') || ''
+    } catch { /* non-fatal */ }
+    return new NextResponse(wordBuffer, {
       headers: {
         'Content-Type':        'application/msword; charset=utf-8',
         'Content-Disposition': `attachment; filename="${safeName}.doc"`,
+        'X-Download-URL':      wordUrl,
       },
     })
   }
 
-  return new NextResponse(Buffer.from(html, 'utf-8'), {
+  // ── PDF: generate a real PDF file for direct download ──
+  if (format === 'pdf' || format === 'pdf-file') {
+    try {
+      const pdf = generateLessonPlanPDF(content, { title, subject, grade, topic, teacherName })
+      const buffer = Buffer.from(pdf.output('arraybuffer'))
+      let pdfUrl = ''
+      try {
+        pdfUrl = await uploadFile(BUCKETS.LESSON_PLANS, `${user.id}/lesson-${safeName}.pdf`, buffer, 'application/pdf') || ''
+      } catch { /* non-fatal */ }
+      return new NextResponse(new Uint8Array(buffer), {
+        headers: {
+          'Content-Type':        'application/pdf',
+          'Content-Disposition': `attachment; filename="${safeName}.pdf"`,
+          'X-Download-URL':      pdfUrl,
+        },
+      })
+    } catch (e) {
+      console.warn('[ExportLessonPlan] PDF generation failed, falling back to HTML:', e)
+      // Fall back to HTML (printable) — never fail the download
+    }
+  }
+
+  // ── Fallback: HTML (print-ready) as an attachment download ──
+  const html = buildLessonPlanHTML(content, title, subject, grade, topic, duration, teacherName)
+  const htmlBuffer = Buffer.from(html, 'utf-8')
+  let htmlUrl = ''
+  try {
+    htmlUrl = await uploadFile(BUCKETS.LESSON_PLANS, `${user.id}/lesson-${safeName}.html`, htmlBuffer, 'text/html') || ''
+  } catch { /* non-fatal */ }
+  return new NextResponse(htmlBuffer, {
     headers: {
       'Content-Type':        'text/html; charset=utf-8',
-      'Content-Disposition': `inline; filename="${safeName}.html"`,
+      'Content-Disposition': `attachment; filename="${safeName}.html"`,
+      'X-Download-URL':      htmlUrl,
     },
   })
 })

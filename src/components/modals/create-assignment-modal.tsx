@@ -23,10 +23,15 @@ interface CreateAssignmentModalProps {
   onSuccess: () => void
   initialData?: {
     title?: string
+    description?: string
     content?: string
     subject?: string
     grade?: string
     topic?: string
+    isTimed?: boolean
+    timeLimit?: number
+    questions?: Question[]
+    answerKey?: string
   }
 }
 
@@ -229,11 +234,49 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
         setPdfUrl(data.url)
         const pdfRef = `\n\n> 📄 **Source PDF**: [${data.name}](${data.url})`
         if (data.extractedText) {
-          setForm(prev => ({ ...prev, content: pdfRef + '\n\n--- Extracted from PDF ---\n\n' + data.extractedText }))
+          // Try to structure the uploaded exam into editable questions via AI
+          let structured = false
+          try {
+            const sr = await fetch('/api/ai/process-uploaded-exam', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ rawText: data.extractedText, subject: form.subject, grade: form.grade }),
+            })
+            if (sr.ok) {
+              const sd = await sr.json()
+              const secQs = (sd.extracted?.sections || []).flatMap((sec: any) => sec.questions || [])
+              if (secQs.length) {
+                const modalQuestions = secQs.map((q: any, i: number) => ({
+                  id: String(q.number || i + 1),
+                  type: q.type === 'true_false' ? 'true_false' : q.type === 'short_answer' ? 'short_answer' : q.type === 'long_answer' ? 'short_answer' : q.type === 'fill_blank' ? 'short_answer' : 'multiple_choice',
+                  text: q.text,
+                  marks: q.marks || 1,
+                  options: q.options,
+                  correctAnswer: q.answer || '',
+                }))
+                const ak: Record<string, string> = {}
+                secQs.forEach((q: any, i: number) => {
+                  const k = String(q.number || i + 1)
+                  if (q.answer) ak[k] = q.answer
+                })
+                const totalMarks = modalQuestions.reduce((s: number, q: { marks: number }) => s + q.marks, 0)
+                setForm(prev => ({ ...prev, content: JSON.stringify({ questions: modalQuestions }) }))
+                setIsTimed(true)
+                setAiGrade(true)
+                setTimeLimit(totalMarks > 60 ? 120 : 60)
+                setQuestions(modalQuestions)
+                setExamAnswerKey(JSON.stringify(ak))
+                toast({ title: `Exam structured: ${modalQuestions.length} questions extracted` })
+                structured = true
+              }
+            }
+          } catch (e) { console.warn('[AssignmentModal] AI structuring failed, falling back to text:', e) }
+          if (!structured) {
+            setForm(prev => ({ ...prev, content: pdfRef + '\n\n--- Extracted from PDF ---\n\n' + data.extractedText }))
+            toast({ title: 'PDF uploaded and text extracted' })
+          }
         } else {
           setForm(prev => ({ ...prev, content: (prev.content || '') + pdfRef }))
         }
-        toast({ title: 'PDF uploaded and text extracted' })
       } else {
         const err = await r.json()
         toast({ title: err.error || 'Upload failed', variant: 'destructive' })
@@ -250,10 +293,18 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
         setForm(prev => ({
           ...prev,
           title: initialData.title || prev.title,
+          description: initialData.description || prev.description,
           content: initialData.content || prev.content,
           subject: initialData.subject || prev.subject,
           grade: initialData.grade || prev.grade,
         }))
+        if (initialData.isTimed) {
+          setIsTimed(true)
+          if (initialData.timeLimit) setTimeLimit(initialData.timeLimit)
+          if (initialData.questions?.length) setQuestions(initialData.questions)
+          if (initialData.answerKey) setExamAnswerKey(initialData.answerKey)
+          setAiGrade(true)
+        }
       } else {
         reset()
       }
@@ -271,13 +322,14 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
       const r = await fetch(`/api/teacher/students?${p}`)
       if (r.ok) {
         const d = await r.json()
-        setStudents(append ? prev => [...prev, ...(d.students || [])] : (d.students || []))
+        const list = Array.isArray(d.data) ? d.data : (d.students || [])
+        setStudents(append ? prev => [...prev, ...list] : list)
         if (d.pagination) setStudentTotalPages(d.pagination.totalPages)
       }
     } catch (e) { console.warn('[AssignmentModal] Failed to fetch students:', e) } finally { if (append) setLoadingMore(false) }
   }
 
-  const fetchClasses = async () => { try { const r = await fetch('/api/teacher/classes'); if (r.ok) setClasses((await r.json()).classes || []) } catch (e) { console.warn('[AssignmentModal] Failed to fetch classes:', e) } }
+  const fetchClasses = async () => { try { const r = await fetch('/api/teacher/classes'); if (r.ok) { const d = await r.json(); setClasses(Array.isArray(d.data) ? d.data : (d.classes || [])) } } catch (e) { console.warn('[AssignmentModal] Failed to fetch classes:', e) } }
   const fetchLessonPlans = async () => { try { const r = await fetch('/api/lesson-plans'); if (r.ok) setLessonPlans((await r.json()).lessonPlans || []) } catch (e) { console.warn('[AssignmentModal] Failed to fetch lesson plans:', e) } }
 
   const reset = () => {
@@ -310,11 +362,13 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
 
   const handleSubmit = async () => {
     setLoading(true)
-    // Use selected students — or auto-select all filtered if none picked
-    const finalStudentIds = selectedIds.length > 0 ? selectedIds
-      : availableStudents.length > 0 ? availableStudents.map(s => s.id)
+    // Exams are broadcast to a whole class (or all teacher's students), never individuals.
+    // Assignments/quizzes may target individual students.
+    const isExam = !!isTimed
+    const finalStudentIds = !isExam && selectedIds.length > 0 ? selectedIds
+      : !isExam && availableStudents.length > 0 ? availableStudents.map(s => s.id)
       : []
-    if (finalStudentIds.length > 0 && selectedIds.length === 0) {
+    if (!isExam && finalStudentIds.length > 0 && selectedIds.length === 0) {
       setSelectedIds(finalStudentIds)
     }
     // Validate
@@ -326,7 +380,14 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
     if (!form.dueDate) errs.dueDate = 'Due date is required'
     else if (new Date(`${form.dueDate}T${form.dueTime}`) <= new Date()) errs.dueDate = 'Must be a future date'
     if (!form.lessonPlanId && (!form.subject.trim() || !form.grade.trim())) errs.subject = 'Subject & grade required'
-    if (finalStudentIds.length === 0) errs.students = 'Select at least one student'
+    if (isExam) {
+      // Exams: always a valid audience (all students is the default fallback)
+      if (classFilter === 'all') {
+        // send neither classId nor studentIds → server assigns to all teacher's students
+      }
+    } else if (finalStudentIds.length === 0) {
+      errs.students = 'Select at least one student'
+    }
     setErrors(errs)
     if (Object.keys(errs).length > 0) {
       toast({ title: Object.values(errs).find(Boolean) as string, variant: 'destructive' })
@@ -338,7 +399,12 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
         title: form.title, description: desc, content: isTimed ? JSON.stringify({ questions }) : form.content,
         subject: selLesson?.subject || form.subject, grade: selLesson?.grade || form.grade,
         dueDate: new Date(`${form.dueDate}T${form.dueTime}`).toISOString(),
-        lessonPlanId: form.lessonPlanId || null, classId: classFilter !== 'all' ? classFilter : null, studentIds: finalStudentIds,
+        lessonPlanId: form.lessonPlanId || null,
+        // Exams: classId when a class is chosen, otherwise no audience fields (→ all students).
+        // Assignments/quizzes: classId (if filtered) + explicit studentIds.
+        ...(isExam
+          ? { classId: classFilter !== 'all' ? classFilter : null }
+          : { classId: classFilter !== 'all' ? classFilter : null, studentIds: finalStudentIds }),
         isTimed: isTimed || undefined, timeLimit: isTimed ? timeLimit : undefined, aiGradeable: true,
       }
       if (isTimed) {
@@ -383,6 +449,33 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
       })
       if (r.ok) {
         const data = await r.json()
+
+        // Handle structured response from smart assessment (new format)
+        if (data.structured) {
+          const { questions: structQs, answerKey, totalMarks } = data.structured
+          if (type === 'exam' && structQs?.length) {
+            // Convert structured questions to the modal's question format
+            const modalQuestions = structQs.map((q: any, i: number) => ({
+              id: String(q.id || i + 1),
+              type: q.type === 'true_false' ? 'true_false' : q.type === 'short_answer' ? 'short_answer' : 'multiple_choice',
+              text: q.text,
+              marks: q.marks || 1,
+              options: q.options,
+              correctAnswer: answerKey?.[String(q.id || i + 1)] || q.correctAnswer || '',
+            }))
+            setForm(prev => ({ ...prev, content: data.content }))
+            setIsTimed(true)
+            setTimeLimit(totalMarks > 60 ? 120 : 60)
+            setQuestions(modalQuestions)
+            setExamAnswerKey(JSON.stringify(answerKey || {}))
+            return
+          }
+          // Assignment type — just set content
+          setForm(prev => ({ ...prev, content: data.content }))
+          return
+        }
+
+        // Legacy: try parsing content as JSON
         if (type === 'exam') {
           try {
             const parsed = JSON.parse(data.content)
@@ -769,30 +862,47 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
           {/* ── STEP 2: STUDENTS ── */}
           {step === 2 && (
             <div className="space-y-4">
-              {/* Class Filter + Count */}
               <div className="flex items-center gap-4">
                 <div className="flex-1 space-y-1">
-                  <Label className="text-xs font-semibold text-gray-700">Class</Label>
-                  <Select value={classFilter} onValueChange={v => { setClassFilter(v); setSelectedIds([]) }}>
+                  <Label className="text-xs font-semibold text-gray-700">
+                    {isTimed ? 'Send exam to' : 'Class'}
+                  </Label>
+                  <Select value={classFilter} onValueChange={v => { setClassFilter(v); if (!isTimed) setSelectedIds([]) }}>
                     <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="All Classes" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all" className="text-sm">All Classes ({students.length} students)</SelectItem>
+                      <SelectItem value="all" className="text-sm">
+                        {isTimed ? 'All students' : `All Classes (${students.length} students)`}
+                      </SelectItem>
                       {classes.map(c => (
                         <SelectItem key={c.id} value={c.id} className="text-sm">{c.name} &middot; {c.subject} ({c.grade})</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold text-gray-700">Search</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                    <Input value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
-                      placeholder="Search students..." className="h-9 text-sm pl-8 w-56" />
+                {!isTimed && (
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold text-gray-700">Search</Label>
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <Input value={studentSearch} onChange={e => setStudentSearch(e.target.value)}
+                        placeholder="Search students..." className="h-9 text-sm pl-8 w-56" />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
+              {isTimed ? (
+                /* Exams: broadcast to a class or all students — no individual selection */
+                <div className="flex items-start gap-3 px-4 py-3 bg-blue-50 rounded-xl border border-blue-200">
+                  <GraduationCap className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-800">
+                    {classFilter === 'all'
+                      ? <>This exam will be sent to <strong>all your students</strong>.</>
+                      : <>This exam will be sent to the whole <strong>{classes.find(c => c.id === classFilter)?.name}</strong> class.</>}
+                  </p>
+                </div>
+              ) : (
+                <>
               {/* Actions Bar */}
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">
@@ -871,6 +981,8 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
                     Assignment will be assigned to <strong>{selectedIds.length} student{selectedIds.length !== 1 && 's'}</strong>
                   </p>
                 </div>
+              )}
+                </>
               )}
             </div>
           )}

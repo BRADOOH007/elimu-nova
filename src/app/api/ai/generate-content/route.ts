@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { OpenAIService } from '@/lib/openai-service';
 import { prisma } from '@/lib/prisma';
 import { route } from '@/lib/api-middleware';
+import {
+  loadCurriculumOutcomes,
+  buildAssessmentSystemPrompt,
+  stripAnswerKeysFromContent,
+  extractAnswerKeyFromMarkdown,
+  buildFallbackAssignment,
+  buildFallbackExam,
+  buildWorksheetMarkdown,
+  buildExamMarkdown,
+  tryParseStructuredExam,
+  toDualWriteContent,
+} from '@/lib/smart-assessment';
 
 export const POST = route({}, async (req, { user }) => {
     const { type, subject, grade, topic, duration, objectives, requirements, difficulty, format, title, description, lessonPlanId, documentContext, numQuestions } = await req.json();
@@ -89,6 +101,19 @@ Make it engaging, visually appealing, and appropriate for the grade level. Inclu
         generatedTitle = title || `Assignment: ${topic || 'New Assignment'}`;
         const qCount = Math.max(1, Math.min(20, numQuestions || 5));
 
+        // Load curriculum outcomes for CBC grounding
+        const assignmentOutcomes = await loadCurriculumOutcomes(grade, subject, topic);
+
+        // Build smart system prompt
+        const assignmentSystemPrompt = buildAssessmentSystemPrompt({
+          kind: 'assignment',
+          grade,
+          subject,
+          topic,
+          outcomes: assignmentOutcomes,
+          templateText,
+        });
+
         prompt = `Create an assignment worksheet for ${grade} ${subject} students on "${topic}".
 
 STRUCTURE — exactly 3 sections:
@@ -108,18 +133,33 @@ RULES:
 - Use Kenyan contexts and examples (KES, Kenyan names, local scenarios)
 - Do NOT use LaTeX — write math in plain text (use "/" for fractions, "^2" for powers)
 - Keep the tone clear and straightforward — this is a worksheet, not a motivational speech
-- Do NOT add extra sections beyond the 3 listed above`;
+- Do NOT add extra sections beyond the 3 listed above
+${assignmentOutcomes.length ? `\nCURRICULUM OUTCOMES TO ASSESS:\n${assignmentOutcomes.map((o, i) => `${i + 1}. ${o}`).join('\n')}` : ''}`;
 
         break;
 
       case 'exam':
         generatedTitle = `Exam: ${topic}`;
-        const curriculumText = format === 'cbc' 
-          ? 'Kenya Competency-Based Curriculum (CBC)' 
-          : format === 'commoncore' 
-            ? 'US Common Core State Standards' 
+
+        // Load curriculum outcomes for CBC grounding
+        const examOutcomes = await loadCurriculumOutcomes(grade, subject, topic);
+
+        // Build smart system prompt
+        const examSystemPrompt = buildAssessmentSystemPrompt({
+          kind: 'exam',
+          grade,
+          subject,
+          topic,
+          outcomes: examOutcomes,
+          templateText,
+        });
+
+        const curriculumText = format === 'cbc'
+          ? 'Kenya Competency-Based Curriculum (CBC)'
+          : format === 'commoncore'
+            ? 'US Common Core State Standards'
             : 'general educational standards';
-        
+
         prompt = `Create a comprehensive ${subject} exam for ${grade} students on the topic: ${topic}.
 
 Curriculum Standard: ${curriculumText}
@@ -140,7 +180,8 @@ Please include:
 6. Space for student name and date
 7. Time management suggestions
 
-Make it age-appropriate, challenging but achievable, and aligned with the curriculum. Include clear sections with headings.`;
+Make it age-appropriate, challenging but achievable, and aligned with the curriculum. Include clear sections with headings.
+${examOutcomes.length ? `\nCURRICULUM OUTCOMES TO ASSESS:\n${examOutcomes.map((o, i) => `${i + 1}. ${o}`).join('\n')}` : ''}`;
 
         break;
 
@@ -190,11 +231,77 @@ Make it engaging, hands-on, and relevant to real-world applications.`;
     });
 
     const { stripLatex } = await import('@/lib/clean-ai-text')
+    const cleanContent = stripLatex(generatedContent)
+
+    // For assignment and exam types, add smart features
+    if (type === 'assignment' || type === 'exam') {
+      // Try to parse structured JSON from AI response
+      let structured = tryParseStructuredExam(cleanContent)
+
+      // Fallback if AI didn't produce structured JSON
+      if (!structured) {
+        if (type === 'assignment') {
+          const assignmentOutcomes = await loadCurriculumOutcomes(grade, subject, topic)
+          const fallback = buildFallbackAssignment({
+            title: generatedTitle,
+            subject,
+            grade,
+            topic: topic || subject,
+            numQuestions: numQuestions || 5,
+            outcomes: assignmentOutcomes,
+          })
+          structured = {
+            questions: fallback.questions,
+            answerKey: fallback.answerKey,
+            markdown: fallback.content,
+            totalMarks: fallback.questions.reduce((s, q) => s + q.marks, 0),
+            title: generatedTitle,
+          }
+        } else {
+          const examOutcomes = await loadCurriculumOutcomes(grade, subject, topic)
+          structured = buildFallbackExam({
+            title: generatedTitle,
+            subject,
+            grade,
+            topic: topic || subject,
+            numberOfQuestions: 20,
+            totalMarks: 100,
+            duration: duration || 60,
+            outcomes: examOutcomes,
+          })
+        }
+      }
+
+      // Clean markdown
+      structured.markdown = stripLatex(structured.markdown)
+
+      // Student-safe: no answer keys
+      const studentContent = stripAnswerKeysFromContent(structured.markdown)
+
+      // Dual-write payload
+      const dualWrite = toDualWriteContent(structured)
+
+      return NextResponse.json({
+        success: true,
+        title: generatedTitle,
+        content: studentContent,           // student-facing (backward compat)
+        contentTeacher: structured.markdown, // teacher-facing (with answer key)
+        structured,                         // structured data for UI consumption
+        dualWrite,                          // dual-write payload
+        metadata: {
+          type,
+          subject,
+          grade,
+          topic,
+          generatedAt: new Date().toISOString()
+        }
+      });
+    }
 
     return NextResponse.json({
       success: true,
       title: generatedTitle,
-      content: stripLatex(generatedContent),
+      content: cleanContent,
       metadata: {
         type,
         subject,
@@ -215,6 +322,29 @@ async function generateAIContentWithOpenAI(
   }
 ): Promise<string> {
   try {
+    // For assignment/exam, use the smart system prompt from the caller
+    if (type === 'assignment' || type === 'exam') {
+      const { buildAssessmentSystemPrompt, loadCurriculumOutcomes } = await import('@/lib/smart-assessment')
+      const outcomes = await loadCurriculumOutcomes(context.grade, context.subject, context.topic)
+      const systemPrompt = buildAssessmentSystemPrompt({
+        kind: type as 'exam' | 'assignment',
+        grade: context.grade,
+        subject: context.subject,
+        topic: context.topic,
+        outcomes,
+        templateText: context.templateText,
+      })
+
+      const content = await OpenAIService.generateLongContent(
+        [
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: prompt },
+        ],
+        { maxTokens: 3000, temperature: 0.7 }
+      )
+      return content
+    }
+
     const templateBlock = context.templateText
       ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the content in the same format:\n\n${context.templateText.slice(0, 6000)}\n\n---\n`
       : ''
@@ -239,7 +369,7 @@ IMPORTANT: Do NOT use LaTeX, TeX or MathJax. Write maths in plain text: use "/" 
 }
 
 function generateFallbackContent(
-  type: string, 
+  type: string,
   context: {
     subject: string;
     grade: string;
@@ -251,46 +381,35 @@ function generateFallbackContent(
   }
 ): string {
   const { subject, grade, topic, title, description, difficulty, duration } = context;
-  
+
   if (type === 'assignment') {
-  return `# ${title}
-
-## Example / Explanation
-
-Here is a simple explanation of **${topic}** to help you understand the concept before attempting the questions.
-
-${topic} in ${subject} for ${grade} is about understanding key ideas and applying them to solve problems. Let's look at an example:
-
-**Example:**
-[Provide a clear, step-by-step example related to ${topic} here. Show how the concept works in practice.]
-
----
-
-## Multiple Choice Questions
-
-Answer the following questions by choosing the correct option (A, B, C, or D).
-
-**1.** Question about ${topic}?
-A. Option one
-B. Option two  
-C. Option three
-D. Option four
-(Answer: A)
-
-**2.** Question about ${topic}?
-A. Option one
-B. Option two
-C. Option three
-D. Option four
-(Answer: C)
-
----
-
-## Answer Key
-1. A
-2. C`;
+    // Use smart fallback from smart-assessment
+    const { buildFallbackAssignment } = require('@/lib/smart-assessment')
+    const fallback = buildFallbackAssignment({
+      title,
+      subject,
+      grade,
+      topic: topic || subject,
+      numQuestions: 5,
+    })
+    return fallback.content
   }
-  
+
+  if (type === 'exam') {
+    // Use smart fallback from smart-assessment
+    const { buildFallbackExam } = require('@/lib/smart-assessment')
+    const fallback = buildFallbackExam({
+      title,
+      subject,
+      grade,
+      topic: topic || subject,
+      numberOfQuestions: 20,
+      totalMarks: 100,
+      duration: duration || 60,
+    })
+    return fallback.markdown
+  }
+
   // For other content types
   return `# ${title}
 

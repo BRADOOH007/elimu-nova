@@ -14,10 +14,10 @@ import {
   MessageSquare, Loader2, Bell, CheckCheck
 } from 'lucide-react'
 import ComposeMessageModal from '@/components/modals/compose-message-modal'
+import NotificationsTab from '@/components/notifications-tab'
 import { useSSE } from '@/hooks/use-sse'
 import { ClientDate, ClientDateTime } from '@/components/ui/client-date'
 
-const NotifTab = dynamic(() => import('@/app/teacher/notifications/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 const DiscTab  = dynamic(() => import('@/app/teacher/discussions/page'),   { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
 interface Message {
@@ -309,7 +309,7 @@ export default function TeacherMessagesPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="notifications" className="flex-1 overflow-y-auto m-0 p-0"><NotifTab/></TabsContent>
+        <TabsContent value="notifications" className="flex-1 overflow-y-auto m-0 p-0"><NotificationsTab compact /></TabsContent>
         <TabsContent value="discussions"   className="flex-1 overflow-y-auto m-0 p-0"><DiscTab/></TabsContent>
       </Tabs>
 

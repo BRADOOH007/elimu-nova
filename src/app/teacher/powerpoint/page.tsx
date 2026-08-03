@@ -7,7 +7,7 @@ import {
   Presentation, Loader2, Download, ChevronLeft, ChevronRight,
   Sparkles, Image as ImageIcon, SkipBack, SkipForward, Maximize2,
   BookOpen, GraduationCap, Zap, Search, Plus, Trash2, Calendar,
-  Eye, MoreHorizontal, ExternalLink
+  Eye, MoreHorizontal
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import StockImagePicker from '@/components/ai/stock-image-picker'
 
 // ── Section styles matching TutorBot exactly ─────────────────────────────────
 const SECTION = {
@@ -210,6 +211,7 @@ export default function PowerPointPage() {
   const [presentationId, setPresentationId] = useState<string | null>(null)
   const [currentSlide, setCurrentSlide]   = useState(0)
   const [showPreview, setShowPreview]     = useState(false)
+  const [stockOpen, setStockOpen]         = useState(false)
 
   const [savedPPTs, setSavedPPTs]   = useState<SavedPPT[]>([])
   const [loadingList, setLoadingList] = useState(true)
@@ -404,6 +406,7 @@ export default function PowerPointPage() {
             title:       s.title,
             content:     s.content,
             imagePrompt: s.imagePrompt,
+            imageUrl:    s.imageUrl,
             layout:      s.imagePrompt ? 'split' : 'content',
             section:     s.section,
             speakerNotes: s.speakerNotes,
@@ -425,6 +428,18 @@ export default function PowerPointPage() {
     } finally {
       setIsExporting(false)
     }
+  }
+
+  const applyStockImage = (url: string) => {
+    setPresentation(prev => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        slides: prev.slides.map((s, i) =>
+          i === currentSlide ? { ...s, imageUrl: url } : s
+        ),
+      }
+    })
   }
 
   const deletePPT = async (id: string) => {
@@ -702,24 +717,14 @@ export default function PowerPointPage() {
                                   {slide.imagePrompt.slice(0, 100)}
                                 </p>
                                 <div className="mt-3 flex items-center gap-1.5 flex-wrap justify-center">
-                                  <span className="text-[10px] text-gray-400 font-medium">AI unavailable — find on:</span>
-                                  {[{
-                                    name: 'Google', url: `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(slide.imagePrompt)}`,
-                                    bg: '#e8f0fe', color: '#1a73e8'
-                                  }, {
-                                    name: 'Pinterest', url: `https://www.pinterest.com/search/pins/?q=${encodeURIComponent(slide.imagePrompt)}`,
-                                    bg: '#fce4ec', color: '#c2185b'
-                                  }, {
-                                    name: 'Unsplash', url: `https://unsplash.com/s/photos/${encodeURIComponent(slide.imagePrompt)}`,
-                                    bg: '#e0f2f1', color: '#00796b'
-                                  }].map(s => (
-                                    <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-0.5 px-2 py-0.5 text-[10px] font-semibold rounded-lg hover:shadow-sm transition-all"
-                                      style={{ backgroundColor: s.bg, color: s.color }}
-                                    >
-                                      <ExternalLink className="h-2.5 w-2.5" /> {s.name}
-                                    </a>
-                                  ))}
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setStockOpen(true)}
+                                    className="text-rose-600 border-rose-200 hover:bg-rose-50"
+                                  >
+                                    <Search className="h-3 w-3 mr-1" /> Search Real Images
+                                  </Button>
                                 </div>
                               </div>
                             )}
@@ -951,6 +956,16 @@ export default function PowerPointPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <StockImagePicker
+        open={stockOpen}
+        onClose={() => setStockOpen(false)}
+        initialQuery={currentSlide >= 0 ? (presentation?.slides[currentSlide]?.imagePrompt || presentation?.slides[currentSlide]?.title || '') : ''}
+        onSelect={(url) => {
+          applyStockImage(url)
+          setStockOpen(false)
+        }}
+      />
     </div>
   )
 }

@@ -1,16 +1,16 @@
 /**
  * POST /api/ai/exam-format-analyzer
- * Exam Format Analyzer — Upload past KCSE/KCPE paper → AI analyses question patterns
+ * Exam Format Analyzer — Upload past exam paper → AI analyses question patterns
  */
 import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 
 export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { user }) => {
-    const { examText, subject, grade, examYear, examType = 'KCSE' } = await request.json()
+    const { examText, subject, grade, examYear, examType = 'Exam' } = await request.json()
     if (!examText) return NextResponse.json({ error: 'examText required' }, { status: 400 })
 
-    const prompt = `You are an expert ${examType} examiner analysing past paper patterns to help Kenyan teachers prepare students.
+    const prompt = `You are an expert ${examType} examiner analysing past paper patterns to help teachers prepare students.
 
 Exam: ${examType} ${examYear || ''} | Subject: ${subject || 'General'} | Grade: ${grade || 'Secondary'}
 
@@ -50,7 +50,7 @@ Analyse this exam and return ONLY valid JSON:
 }`
 
     const raw = await OpenAIService.generateLongContent([
-      { role: 'system', content: 'You are a KCSE/KCPE exam analyst. Return ONLY valid JSON.' },
+      { role: 'system', content: 'You are an exam analyst. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 2000, temperature: 0.3 })
 

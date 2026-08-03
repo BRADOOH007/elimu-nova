@@ -6,6 +6,7 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import { PrismaClient } from '@prisma/client'
+import { uploadFile, removeFileByUrl, BUCKETS } from '@/lib/supabase'
 
 const prisma = new PrismaClient()
 
@@ -125,41 +126,53 @@ export class ImageStorageService {
 
   /**
    * Save AI-generated image with full metadata
-   * For production, we'll use the OpenAI URL directly until cloud storage is implemented
+   * Persists the image to Supabase Storage (fallback: local disk, then OpenAI URL)
    */
   static async saveAIImage(request: SaveImageRequest): Promise<SaveImageResponse> {
     try {
       // Generate unique filename for reference
       const filename = this.generateFilename(request.topic, request.userId, request.type)
 
-      // In production, use OpenAI URL directly (temporary solution)
-      // In development, try to download and save locally
-      let storedUrl = request.imageUrl // Default to OpenAI URL
+      // OpenAI URLs are temporary, so we always download and persist the bytes.
+      // Order: Supabase Storage -> local disk (dev) -> OpenAI URL (last resort).
+      let storedUrl = request.imageUrl
       let fileSize = 0
       let dimensions = { width: 1024, height: 1024 }
 
-      if (process.env.NODE_ENV !== 'production') {
-        try {
-          // Only try local storage in development
-          await this.initializeStorage()
-          const downloadResult = await this.downloadAndSaveImage(request.imageUrl, filename)
-          storedUrl = `${this.PUBLIC_URL_PREFIX}/${filename}`
-          fileSize = downloadResult.fileSize
-          dimensions = downloadResult.dimensions
-        } catch (error) {
-          console.warn('Local storage failed, using OpenAI URL:', error)
-          // Fall back to OpenAI URL
-        }
-      } else {
-        // In production, get image info without downloading
-        try {
-          const response = await fetch(request.imageUrl, { method: 'HEAD' })
-          if (response.ok) {
-            fileSize = parseInt(response.headers.get('content-length') || '0')
+      try {
+        const response = await fetch(request.imageUrl)
+        if (response.ok) {
+          const buffer = Buffer.from(await response.arrayBuffer())
+          fileSize = buffer.length
+          dimensions = await this.getImageDimensions(buffer)
+
+          // 1. Persist to Supabase Storage so images survive redeploys
+          try {
+            const publicUrl = await uploadFile(
+              BUCKETS.AI_IMAGES,
+              `${request.userId}/${filename}`,
+              buffer,
+              'image/png'
+            )
+            if (publicUrl) storedUrl = publicUrl
+          } catch (error) {
+            console.warn('Supabase storage failed, falling back:', error)
           }
-        } catch (error) {
-          console.warn('Could not get image size:', error)
+
+          // 2. Local storage fallback (dev)
+          if (storedUrl === request.imageUrl) {
+            try {
+              await this.initializeStorage()
+              const filePath = path.join(this.STORAGE_DIR, filename)
+              await fs.writeFile(filePath, buffer)
+              storedUrl = `${this.PUBLIC_URL_PREFIX}/${filename}`
+            } catch (error) {
+              console.warn('Local storage failed, using OpenAI URL:', error)
+            }
+          }
         }
+      } catch (error) {
+        console.warn('Could not download image, using OpenAI URL:', error)
       }
 
       // Save to database
@@ -167,7 +180,7 @@ export class ImageStorageService {
         data: {
           filename,
           originalUrl: request.imageUrl,
-          storedUrl, // This will be the OpenAI URL in production
+          storedUrl, // Supabase public URL (or local / OpenAI URL fallback)
           topic: request.topic,
           prompt: request.prompt,
           type: request.type,
@@ -301,10 +314,15 @@ export class ImageStorageService {
         return false
       }
 
-      // Delete file from storage
+      // Delete file from storage (Supabase, or local disk fallback)
       try {
-        const filePath = path.join(this.STORAGE_DIR, image.filename)
-        await fs.unlink(filePath)
+        if (image.storedUrl && image.storedUrl.startsWith('http')) {
+          await removeFileByUrl(image.storedUrl)
+        }
+        if (!image.storedUrl || !image.storedUrl.startsWith('http')) {
+          const filePath = path.join(this.STORAGE_DIR, image.filename)
+          await fs.unlink(filePath)
+        }
       } catch (fileError) {
         console.warn('Could not delete file:', fileError)
         // Continue with database deletion even if file deletion fails
@@ -374,14 +392,19 @@ export class ImageStorageService {
       
       const oldImages = await prisma.aIGeneratedImage.findMany({
         where: { createdAt: { lt: cutoffDate } },
-        select: { id: true, filename: true }
+        select: { id: true, filename: true, storedUrl: true }
       })
 
       let deletedCount = 0
       for (const image of oldImages) {
         try {
-          const filePath = path.join(this.STORAGE_DIR, image.filename)
-          await fs.unlink(filePath)
+          if (image.storedUrl && image.storedUrl.startsWith('http')) {
+            await removeFileByUrl(image.storedUrl)
+          }
+          if (!image.storedUrl || !image.storedUrl.startsWith('http')) {
+            const filePath = path.join(this.STORAGE_DIR, image.filename)
+            await fs.unlink(filePath)
+          }
           await prisma.aIGeneratedImage.delete({ where: { id: image.id } })
           deletedCount++
         } catch (error) {

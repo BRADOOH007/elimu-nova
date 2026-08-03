@@ -12,12 +12,16 @@ export const GET = route({}, async (req, { user }) => {
 
   const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
 
-  const where: any = {
-    metadata: { path: ['isExamBank'], equals: true },
-  }
-  if (subject) where.subject = { contains: subject, mode: 'insensitive' }
-  if (grade)   where.grade   = { contains: grade,   mode: 'insensitive' }
-  if (search)  where.title   = { contains: search,  mode: 'insensitive' }
+  const conditions: any[] = [
+    { metadata: { path: ['isExamBank'], equals: true } },
+  ]
+  if (subject) conditions.push({ subject: { contains: subject, mode: 'insensitive' } })
+  if (grade)   conditions.push({ grade:   { contains: grade,   mode: 'insensitive' } })
+  if (search)  conditions.push({ title:   { contains: search,  mode: 'insensitive' } })
+  if (term)    conditions.push({ metadata: { path: ['term'], equals: term } })
+  if (type)    conditions.push({ metadata: { path: ['type'], equals: type } })
+
+  const where: any = { AND: conditions }
 
   const exams = await prisma.assignment.findMany({
     where,
@@ -71,8 +75,17 @@ export const POST = route({}, async (req, { user }) => {
   return NextResponse.json({ exam }, { status: 201 })
 })
 
-export const DELETE = route({}, async (req, { user }) => {
+export const DELETE = route({ auth: 'TEACHER' }, async (req, { user }) => {
   const { id } = await req.json()
+  const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
+  if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
+
+  const exam = await prisma.assignment.findUnique({ where: { id } })
+  if (!exam) return NextResponse.json({ error: 'Exam not found' }, { status: 404 })
+  if (exam.teacherId !== teacher.id) {
+    return NextResponse.json({ error: 'You can only delete your own exams' }, { status: 403 })
+  }
+
   await prisma.assignment.update({
     where: { id },
     data: { metadata: { isExamBank: false } } as any,

@@ -56,8 +56,72 @@ export const POST = async (req: Request) => {
       return respondTwiML(lines.join('\n'))
     }
 
+    if (body === 'unread' || body === 'messages') {
+      const unreadMessages = await prisma.message.count({
+        where: { recipientId: user.id, isRead: false }
+      })
+      const unreadNotifs = await prisma.notification.count({
+        where: { userId: user.id, isRead: false }
+      })
+      return respondTwiML(`You have ${unreadMessages} unread message${unreadMessages === 1 ? '' : 's'} and ${unreadNotifs} unread notification${unreadNotifs === 1 ? '' : 's'}.`)
+    }
+
     if (body === 'attendance') {
-      return respondTwiML('Attendance feature coming soon. Reply *menu* for available options.')
+      const parent = await prisma.parent.findFirst({
+        where: { userId: user.id },
+        include: {
+          students: {
+            include: {
+              student: {
+                include: {
+                  user: true,
+                  class: { include: { teacher: true } },
+                },
+              },
+            },
+          },
+        },
+      })
+      if (!parent || parent.students.length === 0) return respondTwiML('No linked students found.')
+
+      const now = new Date()
+      const termStart = new Date(now.getFullYear(), 0, 5)
+      const termEnd = new Date(now.getFullYear(), 3, 5)
+      const lines: string[] = []
+
+      for (const ps of parent.students) {
+        const student = ps.student
+        const name = student.user?.firstName || 'Student'
+
+        // Attendance is stored on schedule metadata titled 'ATTENDANCE:...' under the student's class
+        const records = await prisma.schedule.findMany({
+          where: {
+            classId: student.classId || undefined,
+            type: 'OTHER',
+            title: { startsWith: 'ATTENDANCE:' },
+            startTime: { gte: termStart, lte: termEnd },
+          },
+        })
+
+        let present = 0
+        let total = 0
+        for (const record of records) {
+          const meta = record.metadata as Record<string, Record<string, boolean>> | null
+          if (!meta) continue
+          const sessions = meta[student.id]
+          if (!sessions) continue
+          for (const [, isPresent] of Object.entries(sessions)) {
+            total++
+            if (isPresent) present++
+          }
+        }
+
+        const rate = total > 0 ? Math.round((present / total) * 100) : 0
+        const emoji = total === 0 ? '📋' : rate >= 90 ? '✅' : rate >= 75 ? '👍' : '⚠️'
+        lines.push(`${emoji} ${name}: ${present}/${total} days (${rate}%)`)
+      }
+
+      return respondTwiML(lines.join('\n') || 'No attendance records found.')
     }
 
     return respondTwiML(`Hi ${user.firstName}! Reply *menu* to see available commands.`)

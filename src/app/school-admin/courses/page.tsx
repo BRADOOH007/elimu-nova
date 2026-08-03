@@ -11,6 +11,8 @@ import { Loader2, BookOpen, Plus, Search, Edit, Trash2, Users, GraduationCap, Cl
 import { useToast } from "@/hooks/use-toast"
 import { confirmToast } from '@/lib/confirm-toast'
 
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+
 interface Course {
   id: string; title: string; type: string; gradeLevel: string
   difficulty: string; duration?: string; isActive: boolean
@@ -146,7 +148,7 @@ export default function SchoolAdminCoursesPage() {
           <div className="space-y-4">
             <div><label className="text-sm text-gray-600">Title</label><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} /></div>
             <div><label className="text-sm text-gray-600">Type</label><Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['CBC_ENGLISH','CBC_MATH','CBC_SCIENCE','CBC_KISWAHILI','CODING_SCRATCH','CODING_WEB_DEV','CODING_AI_FOR_KIDS','CODING_PYTHON','ROBOTICS_BASIC','OTHER'].map(t => <SelectItem key={t} value={t}>{t.replace(/_/g, ' ')}</SelectItem>)}</SelectContent></Select></div>
-            <div><label className="text-sm text-gray-600">Grade Level</label><Input value={form.gradeLevel} onChange={e => setForm(p => ({ ...p, gradeLevel: e.target.value }))} placeholder="e.g. Grade 7" /></div>
+            <div><label className="text-sm text-gray-600">Grade Level</label><select value={form.gradeLevel} onChange={e => setForm(p => ({ ...p, gradeLevel: e.target.value }))} className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select grade</option>{GRADES.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
             <div><label className="text-sm text-gray-600">Difficulty</label><Select value={form.difficulty} onValueChange={v => setForm(p => ({ ...p, difficulty: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['EASY','MEDIUM','HARD','EXPERT'].map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></div>
             <div><label className="text-sm text-gray-600">Duration</label><Input value={form.duration} onChange={e => setForm(p => ({ ...p, duration: e.target.value }))} placeholder="e.g. 12 weeks" /></div>
             <div><label className="text-sm text-gray-600">Description</label><textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} className="w-full p-3 border rounded-lg" /></div>

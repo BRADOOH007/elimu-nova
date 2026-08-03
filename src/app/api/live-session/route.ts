@@ -35,16 +35,24 @@ export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) 
       return NextResponse.json({ sessions })
     }
 
-    // For students: get their class's active session
+    // For students: get their class's active session (plus open sessions)
     if (role === 'STUDENT') {
       const student = await prisma.student.findUnique({ where: { userId: user.id } })
-      if (!student?.classId) return NextResponse.json({ sessions: [] })
+      if (!student) return NextResponse.json({ sessions: [] })
 
       const sessions = await prisma.schedule.findMany({
-        where: { classId: student.classId, status: 'IN_PROGRESS' },
+        where: {
+          status: 'IN_PROGRESS',
+          type: 'CLASS',
+          OR: [
+            ...(student.classId ? [{ classId: student.classId }] : []),
+            { classId: null },              // open session — teacher didn't pick a class
+            ...(student.teacherId ? [{ teacherId: student.teacherId }] : []),
+          ],
+        },
         include: { teacher: { include: { user: true } } },
         orderBy: { startTime: 'desc' },
-        take: 5,
+        take: 20,
       })
       return NextResponse.json({ sessions })
     }
@@ -66,6 +74,14 @@ export const POST = route({ auth: 'TEACHER', skipSubscriptionCheck: true }, asyn
     const now = new Date()
     const end = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour default
 
+    // Auto-generate a Jitsi Meet link if none provided (no account needed)
+    const sessionCode = Math.random().toString(36).substring(2, 8).toUpperCase()
+    let finalMeetingLink = meetingLink || ''
+    if (!finalMeetingLink) {
+      const slug = `${title || 'LiveClass'}-${sessionCode}`.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 40)
+      finalMeetingLink = `https://meet.jit.si/${slug}`
+    }
+
     const liveSession = await prisma.schedule.create({
       data: {
         schoolId:    teacher.schoolId || '',
@@ -83,8 +99,8 @@ export const POST = route({ auth: 'TEACHER', skipSubscriptionCheck: true }, asyn
           chat: [],            // [{ userId, name, message, ts }]
           participants: [],    // [{ userId, name, joinedAt }]
           startedAt: now.toISOString(),
-          sessionCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
-          meetingLink: meetingLink || '',
+          sessionCode,
+          meetingLink: finalMeetingLink,
         },
       },
       include: { class: true },

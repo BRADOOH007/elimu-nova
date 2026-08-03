@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { MessageSquare, Send, RefreshCw, Inbox, Mail, ArrowLeft } from "lucide-react"
+import { MessageSquare, Send, RefreshCw, Inbox, Mail, ArrowLeft, Bell } from "lucide-react"
 import { ClientDate } from "@/components/ui/client-date"
+import NotificationsTab from '@/components/notifications-tab'
 
 interface Message {
   id: string; subject: string; content: string; senderId: string
@@ -111,25 +112,43 @@ export default function ParentMessages() {
   const displayed = tab === "inbox" ? inbox : sent
   const unread = inbox.filter(m => !m.isRead).length
 
+  const [view, setView] = useState<'messages' | 'notifications'>('messages')
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <div>
+        <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-slate-900">Messages</h1>
-          <p className="text-sm text-slate-500 mt-0.5">Communicate with your children&apos;s teachers</p>
+          <div className="flex bg-slate-100 rounded-lg p-1">
+            <button onClick={() => setView('messages')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${view==='messages'?'bg-white text-blue-600 shadow-sm':'text-slate-500'}`}>
+              Inbox
+            </button>
+            <button onClick={() => setView('notifications')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${view==='notifications'?'bg-white text-blue-600 shadow-sm':'text-slate-500'}`}>
+              <Bell className="w-3 h-3 inline mr-1" />Notifications
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={fetchMessages} className="p-2.5 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200">
-            <RefreshCw className="h-4 w-4 text-slate-500" />
-          </button>
-          <button onClick={() => { setComposing(true); setSelected(null) }}
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
-            <Send className="h-4 w-4" /> Compose
-          </button>
-        </div>
+        {view === 'messages' && (
+          <div className="flex items-center gap-2">
+            <button onClick={fetchMessages} className="p-2.5 rounded-xl hover:bg-slate-100 transition-colors border border-slate-200">
+              <RefreshCw className="h-4 w-4 text-slate-500" />
+            </button>
+            <button onClick={() => { setComposing(true); setSelected(null) }}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+              <Send className="h-4 w-4" /> Compose
+            </button>
+          </div>
+        )}
       </div>
 
+      {view === 'notifications' ? (
+        <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
+          <NotificationsTab compact />
+        </div>
+      ) : (
       <div className="grid lg:grid-cols-[320px_1fr] gap-5">
         {/* Left panel - message list */}
         <div className="bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden">
@@ -273,6 +292,7 @@ export default function ParentMessages() {
           )}
         </div>
       </div>
+      )}
     </div>
   )
 }

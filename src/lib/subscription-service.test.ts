@@ -57,7 +57,48 @@ describe('subscription-service', () => {
       expect(result.daysRemaining).toBeGreaterThan(0)
     })
 
-    it('returns expired status when subscription end date has passed', async () => {
+    it('treats freemium subscriptions as always active with unlimited access', async () => {
+      const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      ;(prisma.subscription.findFirst as any).mockResolvedValue({
+        id: 'sub-free',
+        endDate: futureDate,
+        status: 'ACTIVE',
+        isTrial: false,
+        isFreemium: true,
+        package: { name: 'Free Plan' },
+      })
+
+      const result = await getSubscriptionStatus('user-free')
+
+      expect(result.isActive).toBe(true)
+      expect(result.isExpired).toBe(false)
+      expect(result.status).toBe('FREEMIUM')
+      expect(result.daysRemaining).toBe(9999)
+      expect(result.packageName).toBe('Free Plan')
+    })
+
+    it('treats freemium by type=FREEMIUM as always active', async () => {
+      const pastDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
+      ;(prisma.subscription.findFirst as any).mockResolvedValue({
+        id: 'sub-free2',
+        endDate: pastDate, // very old end date doesn't matter
+        status: 'EXPIRED',
+        isTrial: false,
+        type: 'FREEMIUM',
+        package: { name: 'Free' },
+      })
+
+      const result = await getSubscriptionStatus('user-free2')
+
+      expect(result.isActive).toBe(true)
+      expect(result.status).toBe('FREEMIUM')
+      expect(result.daysRemaining).toBe(9999)
+    })
+
+    it('treats ACTIVE subscriptions as always accessible (paid subscribers are never locked out)', async () => {
+      // An ACTIVE subscription represents a paying subscriber in good standing.
+      // Even if endDate is in the past (e.g. webhook delay / renewal race),
+      // a paid subscriber must never be blocked.
       const pastDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
       ;(prisma.subscription.findFirst as any).mockResolvedValue({
         id: 'sub-1',
@@ -65,6 +106,24 @@ describe('subscription-service', () => {
         status: 'ACTIVE',
         isTrial: false,
         package: { name: 'Pro' },
+      })
+
+      const result = await getSubscriptionStatus('user-1')
+
+      expect(result.isActive).toBe(true)
+      expect(result.isExpired).toBe(false)
+      expect(result.status).toBe('ACTIVE')
+    })
+
+    it('returns expired status when a TRIAL subscription end date has passed beyond grace', async () => {
+      // Trial past its grace period — genuinely expired, should block.
+      const pastDate = new Date(Date.now() - (5 + 6) * 24 * 60 * 60 * 1000) // past endDate + grace (5 days)
+      ;(prisma.subscription.findFirst as any).mockResolvedValue({
+        id: 'sub-1',
+        endDate: pastDate,
+        status: 'TRIAL',
+        isTrial: true,
+        package: { name: 'Basic' },
       })
 
       const result = await getSubscriptionStatus('user-1')
