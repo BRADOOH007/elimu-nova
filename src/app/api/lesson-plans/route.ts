@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { prisma, withRetry } from '@/lib/prisma';
 import { route } from '@/lib/api-middleware';
 
@@ -65,7 +66,7 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     // If the same teacher already has a lesson plan with the exact same
     // title + subject + grade + content, return the existing one instead
     // of creating a duplicate. Content is normalized to a stable hash.
-    const contentHash = require('crypto').createHash('sha256').update(contentString).digest('hex').slice(0, 24);
+    const contentHash = crypto.createHash('sha256').update(contentString).digest('hex').slice(0, 24);
     const existing = await prisma.lessonPlan.findFirst({
       where: { teacherId: teacher.id, subject, grade, title },
       orderBy: { createdAt: 'desc' },
@@ -78,11 +79,11 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
       try {
         const parsed = typeof existing.content === 'string' ? JSON.parse(existing.content) : existing.content;
         existingContent = parsed;
-        existingHash = require('crypto').createHash('sha256').update(
+        existingHash = crypto.createHash('sha256').update(
           typeof existing.content === 'string' ? existing.content : JSON.stringify(existing.content)
         ).digest('hex').slice(0, 24);
       } catch {
-        existingHash = require('crypto').createHash('sha256').update(String(existing.content)).digest('hex').slice(0, 24);
+        existingHash = crypto.createHash('sha256').update(String(existing.content)).digest('hex').slice(0, 24);
       }
 
       // If content matches exactly, return existing to avoid duplicates

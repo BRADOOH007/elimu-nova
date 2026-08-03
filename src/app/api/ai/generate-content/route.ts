@@ -383,8 +383,6 @@ function generateFallbackContent(
   const { subject, grade, topic, title, description, difficulty, duration } = context;
 
   if (type === 'assignment') {
-    // Use smart fallback from smart-assessment
-    const { buildFallbackAssignment } = require('@/lib/smart-assessment')
     const fallback = buildFallbackAssignment({
       title,
       subject,
@@ -396,8 +394,6 @@ function generateFallbackContent(
   }
 
   if (type === 'exam') {
-    // Use smart fallback from smart-assessment
-    const { buildFallbackExam } = require('@/lib/smart-assessment')
     const fallback = buildFallbackExam({
       title,
       subject,

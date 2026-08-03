@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 
-export const POST = route({}, async (request, { user }) => {
+export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const { submissionId, assignmentTitle, submissionText, rubric, totalMarks = 100 } = await request.json()
     if (!submissionText) return NextResponse.json({ error: 'submissionText required' }, { status: 400 })
 
