@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { callAI } from '@/lib/ai-provider'
+import { route } from '@/lib/api-middleware'
 
-export const POST = async (req: Request) => {
+export const POST = route({}, async (req, { user }) => {
   let language = 'en'
   try {
     const body = await req.json()
@@ -26,4 +27,4 @@ export const POST = async (req: Request) => {
     console.error('[VoiceTutor] Error:', error)
     return NextResponse.json({ response: language === 'sw' ? 'Samahani, kuna tatizo. Jaribu tena.' : 'Sorry, something went wrong. Please try again.' })
   }
-}
+})

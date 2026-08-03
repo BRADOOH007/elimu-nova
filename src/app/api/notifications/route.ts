@@ -29,13 +29,20 @@ export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) 
     return NextResponse.json(notifications)
 })
 
-export const POST = route({}, async (req) => {
+export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (req, { user }) => {
 
     const body = await req.json()
     const { title, message, type, userId } = body
 
     if (!title || !message || !type || !userId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    if (user.role !== 'SUPER_ADMIN') {
+      const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+      if (!targetUser) {
+        return NextResponse.json({ error: 'Target user not found' }, { status: 404 })
+      }
     }
 
     const notification = await prisma.notification.create({

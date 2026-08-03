@@ -88,6 +88,11 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(networkFirst(request))
+    return
+  }
+
   event.respondWith(cacheFirst(request))
 })
 
