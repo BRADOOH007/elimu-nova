@@ -159,7 +159,6 @@ Make sure your response is valid JSON without any markdown formatting.`;
       return NextResponse.json({
         success: false,
         error: 'Failed to parse exam document',
-        aiResponse: aiResponse
       }, { status: 500 });
     }
 

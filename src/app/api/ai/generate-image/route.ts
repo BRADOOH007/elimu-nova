@@ -3,7 +3,7 @@ import { ImageGenerationService } from '@/lib/image-generation'
 import { ImageBank } from '@/lib/image-bank'
 import { route } from '@/lib/api-middleware'
 
-export const POST = route({}, async (request, { user }) => {
+export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { user }) => {
   let parsedBody: any = {}
   try {
     parsedBody = await request.json()

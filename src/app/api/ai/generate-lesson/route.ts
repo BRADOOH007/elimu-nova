@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 
-export const POST = route({}, async (req, { user }) => {
+export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (req, { user }) => {
     const body = await req.json()
     const { subject, topic, grade, difficulty, learningStyle } = body
 

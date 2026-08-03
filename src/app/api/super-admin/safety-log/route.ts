@@ -6,7 +6,7 @@ const log = apiLogger('super-admin/safety-log')
 
 export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user, params }) => {
   try {
-    const violations = getViolations(200)
+    const violations = await getViolations(200)
     return NextResponse.json({ violations, total: violations.length })
   } catch (error) {
     log.error('Error fetching safety log:', error)

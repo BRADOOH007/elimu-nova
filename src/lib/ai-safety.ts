@@ -1,4 +1,4 @@
-import fs from 'fs'
+import { promises as fs } from 'fs'
 import path from 'path'
 
 const LOG_DIR = path.join(process.cwd(), 'logs')
@@ -48,9 +48,11 @@ export interface SafetyViolation {
   route?: string
 }
 
-function getSafeLogDir(): string {
-  if (!fs.existsSync(LOG_DIR)) {
-    try { fs.mkdirSync(LOG_DIR, { recursive: true }) } catch (e) { console.warn('[AISafety] Failed to create log dir:', e) }
+async function getSafeLogDir(): Promise<string> {
+  try {
+    await fs.access(LOG_DIR)
+  } catch {
+    try { await fs.mkdir(LOG_DIR, { recursive: true }) } catch (e) { console.warn('[AISafety] Failed to create log dir:', e) }
   }
   return LOG_DIR
 }
@@ -96,19 +98,19 @@ RESPONSIBILITY GUIDELINES — You must follow these:
 }
 
 export async function logViolation(violation: Omit<SafetyViolation, 'timestamp'>): Promise<void> {
-  const safeDir = getSafeLogDir()
+  const safeDir = await getSafeLogDir()
   const entry: SafetyViolation = { ...violation, timestamp: new Date().toISOString() }
   try {
-    fs.appendFileSync(LOG_FILE, JSON.stringify(entry) + '\n')
+    await fs.appendFile(LOG_FILE, JSON.stringify(entry) + '\n')
   } catch (err) {
     console.error('Failed to log safety violation:', err)
   }
 }
 
-export function getViolations(limit = 50): SafetyViolation[] {
+export async function getViolations(limit = 50): Promise<SafetyViolation[]> {
   try {
-    if (!fs.existsSync(LOG_FILE)) return []
-    const data = fs.readFileSync(LOG_FILE, 'utf-8')
+    try { await fs.access(LOG_FILE) } catch { return [] }
+    const data = await fs.readFile(LOG_FILE, 'utf-8')
     const lines = data.trim().split('\n').filter(Boolean)
     return lines.slice(-limit).map(l => JSON.parse(l)).reverse()
   } catch (e) { console.warn('[AISafety] Failed to read violations:', e)
