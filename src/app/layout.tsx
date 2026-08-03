@@ -16,10 +16,17 @@ export const viewport: Viewport = {
   themeColor:    '#ffffff',
 }
 
+let metadataBase: URL
+try {
+  metadataBase = new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000')
+} catch {
+  metadataBase = new URL('http://localhost:3000')
+}
+
 export const metadata: Metadata = {
   title: "ElimuNova AI - Intelligent Education Platform",
   description: "Transform education with AI-powered lesson plans, schemes of work, and personalized learning experiences.",
-  metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
+  metadataBase,
   keywords: ["education", "AI", "learning", "teaching", "lesson plans", "schemes of work"],
   authors: [{ name: "ElimuNova AI Team" }],
   icons: {
