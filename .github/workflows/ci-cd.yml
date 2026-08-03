@@ -8,7 +8,7 @@ on:
   workflow_dispatch:  # Allows manually triggering the db-migration job
 
 env:
-  NODE_VERSION: '20.x'
+  NODE_VERSION: '24.x'
   DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://localhost:5432/placeholder' }}
   NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
   NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
@@ -116,12 +116,6 @@ jobs:
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-          path: .next/
 
       - name: Run Playwright tests
         run: npx playwright test
