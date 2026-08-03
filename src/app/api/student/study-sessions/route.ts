@@ -83,17 +83,10 @@ export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
   })
 })
 
-// POST - Create new study session
+// POST - Create or update study session
 export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
   const body = await request.json()
-  const { subject, topic, duration, startTime, endTime, notes } = body
-
-  // Validate required fields
-  if (!subject || !duration || !startTime || !endTime) {
-    return NextResponse.json({ 
-      error: 'Missing required fields: subject, duration, startTime, endTime' 
-    }, { status: 400 })
-  }
+  const { subject, topic, duration, startTime, endTime, notes, action, sessionId } = body
 
   // Get student profile
   const student = await prisma.student.findUnique({
@@ -104,7 +97,69 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
     return NextResponse.json({ error: 'Student profile not found' }, { status: 404 })
   }
 
-  // Create study session
+  // Action: start — create a new session with zero duration
+  if (action === 'start') {
+    if (!subject) {
+      return NextResponse.json({ error: 'Subject is required' }, { status: 400 })
+    }
+    const now = new Date()
+    const studySession = await prisma.studySession.create({
+      data: {
+        studentId: student.id,
+        subject,
+        topic: topic || null,
+        duration: 0,
+        startTime: now,
+        endTime: now,
+      }
+    })
+    return NextResponse.json({ success: true, session: studySession }, { status: 201 })
+  }
+
+  // Action: stop — update existing session with final duration
+  if (action === 'stop') {
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Session ID is required' }, { status: 400 })
+    }
+    const session = await prisma.studySession.findFirst({
+      where: { id: sessionId, studentId: student.id }
+    })
+    if (!session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+    }
+    const durationSec = parseInt(duration) || 0
+    const endTime = new Date()
+    const startTimeFinal = new Date(endTime.getTime() - durationSec * 1000)
+    const studySession = await prisma.studySession.update({
+      where: { id: sessionId },
+      data: {
+        duration: durationSec,
+        startTime: startTimeFinal,
+        endTime,
+        notes: notes || null,
+      }
+    })
+
+    // Update analytics
+    await prisma.studentAnalytics.upsert({
+      where: { studentId: student.id },
+      update: { totalStudyTime: { increment: durationSec } },
+      create: { studentId: student.id, totalStudyTime: durationSec }
+    })
+
+    // Generate notification for teacher
+    await NotificationGenerator.studySessionStarted(student.id, session.subject, durationSec)
+
+    return NextResponse.json({ success: true, session: studySession })
+  }
+
+  // Default: create session with full details (legacy path)
+  if (!subject || !duration || !startTime || !endTime) {
+    return NextResponse.json({
+      error: 'Missing required fields: subject, duration, startTime, endTime'
+    }, { status: 400 })
+  }
+
   const studySession = await prisma.studySession.create({
     data: {
       studentId: student.id,
@@ -117,25 +172,39 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
     }
   })
 
-  // Update analytics
   await prisma.studentAnalytics.upsert({
     where: { studentId: student.id },
-    update: {
-      totalStudyTime: {
-        increment: parseInt(duration)
-      }
-    },
-    create: {
-      studentId: student.id,
-      totalStudyTime: parseInt(duration)
-    }
+    update: { totalStudyTime: { increment: parseInt(duration) } },
+    create: { studentId: student.id, totalStudyTime: parseInt(duration) }
   })
 
-  // Generate notification for teacher
   await NotificationGenerator.studySessionStarted(student.id, subject, parseInt(duration))
 
-  return NextResponse.json({
-    success: true,
-    studySession
-  }, { status: 201 })
+  return NextResponse.json({ success: true, studySession }, { status: 201 })
+})
+
+// DELETE - Remove a study session
+export const DELETE = route({ auth: 'STUDENT' }, async (request, { user }) => {
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+
+  if (!id) {
+    return NextResponse.json({ error: 'Session ID is required' }, { status: 400 })
+  }
+
+  const student = await prisma.student.findUnique({ where: { userId: user.id } })
+  if (!student) {
+    return NextResponse.json({ error: 'Student profile not found' }, { status: 404 })
+  }
+
+  const session = await prisma.studySession.findFirst({
+    where: { id, studentId: student.id }
+  })
+  if (!session) {
+    return NextResponse.json({ error: 'Session not found' }, { status: 404 })
+  }
+
+  await prisma.studySession.delete({ where: { id } })
+
+  return NextResponse.json({ success: true })
 })

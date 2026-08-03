@@ -90,6 +90,8 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user, p
     }
   }
 
+  const isStudent = user.role === 'STUDENT'
+
   const formattedAssignment = {
     id: assignment.id,
     title: assignment.title,
@@ -99,7 +101,8 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user, p
     status: assignment.status,
     isTimed: assignment.isTimed,
     timeLimit: assignment.timeLimit,
-    answerKey: assignment.answerKey,
+    // Never leak the answer key to students
+    answerKey: isStudent ? undefined : assignment.answerKey,
     createdAt: assignment.createdAt,
     updatedAt: assignment.updatedAt,
     teacher: {
@@ -113,27 +116,30 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user, p
       subject: assignment.lessonPlan.subject,
       grade: assignment.lessonPlan.grade
     } : null,
-    students: assignment.students.map(student => ({
+    students: isStudent ? undefined : assignment.students.map(student => ({
       id: student.id,
       name: `${student.user.firstName} ${student.user.lastName}`
     })),
-    submissions: assignment.submissions.map(submission => ({
-      id: submission.id,
-      content: submission.content,
-      attachments: submission.attachments,
-      grade: submission.grade,
-      feedback: submission.feedback,
-      submittedAt: submission.submittedAt,
-      gradedAt: submission.gradedAt,
-      isAiGraded: submission.isAiGraded,
-      questionScores: submission.questionScores,
-      needsRevision: submission.needsRevision,
-      revisionNotes: submission.revisionNotes,
-      student: {
-        id: submission.student.id,
-        name: `${submission.student.user.firstName} ${submission.student.user.lastName}`
-      }
-    })),
+    // Students only see their own submission and no grading internals
+    submissions: isStudent
+      ? []
+      : assignment.submissions.map(submission => ({
+          id: submission.id,
+          content: submission.content,
+          attachments: submission.attachments,
+          grade: submission.grade,
+          feedback: submission.feedback,
+          submittedAt: submission.submittedAt,
+          gradedAt: submission.gradedAt,
+          isAiGraded: submission.isAiGraded,
+          questionScores: submission.questionScores,
+          needsRevision: submission.needsRevision,
+          revisionNotes: submission.revisionNotes,
+          student: {
+            id: submission.student.id,
+            name: `${submission.student.user.firstName} ${submission.student.user.lastName}`
+          }
+        })),
     mySubmission: mySubmission ? {
       id: mySubmission.id,
       grade: mySubmission.grade,

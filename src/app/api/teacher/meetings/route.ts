@@ -10,6 +10,7 @@ const createMeetingSchema = z.object({
   duration: z.number().optional(),
   description: z.string().optional(),
   location: z.string().optional(),
+  zoomLink: z.string().optional(),
 })
 
 export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
@@ -178,6 +179,7 @@ export const POST = route({ auth: 'TEACHER', schema: createMeetingSchema }, asyn
       time: data.time,
       duration: data.duration || 60,
       location: data.location ?? undefined,
+      zoomJoinUrl: data.zoomLink || undefined,
       status: 'SCHEDULED',
       schoolId: teacher.schoolId,
       createdBy: user.id,
@@ -193,6 +195,7 @@ export const POST = route({ auth: 'TEACHER', schema: createMeetingSchema }, asyn
       time: meeting.time,
       duration: meeting.duration,
       location: meeting.location,
+      zoomJoinUrl: meeting.zoomJoinUrl,
       status: meeting.status,
     },
   }, { status: 200 });

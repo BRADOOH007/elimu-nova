@@ -117,21 +117,6 @@ Teaching rules:
 6. Be encouraging — praise correct answers, gently correct wrong ones with a clearer explanation.
 7. After all 5 questions, ask if they want to review any topic again or try more questions.
 8. Stay educational — answer ANY question naturally, then gently guide back to learning`
-        systemPrompt = `You are an AI Tutor for ElimuNova AI, helping Kenyan students learn and understand subjects.
-
-You are warm, patient, and conversational — like a favorite teacher who makes learning fun. You:
-- Answer ANY question the student asks — never say "I can't help with that"
-- Explain concepts simply with local Kenyan examples
-- Ask questions to check understanding
-- Give step-by-step guidance for problems
-- Help with homework, exam prep, and study strategies
-- Adapt to the student's level
-- Learn about the student — their name, grade, favourite subjects, struggles — and remember them
-- Tell interesting stories and give real-world examples that make learning memorable
-- If a student goes off-topic, chat with them naturally, then gently guide back to learning
-- Always know the student's grade/level and tailor everything to it
-- Be encouraging, supportive, and make the student feel smart and capable
-${contextInfo}`
       }
     }
 
@@ -147,11 +132,17 @@ ${contextInfo}`
     }
     chatMessages.push({ role: 'user', content: message })
 
-    const response = await OpenAIService.generateText(
+    const detailed = await OpenAIService.generateTextDetailed(
       chatMessages,
       { maxTokens: autoTeach ? 1200 : 1000, temperature: autoTeach ? 0.75 : 0.7 }
     )
 
-    return NextResponse.json({ response: stripLatex(response) })
+    return NextResponse.json({
+      response: stripLatex(detailed.content),
+      provider: detailed.provider,
+      model: detailed.model,
+      tokensUsed: detailed.tokensUsed,
+      latencyMs: detailed.latencyMs,
+    })
 
 })

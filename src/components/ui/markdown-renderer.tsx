@@ -146,6 +146,20 @@ export function MarkdownRenderer({ content, className = '' }: Props) {
             </td>
           ),
 
+          // ── Images ────────────────────────────────────────────────────
+          img: ({ src, alt, ...props }: any) => (
+            <div className="my-5 rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white">
+              <img
+                src={src}
+                alt={alt || 'illustration'}
+                className="w-full h-auto object-contain max-h-[420px]"
+                loading="lazy"
+                {...props}
+              />
+              {alt && <p className="text-center text-xs text-slate-400 py-2 px-3 bg-slate-50 border-t border-slate-100 italic">{alt}</p>}
+            </div>
+          ),
+
           // ── Links ──────────────────────────────────────────────────────
           a: ({ href, children }) => (
             <a

@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server'
 import { route } from '@/lib/api-middleware'
 import { supabaseAdmin, BUCKETS } from '@/lib/supabase'
+import { saveFileLocally, removeFileLocally } from '@/lib/local-storage'
 import { prisma } from '@/lib/prisma'
 
-export const POST = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+
+export const POST = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'PARENT'], skipSubscriptionCheck: true }, async (req, { user }) => {
   const formData = await req.formData()
   const file = formData.get('file') as File | null
 
@@ -11,8 +14,8 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
-  if (!file.type.startsWith('image/')) {
-    return NextResponse.json({ error: 'File must be an image' }, { status: 400 })
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return NextResponse.json({ error: 'File must be JPEG, PNG, GIF, or WebP' }, { status: 400 })
   }
 
   if (file.size > 5 * 1024 * 1024) {
@@ -20,7 +23,38 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
   }
 
   if (!supabaseAdmin) {
-    return NextResponse.json({ error: 'Storage service not configured' }, { status: 500 })
+    const ext = file.name.split('.').pop() || 'png'
+    const localPath = `${user.id}_${Date.now()}.${ext}`
+    const bytes = await file.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+
+    const localUrl = await saveFileLocally(BUCKETS.AVATARS, localPath, buffer)
+    if (!localUrl) {
+      return NextResponse.json({ error: 'Upload failed: could not save file' }, { status: 500 })
+    }
+
+    // Save avatar URL to user profile
+    const currentUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { avatar: true }
+    })
+
+    try {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { avatar: localUrl },
+      })
+      // Clean up old local avatar
+      if (currentUser?.avatar?.startsWith('/uploads/')) {
+        await removeFileLocally(currentUser.avatar)
+      }
+    } catch (dbError) {
+      await removeFileLocally(localUrl)
+      console.error('Failed to save avatar URL:', dbError)
+      return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
+    }
+
+    return NextResponse.json({ url: localUrl })
   }
 
   const bucket = BUCKETS.AVATARS
@@ -31,7 +65,7 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
   if (!bucketExists) {
     const { error: createError } = await supabaseAdmin.storage.createBucket(bucket, {
       public: true,
-      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+      allowedMimeTypes: ALLOWED_TYPES,
       fileSizeLimit: 5 * 1024 * 1024,
     })
     if (createError) {
@@ -39,6 +73,12 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
       return NextResponse.json({ error: `Storage setup failed: ${createError.message}` }, { status: 500 })
     }
   }
+
+  // Get current avatar to delete old file
+  const currentUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { avatar: true }
+  })
 
   const ext = file.name.split('.').pop() || 'png'
   const path = `${user.id}_${Date.now()}.${ext}`
@@ -57,11 +97,29 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
   const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(path)
   const publicUrl = urlData.publicUrl
 
-  // Save avatar URL to user profile immediately
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { avatar: publicUrl },
-  })
+  try {
+    // Save avatar URL to user profile
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { avatar: publicUrl },
+    })
+
+    // Delete old avatar file (after successful DB update)
+    if (currentUser?.avatar && currentUser.avatar.includes(bucket)) {
+      try {
+        const oldPath = currentUser.avatar.split(`${bucket}/`).pop()?.split('?')[0]
+        if (oldPath && oldPath !== path) {
+          await supabaseAdmin.storage.from(bucket).remove([oldPath])
+        }
+      } catch { /* non-critical cleanup */ }
+    }
+  } catch (dbError) {
+    // DB update failed — clean up the uploaded file
+    try {
+      await supabaseAdmin.storage.from(bucket).remove([path])
+    } catch { /* best effort cleanup */ }
+    return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
+  }
 
   return NextResponse.json({ url: publicUrl })
 })

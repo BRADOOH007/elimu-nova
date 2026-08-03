@@ -96,20 +96,11 @@ export function CreateAdminUserModal({ isOpen, onClose, onUserCreated }: CreateA
       return false
     }
 
-    if ((formData.role === 'SCHOOL_ADMIN' || formData.role === 'TEACHER') && !formData.schoolId) {
+    if ((formData.role === 'SCHOOL_ADMIN' || formData.role === 'TEACHER' || formData.role === 'STUDENT') && !formData.schoolId) {
       toast({
         variant: "destructive",
         title: "Validation Error",
         description: "Please select a school for this role",
-      })
-      return false
-    }
-
-    if (formData.role === 'STUDENT') {
-      toast({
-        variant: "destructive",
-        title: "Feature Not Available",
-        description: "Student creation is not yet available. Please select School Admin or Teacher.",
       })
       return false
     }
@@ -291,7 +282,7 @@ export function CreateAdminUserModal({ isOpen, onClose, onUserCreated }: CreateA
                         <SelectContent>
                           <SelectItem value="SCHOOL_ADMIN">School Admin</SelectItem>
                           <SelectItem value="TEACHER">Teacher</SelectItem>
-                          <SelectItem value="STUDENT" disabled>Student (Coming Soon)</SelectItem>
+                          <SelectItem value="STUDENT">Student</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -311,7 +302,7 @@ export function CreateAdminUserModal({ isOpen, onClose, onUserCreated }: CreateA
               </Card>
 
               {/* School Assignment */}
-              {(formData.role === 'SCHOOL_ADMIN' || formData.role === 'TEACHER') && (
+              {(formData.role === 'SCHOOL_ADMIN' || formData.role === 'TEACHER' || formData.role === 'STUDENT') && (
                 <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
                   <CardHeader>
                     <CardTitle>School Assignment</CardTitle>

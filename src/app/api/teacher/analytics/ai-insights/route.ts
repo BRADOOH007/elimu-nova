@@ -180,6 +180,110 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
       }
     })
 
+    // 4. At-Risk Student Detection (cross-signal)
+    const studentSignals: Record<string, { name: string; className: string; grades: number[]; lateCount: number; missingCount: number; subject: string }> = {}
+    for (const p of studentProgress) {
+      const sp = p as any
+      const sid = sp.studentId
+      if (!studentSignals[sid]) {
+        studentSignals[sid] = {
+          name: `${sp.student.user.firstName} ${sp.student.user.lastName}`,
+          className: sp.student.class?.name || '',
+          grades: [],
+          lateCount: 0,
+          missingCount: 0,
+          subject: sp.subject || '',
+        }
+      }
+      if (sp.progress != null) studentSignals[sid].grades.push(sp.progress)
+    }
+    for (const s of submissions) {
+      const sub = s as any
+      const sid = sub.studentId
+      if (!studentSignals[sid]) {
+        studentSignals[sid] = {
+          name: `${sub.student.user.firstName} ${sub.student.user.lastName}`,
+          className: sub.student.class?.name || '',
+          grades: [],
+          lateCount: 0,
+          missingCount: 0,
+          subject: sub.assignment?.subject || '',
+        }
+      }
+      if (sub.grade != null) studentSignals[sid].grades.push(sub.grade)
+      const isLate = sub.submittedAt && sub.assignment?.dueDate && new Date(sub.submittedAt) > new Date(sub.assignment.dueDate)
+      if (isLate) studentSignals[sid].lateCount++
+    }
+
+    const atRiskStudents = Object.entries(studentSignals)
+      .map(([sid, sig]) => {
+        const avgGrade = sig.grades.length > 0 ? sig.grades.reduce((a, b) => a + b, 0) / sig.grades.length : 0
+        const riskScore = (avgGrade < 50 ? 3 : avgGrade < 65 ? 2 : 0) + (sig.lateCount >= 3 ? 2 : sig.lateCount >= 2 ? 1 : 0)
+        return { sid, ...sig, avgGrade, riskScore }
+      })
+      .filter(s => s.riskScore >= 3 && s.grades.length > 0)
+      .sort((a, b) => b.riskScore - a.riskScore)
+
+    if (atRiskStudents.length > 0) {
+      insights.push({
+        type: 'at_risk_students',
+        priority: 'high',
+        title: `${atRiskStudents.length} Student${atRiskStudents.length !== 1 ? 's' : ''} At Risk`,
+        message: `${atRiskStudents.length} student${atRiskStudents.length !== 1 ? 's show' : ' shows'} multiple risk signals (low grades + late submissions).`,
+        recommendation: 'Schedule one-on-one check-ins and consider differentiated instruction for these students.',
+        students: atRiskStudents.slice(0, 8).map(s => ({
+          name: s.name,
+          className: s.className,
+          avgGrade: Math.round(s.avgGrade),
+          lateCount: s.lateCount,
+          subject: s.subject,
+        })),
+        createdAt: new Date(),
+      })
+    }
+
+    // 5. Differentiated Instruction Suggestions
+    const classGroups: Record<string, { high: string[]; mid: string[]; low: string[] }> = {}
+    for (const [sid, sig] of Object.entries(studentSignals)) {
+      const cls = sig.className || 'Unknown'
+      if (!classGroups[cls]) classGroups[cls] = { high: [], mid: [], low: [] }
+      const avg = sig.grades.length > 0 ? sig.grades.reduce((a, b) => a + b, 0) / sig.grades.length : 0
+      if (avg >= 75) classGroups[cls].high.push(sig.name)
+      else if (avg >= 50) classGroups[cls].mid.push(sig.name)
+      else classGroups[cls].low.push(sig.name)
+    }
+
+    for (const [cls, groups] of Object.entries(classGroups)) {
+      const total = groups.high.length + groups.mid.length + groups.low.length
+      if (total < 5) continue
+      const lowPct = Math.round((groups.low.length / total) * 100)
+      if (lowPct > 30) {
+        insights.push({
+          type: 'differentiated_instruction',
+          priority: 'medium',
+          title: `Differentiation Needed in ${cls}`,
+          message: `${lowPct}% of students in ${cls} are performing below 50%. Consider tiered instruction.`,
+          recommendation: `Group students by ability: ${groups.low.length} students need scaffolded support, ${groups.mid.length} need standard instruction, ${groups.high.length} need extension activities.`,
+          createdAt: new Date(),
+        })
+      }
+    }
+
+    // 6. Class-Level Performance Summary
+    for (const [cls, groups] of Object.entries(classGroups)) {
+      const total = groups.high.length + groups.mid.length + groups.low.length
+      if (total === 0) continue
+      const avgMastery = Math.round(((groups.high.length * 85) + (groups.mid.length * 62) + (groups.low.length * 35)) / total)
+      insights.push({
+        type: 'class_summary',
+        priority: 'low',
+        title: `${cls} Performance Distribution`,
+        message: `${groups.high.length} high, ${groups.mid.length} medium, ${groups.low.length} low performers. Estimated class mastery: ${avgMastery}%.`,
+        recommendation: avgMastery < 50 ? 'Consider re-teaching key concepts with varied approaches.' : 'Maintain current pace with targeted support for struggling students.',
+        createdAt: new Date(),
+      })
+    }
+
     // Combine all insights
     insights.push(...studentPerformance, ...assignmentInsights, ...submissionInsights)
 
@@ -200,7 +304,8 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
       lowPriority: insights.filter(i => i.priority === 'low').length,
       performanceInsights: studentPerformance.length,
       assignmentInsights: assignmentInsights.length,
-      submissionInsights: submissionInsights.length
+      submissionInsights: submissionInsights.length,
+      atRiskStudents: atRiskStudents.length,
     }
 
     return NextResponse.json({

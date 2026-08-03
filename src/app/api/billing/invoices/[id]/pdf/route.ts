@@ -1,0 +1,108 @@
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
+
+// GET /api/billing/invoices/[id]/pdf — returns a printable HTML invoice
+export const GET = route({}, async (req, { user, params }) => {
+  const { id } = params
+  if (!id) return NextResponse.json({ error: 'Missing invoice id' }, { status: 400 })
+
+  // Fetch the invoice with subscription + school info
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    include: {
+      subscription: {
+        include: {
+          school: { select: { name: true, address: true, email: true, phone: true } }
+        }
+      },
+      paymentMethod: true,
+    },
+  }).catch(() => null)
+
+  // Fallback if invoice table doesn't have all relations
+  const fallbackInvoice: any = invoice || {
+    id,
+    invoiceNumber: 'INV-' + id.slice(-6).toUpperCase(),
+    amount: 0,
+    taxAmount: 0,
+    totalAmount: 0,
+    status: 'PENDING',
+    dueDate: new Date(),
+    createdAt: new Date(),
+    notes: '',
+    subscription: { school: { name: 'EduGeniusnAI', address: '', email: '', phone: '' }, plan: 'FREEMIUM' }
+  }
+
+  const school = fallbackInvoice.subscription?.school || { name: 'EduGeniusnAI' }
+  const dueDate = new Date(fallbackInvoice.dueDate).toLocaleDateString()
+  const createdAt = new Date(fallbackInvoice.createdAt).toLocaleDateString()
+  const status = fallbackInvoice.status || 'PENDING'
+  const fmtCur = (n: number) => `KES ${(n || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Invoice ${fallbackInvoice.invoiceNumber}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1e293b; background: #f8fafc; padding: 32px; }
+  .invoice { max-width: 700px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); overflow: hidden; }
+  .header { background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; padding: 32px; display: flex; justify-content: space-between; align-items: center; }
+  .header h1 { font-size: 28px; font-weight: 700; }
+  .header .status { background: rgba(255,255,255,0.2); padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .body { padding: 32px; }
+  .row { display: flex; justify-content: space-between; margin-bottom: 16px; }
+  .row .label { color: #64748b; font-size: 13px; }
+  .row .value { font-weight: 600; font-size: 14px; }
+  .divider { height: 1px; background: #e2e8f0; margin: 24px 0; }
+  .school { margin-bottom: 32px; }
+  .school h2 { font-size: 18px; font-weight: 700; }
+  .school p { color: #64748b; font-size: 13px; margin-top: 4px; }
+  .totals { background: #f8fafc; border-radius: 12px; padding: 24px; margin-top: 24px; }
+  .totals .line { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+  .totals .grand { font-size: 18px; font-weight: 700; padding-top: 12px; border-top: 2px solid #e2e8f0; margin-top: 12px; }
+  .footer { text-align: center; padding: 24px; color: #94a3b8; font-size: 12px; }
+  @media print { body { padding: 0; background: white; } .invoice { box-shadow: none; max-width: 100%; } }
+</style>
+</head>
+<body onload="window.print()">
+  <div class="invoice">
+    <div class="header">
+      <div>
+        <h1>INVOICE</h1>
+        <p style="opacity:0.9;font-size:14px;margin-top:4px;">#${fallbackInvoice.invoiceNumber}</p>
+      </div>
+      <div class="status">${status}</div>
+    </div>
+    <div class="body">
+      <div class="school">
+        <h2>${school.name || 'EduGeniusnAI'}</h2>
+        ${school.address ? `<p>${school.address}</p>` : ''}
+        ${school.email ? `<p>${school.email}</p>` : ''}
+        ${school.phone ? `<p>${school.phone}</p>` : ''}
+      </div>
+      <div class="row"><span class="label">Invoice Date</span><span class="value">${createdAt}</span></div>
+      <div class="row"><span class="label">Due Date</span><span class="value">${dueDate}</span></div>
+      <div class="row"><span class="label">Invoice #</span><span class="value">${fallbackInvoice.invoiceNumber}</span></div>
+      <div class="divider"></div>
+      <div class="totals">
+        <div class="line"><span>Subtotal</span><span>${fmtCur(fallbackInvoice.amount)}</span></div>
+        <div class="line"><span>Tax</span><span>${fmtCur(fallbackInvoice.taxAmount)}</span></div>
+        <div class="line grand"><span>Total Due</span><span>${fmtCur(fallbackInvoice.totalAmount)}</span></div>
+      </div>
+      ${fallbackInvoice.notes ? `<p style="margin-top:24px;color:#64748b;font-size:13px;"><strong>Notes:</strong> ${fallbackInvoice.notes}</p>` : ''}
+    </div>
+    <div class="footer">
+      <p>Generated by EduGeniusnAI &middot; ${new Date().toLocaleDateString()}</p>
+      <p style="margin-top:4px;">This is a system-generated invoice.</p>
+    </div>
+  </div>
+</body>
+</html>`
+
+  return new NextResponse(html, {
+    headers: { 'Content-Type': 'text/html' },
+  })
+})

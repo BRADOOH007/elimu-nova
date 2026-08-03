@@ -33,11 +33,14 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req) => {
   })
 })
 
-export async function PATCH(req: Request) {
+export const PATCH = route({ auth: 'SUPER_ADMIN' }, async (req) => {
   const { ids, isRead } = await req.json()
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: 'ids array required' }, { status: 400 })
+  }
   await prisma.contactMessage.updateMany({
     where: { id: { in: ids } },
-    data: { isRead },
+    data: { isRead: !!isRead },
   })
   return NextResponse.json({ success: true })
-}
+})

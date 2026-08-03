@@ -31,12 +31,29 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (request) => {
 
   const result = await stkPush(normalizedPhone, amount, ref, 'Subscription Payment')
 
-  // Store the pending transaction
+  // Store the pending transaction — resolve the real subscription: explicit id
+  // wins, otherwise the most recent subscription for the school.
   if (subscriptionId || schoolId) {
-    await (prisma as any).subscription.update({
-      where: subscriptionId ? { id: subscriptionId } : { id: schoolId },
-      data: { transactionId: result.CheckoutRequestID, notes: `MPESA_STK:${result.CheckoutRequestID}` },
-    }).catch(() => {})
+    try {
+      let sub = null
+      if (subscriptionId) {
+        sub = await (prisma as any).subscription.findUnique({ where: { id: subscriptionId } })
+      }
+      if (!sub && schoolId) {
+        sub = await (prisma as any).subscription.findFirst({
+          where: { schoolId },
+          orderBy: { createdAt: 'desc' },
+        })
+      }
+      if (sub) {
+        await (prisma as any).subscription.update({
+          where: { id: sub.id },
+          data: { transactionId: result.CheckoutRequestID, notes: `MPESA_STK:${result.CheckoutRequestID}` },
+        })
+      }
+    } catch (e) {
+      log.warn('Failed to store pending M-Pesa transaction', e instanceof Error ? { error: e.message } : {})
+    }
   }
 
   return NextResponse.json({

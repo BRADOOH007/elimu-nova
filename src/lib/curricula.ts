@@ -53,18 +53,6 @@ export const CURRICULA: Curriculum[] = [
     ],
     grades: ['Form 1', 'Form 2', 'Form 3', 'Form 4'],
   },
-  {
-    id: 'kcse',
-    name: 'KCSE',
-    country: 'KE',
-    subjects: [
-      'Mathematics', 'English', 'Kiswahili', 'Biology', 'Chemistry',
-      'Physics', 'History', 'Geography', 'Religious Education',
-      'Agriculture', 'Business Studies', 'Computer Studies',
-      'Music', 'Art & Craft', 'Physical Education',
-    ],
-    grades: ['Form 1', 'Form 2', 'Form 3', 'Form 4'],
-  },
 
   // ── United Kingdom ──
   {

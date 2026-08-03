@@ -16,9 +16,9 @@ export const POST = route({}, async (request, { user }) => {
     }
 
     // Validate curriculum
-    if (!['CBC', 'IGCSE', 'KCSE'].includes(curriculum)) {
+    if (!['CBC', 'IGCSE'].includes(curriculum)) {
       return NextResponse.json(
-        { error: 'Invalid curriculum. Must be CBC, IGCSE, or KCSE' },
+        { error: 'Invalid curriculum. Must be CBC or IGCSE' },
         { status: 400 }
       )
     }

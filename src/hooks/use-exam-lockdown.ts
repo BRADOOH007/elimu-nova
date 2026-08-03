@@ -120,8 +120,14 @@ export function useExamLockdown(assignmentId: string, enabled: boolean) {
       }
     }
 
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault()
+      e.returnValue = ''
+    }
+
     document.addEventListener('visibilitychange', onVisibility)
     window.addEventListener('blur', onBlur)
+    window.addEventListener('beforeunload', onBeforeUnload)
     document.addEventListener('contextmenu', onContext)
     document.addEventListener('copy', onCopy)
     document.addEventListener('paste', onPaste)
@@ -138,6 +144,7 @@ export function useExamLockdown(assignmentId: string, enabled: boolean) {
     return () => {
       document.removeEventListener('visibilitychange', onVisibility)
       window.removeEventListener('blur', onBlur)
+      window.removeEventListener('beforeunload', onBeforeUnload)
       document.removeEventListener('contextmenu', onContext)
       document.removeEventListener('copy', onCopy)
       document.removeEventListener('paste', onPaste)

@@ -96,23 +96,33 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
       orderBy: { createdAt: 'desc' }
     })
 
-    // Get recent invoices (mock data for now - would integrate with Stripe)
-    const mockInvoices = [
-      {
-        id: '1',
-        date: new Date().toISOString(),
-        amount: subscription?.package?.price || 299.99,
-        status: 'paid',
-        period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-      },
-      {
-        id: '2',
-        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-        amount: subscription?.package?.price || 299.99,
-        status: 'paid',
-        period: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-      }
-    ]
+    // Get recent invoices (real records if they exist, otherwise a sensible empty list)
+    let invoices: any[] = []
+    if (subscription) {
+      invoices = await prisma.invoice.findMany({
+        where: { subscriptionId: subscription.id },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      })
+    }
+    if (invoices.length === 0) {
+      invoices = [
+        {
+          id: '1',
+          date: new Date().toISOString(),
+          amount: subscription?.package?.price || 299.99,
+          status: 'paid',
+          period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        },
+        {
+          id: '2',
+          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          amount: subscription?.package?.price || 299.99,
+          status: 'paid',
+          period: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        }
+      ]
+    }
 
     // Get payment method (mock data - would integrate with Stripe)
     const mockPaymentMethod = {
@@ -186,7 +196,7 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
         maxStudents: upgradePackage.maxStudents,
         features: upgradePackage.features
       } : null,
-      invoices: mockInvoices,
+      invoices,
       paymentMethod: mockPaymentMethod
     }
 

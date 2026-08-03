@@ -39,12 +39,19 @@ function masteryLabel(score: number): string {
 export default function ProgressPage() {
   const [data, setData] = useState<ProgressPageData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     fetch("/api/student/progress-page")
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Failed to load progress' }))
+          throw new Error(err.error || `HTTP ${res.status}`)
+        }
+        return res.json()
+      })
       .then(setData)
-      .catch(console.error)
+      .catch(e => setError(e.message || 'Failed to load progress data'))
       .finally(() => setLoading(false))
   }, [])
 
@@ -52,6 +59,18 @@ export default function ProgressPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center space-y-3">
+          <p className="text-red-500 font-medium">Something went wrong</p>
+          <p className="text-gray-400 text-sm">{error}</p>
+          <button onClick={() => window.location.reload()} className="text-sm text-blue-600 hover:underline">Try again</button>
+        </div>
       </div>
     )
   }

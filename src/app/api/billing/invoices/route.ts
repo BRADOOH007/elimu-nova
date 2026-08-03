@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { resolveSubscription } from '@/lib/payment-notifications'
 
 export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
-  const subscription = await prisma.subscription.findFirst({
+  // School admins subscribe at the school level — resolve by school first,
+  // fall back to the user's own subscription for independent admins.
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
     where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
+    select: { schoolId: true },
   })
+
+  const subscription = await resolveSubscription(schoolAdmin?.schoolId, user.id)
 
   if (!subscription) {
     return NextResponse.json({ invoices: [] })

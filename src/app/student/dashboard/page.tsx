@@ -18,6 +18,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import ChatContainer from "@/components/chat/chat-container"
 import RecentStudySessions from "@/components/student/recent-study-sessions"
 import AITutorHistory from "@/components/student/ai-tutor-history"
+import { AIUsageCard } from "@/components/ai-usage-card"
 import StudentGreeting from "@/components/student/greeting"
 import StudentSummaryStats from "@/components/student/summary-stats"
 import CurriculumAccordion from "@/components/student/curriculum-accordion"
@@ -29,6 +30,10 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import { Bell, Code2, ChevronRight, GraduationCap, Brain, ClipboardList } from "lucide-react"
 import { grades1to9CurriculumByTerm, type GradeLevel, type LearningAreaData } from "@/data/grades1-9CurriculumByTerm"
+
+interface SubStrand { name: string; learningOutcomes?: string[]; activities?: string[] }
+interface Strand { name: string; subStrands: SubStrand[] }
+interface LearningArea { name: string; strands: Strand[] }
 
 interface SkillMasteryItem {
   skillName: string; skillCategory: string; masteryScore: number; timesCorrect: number; timesTested: number
@@ -86,6 +91,9 @@ export default function StudentDashboard() {
   const termCurriculum = grades1to9CurriculumByTerm.find(t => t.term === currentTerm && t.grade === studentGrade)
   const learningAreas: LearningAreaData[] = termCurriculum?.learningAreas || []
 
+  // DB curriculum state — fetched from API, falls back to hardcoded
+  const [dbCurriculum, setDbCurriculum] = useState<LearningArea[] | null>(null)
+
   // Inject "Coding & Programming" as a learning area available to all grades
   const codingLearningArea: LearningAreaData = {
     name: "Coding & Programming",
@@ -128,7 +136,34 @@ export default function StudentDashboard() {
       },
     ]
   }
-  const allLearningAreas = [...learningAreas, codingLearningArea]
+  const allLearningAreas: LearningArea[] = dbCurriculum || [...learningAreas, codingLearningArea]
+
+  // Fetch curriculum from DB on mount — falls back to hardcoded data
+  useEffect(() => {
+    if (!studentGrade || studentGrade === 'Grade 10' || studentGrade === 'Grade 11' || studentGrade === 'Grade 12') return
+    const subjects = ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'CRE']
+    Promise.all(subjects.map(subject =>
+      fetch('/api/curriculum/auto-populate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ grade: studentGrade, subject, term: currentTerm }),
+      }).then(r => r.ok ? r.json() : null).catch(() => null)
+    )).then(results => {
+      const areas: LearningArea[] = []
+      results.forEach((data, i) => {
+        if (data?.topics?.length > 0) {
+          areas.push({
+            name: subjects[i],
+            strands: data.topics.map((t: any) => ({
+              name: t.strandName,
+              subStrands: t.substrands?.map((s: any) => ({ name: s.name, learningOutcomes: s.learningOutcomes, activities: s.activities })) || [],
+            })),
+          })
+        }
+      })
+      if (areas.length > 0) setDbCurriculum([...areas, codingLearningArea as any])
+    }).catch(() => {})
+  }, [studentGrade, currentTerm])
 
   useEffect(() => {
     fetchDashboardData()
@@ -161,7 +196,7 @@ export default function StudentDashboard() {
 
   const markAllRead = async () => {
     try {
-      await fetch('/api/notifications/read-all', { method: 'POST' })
+      await fetch('/api/notifications/mark-all-read', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: session?.user?.id }) })
       setNotifications([])
       setDashboardData(prev => prev ? { ...prev, unreadNotificationCount: 0 } : prev)
     } catch (e) { console.error('Failed to mark all as read:', e) }
@@ -227,7 +262,7 @@ export default function StudentDashboard() {
                 <StudentGreeting
                   displayName={displayName || dashboardData?.student.name || session?.user?.name || "Student"}
                   onChatClick={() => setShowAIChat(true)}
-                  onRefreshInsights={() => {}}
+                  onRefreshInsights={fetchDashboardData}
                 />
                 <div ref={notifRef} className="absolute top-3 right-3">
                   <button onClick={() => setShowNotifs(v => !v)}
@@ -318,6 +353,7 @@ export default function StudentDashboard() {
                 activeAssignments={dashboardData?.stats.activeAssignments || 0}
               />
               <StudyGoalTracker />
+              <AIUsageCard />
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <AssignmentsList assignments={dashboardData?.assignments || []} />
                 <UpcomingLessons lessons={dashboardData?.upcomingLessons || []} />

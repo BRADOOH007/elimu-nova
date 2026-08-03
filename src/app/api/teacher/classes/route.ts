@@ -22,11 +22,14 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
     prisma.class.count({ where: { teacherId: teacher.id } }),
   ])
 
-  return NextResponse.json(paginate(
+  const result = paginate(
     classes.map(c => ({ id: c.id, name: c.name, subject: c.subject, grade: c.grade, description: c.description, isActive: c.isActive, createdAt: c.createdAt, studentCount: c._count.students })),
     total,
     pg,
-  ))
+  )
+
+  // Legacy alias so older consumers reading `.classes` keep working
+  return NextResponse.json({ ...result, classes: result.data })
 })
 
 export const POST = route({ auth: 'TEACHER', schema: CreateClassSchema }, async (req, { user, body }) => {

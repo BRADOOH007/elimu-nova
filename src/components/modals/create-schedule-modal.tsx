@@ -23,6 +23,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, Plus, Calendar, Clock, MapPin, BookOpen } from "lucide-react"
 
+const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE','Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies','Computer Studies','Home Science','Art & Design']
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+
 interface CreateScheduleModalProps {
   isOpen: boolean
   onClose: () => void
@@ -234,24 +237,28 @@ export default function CreateScheduleModal({ isOpen, onClose, onScheduleCreated
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="subject">Subject</Label>
-              <Input
+              <select
                 id="subject"
-                placeholder="e.g., Mathematics"
                 value={formData.subject}
                 onChange={(e) => handleInputChange('subject', e.target.value)}
-                className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-blue-500"
-              />
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select subject</option>
+                {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="grade">Grade</Label>
-              <Input
+              <select
                 id="grade"
-                placeholder="e.g., Grade 7"
                 value={formData.grade}
                 onChange={(e) => handleInputChange('grade', e.target.value)}
-                className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-blue-500"
-              />
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select grade</option>
+                {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
             </div>
           </div>
 

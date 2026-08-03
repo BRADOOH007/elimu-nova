@@ -26,6 +26,7 @@ export default function SchoolAdminLayout({ children }: { children: React.ReactN
     { icon: School,     label: 'Students',  href: '/school-admin/students',  tourId: 'admin-students'  },
     { icon: BookOpen,      label: 'Courses',     href: '/school-admin/courses',    tourId: 'admin-courses'     },
     { icon: ClipboardList, label: 'Curriculum',  href: '/school-admin/curriculum', tourId: 'admin-curriculum'  },
+    { icon: Calendar,      label: 'Calendar',   href: '/school-admin/academic-calendar', tourId: 'admin-calendar'   },
     { icon: Calendar,      label: 'Timetable',   href: '/school-admin/timetable', tourId: 'admin-timetable'   },
     { icon: Activity,      label: 'Activities',  href: '/school-admin/activities', tourId: 'admin-activities'  },
     { icon: FileText,      label: 'Reports',     href: '/school-admin/reports',    tourId: 'admin-reports'     },

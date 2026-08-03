@@ -81,6 +81,7 @@ export const POST = route({}, async (request, { user }) => {
         title: slide.title || `Slide ${index + 1}`,
         content: Array.isArray(slide.content) ? slide.content : [slide.content || ''],
         imagePrompt: slide.imagePrompt || slide.visualSuggestions?.join(', '),
+        imageUrl: slide.image || slide.imageUrl || undefined,
         layout: slide.layout === 'image' ? 'image' as const :
                 slide.layout === 'split' ? 'split' as const :
                 'content' as const

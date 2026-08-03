@@ -20,6 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE','Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies','Computer Studies','Home Science','Art & Design']
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+
 import {
   Plus,
   Trash2,
@@ -207,19 +210,25 @@ export default function SchemeOfWorkModal({
                   </div>
                   <div>
                     <label className="text-sm font-medium">Subject</label>
-                    <Input
+                    <select
                       value={formData.subject}
                       onChange={(e) => handleInputChange('subject', e.target.value)}
-                      placeholder="e.g., Mathematics, English"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select subject</option>
+                      {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Grade Level</label>
-                    <Input
+                    <select
                       value={formData.grade}
                       onChange={(e) => handleInputChange('grade', e.target.value)}
-                      placeholder="e.g., Grade 7, Form 2"
-                    />
+                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select grade</option>
+                      {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="text-sm font-medium">Term</label>

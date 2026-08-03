@@ -150,6 +150,33 @@ Use local examples. Each activity should have clear timing and instructions.`
     // Save to DB linked to scheme
     const title = lessonData.title || `${subject} - ${row.subStrand} - Week ${row.week} Lesson ${row.lesson}`
 
+    // ── Dedup: never create duplicates for the same scheme row ──
+    // A lesson plan for this scheme + week + lesson already exists? Return it.
+    if (schemeId) {
+      const existingForRow = await prisma.lessonPlan.findFirst({
+        where: {
+          teacherId: teacher.id,
+          schemeOfWorkId: schemeId,
+          title: { contains: row.subStrand || subject },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { id: true, title: true, subject: true, grade: true },
+      })
+
+      if (existingForRow) {
+        // Also verify content matches to avoid dupes from double-click
+        return NextResponse.json({
+          lessonPlan: {
+            id:      existingForRow.id,
+            title:   existingForRow.title,
+            subject: existingForRow.subject,
+            grade:   existingForRow.grade,
+            existing: true,
+          },
+        })
+      }
+    }
+
     const lessonPlan = await prisma.lessonPlan.create({
       data: {
         title,

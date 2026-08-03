@@ -344,11 +344,11 @@ export default function AnalyticsPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="w-full overflow-x-auto flex">
-            <TabsTrigger value="students" className="shrink-0">Student Progress</TabsTrigger>
-            <TabsTrigger value="assignments" className="shrink-0">Assignments</TabsTrigger>
-            <TabsTrigger value="activity" className="shrink-0">Recent Activity</TabsTrigger>
-            <TabsTrigger value="insights" className="shrink-0">AI Insights</TabsTrigger>
+          <TabsList className="w-full overflow-x-auto flex gap-2 bg-slate-100/80 p-1.5 rounded-xl h-12 border-0">
+            <TabsTrigger value="students" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">Student Progress</TabsTrigger>
+            <TabsTrigger value="assignments" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">Assignments</TabsTrigger>
+            <TabsTrigger value="activity" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">Recent Activity</TabsTrigger>
+            <TabsTrigger value="insights" className="shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-lg bg-white/60 data-[state=active]:bg-white data-[state=active]:shadow-sm">AI Insights</TabsTrigger>
           </TabsList>
 
           <TabsContent value="students">

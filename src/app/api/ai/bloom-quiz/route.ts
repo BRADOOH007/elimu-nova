@@ -8,19 +8,26 @@ import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 
 export const POST = route({}, async (request, { user }) => {
-    const { subject, grade, strand, subStrand, topic, concepts = [] } = await request.json()
+    const { subject, grade, strand, subStrand, topic, concepts = [], numQuestions = 6 } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
     const conceptsStr = concepts.length > 0 ? concepts.join(', ') : topic || `${strand} — ${subStrand}`
+    const numQ = Math.max(3, Math.min(12, Number(numQuestions) || 6))
+
+    // Determine level distribution based on numQuestions
+    const levels = ['REMEMBER', 'UNDERSTAND', 'APPLY', 'ANALYZE', 'EVALUATE', 'CREATE']
+    const levelInstructions = numQ <= 6
+      ? 'Generate exactly 6 questions — one per Bloom\'s level.'
+      : `Generate ${numQ} questions — at least one per Bloom's level, with extra questions distributed across APPLY, ANALYZE, and CREATE levels.`
 
     const prompt = `You are an expert CBC curriculum assessment designer for Kenyan schools.
-Generate 6 questions — one per Bloom's Taxonomy level — based on this content:
+${levelInstructions} Base them on this content:
 
 Subject: ${subject} | Grade: ${grade}
 Strand: ${strand || 'N/A'} | Sub-Strand: ${subStrand || topic || 'N/A'}
 Key Concepts: ${conceptsStr}
 
-Return ONLY a valid JSON array of 6 objects:
+Return ONLY a valid JSON array of ${numQ} objects:
 [
   {
     "level": "REMEMBER",
@@ -40,43 +47,6 @@ Return ONLY a valid JSON array of 6 objects:
     "type": "open_ended",
     "model_answer": "...",
     "explanation": "..."
-  },
-  {
-    "level": "APPLY",
-    "levelNumber": 3,
-    "cognitive_skill": "Use information in new situations",
-    "question": "...",
-    "type": "multiple_choice",
-    "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
-    "correct_answer": 1,
-    "explanation": "..."
-  },
-  {
-    "level": "ANALYZE",
-    "levelNumber": 4,
-    "cognitive_skill": "Draw connections among ideas",
-    "question": "...",
-    "type": "open_ended",
-    "model_answer": "...",
-    "explanation": "..."
-  },
-  {
-    "level": "EVALUATE",
-    "levelNumber": 5,
-    "cognitive_skill": "Justify a decision or course of action",
-    "question": "...",
-    "type": "open_ended",
-    "model_answer": "...",
-    "explanation": "..."
-  },
-  {
-    "level": "CREATE",
-    "levelNumber": 6,
-    "cognitive_skill": "Produce new or original work",
-    "question": "...",
-    "type": "open_ended",
-    "model_answer": "...",
-    "explanation": "..."
   }
 ]
 
@@ -86,12 +56,14 @@ Rules:
 - Questions must be based ONLY on the provided content
 - Multiple choice options must be plausible, not obviously wrong
 - Model answers should be 2-4 sentences
-- correct_answer is 0-indexed (0=A, 1=B, 2=C, 3=D)`
+- correct_answer is 0-indexed (0=A, 1=B, 2=C, 3=D)
+- For questions beyond the initial 6, vary the cognitive_skill name (e.g. "Compare and contrast", "Design an experiment", "Critique a method") while keeping the same Bloom's level`
+
 
     const raw = await OpenAIService.generateText([
       { role: 'system', content: 'You are a CBC curriculum expert. Return ONLY valid JSON array, no markdown, no LaTeX, no TeX commands.' },
       { role: 'user', content: prompt },
-    ], { maxTokens: 2000, temperature: 0.6 })
+    ], { maxTokens: Math.min(4000, 2000 + numQ * 200), temperature: 0.6 })
 
     const start = raw.indexOf('['); const end = raw.lastIndexOf(']')
     if (start === -1 || end <= start) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })

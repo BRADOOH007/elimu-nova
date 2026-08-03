@@ -3,7 +3,8 @@
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Pen, Eraser, RotateCcw, Download, Loader2, ImageIcon, Sparkles, Search, ExternalLink } from 'lucide-react'
+import { Pen, Eraser, RotateCcw, Download, Loader2, ImageIcon, Sparkles, Search } from 'lucide-react'
+import StockImagePicker from '@/components/ai/stock-image-picker'
 
 type Tool = 'pen' | 'eraser'
 
@@ -17,6 +18,7 @@ export function AIWhiteboard() {
   const [generating, setGenerating] = useState(false)
   const [aiDiagram, setAiDiagram] = useState<string | null>(null)
   const [isPlaceholder, setIsPlaceholder] = useState(false)
+  const [stockOpen, setStockOpen] = useState(false)
   const lastPos = useRef<{ x: number; y: number } | null>(null)
 
   const getPos = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -59,13 +61,17 @@ export function AIWhiteboard() {
     setAiDiagram(null)
   }
 
-  const searchUrl = (q: string) => {
-    const encoded = encodeURIComponent(q)
-    return {
-      google: `https://www.google.com/search?tbm=isch&q=${encoded}`,
-      pinterest: `https://www.pinterest.com/search/pins/?q=${encoded}`,
-      unsplash: `https://unsplash.com/s/photos/${encoded}`,
+  const drawImageToCanvas = (url: string) => {
+    const img = new window.Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      const canvas = canvasRef.current
+      if (!canvas) return
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
     }
+    img.src = url
   }
 
   const generateDiagram = async () => {
@@ -88,16 +94,7 @@ export function AIWhiteboard() {
           setIsPlaceholder(placeholder)
           setAiDiagram(data.imageUrl)
           if (!placeholder) {
-            const img = new window.Image()
-            img.crossOrigin = 'anonymous'
-            img.onload = () => {
-              const canvas = canvasRef.current
-              if (!canvas) return
-              const ctx = canvas.getContext('2d')
-              if (!ctx) return
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-            }
-            img.src = data.imageUrl
+            drawImageToCanvas(data.imageUrl)
           }
         }
       }
@@ -174,26 +171,30 @@ export function AIWhiteboard() {
           {isPlaceholder && (
             <div className="mt-3 pt-3 border-t border-teal-200">
               <p className="text-xs font-semibold text-teal-700 mb-2 flex items-center gap-1.5">
-                <Search className="h-3.5 w-3.5" /> AI generation unavailable — find real images below:
+                <Search className="h-3.5 w-3.5" /> AI generation unavailable — find real images instead:
               </p>
-              <div className="flex gap-2 flex-wrap">
-                {Object.entries(searchUrl(diagramPrompt)).map(([name, url]) => (
-                  <a key={name} href={url} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all hover:shadow-md"
-                    style={{
-                      backgroundColor: name === 'google' ? '#e8f0fe' : name === 'pinterest' ? '#fce4ec' : '#e0f2f1',
-                      color: name === 'google' ? '#1a73e8' : name === 'pinterest' ? '#c2185b' : '#00796b',
-                    }}
-                  >
-                    <ExternalLink className="h-3 w-3" />
-                    {name === 'google' ? 'Google Images' : name === 'pinterest' ? 'Pinterest' : 'Unsplash'}
-                  </a>
-                ))}
-              </div>
+              <button
+                onClick={() => setStockOpen(true)}
+                className="w-full px-3 py-2 text-xs font-semibold text-rose-600 border border-rose-200 rounded-xl hover:bg-rose-50 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Search className="h-3.5 w-3.5" />
+                Search Real Images
+              </button>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <StockImagePicker
+        open={stockOpen}
+        onClose={() => setStockOpen(false)}
+        initialQuery={diagramPrompt}
+        onSelect={(url) => {
+          setAiDiagram(url)
+          setIsPlaceholder(false)
+          drawImageToCanvas(url)
+        }}
+      />
     </div>
   )
 }

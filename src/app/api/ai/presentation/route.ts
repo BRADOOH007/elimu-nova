@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 import PptxGenJS from 'pptxgenjs'
-import { writeFile, mkdir } from 'fs/promises'
+import { writeFile, mkdir, readFile } from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
 import { z } from 'zod'
@@ -254,6 +254,19 @@ async function buildPresentationPPTX(params: {
   const { title, slides, presentationId } = params
 
   try {
+    // Resolve every slide image to an embeddable data URI up front
+    const resolvedImages = await Promise.all(
+      slides.map(async slide => {
+        if (!slide.imageUrl) return null
+        try {
+          return await toEmbeddableImage(slide.imageUrl)
+        } catch (e) {
+          console.warn(`⚠️ Could not embed image for slide "${slide.title}":`, e)
+          return null
+        }
+      })
+    )
+
     const pptx = new PptxGenJS()
 
     // Set presentation properties
@@ -320,19 +333,48 @@ async function buildPresentationPPTX(params: {
             valign: 'top'
           })
 
-          // Add image placeholder (since we can't easily load external images in PptxGenJS)
-          slide.addText('[AI Generated Image]', {
-            x: 5.5,
-            y: 1.8,
-            w: 4,
-            h: 4,
-            fontSize: 14,
-            color: accentColor,
-            align: 'center',
-            valign: 'middle',
-            border: { type: 'solid', color: accentColor, pt: 2 },
-            margin: 0
-          } as any)
+          // Add image (real image embedded; fall back to placeholder)
+          const embeddable = resolvedImages[index]
+          if (embeddable) {
+            try {
+              slide.addImage({
+                data: embeddable,
+                x: 5.5,
+                y: 1.8,
+                w: 4,
+                h: 4,
+                rounding: true,
+                sizing: { type: 'contain', w: 4, h: 4 },
+              } as any)
+            } catch (imgError) {
+              console.warn(`⚠️ addImage failed for slide ${index + 1}:`, imgError)
+              slide.addText('[AI Generated Image]', {
+                x: 5.5,
+                y: 1.8,
+                w: 4,
+                h: 4,
+                fontSize: 14,
+                color: accentColor,
+                align: 'center',
+                valign: 'middle',
+                border: { type: 'solid', color: accentColor, pt: 2 },
+                margin: 0
+              } as any)
+            }
+          } else {
+            slide.addText('[AI Generated Image]', {
+              x: 5.5,
+              y: 1.8,
+              w: 4,
+              h: 4,
+              fontSize: 14,
+              color: accentColor,
+              align: 'center',
+              valign: 'middle',
+              border: { type: 'solid', color: accentColor, pt: 2 },
+              margin: 0
+            } as any)
+          }
         } else {
           // Full width content
           slide.addText(bulletText, {
@@ -363,4 +405,28 @@ async function buildPresentationPPTX(params: {
     console.error('❌ Error building PPTX:', error)
     throw new Error(`Failed to build PPTX: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
+}
+
+/**
+ * Convert a slide image (data URI, local path, or remote URL) into a
+ * base64 data URI that PptxGenJS can embed into the PPTX.
+ */
+async function toEmbeddableImage(imageUrl: string): Promise<string> {
+  if (imageUrl.startsWith('data:')) return imageUrl
+
+  if (imageUrl.startsWith('/')) {
+    // Local path served from /public (e.g. /ai-images/temp/file.png)
+    const filePath = path.join(process.cwd(), 'public', imageUrl.replace(/^\//, ''))
+    const buf = await readFile(filePath)
+    const ext = path.extname(filePath).toLowerCase().slice(1)
+    const mime = ext === 'png' ? 'image/png' : ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'webp' ? 'image/webp' : 'image/png'
+    return `data:${mime};base64,${buf.toString('base64')}`
+  }
+
+  // Remote URL (Supabase public URL, Unsplash, Wikimedia, etc.)
+  const response = await fetch(imageUrl)
+  if (!response.ok) throw new Error(`Download failed: ${response.status}`)
+  const buf = Buffer.from(await response.arrayBuffer())
+  const contentType = response.headers.get('content-type') || 'image/png'
+  return `data:${contentType};base64,${buf.toString('base64')}`
 }

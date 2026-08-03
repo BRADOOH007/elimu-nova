@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { uploadFile, BUCKETS } from '@/lib/supabase'
 import { route } from '@/lib/api-middleware'
 
 export const POST = route({}, async (req, { user }) => {
@@ -54,20 +55,34 @@ export const POST = route({}, async (req, { user }) => {
 
     if (format === 'pdf') {
       const htmlContent = generateProfessionalHTML(mockSchemeOfWork, requestContent, requestContent)
+      const htmlBuffer = Buffer.from(htmlContent, 'utf-8')
+      const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      let htmlUrl = ''
+      try {
+        htmlUrl = await uploadFile(BUCKETS.SCHEMES, `${user.id}/scheme-${safeTitle}.html`, htmlBuffer, 'text/html') || ''
+      } catch { /* non-fatal */ }
 
-      return new NextResponse(htmlContent, {
+      return new NextResponse(htmlBuffer, {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
-          'Content-Disposition': `attachment; filename="${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_scheme_of_work.html`,
+          'Content-Disposition': `attachment; filename="${safeTitle}_scheme_of_work.html"`,
+          'X-Download-URL': htmlUrl,
         },
       })
     } else if (format === 'word') {
       const htmlContent = generateProfessionalWordHTML(mockSchemeOfWork, requestContent, requestContent)
+      const wordBuffer = Buffer.from(htmlContent, 'utf-8')
+      const safeTitle = title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      let wordUrl = ''
+      try {
+        wordUrl = await uploadFile(BUCKETS.SCHEMES, `${user.id}/scheme-${safeTitle}.doc`, wordBuffer, 'application/msword') || ''
+      } catch { /* non-fatal */ }
 
-      return new NextResponse(htmlContent, {
+      return new NextResponse(wordBuffer, {
         headers: {
           'Content-Type': 'application/msword; charset=utf-8',
-          'Content-Disposition': `attachment; filename="${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_scheme_of_work.doc`,
+          'Content-Disposition': `attachment; filename="${safeTitle}_scheme_of_work.doc"`,
+          'X-Download-URL': wordUrl,
         },
       })
     }
@@ -173,20 +188,34 @@ export const POST = route({}, async (req, { user }) => {
   try {
     if (format === 'pdf') {
       const htmlContent = generateProfessionalHTML(schemeWithTopics, content, rawContent)
+      const htmlBuffer = Buffer.from(htmlContent, 'utf-8')
+      const safeTitle = schemeOfWork.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      let htmlUrl = ''
+      try {
+        htmlUrl = await uploadFile(BUCKETS.SCHEMES, `${user.id}/scheme-${safeTitle}.html`, htmlBuffer, 'text/html') || ''
+      } catch { /* non-fatal */ }
 
-      return new NextResponse(htmlContent, {
+      return new NextResponse(htmlBuffer, {
         headers: {
           'Content-Type': 'text/html',
-          'Content-Disposition': `attachment; filename="${schemeOfWork.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-scheme-of-work.html"`
+          'Content-Disposition': `attachment; filename="${safeTitle}-scheme-of-work.html"`,
+          'X-Download-URL': htmlUrl,
         }
       })
     } else if (format === 'word') {
       const wordContent = generateProfessionalWordHTML(schemeWithTopics, content, rawContent)
+      const wordBuffer = Buffer.from(wordContent, 'utf-8')
+      const safeTitle = schemeOfWork.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      let wordUrl = ''
+      try {
+        wordUrl = await uploadFile(BUCKETS.SCHEMES, `${user.id}/scheme-${safeTitle}.doc`, wordBuffer, 'application/msword') || ''
+      } catch { /* non-fatal */ }
 
-      return new NextResponse(wordContent, {
+      return new NextResponse(wordBuffer, {
         headers: {
           'Content-Type': 'application/msword',
-          'Content-Disposition': `attachment; filename="${schemeOfWork.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-scheme-of-work.doc"`
+          'Content-Disposition': `attachment; filename="${safeTitle}-scheme-of-work.doc"`,
+          'X-Download-URL': wordUrl,
         }
       })
     }

@@ -12,6 +12,9 @@ import { Loader2, School, Plus, Search, Edit, Trash2, Users, BookOpen, Graduatio
 import { useToast } from "@/hooks/use-toast"
 import { confirmToast } from '@/lib/confirm-toast'
 
+const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE','Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies','Computer Studies','Home Science','Art & Design']
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+
 interface ClassRecord {
   id: string; name: string; subject: string; grade: string
   description?: string; isActive: boolean
@@ -160,8 +163,8 @@ export default function SchoolAdminClassesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div><label className="text-sm text-gray-600">Class Name</label><Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Grade 7A" /></div>
-            <div><label className="text-sm text-gray-600">Subject</label><Input value={subject} onChange={e => setSubject(e.target.value)} placeholder="e.g. Mathematics" /></div>
-            <div><label className="text-sm text-gray-600">Grade</label><Input value={grade} onChange={e => setGrade(e.target.value)} placeholder="e.g. Grade 7" /></div>
+            <div><label className="text-sm text-gray-600">Subject</label><select value={subject} onChange={e => setSubject(e.target.value)} className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select subject</option>{SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+            <div><label className="text-sm text-gray-600">Grade</label><select value={grade} onChange={e => setGrade(e.target.value)} className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select grade</option>{GRADES.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
             <div><label className="text-sm text-gray-600">Teacher (optional)</label>
               <Select value={teacherId} onValueChange={setTeacherId}>
                 <SelectTrigger><SelectValue placeholder="Select teacher" /></SelectTrigger>

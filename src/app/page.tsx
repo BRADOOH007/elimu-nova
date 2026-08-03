@@ -44,6 +44,27 @@ import { Logo } from "@/components/ui/logo";
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [roleIndex, setRoleIndex] = useState(0);
+  const [studentTestimonialIndex, setStudentTestimonialIndex] = useState(0);
+  const [teacherTestimonialIndex, setTeacherTestimonialIndex] = useState(0);
+
+  const studentTestimonials = [
+    { name: "Mercy K.", grade: "Grade 7", school: "Hopewell STEM Academy", quote: "Elimu Nova explains things in a way I actually understand. My Maths grade jumped two levels in one term — I never thought that was possible!", initial: "M" },
+    { name: "Theophilus Boaz", grade: "Grade 7", school: "Hopewell STEM Academy", quote: "The AI tutor is like having a personal teacher who never gets tired. I can ask the same question ten times and it still explains patiently!", initial: "T" },
+    { name: "Brian Githae", grade: "Grade 8", school: "Hopewell STEM Academy", quote: "I used to struggle with Science concepts, but Elimu Nova breaks them down with real examples I can relate to. My confidence has grown so much!", initial: "B" },
+    { name: "Perminus Mbugua", grade: "Grade 8", school: "Hopewell STEM Academy", quote: "The quizzes after each topic really help me know what I've understood and what I need to review. It's like having a study buddy 24/7!", initial: "P" },
+    { name: "Rita Wanjiku", grade: "Grade 7", school: "Hopewell STEM Academy", quote: "I love how the AI remembers what I've learned and connects new topics to things I already know. Learning finally makes sense!", initial: "R" },
+    { name: "Patricia Mary", grade: "Grade 7", school: "Hopewell STEM Academy", quote: "Before Elimu Nova, I was afraid to ask questions in class. Now I can ask anything privately and actually enjoy studying!", initial: "P" },
+    { name: "Shadrack Kipgogei", grade: "Grade 7", school: "Hopewell STEM Academy", quote: "The interactive lessons make studying feel like an adventure. I went from dreading homework to actually looking forward to it!", initial: "S" },
+    { name: "Peter Lukuma", grade: "Grade 8", school: "Hopewell STEM Academy", quote: "My parents can see my progress in real-time. It motivates me to keep pushing because I know they're proud of my improvement!", initial: "P" },
+  ];
+
+  const teacherTestimonials = [
+    { name: "Kairu Samuel", subject: "Science Teacher", school: "Hopewell STEM Academy", quote: "Before Elimu Nova, I spent weekends preparing lessons and marking. Now I finish everything during school hours and actually have time for my students." },
+    { name: "James Muema", subject: "Mathematics Teacher", school: "Hopewell STEM Academy", quote: "The auto-marking feature is a game-changer. I upload 40 papers and get detailed feedback for each student in minutes. It's incredible!" },
+    { name: "Md. Diana Chelagat", subject: "Integrated Science Teacher", school: "Hopewell STEM Academy", quote: "Elimu Nova helps me create differentiated lesson plans for mixed-ability classes. Every student gets content at their level — it's magical!" },
+    { name: "Ruth Muchiri", subject: "Kiswahili Teacher", school: "Hopewell STEM Academy", quote: "The AI-generated schemes of work are curriculum-aligned and save me hours of planning. I can focus on what matters — teaching!" },
+    { name: "Timothy Gachoka", subject: "Social Studies Teacher", school: "Hopewell STEM Academy", quote: "I've seen my students' engagement double since we started using Elimu Nova. The interactive lessons keep them hooked and curious!" },
+  ];
 
   const roles = [
     {
@@ -90,6 +111,18 @@ export default function Home() {
     return () => clearInterval(t);
   }, []);
 
+  // Auto-rotate student testimonials every 4 s
+  useEffect(() => {
+    const t = setInterval(() => setStudentTestimonialIndex((i) => (i + 1) % studentTestimonials.length), 4000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Auto-rotate teacher testimonials every 4.5 s
+  useEffect(() => {
+    const t = setInterval(() => setTeacherTestimonialIndex((i) => (i + 1) % teacherTestimonials.length), 4500);
+    return () => clearInterval(t);
+  }, []);
+
   const activeRole = roles[roleIndex];
 
   const chatMessages = [
@@ -102,8 +135,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white font-sans" suppressHydrationWarning>
       {/* ── NAVBAR ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <header suppressHydrationWarning className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" suppressHydrationWarning>
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2.5">
@@ -490,16 +523,16 @@ export default function Home() {
             <div className="mt-12 relative rounded-2xl overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-violet-600/20 backdrop-blur-sm" />
               <div className="absolute inset-0 border border-purple-500/20 rounded-2xl" />
-              <div className="relative flex gap-4 sm:gap-6 items-start p-6 sm:p-8">
-                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white font-extrabold flex items-center justify-center text-lg flex-shrink-0 shadow-lg">M</div>
+              <div className="relative flex gap-4 sm:gap-6 items-start p-6 sm:p-8" key={studentTestimonialIndex}>
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 text-white font-extrabold flex items-center justify-center text-lg flex-shrink-0 shadow-lg transition-all duration-500">{studentTestimonials[studentTestimonialIndex].initial}</div>
                 <div>
                   <div className="flex gap-0.5 mb-3">
                     {[...Array(5)].map((_, i) => <Star key={i} className="h-4 w-4 fill-purple-400 text-purple-400" />)}
                   </div>
-                  <p className="text-slate-200 text-base italic leading-relaxed mb-3">
-                    "Elimu Nova explains things in a way I actually understand. My Maths grade jumped two levels in one term — I never thought that was possible!"
+                  <p className="text-slate-200 text-base italic leading-relaxed mb-3 transition-opacity duration-500">
+                    "{studentTestimonials[studentTestimonialIndex].quote}"
                   </p>
-                  <p className="text-purple-300 font-semibold text-sm">Mercy K. — Grade 7 Student, Hopewell STEM Academy</p>
+                  <p className="text-purple-300 font-semibold text-sm transition-opacity duration-500">{studentTestimonials[studentTestimonialIndex].name} — {studentTestimonials[studentTestimonialIndex].grade} Student, {studentTestimonials[studentTestimonialIndex].school}</p>
                 </div>
               </div>
             </div>
@@ -528,12 +561,12 @@ export default function Home() {
                   ))}
                 </div>
 
-                <blockquote className="mt-8 border-l-2 border-purple-500 pl-5">
-                  <p className="text-slate-300 italic leading-relaxed">
-                    "Before Elimu Nova, I spent weekends preparing lessons and marking. Now I finish everything during school hours and actually have time for my students."
+                <blockquote className="mt-8 border-l-2 border-purple-500 pl-5" key={teacherTestimonialIndex}>
+                  <p className="text-slate-300 italic leading-relaxed transition-opacity duration-500">
+                    "{teacherTestimonials[teacherTestimonialIndex].quote}"
                   </p>
-                  <footer className="mt-2 text-purple-400 font-semibold text-sm">
-                    — Kairu Samuel, Science Teacher · Hopewell STEM Academy
+                  <footer className="mt-2 text-purple-400 font-semibold text-sm transition-opacity duration-500">
+                    — {teacherTestimonials[teacherTestimonialIndex].name}, {teacherTestimonials[teacherTestimonialIndex].subject} · {teacherTestimonials[teacherTestimonialIndex].school}
                   </footer>
                 </blockquote>
               </div>

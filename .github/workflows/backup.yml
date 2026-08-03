@@ -1,13 +1,18 @@
-# ──────────────────────────────────────────────────────────────────
-# Automated Database Backup — runs daily at 2 AM UTC.
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Automated Database Backup â€” runs daily at 2 AM UTC.
 # Uses pg_dump (custom format) and stores as GitHub artifact.
 # Retention: 90 days. Old artifacts auto-cleaned.
 #
-# Manual trigger: GitHub UI → Actions → Database Backup → Run workflow
+# Manual trigger: GitHub UI â†’ Actions â†’ Database Backup â†’ Run workflow
 #
-# Prerequisite: Add DATABASE_URL to GitHub repo secrets.
-#   Settings → Secrets and variables → Actions → Add DATABASE_URL
-# ──────────────────────────────────────────────────────────────────
+# Prerequisite: Add a DIRECT (non-pooler) database URL to GitHub secrets.
+#   Settings â†’ Secrets and variables â†’ Actions â†’ Add BACKUP_DATABASE_URL
+#
+# IMPORTANT: pg_dump does NOT work against the PgBouncer pooled (-pooler)
+# endpoint that the app uses. Use the direct Neon connection string
+# (same host without "-pooler"). Falls back to DATABASE_URL if
+# BACKUP_DATABASE_URL is not set.
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 name: Database Backup
 
@@ -24,16 +29,23 @@ jobs:
     name: pg_dump
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Verify database URL is configured
+        run: |
+          if [ -z "${{ secrets.BACKUP_DATABASE_URL || secrets.DATABASE_URL }}" ]; then
+            echo "::error::No database URL configured. Add BACKUP_DATABASE_URL (direct, non-pooler Neon URL) to repository secrets."
+            exit 1
+          fi
 
       - name: Run pg_dump
         run: |
           TIMESTAMP=$(date +%Y-%m-%dT%H-%M-%S)
           FILENAME="elimunova-backup-${TIMESTAMP}.sql"
-          pg_dump "${{ secrets.DATABASE_URL }}" \
+          pg_dump "${{ secrets.BACKUP_DATABASE_URL || secrets.DATABASE_URL }}" \
             --no-owner \
             --no-acl \
             --format=custom \

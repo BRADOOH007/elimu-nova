@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react'
 import {
   Brain, CheckCircle, XCircle, RefreshCw, Save, Loader2,
   Zap, Eye, EyeOff, AlertTriangle, Sparkles, Settings,
-  ChevronDown, ChevronUp, Info
+  ChevronDown, ChevronUp, Info, Plus, Trash2
 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
 
 interface ProviderStatus { ok: boolean; latencyMs?: number; error?: string }
 interface ModelOption { id: string; name: string; provider: string; cost: string; speed: string }
@@ -137,15 +138,22 @@ export default function AIConfigPage() {
     if (Object.keys(edits).length === 0) return
     setSaving(true)
     try {
-      await fetch('/api/super-admin/ai-config', {
+      const res = await fetch('/api/super-admin/ai-config', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(edits),
       })
-      setSaved(true)
-      setEdits({})
-      setTimeout(() => setSaved(false), 3000)
-      await load()
+      if (res.ok) {
+        setSaved(true)
+        setEdits({})
+        toast({ title: 'API keys saved', description: 'Configuration updated successfully. Testing connections...', variant: 'success' })
+        setTimeout(() => setSaved(false), 3000)
+        await load(true)
+      } else {
+        toast({ title: 'Save failed', description: 'Could not save configuration. Please try again.', variant: 'destructive' })
+      }
+    } catch {
+      toast({ title: 'Save failed', description: 'Network error. Please try again.', variant: 'destructive' })
     } finally { setSaving(false) }
   }
 
@@ -261,7 +269,7 @@ export default function AIConfigPage() {
                 <div className="px-5 pb-5 border-t border-white/60 pt-4">
                   <div className="mb-3 flex items-center justify-between">
                     <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      API Key <span className="text-slate-400 font-normal normal-case">(env: {p.envVar})</span>
+                      API Key(s) <span className="text-slate-400 font-normal normal-case">(env: {p.envVar})</span>
                     </label>
                     <a href={p.docsUrl} target="_blank" rel="noopener noreferrer"
                       className="text-xs text-blue-600 hover:underline">Get key →</a>
@@ -271,7 +279,7 @@ export default function AIConfigPage() {
                       type={showKey ? 'text' : 'password'}
                       value={currentVal}
                       onChange={e => set(p.keyField, e.target.value)}
-                      placeholder={`Paste your ${p.label} API key`}
+                      placeholder={`Paste your ${p.label} API key(s), comma-separated for multiples`}
                       className="w-full h-10 px-3 pr-10 border border-slate-200 rounded-xl text-sm bg-white font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <button
@@ -284,6 +292,9 @@ export default function AIConfigPage() {
                   </div>
                   <p className="text-xs text-slate-400 mt-2">
                     Key is stored encrypted in the database. Set in .env as <code className="bg-slate-100 px-1 rounded">{p.envVar}</code> for environment-level override.
+                  </p>
+                  <p className="text-xs text-blue-500 mt-1">
+                    <Plus className="h-3 w-3 inline mr-0.5" /> Multiple keys? Separate with commas — each will be tried in order.
                   </p>
                 </div>
               )}
@@ -354,6 +365,8 @@ export default function AIConfigPage() {
               <option value="gemini">Gemini</option>
               <option value="openrouter">OpenRouter</option>
               <option value="openai">OpenAI</option>
+              <option value="dalle">DALL-E 3</option>
+              <option value="stability">Stability AI</option>
             </select>
           </div>
         </div>

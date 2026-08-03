@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export const GET = route({ auth: 'SUPER_ADMIN' }, async () => {
   try {
     const [
       totalSchools,
@@ -31,4 +32,4 @@ export async function GET() {
     console.error('[LiveMetrics] Failed to fetch:', e)
     return NextResponse.json({ error: 'Failed to fetch metrics' }, { status: 500 })
   }
-}
+})

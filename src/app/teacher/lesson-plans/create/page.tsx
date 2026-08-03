@@ -18,6 +18,62 @@ import {
 
 type Mode = 'single' | 'term'
 
+// Fallback topic suggestions when DB curriculum is not seeded
+const TOPIC_SUGGESTIONS: Record<string, { strands: string[]; topics: Record<string, string[]> }> = {
+  Mathematics: {
+    strands: ['Whole Numbers', 'Fractions', 'Decimals', 'Measurement', 'Geometry', 'Algebra', 'Data Handling'],
+    topics: {
+      'Whole Numbers': ['Counting and Writing Numbers', 'Place Value', 'Addition', 'Subtraction', 'Multiplication', 'Division', 'Number Patterns'],
+      'Fractions': ['Introduction to Fractions', 'Equivalent Fractions', 'Comparing Fractions', 'Adding Fractions', 'Subtracting Fractions', 'Multiplying Fractions'],
+      'Decimals': ['Introduction to Decimals', 'Place Value in Decimals', 'Adding Decimals', 'Subtracting Decimals', 'Converting Fractions to Decimals'],
+      'Measurement': ['Length', 'Mass', 'Capacity', 'Time', 'Money', 'Area', 'Perimeter', 'Volume'],
+      'Geometry': ['Shapes', 'Symmetry', 'Position and Direction', 'Angles', 'Lines'],
+      'Algebra': ['Patterns', 'Variables', 'Simple Equations', 'Number Sentences'],
+      'Data Handling': ['Collecting Data', 'Tally Marks', 'Bar Graphs', 'Pictographs', 'Mode and Median'],
+    },
+  },
+  English: {
+    strands: ['Listening & Speaking', 'Reading', 'Grammar', 'Writing', 'Vocabulary'],
+    topics: {
+      'Listening & Speaking': ['Oral Narratives', 'Rhymes and Songs', 'Dialogue', 'Storytelling', 'Presentations'],
+      'Reading': ['Comprehension', 'Phonics', 'Sight Words', 'Reading Fluency', 'Story Reading'],
+      'Grammar': ['Nouns', 'Verbs', 'Adjectives', 'Adverbs', 'Prepositions', 'Conjunctions', 'Tenses'],
+      'Writing': ['Letter Writing', 'Essay Writing', 'Creative Writing', 'Dictation', 'Copy Writing'],
+      'Vocabulary': ['Word Building', 'Synonyms', 'Antonyms', 'Homonyms', 'Idioms'],
+    },
+  },
+  Science: {
+    strands: ['Living Things', 'Energy', 'Forces', 'Materials', 'Earth and Space'],
+    topics: {
+      'Living Things': ['Plants', 'Animals', 'Human Body', 'Food and Nutrition', 'Habitats', 'Life Cycles'],
+      'Energy': ['Heat', 'Light', 'Sound', 'Electricity', 'Magnetism', 'Sources of Energy'],
+      'Forces': ['Push and Pull', 'Gravity', 'Friction', 'Simple Machines', 'Motion'],
+      'Materials': ['Properties of Materials', 'States of Matter', 'Mixtures', 'Changes in Materials'],
+      'Earth and Space': ['Weather', 'Soil', 'Water', 'Rocks', 'Solar System', 'Climate'],
+    },
+  },
+  'Social Studies': {
+    strands: ['Our Country', 'Our Environment', 'Resources', 'Government', 'History'],
+    topics: {
+      'Our Country': ['Map of Kenya', 'Counties', 'Tribes and Culture', 'National Symbols'],
+      'Our Environment': ['Natural Environment', 'Built Environment', 'Environmental Conservation'],
+      'Resources': ['Natural Resources', 'Human Resources', 'Resource Management'],
+      'Government': ['Types of Government', 'Leadership', 'Citizenship', 'Rights and Duties'],
+      'History': ['Early Man', 'Trade', 'Colonial History', 'Independence', 'Constitution'],
+    },
+  },
+  Kiswahili: {
+    strands: ['Kusikiliza na Kuzungumza', 'Sarufi', 'Msamiati', 'Ufahamu', 'Insha'],
+    topics: {
+      'Kusikiliza na Kuzungumza': ['Hadithi', 'Mazungumzo', 'Ushairi', 'Nyimbo'],
+      'Sarufi': ['Viungo', 'Nomino', 'Vitenzi', 'Vijia', 'Viambatisho'],
+      'Msamiati': ['Maneno ya kila siku', 'Viungo vya mwili', 'Mazingira', 'Shule'],
+      'Ufahamu': ['Kifungu kile', 'Maswali', 'Ufunzi'],
+      'Insha': ['Insha y富力', 'Barua', 'Hadithi', 'Maelezo'],
+    },
+  },
+}
+
 interface KICDOrganisationStep {
   duration: number
   teacherActivity: string
@@ -112,7 +168,7 @@ export default function CreateLessonPlan() {
 
   // Single mode fields
   const [formData, setFormData] = useState({
-    subject: '', grade: '', topic: '', duration: 40,
+    subject: '', grade: '', topic: '', title: '', duration: 40,
     objectives: [''],
     prerequisites: [''],
   })
@@ -135,7 +191,23 @@ export default function CreateLessonPlan() {
   const [availableTopics, setAvailableTopics] = useState<{ strandName: string; substrands: { name: string; learningOutcomes: string[]; activities: string[] }[] }[]>([])
   const [loadingTopics, setLoadingTopics] = useState(false)
 
-  // Fetch CBC topics when subject + grade changes
+  // Auto-fill weeksCount from academic calendar when term is selected
+  useEffect(() => {
+    if (mode !== 'term' || !termData.term) return
+    const termNum = parseInt(termData.term.replace('Term ', ''))
+    const year = new Date().getFullYear()
+    fetch(`/api/academic-calendar?year=${year}`)
+      .then(r => r.json())
+      .then(data => {
+        const term = data.terms?.find((t: any) => t.term === termNum)
+        if (term) {
+          setTermData(prev => ({ ...prev, weeksCount: term.weeksCount || prev.weeksCount }))
+        }
+      })
+      .catch(() => {})
+  }, [mode, termData.term])
+
+  // Fetch CBC topics when subject + grade changes — merges DB data with fallback suggestions
   useEffect(() => {
     const curSubject = mode === 'single' ? formData.subject : termData.subject
     const curGrade = mode === 'single' ? formData.grade : termData.grade
@@ -151,13 +223,50 @@ export default function CreateLessonPlan() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ grade: curGrade, subject: curSubject, term: termNum }),
         })
+        let topics: { strandName: string; substrands: { name: string; learningOutcomes: string[]; activities: string[] }[] }[] = []
         if (res.ok) {
           const data = await res.json()
-          setAvailableTopics(data.topics || [])
+          topics = data.topics || []
+        }
+
+        // Merge with fallback suggestions if DB has few results
+        if (topics.length < 2) {
+          const fallback = TOPIC_SUGGESTIONS[curSubject]
+          if (fallback) {
+            for (const strand of fallback.strands) {
+              const existing = topics.find(t => t.strandName === strand)
+              if (!existing) {
+                const subTopics = fallback.topics[strand] || []
+                topics.push({
+                  strandName: strand,
+                  substrands: subTopics.map(t => ({
+                    name: t,
+                    learningOutcomes: [],
+                    activities: [],
+                  })),
+                })
+              }
+            }
+          }
+        }
+
+        setAvailableTopics(topics)
+      } catch {
+        // Use fallback only
+        const fallback = TOPIC_SUGGESTIONS[curSubject]
+        if (fallback) {
+          setAvailableTopics(fallback.strands.map(strand => ({
+            strandName: strand,
+            substrands: (fallback.topics[strand] || []).map(t => ({
+              name: t,
+              learningOutcomes: [],
+              activities: [],
+            })),
+          })))
         } else {
           setAvailableTopics([])
         }
-      } catch { setAvailableTopics([]) }
+      }
       finally { setLoadingTopics(false) }
     }
     fetchTopics()
@@ -275,7 +384,7 @@ export default function CreateLessonPlan() {
       let content = {}
 
       if (generatedLesson) {
-        title = generatedLesson.title || `${formData.topic} - ${formData.subject}`
+        title = formData.title || generatedLesson.title || `${formData.topic} - ${formData.subject}`
         content = { ...generatedLesson, topic: formData.topic, subject: formData.subject, grade: formData.grade }
       } else if (generatedTermPlan) {
         title = generatedTermPlan.title || `${termData.subject} ${termData.grade} - ${termData.term}`
@@ -564,20 +673,34 @@ export default function CreateLessonPlan() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Topic</label>
                 {loadingTopics ? (
                   <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 rounded-lg border border-slate-200 text-sm text-slate-400">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Loading topics...
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading curriculum topics...
                   </div>
                 ) : availableTopics.length > 0 ? (
                   <Select name="topic" value={formData.topic} onValueChange={(v) => {
                     setFormData(prev => ({ ...prev, topic: v }))
-                    // Auto-populate learning outcomes from selected substrand
+                    // Auto-populate learning outcomes, objectives, prerequisites, title, and duration from selected substrand
                     for (const strand of availableTopics) {
                       const sub = strand.substrands.find(s => s.name === v)
-                      if (sub && sub.learningOutcomes.length > 0) {
-                        setFormData(prev => ({ ...prev, objectives: sub.learningOutcomes }))
+                      if (sub) {
+                        const newObjectives = sub.learningOutcomes.length > 0 ? sub.learningOutcomes : [`Understand ${v}`, `Apply ${v} in real-life situations`, `Demonstrate knowledge of ${v}`]
+                        const newPrereqs = strand.substrands.indexOf(sub) > 0 ? [strand.substrands[strand.substrands.indexOf(sub) - 1].name] : []
+                        const autoTitle = `${v} - ${formData.subject} ${formData.grade}`
+                        // Smart duration: basic topics 30min, intermediate 40min, complex 50min
+                        const complexTopics = ['Algebra', 'Geometry', 'Trigonometry', 'Calculus', 'Physics', 'Chemistry', 'Biology']
+                        const isComplex = complexTopics.some(c => v.toLowerCase().includes(c.toLowerCase()))
+                        const suggestedDuration = isComplex ? 50 : v.split(' ').length > 3 ? 45 : 40
+                        setFormData(prev => ({
+                          ...prev,
+                          topic: v,
+                          title: autoTitle,
+                          objectives: newObjectives,
+                          prerequisites: newPrereqs.length > 0 ? newPrereqs : prev.prerequisites,
+                          duration: suggestedDuration,
+                        }))
                       }
                     }
                   }}>
-                    <SelectTrigger><SelectValue placeholder="Select a topic from CBC curriculum..." /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select a topic — curriculum auto-loaded..." /></SelectTrigger>
                     <SelectContent>
                       {availableTopics.map(strand => (
                         <div key={strand.strandName}>
@@ -592,10 +715,19 @@ export default function CreateLessonPlan() {
                 ) : (
                   <Input name="topic" value={formData.topic} onChange={handleSingleChange} placeholder="e.g. Addition of Fractions" className="h-10" required />
                 )}
+                {formData.topic && formData.objectives.length > 0 && formData.objectives[0] && (
+                  <p className="text-xs text-green-600 mt-1">Auto-filled {formData.objectives.length} learning objectives</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Lesson Title</label>
+                <Input name="title" value={formData.title} onChange={handleSingleChange} placeholder="Auto-generated from topic" className="h-10" />
+                {formData.title && <p className="text-xs text-blue-600 mt-1">Auto-generated — edit if needed</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Duration (minutes)</label>
                 <Input name="duration" type="number" value={formData.duration} onChange={handleSingleChange} min={15} max={120} className="h-10 w-32" />
+                {formData.duration !== 40 && <p className="text-xs text-blue-600 mt-1">Suggested based on topic complexity</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Learning Objectives</label>

@@ -21,28 +21,23 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
       orderBy: { createdAt: 'desc' }
     })
 
-    // In a real implementation, this would fetch from Stripe invoices
-    // For now, generate mock invoices based on subscription
-    const mockInvoices = []
+    let invoices: any[] = []
     if (subscription) {
-      const currentDate = new Date()
-      
-      // Generate last 6 months of invoices
-      for (let i = 0; i < 6; i++) {
-        const invoiceDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-        const period = invoiceDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-        
-        mockInvoices.push({
-          id: `inv_${Date.now()}_${i}`,
-          date: invoiceDate.toISOString(),
-          amount: subscription.package.price,
-          status: i === 0 ? 'pending' : 'paid',
-          period,
-          description: `${subscription.package.name} - ${period}`,
-          downloadUrl: `/api/school-admin/invoices/inv_${Date.now()}_${i}/download`
-        })
-      }
+      const realInvoices = await prisma.invoice.findMany({
+        where: { subscriptionId: subscription.id },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      })
+      invoices = realInvoices.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber,
+        date: inv.createdAt.toISOString(),
+        amount: inv.totalAmount,
+        status: inv.status.toLowerCase(),
+        period: inv.createdAt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+        downloadUrl: `/api/billing/invoices/${inv.id}/pdf`,
+      }))
     }
 
-    return NextResponse.json({ success: true, invoices: mockInvoices })
+    return NextResponse.json({ success: true, invoices })
 })

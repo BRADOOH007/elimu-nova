@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import {
+  loadCurriculumOutcomes,
+  buildAssessmentSystemPrompt,
+  stripAnswerKeysFromContent,
+  extractAnswerKeyFromMarkdown,
+  buildFallbackExam,
+  buildExamMarkdown,
+  tryParseStructuredExam,
+  toDualWriteContent,
+} from '@/lib/smart-assessment'
 
 export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const examData = await request.json()
@@ -22,22 +32,41 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, 
       })
       templateText = teacher?.examTemplate || null
     }
-    const templateBlock = templateText
-      ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the exam in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
-      : ''
 
-    const systemPrompt = `You are an expert educational exam creator for ElimuNova AI — Kenya CBC curriculum.${templateBlock}
-Always generate content in English unless the subject is Kiswahili.
-Structure exams with: Cover Page, Student Instructions, Section A (MCQ), Section B (Short Answer), Section C (Long Answer/Essay), Marking Scheme.
+    // Load curriculum outcomes for CBC grounding
+    const outcomes = await loadCurriculumOutcomes(examData.gradeLevel, examData.subject, examData.topics)
 
-CRITICAL FORMATTING RULES — follow exactly:
-- Do NOT use LaTeX, MathJax or any TeX notation. No \\frac, \\underline, \\qquad, \\textbf, $...$ or \\(...\\) — ever.
-- Write ALL mathematics in plain readable English/text: use "/" for fractions (e.g. 1/3 not \\frac{1}{3}), "x^2" for powers, "_____" for fill-in-the-blank lines.
-- Do NOT wrap any words in curly braces {}.
-- Use standard Markdown only: ## headings, **bold**, numbered lists, bullet points.
-- Answer blanks: write "_____________" (underscores), never LaTeX underline commands.`
+    // Build smart system prompt with CBC context
+    const systemPrompt = buildAssessmentSystemPrompt({
+      kind: 'exam',
+      grade: examData.gradeLevel,
+      subject: examData.subject,
+      topic: examData.topics,
+      outcomes,
+      templateText,
+    })
 
-    const userPrompt = `Generate a complete ${examData.curriculum || 'CBC'} exam:
+    const userPrompt = `Generate a complete ${examData.curriculum || 'CBC'} exam as structured JSON with this schema:
+{
+  "questions": [
+    {
+      "id": 1,
+      "type": "multiple_choice" | "true_false" | "short_answer" | "essay",
+      "text": "question text",
+      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+      "marks": 1,
+      "correctAnswer": "A",
+      "section": "A" | "B" | "C",
+      "bloomLevel": "remember|understand|apply|analyse|evaluate|create"
+    }
+  ],
+  "answerKey": { "1": "A", "2": "B", ... },
+  "markdown": "full exam markdown with sections",
+  "totalMarks": 100,
+  "title": "${examData.examTitle}"
+}
+
+Exam parameters:
 - Title: ${examData.examTitle}
 - Subject: ${examData.subject}
 - Grade: ${examData.gradeLevel}
@@ -47,18 +76,59 @@ CRITICAL FORMATTING RULES — follow exactly:
 - Duration: ${examData.duration || 60} minutes
 - Topics: ${examData.topics || 'All relevant topics'}
 - Focus: ${examData.focusAreas || 'General understanding and application'}
+${outcomes.length ? `\nCURRICULUM OUTCOMES TO ASSESS:\n${outcomes.map((o, i) => `${i + 1}. ${o}`).join('\n')}` : ''}
 ${examData.includeDiagrams ? '- Include diagram-based questions where appropriate' : ''}
 
-Format the exam as Markdown for easy reading and printing.`
+IMPORTANT: Return ONLY valid JSON. No markdown fences, no commentary.`
 
-    const examContent = await OpenAIService.generateLongContent([
-      { role: 'system', content: systemPrompt },
-      { role: 'user',   content: userPrompt   },
-    ], { maxTokens: 4000, temperature: 0.7 })
-
-    // Strip any LaTeX the AI may have included despite the instruction
+    // Try AI generation with retry
+    let structured = null
     const { stripLatex } = await import('@/lib/clean-ai-text')
-    const cleanContent = stripLatex(examContent)
+    const maxRetries = 3
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const raw = await OpenAIService.generateLongContent([
+          { role: 'system', content: systemPrompt },
+          { role: 'user',   content: userPrompt   },
+        ], { maxTokens: 4000, temperature: 0.7 })
 
-    return NextResponse.json({ examContent: cleanContent })
+        structured = tryParseStructuredExam(raw)
+        if (structured) break
+      } catch (err) {
+        console.warn(`Exam generation attempt ${attempt + 1} failed:`, err)
+      }
+    }
+
+    // Fallback if AI didn't produce structured JSON
+    if (!structured) {
+      structured = buildFallbackExam({
+        title: examData.examTitle,
+        subject: examData.subject,
+        grade: examData.gradeLevel,
+        topic: examData.topics || examData.subject,
+        numberOfQuestions: examData.numberOfQuestions || 20,
+        totalMarks: examData.totalMarks || 100,
+        duration: examData.duration || 60,
+        outcomes,
+      })
+    }
+
+    // Clean markdown (strip LaTeX)
+    structured.markdown = stripLatex(structured.markdown)
+
+    // Dual-write: structured JSON as content (for programmatic use)
+    const dualWrite = toDualWriteContent(structured)
+
+    // Student-safe: no answer keys
+    const studentContent = stripAnswerKeysFromContent(structured.markdown)
+
+    // Teacher content: full markdown with answer key
+    const teacherContent = structured.markdown
+
+    return NextResponse.json({
+      examContent: studentContent,        // student-facing (backward compat)
+      examContentTeacher: teacherContent,  // teacher-facing (with answer key)
+      structured,                          // structured data for UI consumption
+      dualWrite,                           // dual-write payload
+    })
 })

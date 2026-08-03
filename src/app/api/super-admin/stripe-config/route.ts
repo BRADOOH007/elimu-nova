@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { encryptPassword, decryptPassword } from '@/lib/password-encryption'
 
 const STRIPE_KEYS = [
   'stripe_secret_key',
@@ -18,11 +19,12 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
 
     const config: Record<string, string> = {}
     settings.forEach((s: any) => {
+      const plain = s.value ? (decryptPassword(s.value) || s.value) : ''
       // Mask secret keys — show last 4 chars only
-      if (s.key === 'stripe_secret_key' && s.value) {
-        config[s.key] = '••••••••••••••••' + s.value.slice(-4)
-      } else if (s.key === 'stripe_webhook_secret' && s.value) {
-        config[s.key] = '••••••••' + s.value.slice(-4)
+      if (s.key === 'stripe_secret_key' && plain) {
+        config[s.key] = '••••••••••••••••' + plain.slice(-4)
+      } else if (s.key === 'stripe_webhook_secret' && plain) {
+        config[s.key] = '••••••••' + plain.slice(-4)
       } else {
         config[s.key] = s.value || ''
       }
@@ -45,9 +47,10 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
     const { stripe_secret_key, stripe_publishable_key, stripe_webhook_secret, stripe_mode } = await req.json()
 
     const updates: Record<string, string> = {}
-    if (stripe_secret_key     && !stripe_secret_key.includes('•'))     updates.stripe_secret_key     = stripe_secret_key
+    const encrypt = (v: string) => v.startsWith('PWD_ENC:') ? v : (() => { try { return encryptPassword(v) } catch (e) { console.warn('Stripe key encryption failed, storing plaintext:', e); return v } })()
+    if (stripe_secret_key     && !stripe_secret_key.includes('•'))     updates.stripe_secret_key     = encrypt(stripe_secret_key)
     if (stripe_publishable_key && !stripe_publishable_key.includes('•')) updates.stripe_publishable_key = stripe_publishable_key
-    if (stripe_webhook_secret  && !stripe_webhook_secret.includes('•'))  updates.stripe_webhook_secret  = stripe_webhook_secret
+    if (stripe_webhook_secret  && !stripe_webhook_secret.includes('•'))  updates.stripe_webhook_secret  = encrypt(stripe_webhook_secret)
     if (stripe_mode) updates.stripe_mode = stripe_mode
 
     for (const [key, value] of Object.entries(updates)) {
@@ -81,8 +84,8 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
 export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
 
-    const { getStripe } = await import('@/lib/stripe')
-    const stripe = getStripe()
+    const { getStripeAsync } = await import('@/lib/stripe')
+    const stripe = await getStripeAsync()
 
     // Simple test — list first payment method
     const balance = await stripe.balance.retrieve()

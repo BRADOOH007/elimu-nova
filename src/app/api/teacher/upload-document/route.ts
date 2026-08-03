@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 import { supabaseAdmin } from '@/lib/supabase'
+import { saveFileLocally } from '@/lib/local-storage'
 import { PDFParse } from 'pdf-parse'
 import * as mammoth from 'mammoth'
 
@@ -52,23 +53,29 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    if (!supabaseAdmin) {
-      return NextResponse.json({ error: 'Storage service not configured' }, { status: 500 })
-    }
-
     // Upload to Supabase Storage
     const path = `${user.id}/${docType}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .upload(path, buffer, { contentType: file.type, upsert: true })
 
-    if (uploadError) {
-      console.error('Supabase upload error:', uploadError)
-      return NextResponse.json({ error: `Failed to upload document: ${uploadError.message}` }, { status: 500 })
+    let publicUrl: string
+    if (!supabaseAdmin) {
+      const localUrl = await saveFileLocally(BUCKET, path, buffer)
+      if (!localUrl) {
+        return NextResponse.json({ error: 'Upload failed: could not save file' }, { status: 500 })
+      }
+      publicUrl = localUrl
+    } else {
+      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .upload(path, buffer, { contentType: file.type, upsert: true })
+
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError)
+        return NextResponse.json({ error: `Failed to upload document: ${uploadError.message}` }, { status: 500 })
+      }
+
+      const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(uploadData.path)
+      publicUrl = urlData.publicUrl
     }
-
-    const { data: urlData } = supabaseAdmin.storage.from(BUCKET).getPublicUrl(uploadData.path)
-    const publicUrl = urlData.publicUrl
 
     // Extract text content for AI context
     let extractedText: string | null = null

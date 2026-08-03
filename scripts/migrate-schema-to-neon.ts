@@ -6,7 +6,7 @@ async function migrateSchemaToNeon() {
   try {
     // Step 1: Set environment to use Neon database
     console.log('\n📝 Step 1: Setting up environment for Neon migration...')
-    process.env.DATABASE_URL = "postgresql://neondb_owner:npg_4dCrxETYqoX9@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require"
+    // DATABASE_URL is loaded automatically by Prisma from .env (schema: env("DATABASE_URL"))
     console.log('✅ Environment set to Neon database')
 
     // Step 2: Generate Prisma client
@@ -41,7 +41,7 @@ async function migrateSchemaToNeon() {
     console.log('3. Deploy to production')
     
     console.log('\n📋 Vercel Environment Variables needed:')
-    console.log('DATABASE_URL=postgresql://neondb_owner:npg_4dCrxETYqoX9@ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require')
+    console.log('DATABASE_URL=<your Neon pooled connection string from .env>')
     console.log('NEXTAUTH_URL=https://your-domain.vercel.app')
     console.log('NEXTAUTH_SECRET=your-production-secret')
     

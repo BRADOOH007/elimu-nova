@@ -9,7 +9,7 @@ import { OpenAIService } from './openai-service'
 export interface DiagramRequest {
   topic: string
   grade: string
-  curriculum: 'CBC' | 'IGCSE' | 'KCSE'
+  curriculum: 'CBC' | 'IGCSE'
   type: 'biology' | 'geography' | 'physics' | 'chemistry' | 'mathematics' | 'general'
   size?: '512x512' | '1024x1024' | '1536x1024' | '1024x1536'
   quality?: 'standard' | 'hd'

@@ -42,6 +42,29 @@ export class OpenAIService {
   }
 
   /**
+   * Generate text and also return which provider/model served the request
+   * (used by the AI test suite to display the winning provider).
+   */
+  static async generateTextDetailed(
+    messages: OpenAIMessage[],
+    options?: {
+      model?:       string
+      maxTokens?:   number
+      temperature?: number
+      useReasoner?: boolean
+    }
+  ): Promise<{ content: string; provider: string; model: string; tokensUsed?: number; latencyMs?: number }> {
+    const result = await callAI({
+      messages:    messages as AIMessage[],
+      maxTokens:   options?.maxTokens   ?? 2000,
+      temperature: options?.temperature ?? 0.7,
+      useReasoner: options?.useReasoner ?? false,
+    })
+    console.log(`[AI] ${result.provider}/${result.model} — ${result.latencyMs}ms, ${result.tokensUsed ?? '?'} tokens`)
+    return result
+  }
+
+  /**
    * Generate text optimised for long-form content (lesson plans, schemes).
    */
   static async generateLongContent(
@@ -202,15 +225,27 @@ Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1
       console.warn('[AI] Stability AI failed:', e.message)
     }
 
+    // Fallback: Groq SVG diagram (free, fast — no DALL-E/Stability key needed)
+    try {
+      const groqSvg = await this.generateGroqSVG(options.prompt)
+      if (groqSvg) return groqSvg
+    } catch (e: any) {
+      console.warn('[AI] Groq SVG failed:', e.message)
+    }
+
     // Fallback: generate an SVG educational diagram using text AI
     try {
       const svgContent = await this.generateText([
         {
           role: 'system',
-          content: `You are an expert educational diagram creator. Return ONLY valid SVG markup.
+          content: `You are an expert educational diagram illustrator. Return ONLY valid SVG markup.
 Start with <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"> and end with </svg>.
-Use bright, high-contrast educational colors. Make it clean, textbook-style, and age-appropriate.
-Include helpful labels. No markdown fences, no explanations — just the SVG.`,
+DRAW THE ACTUAL TOPIC — a real labeled diagram, not a generic placeholder. Examples:
+- "The Heart" → draw an anatomical heart with labeled chambers (left/right atrium & ventricle) and arrows showing blood flow.
+- "Evaporation" → draw the water cycle or a labeled pan of water with arrows showing liquid→vapour, sun, steam.
+- "Heat Transfer" → draw three labeled panels: conduction (metal rod over flame), convection (pot of water with arrows), radiation (sun rays).
+Use bright, high-contrast educational colors. Clean, textbook-style, age-appropriate. Always include clear labels and directional arrows.
+No markdown fences, no explanations — just the SVG.`,
         },
         {
           role: 'user',
@@ -241,6 +276,62 @@ Include helpful labels. No markdown fences, no explanations — just the SVG.`,
       url: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
       provider: 'placeholder',
       revisedPrompt: options.prompt,
+    }
+  }
+
+  /**
+   * Generate an educational SVG diagram using Groq (free, fast) —
+   * used as a fallback when OpenAI DALL-E / Stability keys are unavailable.
+   * Groq's fast Llama models are excellent at producing clean SVG markup.
+   */
+  static async generateGroqSVG(prompt: string, opts?: { model?: string }): Promise<ImageGenerationResult | null> {
+    try {
+      const groqKey = await getKey('GROQ_API_KEY')
+      if (!groqKey) return null
+
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${groqKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: opts?.model || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert educational diagram illustrator. Return ONLY valid SVG markup.
+Start with <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"> and end with </svg>.
+DRAW THE ACTUAL TOPIC — a real labeled diagram, not a generic placeholder. Examples:
+- "The Heart" → draw an anatomical heart with labeled chambers (left/right atrium & ventricle) and arrows showing blood flow.
+- "Evaporation" → draw the water cycle or a labeled pan of water with arrows showing liquid→vapour, sun, steam.
+- "Heat Transfer" → draw three labeled panels: conduction (metal rod over flame), convection (pot of water with arrows), radiation (sun rays).
+Use bright, high-contrast educational colors. Clean, textbook-style, age-appropriate. Always include clear labels and directional arrows.
+No markdown fences, no explanations — just the SVG.`,
+            },
+            {
+              role: 'user',
+              content: `Create a classroom-ready educational illustration as SVG for: ${prompt}`,
+            },
+          ],
+          max_tokens: 2048,
+          temperature: 0.4,
+        }),
+      })
+      if (!res.ok) {
+        console.warn(`[AI] Groq SVG failed: ${res.status}`)
+        return null
+      }
+      const data = await res.json()
+      const svgContent = data?.choices?.[0]?.message?.content || ''
+      const match = svgContent.match(/<svg[\s\S]*?<\/svg>/i)
+      if (!match) return null
+      const url = `data:image/svg+xml;base64,${Buffer.from(match[0]).toString('base64')}`
+      console.log('[AI] SVG diagram generated via Groq')
+      return { url, provider: 'groq-svg', revisedPrompt: prompt }
+    } catch (e: any) {
+      console.warn('[AI] Groq SVG generation failed:', e.message)
+      return null
     }
   }
 }

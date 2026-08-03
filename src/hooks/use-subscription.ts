@@ -72,7 +72,7 @@ export function useSubscription() {
     }
   }
 
-  const createCheckout = async (packageId: string) => {
+  const createCheckout = async (packageId: string, currency?: string) => {
     try {
       const response = await fetch('/api/subscription/create-checkout', {
         method: 'POST',
@@ -82,7 +82,8 @@ export function useSubscription() {
         body: JSON.stringify({
           packageId,
           successUrl: `${window.location.origin}/subscription/success`,
-          cancelUrl: `${window.location.origin}/subscription/cancel`
+          cancelUrl: `${window.location.origin}/subscription/cancel`,
+          currency
         })
       })
 

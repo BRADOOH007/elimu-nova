@@ -12,6 +12,7 @@ import LiveFamilyPulse from "@/components/parent/live-family-pulse"
 import ChildTrends from "@/components/parent/child-trends"
 import EngagementSummary from "@/components/parent/engagement-summary"
 import SkillComparison from "@/components/parent/skill-comparison"
+import ParentAIInsightsPanel from "@/components/parent/ai-insights-panel"
 
 interface SkillSummary {
   skillName: string; skillCategory: string; masteryScore: number; timesCorrect: number; timesTested: number
@@ -128,6 +129,9 @@ export default function ParentDashboard() {
         <ParentStatCard label="Average Grade" value={avgGrade !== null ? `${avgGrade}%` : "—"} icon={TrendingUp} color={gradeColor(avgGrade)} />
         <ParentStatCard label="AI Alerts" value={totalAlerts} icon={AlertTriangle} color={criticalAlerts > 0 ? "text-red-600" : "text-amber-600"} href="/parent/alerts" />
       </div>
+
+      {/* AI Insights */}
+      <ParentAIInsightsPanel />
 
       {/* Trends & Charts */}
       <ChildTrends />

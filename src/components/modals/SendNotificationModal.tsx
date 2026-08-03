@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -42,7 +42,8 @@ import {
   Users,
   User,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Search
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -68,6 +69,32 @@ export default function SendNotificationModal({
   const [activeTab, setActiveTab] = useState('roles')
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
+  const [availableUsers, setAvailableUsers] = useState<Array<{ id: string; name: string; email: string; role: string }>>([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [userSearch, setUserSearch] = useState('')
+
+  // Fetch users when the users tab is opened or role/schoolId changes
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'users') return
+    let cancelled = false
+    setUsersLoading(true)
+    const params = new URLSearchParams()
+    if (selectedRoles.length === 1) params.set('role', selectedRoles[0])
+    if (userSearch.trim()) params.set('search', userSearch.trim())
+    if (schoolId) params.set('schoolId', schoolId)
+    fetch(`/api/users/lookup?${params.toString()}`)
+      .then(r => r.ok ? r.json() : { users: [] })
+      .then(d => { if (!cancelled) setAvailableUsers(d.users || []) })
+      .catch(() => { if (!cancelled) setAvailableUsers([]) })
+      .finally(() => { if (!cancelled) setUsersLoading(false) })
+    return () => { cancelled = true }
+  }, [isOpen, activeTab, selectedRoles, userSearch, schoolId])
+
+  const toggleUser = (id: string) => {
+    setSelectedUserIds(prev =>
+      prev.includes(id) ? prev.filter(u => u !== id) : [...prev, id]
+    )
+  }
 
   // Get available roles based on user's role
   const getAvailableRoles = () => {
@@ -305,12 +332,58 @@ export default function SendNotificationModal({
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-semibold">Select Users</CardTitle>
                     <CardDescription>Choose specific users to send notifications to</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-gray-500">
-                      <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>User selection coming soon</p>
+                    <div className="relative pt-2">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                      <Input
+                        value={userSearch}
+                        onChange={e => setUserSearch(e.target.value)}
+                        placeholder="Search by name or email..."
+                        className="pl-8 bg-white"
+                      />
                     </div>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {getAvailableRoles().map(role => (
+                        <button
+                          key={role}
+                          onClick={() => toggleRole(role)}
+                          className={`text-[11px] px-2 py-1 rounded-full transition-colors ${selectedRoles.includes(role) ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                          {role.replace('_', ' ')}
+                        </button>
+                      ))}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="max-h-72 overflow-y-auto">
+                    {usersLoading ? (
+                      <div className="flex items-center justify-center py-8 text-gray-400">
+                        <Loader2 className="w-5 h-5 animate-spin mr-2" /> Loading users...
+                      </div>
+                    ) : availableUsers.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p>No users found</p>
+                        <p className="text-xs mt-1">Try adjusting the role filter or search</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {availableUsers.map(u => (
+                          <label
+                            key={u.id}
+                            className="flex items-center gap-3 p-2.5 rounded-lg bg-white/80 hover:bg-white cursor-pointer transition-all border border-transparent hover:border-blue-100"
+                          >
+                            <Checkbox
+                              checked={selectedUserIds.includes(u.id)}
+                              onCheckedChange={() => toggleUser(u.id)}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-800 truncate">{u.name}</p>
+                              <p className="text-xs text-gray-400 truncate">{u.email}</p>
+                            </div>
+                            <span className="text-[10px] uppercase tracking-wide text-gray-400 shrink-0">{u.role.replace('_', ' ')}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

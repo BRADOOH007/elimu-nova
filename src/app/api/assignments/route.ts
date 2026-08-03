@@ -7,6 +7,7 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user })
   const limit = parseInt(searchParams.get('limit') || '10')
   const status = searchParams.get('status')
   const search = searchParams.get('search')
+  const type = searchParams.get('type')
 
   let where: any = {}
 
@@ -38,6 +39,13 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user })
 
   if (status && status !== 'all') {
     where.status = status.toUpperCase()
+  }
+
+  // type=EXAM → timed exams only; ASSIGNMENT/QUIZ → everything else
+  if (type) {
+    const normalized = type.toUpperCase()
+    if (normalized === 'EXAM') where.isTimed = true
+    else if (normalized === 'ASSIGNMENT' || normalized === 'QUIZ') where.isTimed = false
   }
 
   if (search) {
@@ -107,71 +115,81 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user })
     take: limit
   })
 
-  const formattedAssignments = assignments.map(assignment => ({
-    id: assignment.id,
-    title: assignment.title,
-    description: assignment.description,
-    content: assignment.content,
-    dueDate: assignment.dueDate,
-    status: assignment.status,
-    createdAt: assignment.createdAt,
-    updatedAt: assignment.updatedAt,
-    isTimed: assignment.isTimed,
-    timeLimit: assignment.timeLimit,
-    startTime: assignment.startTime,
-    rubricId: assignment.rubricId,
-    aiGradeable: assignment.aiGradeable,
-    answerKey: assignment.answerKey,
-    classId: assignment.classId,
-    subject: assignment.subject,
-    grade: assignment.grade,
-    teacher: {
-      id: assignment.teacher.id,
-      name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
-      email: assignment.teacher.user.email
-    },
-    lessonPlan: assignment.lessonPlan ? {
-      id: assignment.lessonPlan.id,
-      title: assignment.lessonPlan.title,
-      subject: assignment.lessonPlan.subject,
-      grade: assignment.lessonPlan.grade
-    } : null,
-    class: assignment.class ? {
-      id: assignment.class.id,
-      name: assignment.class.name
-    } : null,
-    students: assignment.students.map(student => ({
-      id: student.id,
-      name: `${student.user.firstName} ${student.user.lastName}`
-    })),
-    submissions: assignment.submissions.map(submission => ({
-      id: submission.id,
-      content: submission.content,
-      attachments: submission.attachments,
-      grade: submission.grade,
-      feedback: submission.feedback,
-      submittedAt: submission.submittedAt,
-      gradedAt: submission.gradedAt,
-      startedAt: submission.startedAt,
-      timeSpent: submission.timeSpent,
-      isAiGraded: submission.isAiGraded,
-      aiGradingMetadata: submission.aiGradingMetadata,
-      aiConfidence: submission.aiConfidence,
-      questionScores: submission.questionScores,
-      needsRevision: submission.needsRevision,
-      revisionNotes: submission.revisionNotes,
-      student: {
-        id: submission.student.id,
-        name: `${submission.student.user.firstName} ${submission.student.user.lastName}`
+  const formattedAssignments = assignments.map(assignment => {
+    const isStudent = user.role === 'STUDENT'
+    // Never expose answer keys / grading secrets to students
+    const safeAnswerKey = isStudent ? undefined : assignment.answerKey
+
+    return {
+      id: assignment.id,
+      title: assignment.title,
+      description: assignment.description,
+      content: assignment.content,
+      dueDate: assignment.dueDate,
+      status: assignment.status,
+      createdAt: assignment.createdAt,
+      updatedAt: assignment.updatedAt,
+      isTimed: assignment.isTimed,
+      timeLimit: assignment.timeLimit,
+      startTime: assignment.startTime,
+      rubricId: assignment.rubricId,
+      aiGradeable: assignment.aiGradeable,
+      answerKey: safeAnswerKey,
+      classId: assignment.classId,
+      subject: assignment.subject,
+      grade: assignment.grade,
+      teacher: {
+        id: assignment.teacher.id,
+        name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
+        email: assignment.teacher.user.email
+      },
+      lessonPlan: assignment.lessonPlan ? {
+        id: assignment.lessonPlan.id,
+        title: assignment.lessonPlan.title,
+        subject: assignment.lessonPlan.subject,
+        grade: assignment.lessonPlan.grade
+      } : null,
+      class: assignment.class ? {
+        id: assignment.class.id,
+        name: assignment.class.name
+      } : null,
+      students: assignment.students.map(student => ({
+        id: student.id,
+        name: `${student.user.firstName} ${student.user.lastName}`
+      })),
+      // Submissions: students should only see their OWN submission, and never
+      // grading internals (questionScores, aiGradingMetadata) until graded.
+      submissions: assignment.submissions
+        .filter(sub => !isStudent || sub.student.userId === user.id)
+        .map(submission => ({
+          id: submission.id,
+          content: submission.content,
+          attachments: submission.attachments,
+          grade: submission.grade,
+          feedback: submission.feedback,
+          submittedAt: submission.submittedAt,
+          gradedAt: submission.gradedAt,
+          startedAt: submission.startedAt,
+          timeSpent: submission.timeSpent,
+          isAiGraded: submission.isAiGraded,
+          aiGradingMetadata: isStudent ? undefined : submission.aiGradingMetadata,
+          aiConfidence: submission.aiConfidence,
+          questionScores: isStudent ? undefined : submission.questionScores,
+          needsRevision: submission.needsRevision,
+          revisionNotes: submission.revisionNotes,
+          student: {
+            id: submission.student.id,
+            name: `${submission.student.user.firstName} ${submission.student.user.lastName}`
+          }
+        })),
+      stats: {
+        totalStudents: assignment._count.students,
+        totalSubmissions: assignment._count.submissions,
+        gradedSubmissions: assignment.submissions.filter(s => s.grade !== null).length,
+        pendingSubmissions: assignment.submissions.filter(s => s.grade === null).length
       }
-    })),
-    stats: {
-      totalStudents: assignment._count.students,
-      totalSubmissions: assignment._count.submissions,
-      gradedSubmissions: assignment.submissions.filter(s => s.grade !== null).length,
-      pendingSubmissions: assignment.submissions.filter(s => s.grade === null).length
     }
-  }))
+  })
 
   return NextResponse.json({
     assignments: formattedAssignments,

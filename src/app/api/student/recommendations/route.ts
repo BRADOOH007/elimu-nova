@@ -90,6 +90,62 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
       })
     }
 
+    // ── Adaptive signals ──────────────────────────────────────────────
+    // Due spaced-repetition reviews
+    const dueReviews = await prisma.reviewSchedule.findMany({
+      where: { studentId: student.id, nextReviewAt: { lte: new Date() } },
+      orderBy: { nextReviewAt: 'asc' },
+      take: 5,
+    })
+    if (dueReviews.length > 0) {
+      const topics = dueReviews.slice(0, 2).map(r => r.topic).join(' and ')
+      recommendations.push({
+        type: 'info', title: 'Reviews Due',
+        description: `${dueReviews.length} topic${dueReviews.length > 1 ? 's' : ''} due for review: ${topics}. Spaced review locks in learning.`,
+        action: 'Start Reviewing', href: '/student/learn',
+      })
+    }
+
+    // Weak skills (below mastery 50) from per-skill tracking
+    const progressRow = await prisma.studentProgress.findFirst({
+      where: { studentId: student.id },
+      orderBy: { updatedAt: 'desc' },
+      include: { skillMastery: { orderBy: { masteryScore: 'asc' }, take: 5 } },
+    })
+    const weakSkills = (progressRow?.skillMastery || []).filter(s => s.masteryScore < 50)
+    if (weakSkills.length > 0) {
+      const skills = weakSkills.slice(0, 2).map(s => s.skillName).join(' and ')
+      recommendations.push({
+        type: 'warning', title: 'Adaptive Focus: Weak Skills',
+        description: `Mastery engine flagged: ${skills}. Targeted practice will boost these fast.`,
+        action: 'Personalized Practice', href: '/student/ai-tutor',
+      })
+    }
+
+    // Adaptive difficulty recommendation from recent performance
+    const adaptive = await prisma.studentProgress.findFirst({
+      where: { studentId: student.id, preferredDifficulty: { not: 'medium' } },
+      orderBy: { updatedAt: 'desc' },
+      select: { preferredDifficulty: true },
+    })
+    if (adaptive) {
+      const isHard = adaptive.preferredDifficulty === 'hard'
+      const isEasy = adaptive.preferredDifficulty === 'easy'
+      if (isHard) {
+        recommendations.push({
+          type: 'success', title: 'Adaptive Boost',
+          description: 'Your performance is strong. The system bumped you to harder questions to keep you challenged.',
+          action: 'Try Harder Practice', href: '/student/learn',
+        })
+      } else if (isEasy) {
+        recommendations.push({
+          type: 'warning', title: 'Adaptive Support',
+          description: 'Recent results suggest easing difficulty for a confidence boost before advancing.',
+          action: 'Review Foundations', href: '/student/ai-tutor',
+        })
+      }
+    }
+
     if (recommendations.length === 0) {
       recommendations.push({
         type: 'success', title: 'Great Progress!',

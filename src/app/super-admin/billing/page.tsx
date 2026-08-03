@@ -574,6 +574,7 @@ export default function BillingPage() {
   const [billingDetailsOpen, setBillingDetailsOpen] = useState(false)
   const [selectedBillingId, setSelectedBillingId] = useState<string | null>(null)
   const [createPaymentMethodOpen, setCreatePaymentMethodOpen] = useState(false)
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState<any | null>(null)
   const [createInvoiceOpen, setCreateInvoiceOpen] = useState(false)
 
   // Fetch billing data
@@ -696,7 +697,7 @@ export default function BillingPage() {
   }
 
   // Derived stats from loaded subscriptions
-  const totalRevenue = billing.reduce((sum, s) => sum + s.amount, 0)
+  const totalRevenue = billing.filter(s => !s.isFreemium).reduce((sum, s) => sum + s.amount, 0)
   const activeCount = billing.filter(s => s.status === 'ACTIVE').length
   const pendingCount = billing.filter(s => s.status === 'PENDING').length
   const expiredCount = billing.filter(s => s.status === 'EXPIRED' || s.status === 'CANCELLED').length
@@ -985,7 +986,7 @@ export default function BillingPage() {
                         <CreditCard className={`w-5 h-5 ${method.isActive ? 'text-emerald-600' : 'text-slate-400'}`} />
                       </div>
                       <div className="flex items-center gap-1">
-                        <button onClick={() => toast({ title: 'Edit', description: 'Edit feature coming soon' })}
+                        <button onClick={() => { setEditingPaymentMethod(method); setCreatePaymentMethodOpen(true) }}
                           className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
                           <Edit className="w-3.5 h-3.5" />
                         </button>
@@ -1102,8 +1103,9 @@ export default function BillingPage() {
       <BillingDetailsModal isOpen={billingDetailsOpen} onClose={() => setBillingDetailsOpen(false)}
         billingId={selectedBillingId} onBillingUpdated={() => { setBillingDetailsOpen(false); fetchBilling() }}
         onBillingDeleted={() => { setBillingDetailsOpen(false); fetchBilling() }} />
-      <CreatePaymentMethodModal open={createPaymentMethodOpen} onOpenChange={setCreatePaymentMethodOpen}
-        onSuccess={() => { setCreatePaymentMethodOpen(false); fetchPaymentMethods() }} />
+      <CreatePaymentMethodModal open={createPaymentMethodOpen} onOpenChange={(open) => { setCreatePaymentMethodOpen(open); if (!open) setEditingPaymentMethod(null) }}
+        editing={editingPaymentMethod}
+        onSuccess={() => { setCreatePaymentMethodOpen(false); setEditingPaymentMethod(null); fetchPaymentMethods() }} />
       <CreateInvoiceModal open={createInvoiceOpen} onOpenChange={setCreateInvoiceOpen}
         onSuccess={() => { setCreateInvoiceOpen(false); fetchInvoices() }} />
     </div>

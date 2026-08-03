@@ -374,15 +374,26 @@ export function StudentSchedulePage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                        onClick={() => router.push(`/student/meetings/${event.id}`)}
-                      >
-                        <Video className="w-4 h-4 mr-1" />
-                        {event.status === 'IN_PROGRESS' ? 'Join Live' : 'Join Class'}
-                      </Button>
-                      {event.location && (
+                      {event.status === 'IN_PROGRESS' && event.type === 'CLASS' ? (
+                        <Button
+                          size="sm"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                          onClick={() => router.push(`/student/live-class?code=${event.metadata?.sessionCode || ''}`)}
+                        >
+                          <Video className="w-4 h-4 mr-1" />
+                          Join Live
+                        </Button>
+                      ) : event.type === 'MEETING' ? (
+                        <Button
+                          size="sm"
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                          onClick={() => router.push(`/student/meetings/${event.id}`)}
+                        >
+                          <Video className="w-4 h-4 mr-1" />
+                          Join Class
+                        </Button>
+                      ) : null}
+                      {event.location && event.location.startsWith('http') && (
                         <a 
                           href={event.location} 
                           target="_blank" 
@@ -390,7 +401,7 @@ export function StudentSchedulePage() {
                         >
                           <Button size="sm" variant="outline">
                             <Link2 className="w-4 h-4 mr-1" />
-                            Zoom
+                            Video Link
                           </Button>
                         </a>
                       )}

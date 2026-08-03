@@ -412,20 +412,20 @@ export default function PlanningPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lessonPlanId: lp.id, title: lp.title, subject: lp.subject, grade: lp.grade, format }),
       })
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Export failed') }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Export failed') }
       const blob = await res.blob()
       const url  = URL.createObjectURL(blob)
-      if (format === 'word') {
-        // Word: download directly
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${lp.title.replace(/[^a-z0-9]/gi, '_')}.doc`
-        a.click()
-      } else {
-        // PDF: open in new tab → Ctrl+P → Save as PDF
-        window.open(url, '_blank')
-      }
+      // Determine extension from content-type (pdf or word)
+      const ct = res.headers.get('content-type') || ''
+      const ext = ct.includes('pdf') ? 'pdf' : 'doc'
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${lp.title.replace(/[^a-z0-9]/gi, '_')}.${ext}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 10000)
+      toast({ title: `Downloaded ${ext.toUpperCase()}`, variant: 'success' })
     } catch (e: any) {
       toast({ variant: 'destructive', title: 'Download Failed', description: e.message })
     }

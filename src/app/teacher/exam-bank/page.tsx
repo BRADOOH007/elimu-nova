@@ -10,6 +10,11 @@ interface Exam {
   description: string; totalMarks: number; createdAt: string
   teacher: { user: { firstName: string; lastName: string } }
   metadata: any
+  content?: string
+  questions?: any[]
+  answerKey?: string
+  isTimed?: boolean
+  timeLimit?: number
 }
 
 const SUBJECTS = ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'CRE', 'IRE', 'Agriculture', 'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Business Studies', 'Computer Studies']
@@ -65,13 +70,22 @@ export default function ExamBankPage() {
   }
 
   const useExam = async (exam: Exam) => {
-    // Copy exam to assignments page
-    const params = new URLSearchParams({
-      fromBank: exam.id,
-      title: exam.title,
-      subject: exam.subject,
-      grade: exam.grade,
-    })
+    // Stash the full exam so the assignments page can prefill the create modal
+    try {
+      sessionStorage.setItem('examBankSelection', JSON.stringify({
+        title: exam.title,
+        description: exam.description,
+        subject: exam.subject,
+        grade: exam.grade,
+        content: exam.content || '',
+        questions: exam.questions || [],
+        answerKey: exam.answerKey || '',
+        isTimed: exam.isTimed,
+        timeLimit: exam.timeLimit || 60,
+        totalMarks: exam.totalMarks,
+      }))
+    } catch {}
+    const params = new URLSearchParams({ fromBank: exam.id })
     router.push(`/teacher/assignments?${params}`)
   }
 

@@ -1,0 +1,1989 @@
+▲ Next.js 16.1.1 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.100.16:3000
+- Environments: .env.local, .env
+- Experiments (use with caution):
+  · clientTraceMetadata
+  · serverActions
+
+✓ Starting...
+✓ Ready in 20s
+○ Compiling /_not-found/page ...
+ GET /api/auth/csrf 404 in 8.6s (compile: 7.2s, render: 1376ms)
+ GET /api/auth/csrf 200 in 7.0s (compile: 6.9s, render: 133ms)
+ GET /api/auth/csrf 200 in 127ms (compile: 62ms, render: 65ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmkdtu4ay0000l204hnee8avn', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 22.3s (compile: 20ms, render: 22.3s)
+[AUDIT] {"ts":"2026-08-02T18:21:00.701Z","method":"GET","path":"/api/exam-bank","userId":"cmkdtu4ay0000l204hnee8avn","status":200,"durationMs":7308}
+ GET /api/exam-bank 200 in 7.9s (compile: 567ms, render: 7.3s)
+[AUDIT] {"ts":"2026-08-02T18:21:08.673Z","method":"GET","path":"/api/teacher/classes","userId":"cmkdtu4ay0000l204hnee8avn","status":200,"durationMs":7144}
+ GET /api/teacher/classes 200 in 7.9s (compile: 763ms, render: 7.2s)
+ GET /api/auth/csrf 200 in 90ms (compile: 43ms, render: 47ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmkdtu4ay0000l204hnee8avn', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 11.9s (compile: 14ms, render: 11.8s)
+[AUDIT] {"ts":"2026-08-02T18:21:41.422Z","method":"GET","path":"/api/teacher/students","userId":"cmkdtu4ay0000l204hnee8avn","status":200,"durationMs":5367}
+ GET /api/teacher/students?limit=50 200 in 6.0s (compile: 557ms, render: 5.4s)
+ GET /api/auth/csrf 200 in 69ms (compile: 38ms, render: 30ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 12.0s (compile: 13ms, render: 12.0s)
+ GET /api/auth/csrf 200 in 173ms (compile: 64ms, render: 108ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 12.3s (compile: 15ms, render: 12.2s)
+[AUDIT] {"ts":"2026-08-02T18:24:55.887Z","method":"POST","path":"/api/exam-bank","userId":"cms5r55hv0007oem85luig434","status":201,"durationMs":7549}
+ POST /api/exam-bank 201 in 7.6s (compile: 15ms, render: 7.6s)
+[AUDIT] {"ts":"2026-08-02T18:25:01.920Z","method":"GET","path":"/api/exam-bank","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":5912}
+ GET /api/exam-bank 200 in 6.0s (compile: 17ms, render: 5.9s)
+[AUDIT] {"ts":"2026-08-02T18:25:07.720Z","method":"GET","path":"/api/teacher/classes","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":5699}
+ GET /api/teacher/classes 200 in 5.7s (compile: 18ms, render: 5.7s)
+[AUDIT] {"ts":"2026-08-02T18:25:20.048Z","method":"POST","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":11682}
+ POST /api/assignments 200 in 12.1s (compile: 362ms, render: 11.7s)
+[AUDIT] {"ts":"2026-08-02T18:25:29.472Z","method":"GET","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":9345}
+ GET /api/assignments?type=EXAM&limit=50 200 in 9.4s (compile: 13ms, render: 9.4s)
+[AUDIT] {"ts":"2026-08-02T18:25:34.831Z","method":"GET","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":5188}
+ GET /api/assignments?type=ASSIGNMENT&limit=50 200 in 5.2s (compile: 20ms, render: 5.2s)
+ GET /api/auth/csrf 200 in 71ms (compile: 34ms, render: 38ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 19.2s (compile: 14ms, render: 19.2s)
+[AUDIT] {"ts":"2026-08-02T18:27:11.299Z","method":"GET","path":"/api/student/assignments","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":11405}
+ GET /api/student/assignments?limit=50 200 in 12.9s (compile: 1468ms, render: 11.4s)
+[AUDIT] {"ts":"2026-08-02T18:27:31.267Z","method":"GET","path":"/api/student/dashboard","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":19158}
+ GET /api/student/dashboard 200 in 19.7s (compile: 477ms, render: 19.2s)
+ GET /api/auth/csrf 200 in 69ms (compile: 31ms, render: 38ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 12.7s (compile: 11ms, render: 12.7s)
+[AUDIT] {"ts":"2026-08-02T18:30:00.602Z","method":"DELETE","path":"/api/assignments/cmsc4rjv7000boeu4wxwba1zx","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":9856}
+ DELETE /api/assignments/cmsc4rjv7000boeu4wxwba1zx 200 in 15.4s (compile: 5.5s, render: 9.9s)
+[AUDIT] {"ts":"2026-08-02T18:30:06.780Z","method":"DELETE","path":"/api/exam-bank","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6115}
+ DELETE /api/exam-bank 200 in 6.2s (compile: 12ms, render: 6.1s)
+[AUDIT] {"ts":"2026-08-02T18:30:13.237Z","method":"GET","path":"/api/exam-bank","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6382}
+ GET /api/exam-bank 200 in 6.4s (compile: 32ms, render: 6.4s)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/auth/csrf 200 in 59ms (compile: 33ms, render: 26ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 14.0s (compile: 10ms, render: 13.9s)
+[AUDIT] {"ts":"2026-08-02T18:55:27.462Z","method":"POST","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":12787}
+ POST /api/assignments 200 in 12.8s (compile: 13ms, render: 12.8s)
+ GET /api/auth/csrf 200 in 70ms (compile: 29ms, render: 41ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 12.6s (compile: 8ms, render: 12.5s)
+[AUDIT] {"ts":"2026-08-02T18:56:07.974Z","method":"POST","path":"/api/assignments/cmsc5ub6c000loeu4fp3tq2q5/submit","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":20485}
+ POST /api/assignments/cmsc5ub6c000loeu4fp3tq2q5/submit 200 in 27.8s (compile: 7.3s, render: 20.5s)
+[AUDIT] {"ts":"2026-08-02T18:56:20.174Z","method":"GET","path":"/api/assignments/cmsc5ub6c000loeu4fp3tq2q5","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":10703}
+ GET /api/assignments/cmsc5ub6c000loeu4fp3tq2q5 200 in 12.1s (compile: 1311ms, render: 10.7s)
+[AUDIT] {"ts":"2026-08-02T18:56:36.744Z","method":"GET","path":"/api/assignments/cmsc5ub6c000loeu4fp3tq2q5/results","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":11216}
+ GET /api/assignments/cmsc5ub6c000loeu4fp3tq2q5/results 200 in 16.5s (compile: 5.3s, render: 11.2s)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/auth/csrf 200 in 68ms (compile: 35ms, render: 32ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 14.4s (compile: 13ms, render: 14.4s)
+ GET /api/auth/csrf 200 in 77ms (compile: 42ms, render: 35ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 11.7s (compile: 18ms, render: 11.7s)
+[AUDIT] {"ts":"2026-08-02T19:02:30.304Z","method":"POST","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":13197}
+ POST /api/assignments 200 in 13.2s (compile: 14ms, render: 13.2s)
+[AUDIT] {"ts":"2026-08-02T19:02:40.976Z","method":"POST","path":"/api/exam-sessions","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":9694}
+ POST /api/exam-sessions 200 in 10.6s (compile: 920ms, render: 9.7s)
+✓ Finished filesystem cache database compaction in 15.9s
+[AUDIT] {"ts":"2026-08-02T19:03:04.096Z","method":"POST","path":"/api/exam-sessions/cmsc63oub000zoeu4dos1p0l5/violations","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":8603}
+ POST /api/exam-sessions/cmsc63oub000zoeu4dos1p0l5/violations 200 in 23.0s (compile: 14.4s, render: 8.6s)
+[AUDIT] {"ts":"2026-08-02T19:03:22.042Z","method":"POST","path":"/api/exam-sessions/cmsc63oub000zoeu4dos1p0l5/reentry","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":7245}
+ POST /api/exam-sessions/cmsc63oub000zoeu4dos1p0l5/reentry 200 in 17.9s (compile: 10.6s, render: 7.3s)
+[AUDIT] {"ts":"2026-08-02T19:03:30.829Z","method":"POST","path":"/api/exam-sessions/cmsc63oub000zoeu4dos1p0l5/reentry","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":8690}
+ POST /api/exam-sessions/cmsc63oub000zoeu4dos1p0l5/reentry 200 in 8.8s (compile: 42ms, render: 8.7s)
+[AUDIT] {"ts":"2026-08-02T19:03:35.432Z","method":"GET","path":"/api/exam-sessions/cmsc63oub000zoeu4dos1p0l5/reentry","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":4513}
+ GET /api/exam-sessions/cmsc63oub000zoeu4dos1p0l5/reentry 200 in 4.6s (compile: 45ms, render: 4.5s)
+ GET /api/auth/session 200 in 107ms (compile: 47ms, render: 60ms)
+[AUDIT] {"ts":"2026-08-02T19:03:41.062Z","method":"POST","path":"/api/live-session","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":4777}
+ POST /api/live-session 200 in 5.5s (compile: 670ms, render: 4.8s)
+[AUDIT] {"ts":"2026-08-02T19:03:44.591Z","method":"PATCH","path":"/api/live-session","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":3451}
+ PATCH /api/live-session 200 in 3.5s (compile: 11ms, render: 3.5s)
+[AUDIT] {"ts":"2026-08-02T19:03:47.886Z","method":"PATCH","path":"/api/live-session","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":3230}
+ PATCH /api/live-session 200 in 3.3s (compile: 20ms, render: 3.3s)
+ PATCH /api/live-session 200 in 1494ms (compile: 16ms, render: 1477ms)
+[AUDIT] {"ts":"2026-08-02T19:03:51.752Z","method":"PATCH","path":"/api/live-session","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":3819}
+ GET /api/auth/csrf 200 in 93ms (compile: 44ms, render: 49ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 11.7s (compile: 20ms, render: 11.7s)
+[AUDIT] {"ts":"2026-08-02T19:04:44.403Z","method":"GET","path":"/api/live-session","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":3699}
+ GET /api/live-session?sessionId=cmsc64ylk0013oeu4i73pvmry 200 in 3.7s (compile: 13ms, render: 3.7s)
+[AUDIT] {"ts":"2026-08-02T19:04:47.978Z","method":"PATCH","path":"/api/live-session","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":3466}
+ PATCH /api/live-session 200 in 3.5s (compile: 8ms, render: 3.5s)
+[AUDIT] {"ts":"2026-08-02T19:04:56.372Z","method":"DELETE","path":"/api/assignments/cmsc63cx8000xoeu4ax15ikjl","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":8299}
+ DELETE /api/assignments/cmsc63cx8000xoeu4ax15ikjl 200 in 8.4s (compile: 41ms, render: 8.3s)
+[AUDIT] {"ts":"2026-08-02T19:05:02.676Z","method":"DELETE","path":"/api/assignments/cmsc5ub6c000loeu4fp3tq2q5","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6218}
+ DELETE /api/assignments/cmsc5ub6c000loeu4fp3tq2q5 200 in 6.3s (compile: 44ms, render: 6.2s)
+ GET /api/auth/csrf 200 in 85ms (compile: 37ms, render: 49ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 13.1s (compile: 12ms, render: 13.1s)
+ GET /api/auth/csrf 200 in 90ms (compile: 43ms, render: 46ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 11.5s (compile: 11ms, render: 11.5s)
+[AUDIT] {"ts":"2026-08-02T19:10:28.073Z","method":"POST","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":12552}
+ POST /api/assignments 200 in 12.6s (compile: 21ms, render: 12.6s)
+[AUDIT] {"ts":"2026-08-02T19:10:37.283Z","method":"POST","path":"/api/exam-sessions","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":9117}
+ POST /api/exam-sessions 200 in 9.2s (compile: 17ms, render: 9.1s)
+[AUDIT] {"ts":"2026-08-02T19:10:59.511Z","method":"POST","path":"/api/assignments/cmsc6dm03001boeu4vfsk9pmh/submit","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":20787}
+ POST /api/assignments/cmsc6dm03001boeu4vfsk9pmh/submit 200 in 22.2s (compile: 1383ms, render: 20.8s)
+[AUDIT] {"ts":"2026-08-02T19:11:06.506Z","method":"GET","path":"/api/exam-sessions","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6934}
+ GET /api/exam-sessions?assignmentId=cmsc6dm03001boeu4vfsk9pmh 200 in 7.0s (compile: 14ms, render: 7.0s)
+[AUDIT] {"ts":"2026-08-02T19:11:15.894Z","method":"GET","path":"/api/assignments/cmsc6dm03001boeu4vfsk9pmh/results","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":9194}
+ GET /api/assignments/cmsc6dm03001boeu4vfsk9pmh/results 200 in 9.3s (compile: 55ms, render: 9.2s)
+[AUDIT] {"ts":"2026-08-02T19:11:22.446Z","method":"DELETE","path":"/api/assignments/cmsc6dm03001boeu4vfsk9pmh","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6417}
+ DELETE /api/assignments/cmsc6dm03001boeu4vfsk9pmh 200 in 6.5s (compile: 55ms, render: 6.5s)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/auth/csrf 200 in 973ms (compile: 900ms, render: 74ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 14.0s (compile: 13ms, render: 14.0s)
+ GET /api/auth/csrf 200 in 82ms (compile: 40ms, render: 43ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 11.6s (compile: 15ms, render: 11.6s)
+[AUDIT] {"ts":"2026-08-02T19:33:15.291Z","method":"GET","path":"/api/student/mastery","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":8821}
+ GET /api/student/mastery 200 in 10.0s (compile: 1201ms, render: 8.8s)
+[AUDIT] {"ts":"2026-08-02T19:33:28.073Z","method":"GET","path":"/api/student/recommendations","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":11542}
+ GET /api/student/recommendations 200 in 12.7s (compile: 1166ms, render: 11.6s)
+✓ Finished filesystem cache database compaction in 13.1s
+[AUDIT] {"ts":"2026-08-02T19:33:38.444Z","method":"GET","path":"/api/student/review-schedule","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":8974}
+ GET /api/student/review-schedule 200 in 10.3s (compile: 1272ms, render: 9.0s)
+[AUDIT] {"ts":"2026-08-02T19:33:49.805Z","method":"POST","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":10925}
+ POST /api/assignments 200 in 11.2s (compile: 245ms, render: 11.0s)
+[AUDIT] {"ts":"2026-08-02T19:34:20.112Z","method":"POST","path":"/api/assignments/cmsc77nod001noeu4nh90fee5/submit","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":28699}
+ POST /api/assignments/cmsc77nod001noeu4nh90fee5/submit 200 in 30.3s (compile: 1539ms, render: 28.7s)
+[AUDIT] {"ts":"2026-08-02T19:34:28.806Z","method":"GET","path":"/api/student/mastery","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":8639}
+ GET /api/student/mastery 200 in 8.7s (compile: 14ms, render: 8.7s)
+ GET /api/student/review-schedule 200 in 7.8s (compile: 12ms, render: 7.8s)
+[AUDIT] {"ts":"2026-08-02T19:34:37.654Z","method":"GET","path":"/api/student/review-schedule","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":8649}
+ GET /api/auth/csrf 200 in 62ms (compile: 30ms, render: 32ms)
+ POST /api/auth/callback/credentials 500 in 81ms (compile: 13ms, render: 68ms)
+ GET /api/student/review-schedule 401 in 1162ms (compile: 10ms, render: 1152ms)
+ GET /api/student/review-schedule 401 in 726ms (compile: 11ms, render: 715ms)
+ GET /api/student/recommendations 401 in 666ms (compile: 8ms, render: 658ms)
+[AUDIT] {"ts":"2026-08-02T19:35:23.084Z","method":"GET","path":"/api/cron/adaptive-learning","userId":"anonymous","status":200,"durationMs":6257}
+ GET /api/cron/adaptive-learning 200 in 7.5s (compile: 1228ms, render: 6.3s)
+ GET /api/auth/csrf 200 in 62ms (compile: 31ms, render: 32ms)
+ POST /api/auth/callback/credentials 500 in 57ms (compile: 16ms, render: 42ms)
+ GET /api/auth/session 200 in 54ms (compile: 12ms, render: 42ms)
+ GET /api/auth/csrf 200 in 82ms (compile: 38ms, render: 44ms)
+ POST /api/auth/callback/credentials 500 in 35ms (compile: 10ms, render: 24ms)
+ GET /api/auth/session 200 in 50ms (compile: 10ms, render: 40ms)
+ GET /api/student/review-schedule 401 in 571ms (compile: 12ms, render: 559ms)
+ GET /api/student/recommendations 401 in 539ms (compile: 9ms, render: 530ms)
+ GET /api/auth/csrf 200 in 82ms (compile: 37ms, render: 45ms)
+ POST /api/auth/callback/credentials 500 in 36ms (compile: 9ms, render: 26ms)
+ GET /api/auth/session 200 in 44ms (compile: 16ms, render: 28ms)
+ GET /api/auth/csrf 200 in 86ms (compile: 30ms, render: 56ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 11.4s (compile: 10ms, render: 11.4s)
+[AUDIT] {"ts":"2026-08-02T19:37:03.474Z","method":"GET","path":"/api/student/review-schedule","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":11546}
+ GET /api/student/review-schedule 200 in 11.6s (compile: 8ms, render: 11.6s)
+ GET /api/auth/csrf 200 in 77ms (compile: 34ms, render: 44ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 11.8s (compile: 10ms, render: 11.8s)
+[AUDIT] {"ts":"2026-08-02T19:37:28.969Z","method":"GET","path":"/api/student/recommendations","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":12098}
+ GET /api/student/recommendations 200 in 12.1s (compile: 9ms, render: 12.1s)
+[AUDIT] {"ts":"2026-08-02T19:38:01.104Z","method":"GET","path":"/api/cron/adaptive-learning","userId":"anonymous","status":200,"durationMs":7602}
+ GET /api/cron/adaptive-learning 200 in 7.6s (compile: 9ms, render: 7.6s)
+[AUDIT] {"ts":"2026-08-02T19:38:22.104Z","method":"GET","path":"/api/cron/adaptive-learning","userId":"anonymous","status":200,"durationMs":5769}
+ GET /api/cron/adaptive-learning 200 in 5.8s (compile: 11ms, render: 5.8s)
+[AUDIT] {"ts":"2026-08-02T19:38:47.909Z","method":"GET","path":"/api/cron/adaptive-learning","userId":"anonymous","status":200,"durationMs":7036}
+ GET /api/cron/adaptive-learning 200 in 7.1s (compile: 8ms, render: 7.1s)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/health 200 in 4.9s (compile: 1032ms, render: 3.9s)
+ GET /api/auth/csrf 200 in 69ms (compile: 39ms, render: 30ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 17.1s (compile: 8ms, render: 17.1s)
+ GET /api/auth/session 200 in 80ms (compile: 30ms, render: 50ms)
+[AUDIT] {"ts":"2026-08-03T04:16:56.264Z","method":"GET","path":"/api/super-admin/dashboard-stats","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5896}
+ GET /api/super-admin/dashboard-stats 200 in 7.0s (compile: 1088ms, render: 5.9s)
+[AUDIT] {"ts":"2026-08-03T04:17:13.043Z","method":"GET","path":"/api/super-admin/schools","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":14531}
+ GET /api/super-admin/schools 200 in 16.8s (compile: 2.2s, render: 14.6s)
+ GET /api/super-admin/system-settings 500 in 2.7s (compile: 1183ms, render: 1502ms)
+[AUDIT] {"ts":"2026-08-03T04:17:19.133Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2423}
+ GET /api/super-admin/live-metrics 200 in 2.8s (compile: 318ms, render: 2.5s)
+✓ Finished filesystem cache database compaction in 17.0s
+ GET /api/super-admin/trends 200 in 60s (compile: 521ms, render: 59s)
+[AUDIT] {"ts":"2026-08-03T04:18:24.664Z","method":"GET","path":"/api/super-admin/audit-logs","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":4165}
+ GET /api/super-admin/audit-logs 200 in 5.4s (compile: 1262ms, render: 4.2s)
+ GET /api/auth/csrf 200 in 61ms (compile: 34ms, render: 27ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r52sx0004oem8nyup7ag5', role: 'SCHOOL_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 13.7s (compile: 8ms, render: 13.7s)
+ GET /api/auth/session 200 in 105ms (compile: 46ms, render: 59ms)
+[AUDIT] {"ts":"2026-08-03T04:18:50.638Z","method":"GET","path":"/api/school-admin/dashboard-stats","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":10763}
+ GET /api/school-admin/dashboard-stats 200 in 12.1s (compile: 1272ms, render: 10.8s)
+[AUDIT] {"ts":"2026-08-03T04:18:57.922Z","method":"GET","path":"/api/school-admin/classes","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":6110}
+ GET /api/school-admin/classes 200 in 7.3s (compile: 1143ms, render: 6.1s)
+[AUDIT] {"ts":"2026-08-03T04:19:06.408Z","method":"GET","path":"/api/super-admin/trends","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":106700}
+[AUDIT] {"ts":"2026-08-03T04:19:07.066Z","method":"GET","path":"/api/school-admin/teachers","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":7100}
+ GET /api/school-admin/teachers 200 in 9.1s (compile: 2.0s, render: 7.1s)
+[AUDIT] {"ts":"2026-08-03T04:19:14.062Z","method":"GET","path":"/api/school-admin/students","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":5931}
+ GET /api/school-admin/students 200 in 7.0s (compile: 1028ms, render: 5.9s)
+[AUDIT] {"ts":"2026-08-03T04:19:19.878Z","method":"GET","path":"/api/school-admin/school-info","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":4375}
+ GET /api/school-admin/school-info 200 in 5.8s (compile: 1389ms, render: 4.4s)
+[AUDIT] {"ts":"2026-08-03T04:19:26.869Z","method":"GET","path":"/api/school-admin/reports","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":5250}
+ GET /api/school-admin/reports 200 in 7.0s (compile: 1696ms, render: 5.3s)
+[AUDIT] {"ts":"2026-08-03T04:19:39.605Z","method":"GET","path":"/api/school-admin/timetable","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":10430}
+ GET /api/school-admin/timetable 200 in 12.7s (compile: 2.3s, render: 10.5s)
+ GET /api/auth/csrf 200 in 70ms (compile: 35ms, render: 35ms)
+✓ Finished filesystem cache database compaction in 10.7s
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 11.6s (compile: 12ms, render: 11.6s)
+ GET /api/auth/session 200 in 56ms (compile: 25ms, render: 31ms)
+🔍 Looking for teacher with userId: cms5r55hv0007oem85luig434
+✅ Found teacher: teacher@demoschool.edu
+[AUDIT] {"ts":"2026-08-03T04:20:01.557Z","method":"GET","path":"/api/teacher/dashboard-stats","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":9655}
+ GET /api/teacher/dashboard-stats 200 in 10.2s (compile: 472ms, render: 9.7s)
+Analytics API - Teacher found: cms5r56gh0009oem837yddjkt School ID: cms5r52el0003oem85b3m7iku
+Analytics API - Returning data: {
+  "analytics": {
+    "totalStudents": 11,
+    "totalAssignments": 3,
+    "completedAssignments": 1,
+    "averageGrade": 67,
+    "completionRate": 33.33,
+    "activeStudents": 1,
+    "totalHours": 7.23
+  },
+  "studentProgress": [
+    {
+      "id": "cms5r5929000coem89t60tmv9",
+      "name": "Jane Student",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5d7e000joem85um5kng6",
+      "name": "Alice Wambui",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5g3l000moem8897vnpd4",
+      "name": "Brian Otieno",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5ivp000poem8z0g15l3i",
+      "name": "Catherine Njeri",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5llb000soem8fg6y2t1d",
+      "name": "David Kiprotich",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5oik000voem8zm9tb8mq",
+      "name": "Esther Muthoni",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5rdl000yoem867oy0stp",
+      "name": "Francis Mwangi",
+      "className": "Grade 4B",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5u5u0011oem8anzyo0a7",
+      "name": "Grace Akinyi",
+      "className": "Grade 4B",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5wu90014oem8jj97xb43",
+      "name": "Henry Ochieng",
+      "className": "Grade 4B",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5zpo0017oem8t5epedgp",
+      "name": "Irene Njoki",
+      "className": "Grade 4B",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    }
+  ],
+  "assignmentStats": [
+    {
+      "id": "cmsaba1cs000boerg687eih4b",
+      "title": "QUICK MATHS ",
+      "totalSubmissions": 0,
+      "completionRate": 0,
+      "averageGrade": 0
+    },
+    {
+      "id": "cmsc4r5an0009oeu4eji7z59j",
+      "title": "Maths CAT Term 2 (Test)",
+      "totalSubmissions": 0,
+      "completionRate": 0,
+      "averageGrade": 0
+    },
+    {
+      "id": "cmsc77nod001noeu4nh90fee5",
+      "title": "Social Studies E2E",
+      "totalSubmissions": 1,
+      "completionRate": 100,
+      "averageGrade": 67
+    }
+  ],
+  "recentActivity": [],
+  "aiInsights": []
+}
+[AUDIT] {"ts":"2026-08-03T04:20:09.163Z","method":"GET","path":"/api/teacher/analytics","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":7176}
+ GET /api/teacher/analytics 200 in 7.6s (compile: 391ms, render: 7.2s)
+[AUDIT] {"ts":"2026-08-03T04:20:14.255Z","method":"GET","path":"/api/teacher/classes","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":4936}
+ GET /api/teacher/classes 200 in 5.1s (compile: 129ms, render: 5.0s)
+[AUDIT] {"ts":"2026-08-03T04:20:20.244Z","method":"GET","path":"/api/teacher/students","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":5733}
+ GET /api/teacher/students 200 in 6.0s (compile: 216ms, render: 5.8s)
+[AUDIT] {"ts":"2026-08-03T04:20:27.642Z","method":"GET","path":"/api/teacher/gradebook","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6936}
+ GET /api/teacher/gradebook 200 in 7.4s (compile: 424ms, render: 7.0s)
+[AUDIT] {"ts":"2026-08-03T04:20:37.221Z","method":"GET","path":"/api/teacher/marks","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":8372}
+ GET /api/teacher/marks 200 in 9.6s (compile: 1157ms, render: 8.4s)
+[AUDIT] {"ts":"2026-08-03T04:20:43.783Z","method":"GET","path":"/api/teacher/pending-grading","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6084}
+ GET /api/teacher/pending-grading 200 in 6.6s (compile: 439ms, render: 6.1s)
+[AUDIT] {"ts":"2026-08-03T04:20:49.217Z","method":"GET","path":"/api/teacher/mastery-summary","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":4872}
+ GET /api/teacher/mastery-summary 200 in 5.4s (compile: 524ms, render: 4.9s)
+[AUDIT] {"ts":"2026-08-03T04:20:56.940Z","method":"GET","path":"/api/teacher/student-progress-monitor","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6609}
+ GET /api/teacher/student-progress-monitor 200 in 7.7s (compile: 1074ms, render: 6.6s)
+[AUDIT] {"ts":"2026-08-03T04:21:05.790Z","method":"GET","path":"/api/teacher/live-metrics","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":8345}
+ GET /api/teacher/live-metrics 200 in 8.8s (compile: 464ms, render: 8.4s)
+[AUDIT] {"ts":"2026-08-03T04:21:15.706Z","method":"GET","path":"/api/teacher/schedules","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":9493}
+ GET /api/teacher/schedules 200 in 9.9s (compile: 392ms, render: 9.5s)
+[AUDIT] {"ts":"2026-08-03T04:21:24.983Z","method":"GET","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":9226}
+ GET /api/assignments 200 in 9.3s (compile: 9ms, render: 9.2s)
+ GET /api/health 200 in 4.5s (compile: 13ms, render: 4.5s)
+ GET /api/auth/csrf 200 in 66ms (compile: 31ms, render: 36ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 14.1s (compile: 8ms, render: 14.1s)
+ GET /api/auth/session 200 in 82ms (compile: 38ms, render: 45ms)
+[AUDIT] {"ts":"2026-08-03T04:22:20.785Z","method":"GET","path":"/api/super-admin/dashboard-stats","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5107}
+ GET /api/super-admin/dashboard-stats 200 in 5.1s (compile: 12ms, render: 5.1s)
+[AUDIT] {"ts":"2026-08-03T04:22:26.371Z","method":"GET","path":"/api/super-admin/schools","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5532}
+ GET /api/super-admin/schools 200 in 5.6s (compile: 13ms, render: 5.6s)
+ GET /api/super-admin/system-settings 500 in 1116ms (compile: 15ms, render: 1102ms)
+[AUDIT] {"ts":"2026-08-03T04:22:30.110Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2310}
+ GET /api/super-admin/live-metrics 200 in 2.4s (compile: 11ms, render: 2.3s)
+ GET /api/super-admin/trends 200 in 60s (compile: 14ms, render: 60s)
+[AUDIT] {"ts":"2026-08-03T04:23:32.963Z","method":"GET","path":"/api/super-admin/audit-logs","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2785}
+ GET /api/super-admin/audit-logs 200 in 2.8s (compile: 13ms, render: 2.8s)
+ GET /api/auth/csrf 200 in 92ms (compile: 41ms, render: 51ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r52sx0004oem8nyup7ag5', role: 'SCHOOL_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 11.3s (compile: 13ms, render: 11.3s)
+ GET /api/auth/session 200 in 104ms (compile: 59ms, render: 45ms)
+[AUDIT] {"ts":"2026-08-03T04:23:55.560Z","method":"GET","path":"/api/school-admin/dashboard-stats","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":10973}
+ GET /api/school-admin/dashboard-stats 200 in 11.0s (compile: 9ms, render: 11.0s)
+[AUDIT] {"ts":"2026-08-03T04:24:01.643Z","method":"GET","path":"/api/school-admin/classes","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":6033}
+ GET /api/school-admin/classes 200 in 6.1s (compile: 15ms, render: 6.1s)
+[AUDIT] {"ts":"2026-08-03T04:24:02.339Z","method":"GET","path":"/api/super-admin/trends","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":92182}
+[AUDIT] {"ts":"2026-08-03T04:24:08.225Z","method":"GET","path":"/api/school-admin/teachers","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":6541}
+ GET /api/school-admin/teachers 200 in 6.6s (compile: 11ms, render: 6.6s)
+[AUDIT] {"ts":"2026-08-03T04:24:14.325Z","method":"GET","path":"/api/school-admin/students","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":6052}
+ GET /api/school-admin/students 200 in 6.1s (compile: 15ms, render: 6.1s)
+[AUDIT] {"ts":"2026-08-03T04:24:18.211Z","method":"GET","path":"/api/school-admin/school-info","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":3850}
+ GET /api/school-admin/school-info 200 in 3.9s (compile: 7ms, render: 3.9s)
+[AUDIT] {"ts":"2026-08-03T04:24:22.822Z","method":"GET","path":"/api/school-admin/reports","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":4571}
+ GET /api/school-admin/reports 200 in 4.6s (compile: 10ms, render: 4.6s)
+[AUDIT] {"ts":"2026-08-03T04:24:32.802Z","method":"GET","path":"/api/school-admin/timetable","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":9905}
+ GET /api/school-admin/timetable 200 in 10.0s (compile: 47ms, render: 9.9s)
+ GET /api/auth/csrf 200 in 80ms (compile: 49ms, render: 31ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 11.0s (compile: 13ms, render: 11.0s)
+ GET /api/auth/session 200 in 106ms (compile: 42ms, render: 64ms)
+🔍 Looking for teacher with userId: cms5r55hv0007oem85luig434
+✅ Found teacher: teacher@demoschool.edu
+[AUDIT] {"ts":"2026-08-03T04:24:51.649Z","method":"GET","path":"/api/teacher/dashboard-stats","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":7478}
+ GET /api/teacher/dashboard-stats 200 in 7.5s (compile: 13ms, render: 7.5s)
+Analytics API - Teacher found: cms5r56gh0009oem837yddjkt School ID: cms5r52el0003oem85b3m7iku
+Analytics API - Returning data: {
+  "analytics": {
+    "totalStudents": 11,
+    "totalAssignments": 3,
+    "completedAssignments": 1,
+    "averageGrade": 67,
+    "completionRate": 33.33,
+    "activeStudents": 1,
+    "totalHours": 7.23
+  },
+  "studentProgress": [
+    {
+      "id": "cms5r5929000coem89t60tmv9",
+      "name": "Jane Student",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5d7e000joem85um5kng6",
+      "name": "Alice Wambui",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5g3l000moem8897vnpd4",
+      "name": "Brian Otieno",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5ivp000poem8z0g15l3i",
+      "name": "Catherine Njeri",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5llb000soem8fg6y2t1d",
+      "name": "David Kiprotich",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5oik000voem8zm9tb8mq",
+      "name": "Esther Muthoni",
+      "className": "Grade 3A",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5rdl000yoem867oy0stp",
+      "name": "Francis Mwangi",
+      "className": "Grade 4B",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5u5u0011oem8anzyo0a7",
+      "name": "Grace Akinyi",
+      "className": "Grade 4B",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5wu90014oem8jj97xb43",
+      "name": "Henry Ochieng",
+      "className": "Grade 4B",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    },
+    {
+      "id": "cms5r5zpo0017oem8t5epedgp",
+      "name": "Irene Njoki",
+      "className": "Grade 4B",
+      "totalSubmissions": 0,
+      "averageGrade": 0,
+      "lastActivity": null
+    }
+  ],
+  "assignmentStats": [
+    {
+      "id": "cmsaba1cs000boerg687eih4b",
+      "title": "QUICK MATHS ",
+      "totalSubmissions": 0,
+      "completionRate": 0,
+      "averageGrade": 0
+    },
+    {
+      "id": "cmsc4r5an0009oeu4eji7z59j",
+      "title": "Maths CAT Term 2 (Test)",
+      "totalSubmissions": 0,
+      "completionRate": 0,
+      "averageGrade": 0
+    },
+    {
+      "id": "cmsc77nod001noeu4nh90fee5",
+      "title": "Social Studies E2E",
+      "totalSubmissions": 1,
+      "completionRate": 100,
+      "averageGrade": 67
+    }
+  ],
+  "recentActivity": [],
+  "aiInsights": []
+}
+[AUDIT] {"ts":"2026-08-03T04:24:59.191Z","method":"GET","path":"/api/teacher/analytics","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":7486}
+ GET /api/teacher/analytics 200 in 7.5s (compile: 11ms, render: 7.5s)
+[AUDIT] {"ts":"2026-08-03T04:25:05.763Z","method":"GET","path":"/api/teacher/classes","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6531}
+ GET /api/teacher/classes 200 in 6.6s (compile: 12ms, render: 6.6s)
+[AUDIT] {"ts":"2026-08-03T04:25:11.624Z","method":"GET","path":"/api/teacher/students","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":5823}
+ GET /api/teacher/students 200 in 5.9s (compile: 11ms, render: 5.8s)
+[AUDIT] {"ts":"2026-08-03T04:25:17.672Z","method":"GET","path":"/api/teacher/gradebook","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6012}
+ GET /api/teacher/gradebook 200 in 6.0s (compile: 7ms, render: 6.0s)
+[AUDIT] {"ts":"2026-08-03T04:25:27.208Z","method":"GET","path":"/api/teacher/marks","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":9440}
+ GET /api/teacher/marks 200 in 9.5s (compile: 50ms, render: 9.5s)
+[AUDIT] {"ts":"2026-08-03T04:25:33.314Z","method":"GET","path":"/api/teacher/pending-grading","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6057}
+ GET /api/teacher/pending-grading 200 in 6.1s (compile: 14ms, render: 6.1s)
+[AUDIT] {"ts":"2026-08-03T04:25:38.200Z","method":"GET","path":"/api/teacher/mastery-summary","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":4833}
+ GET /api/teacher/mastery-summary 200 in 4.9s (compile: 19ms, render: 4.9s)
+[AUDIT] {"ts":"2026-08-03T04:25:45.768Z","method":"GET","path":"/api/teacher/student-progress-monitor","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":7517}
+ GET /api/teacher/student-progress-monitor 200 in 7.6s (compile: 16ms, render: 7.5s)
+[AUDIT] {"ts":"2026-08-03T04:25:52.191Z","method":"GET","path":"/api/teacher/live-metrics","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6373}
+ GET /api/teacher/live-metrics 200 in 6.4s (compile: 12ms, render: 6.4s)
+[AUDIT] {"ts":"2026-08-03T04:26:03.026Z","method":"GET","path":"/api/teacher/schedules","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":10798}
+ GET /api/teacher/schedules 200 in 10.8s (compile: 9ms, render: 10.8s)
+[AUDIT] {"ts":"2026-08-03T04:26:15.142Z","method":"GET","path":"/api/assignments","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":12058}
+ GET /api/assignments 200 in 12.1s (compile: 12ms, render: 12.1s)
+ GET /api/auth/csrf 200 in 95ms (compile: 40ms, render: 54ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 16.5s (compile: 13ms, render: 16.4s)
+[AUDIT] {"ts":"2026-08-03T04:28:47.403Z","method":"GET","path":"/api/super-admin/system-settings","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":4626}
+ GET /api/super-admin/system-settings 200 in 6.2s (compile: 1551ms, render: 4.7s)
+[AUDIT] {"ts":"2026-08-03T04:30:18.947Z","method":"GET","path":"/api/super-admin/trends","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":91420}
+ GET /api/super-admin/trends 200 in 91s (compile: 10ms, render: 91s)
+ GET /api/auth/csrf 200 in 69ms (compile: 36ms, render: 33ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 11.7s (compile: 9ms, render: 11.7s)
+ GET /api/auth/session 200 in 91ms (compile: 43ms, render: 48ms)
+[AUDIT] {"ts":"2026-08-03T04:31:51.564Z","method":"GET","path":"/api/student/dashboard","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":20677}
+ GET /api/student/dashboard 200 in 20.9s (compile: 168ms, render: 20.7s)
+[AUDIT] {"ts":"2026-08-03T04:32:03.292Z","method":"GET","path":"/api/student/progress","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":10187}
+ GET /api/student/progress 200 in 11.7s (compile: 1505ms, render: 10.2s)
+[AUDIT] {"ts":"2026-08-03T04:32:10.245Z","method":"GET","path":"/api/student/progress-page","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":5671}
+ GET /api/student/progress-page 200 in 6.9s (compile: 1247ms, render: 5.7s)
+[AUDIT] {"ts":"2026-08-03T04:32:17.143Z","method":"GET","path":"/api/student/mastery","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":6800}
+ GET /api/student/mastery 200 in 6.8s (compile: 13ms, render: 6.8s)
+[AUDIT] {"ts":"2026-08-03T04:32:26.090Z","method":"GET","path":"/api/student/review-schedule","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":8878}
+ GET /api/student/review-schedule 200 in 8.9s (compile: 21ms, render: 8.9s)
+[AUDIT] {"ts":"2026-08-03T04:32:38.224Z","method":"GET","path":"/api/student/recommendations","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":12081}
+ GET /api/student/recommendations 200 in 12.1s (compile: 15ms, render: 12.1s)
+✓ Finished filesystem cache database compaction in 10.9s
+[AUDIT] {"ts":"2026-08-03T04:32:57.312Z","method":"GET","path":"/api/student/learning-path","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":17733}
+ GET /api/student/learning-path 200 in 19.1s (compile: 1322ms, render: 17.8s)
+[AUDIT] {"ts":"2026-08-03T04:33:06.643Z","method":"GET","path":"/api/student/course-challenge","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":6842}
+ GET /api/student/course-challenge 200 in 9.3s (compile: 2.4s, render: 6.9s)
+[AUDIT] {"ts":"2026-08-03T04:33:17.087Z","method":"GET","path":"/api/student/trends","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":8784}
+ GET /api/student/trends 200 in 10.4s (compile: 1607ms, render: 8.8s)
+✓ Finished filesystem cache database compaction in 13.0s
+✓ Finished writing to filesystem cache in 10.2s
+[AUDIT] {"ts":"2026-08-03T04:33:28.271Z","method":"GET","path":"/api/student/goals","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":8038}
+ GET /api/student/goals 200 in 11.2s (compile: 3.1s, render: 8.1s)
+[AUDIT] {"ts":"2026-08-03T04:33:36.350Z","method":"GET","path":"/api/student/study-sessions","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":5150}
+ GET /api/student/study-sessions 200 in 7.9s (compile: 2.7s, render: 5.2s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].student.findUnique()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__08367552._.js:1852:164
+
+  1849 }, async (request, { user })=>{
+  1850     const userId = user.id;
+  1851     // Get student-specific statistics
+→ 1852     const student = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].student.findUnique({
+             where: {
+               userId: "cms5r61eg0018oem80p4mckxy"
+             },
+             include: {
+               user: true,
+               class: {
+                 include: {
+                   teacher: {
+                     include: {
+                       user: true
+                     }
+                   }
+                 }
+               },
+               assignments: {
+                 include: {
+                   assignment: true,
+                   ~~~~~~~~~~
+           ?       teacher?: true,
+           ?       lessonPlan?: true,
+           ?       students?: true,
+           ?       submissions?: true,
+           ?       class?: true,
+           ?       courseAssignments?: true,
+           ?       examSessions?: true
+                 }
+               }
+             }
+           })
+
+Unknown field `assignment` for include statement on model `Assignment`. Available options are marked with ?.
+ GET /api/student/dashboard-stats 500 in 6.8s (compile: 2.2s, render: 4.6s)
+✓ Finished filesystem cache database compaction in 10.9s
+[AUDIT] {"ts":"2026-08-03T04:33:54.759Z","method":"GET","path":"/api/student/schedules","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":9946}
+ GET /api/student/schedules 200 in 11.5s (compile: 1520ms, render: 10.0s)
+📚 Fetching student school info...
+Session: james.kamau@demoschool.edu STUDENT
+🔍 Looking for student with userId: cms5r61eg0018oem80p4mckxy
+✅ Found student and school: james.kamau@demoschool.edu Demo School
+[AUDIT] {"ts":"2026-08-03T04:34:01.284Z","method":"GET","path":"/api/student/school-info","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":5989}
+ GET /api/student/school-info 200 in 6.5s (compile: 499ms, render: 6.0s)
+✓ Finished filesystem cache database compaction in 14.4s
+✓ Finished writing to filesystem cache in 12.7s
+[AUDIT] {"ts":"2026-08-03T04:34:15.444Z","method":"GET","path":"/api/student/resources","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":10778}
+ GET /api/student/resources 200 in 14.1s (compile: 3.1s, render: 11.1s)
+[AUDIT] {"ts":"2026-08-03T04:34:24.380Z","method":"GET","path":"/api/student/ai-lessons","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":6459}
+ GET /api/student/ai-lessons 200 in 8.9s (compile: 2.4s, render: 6.5s)
+[AUDIT] {"ts":"2026-08-03T04:34:31.909Z","method":"GET","path":"/api/student/assignments","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":7316}
+ GET /api/student/assignments 200 in 7.5s (compile: 174ms, render: 7.3s)
+[AUDIT] {"ts":"2026-08-03T04:34:40.301Z","method":"GET","path":"/api/student/live-metrics","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":7058}
+ GET /api/student/live-metrics 200 in 8.4s (compile: 1299ms, render: 7.1s)
+ GET /api/auth/csrf 200 in 139ms (compile: 60ms, render: 79ms)
+[DEBUG] User found, checking password... 
+ POST /api/auth/callback/credentials 401 in 11.2s (compile: 80ms, render: 11.1s)
+ GET /api/auth/csrf 200 in 87ms (compile: 50ms, render: 37ms)
+[DEBUG] User found, checking password... 
+ POST /api/auth/callback/credentials 401 in 10.8s (compile: 22ms, render: 10.8s)
+ GET /api/auth/csrf 200 in 100ms (compile: 43ms, render: 57ms)
+[DEBUG] User found, checking password... 
+ POST /api/auth/callback/credentials 401 in 10.8s (compile: 11ms, render: 10.8s)
+ GET /api/auth/csrf 200 in 73ms (compile: 30ms, render: 43ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms46tfi00000oe5k6p8zc4e2', role: 'PARENT' }
+ POST /api/auth/callback/credentials 200 in 11.6s (compile: 9ms, render: 11.6s)
+ GET /api/auth/session 200 in 76ms (compile: 31ms, render: 46ms)
+[AUDIT] {"ts":"2026-08-03T04:38:09.002Z","method":"GET","path":"/api/parent/children","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":10543}
+ GET /api/parent/children 200 in 11.7s (compile: 1128ms, render: 10.6s)
+[AUDIT] {"ts":"2026-08-03T04:38:19.372Z","method":"GET","path":"/api/parent/grades","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":9115}
+ GET /api/parent/grades 200 in 10.3s (compile: 1205ms, render: 9.1s)
+[AUDIT] {"ts":"2026-08-03T04:38:29.965Z","method":"GET","path":"/api/parent/progress","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":9054}
+ GET /api/parent/progress 200 in 10.6s (compile: 1498ms, render: 9.1s)
+✓ Finished filesystem cache database compaction in 10.4s
+[AUDIT] {"ts":"2026-08-03T04:38:40.431Z","method":"GET","path":"/api/parent/alerts","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":9325}
+ GET /api/parent/alerts 200 in 10.5s (compile: 1107ms, render: 9.4s)
+[AUDIT] {"ts":"2026-08-03T04:38:50.166Z","method":"GET","path":"/api/parent/schedule","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":8310}
+ GET /api/parent/schedule 200 in 9.7s (compile: 1379ms, render: 8.3s)
+[AUDIT] {"ts":"2026-08-03T04:38:58.728Z","method":"GET","path":"/api/parent/teachers","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":6688}
+ GET /api/parent/teachers 200 in 8.5s (compile: 1735ms, render: 6.8s)
+[AUDIT] {"ts":"2026-08-03T04:39:16.470Z","method":"GET","path":"/api/parent/assignments","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":16144}
+ GET /api/parent/assignments 200 in 17.7s (compile: 1557ms, render: 16.2s)
+[AUDIT] {"ts":"2026-08-03T04:39:26.470Z","method":"GET","path":"/api/parent/messages/unread","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":7888}
+ GET /api/parent/messages/unread 200 in 9.9s (compile: 2.0s, render: 7.9s)
+✓ Finished filesystem cache database compaction in 10.1s
+[AUDIT] {"ts":"2026-08-03T04:39:37.665Z","method":"GET","path":"/api/parent/engagement","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":9296}
+ GET /api/parent/engagement 200 in 11.2s (compile: 1770ms, render: 9.4s)
+[AUDIT] {"ts":"2026-08-03T04:39:51.516Z","method":"GET","path":"/api/parent/live-metrics","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":11999}
+ GET /api/parent/live-metrics 200 in 13.8s (compile: 1781ms, render: 12.0s)
+✓ Finished filesystem cache database compaction in 10.9s
+[AUDIT] {"ts":"2026-08-03T04:40:01.041Z","method":"GET","path":"/api/parent/trends","userId":"cms46tfi00000oe5k6p8zc4e2","status":200,"durationMs":8102}
+ GET /api/parent/trends 200 in 9.5s (compile: 1374ms, render: 8.1s)
+ GET /api/auth/csrf 200 in 84ms (compile: 40ms, render: 44ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 11.7s (compile: 9ms, render: 11.7s)
+[AUDIT] {"ts":"2026-08-03T04:40:27.254Z","method":"GET","path":"/api/student/dashboard-stats","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":13184}
+ GET /api/student/dashboard-stats 200 in 14.4s (compile: 1167ms, render: 13.2s)
+ GET /api/auth/csrf 200 in 114ms (compile: 54ms, render: 60ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 14.2s (compile: 23ms, render: 14.2s)
+ GET /api/super-admin/trends 200 in 16.3s (compile: 1092ms, render: 15.2s)
+[AUDIT] {"ts":"2026-08-03T04:41:04.442Z","method":"GET","path":"/api/super-admin/trends","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":21623}
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/auth/csrf 200 in 105ms (compile: 55ms, render: 50ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 17.6s (compile: 11ms, render: 17.6s)
+[AUDIT] {"ts":"2026-08-03T05:14:16.279Z","method":"GET","path":"/api/super-admin/trends","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":24615}
+ GET /api/super-admin/trends 200 in 24.7s (compile: 12ms, render: 24.6s)
+ GET /api/auth/csrf 200 in 54ms (compile: 28ms, render: 25ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 12.7s (compile: 11ms, render: 12.6s)
+[AI] groq/llama-3.3-70b-versatile — 3582ms, 523 tokens
+[AUDIT] {"ts":"2026-08-03T05:15:41.260Z","method":"GET","path":"/api/student/ai-insights","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":12988}
+ GET /api/student/ai-insights 200 in 14.3s (compile: 1310ms, render: 13.0s)
+[AUDIT] {"ts":"2026-08-03T05:16:03.697Z","method":"GET","path":"/api/student/tutor/next","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":20812}
+ GET /api/student/tutor/next 200 in 22.4s (compile: 1535ms, render: 20.8s)
+📚 Fetching AI teacher insights...
+✅ Session found: james.kamau@demoschool.edu
+✅ Student found: cms5r62cf001aoem80ftjo8ys
+📖 Recent lesson plan: Counting and Writing Numbers - Mathematics Grade 4
+📅 Today's schedule: 0 classes
+📋 Scheme of work: None found
+📚 Learning Path Data:
+  Completed: 1 topics
+  Current: Counting and Writing Numbers - Mathematics Grade 4
+  Upcoming: 1 topics
+✅ AI insights generated successfully
+[AUDIT] {"ts":"2026-08-03T05:16:25.295Z","method":"GET","path":"/api/student/ai-teacher-insights","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":20451}
+ GET /api/student/ai-teacher-insights 200 in 21.6s (compile: 1110ms, render: 20.5s)
+ GET /api/auth/csrf 200 in 90ms (compile: 40ms, render: 51ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 14.7s (compile: 13ms, render: 14.7s)
+[AUDIT] {"ts":"2026-08-03T05:17:34.105Z","method":"DELETE","path":"/api/assignments/cmsc77nod001noeu4nh90fee5","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":9030}
+ DELETE /api/assignments/cmsc77nod001noeu4nh90fee5 200 in 9.2s (compile: 135ms, render: 9.1s)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/auth/csrf 200 in 73ms (compile: 35ms, render: 38ms)
+[INFO] [billing/mpesa/callback] M-Pesa callback: TEST-CB-001 -> SUCCESS (The service request is processed successfully.) 
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> admin@demoschool.edu
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> emitcenter@gmail.com
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> admin@elimunova.ai
+[Payment] handlePaymentSuccess complete {
+  subscriptionId: 'cms5r69vz002koem84u3wuavx',
+  invoice: 'INV-000008',
+  method: 'MPESA'
+}
+[INFO] [billing/mpesa/callback] Subscription cms5r69vz002koem84u3wuavx activated via M-Pesa TESTREC1PK 
+[AUDIT] {"ts":"2026-08-03T05:38:35.923Z","method":"POST","path":"/api/billing/mpesa/callback","userId":"anonymous","status":200,"durationMs":32339}
+ POST /api/billing/mpesa/callback 200 in 34.1s (compile: 1724ms, render: 32.4s)
+✓ Finished filesystem cache database compaction in 13.2s
+[INFO] [billing/mpesa/callback] M-Pesa callback: TEST-CB-001 -> SUCCESS (The service request is processed successfully.) 
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> admin@demoschool.edu
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> emitcenter@gmail.com
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> admin@elimunova.ai
+[Payment] handlePaymentSuccess complete {
+  subscriptionId: 'cms5r69vz002koem84u3wuavx',
+  invoice: 'INV-000008',
+  method: 'MPESA'
+}
+[INFO] [billing/mpesa/callback] Subscription cms5r69vz002koem84u3wuavx activated via M-Pesa TESTREC1PK 
+[AUDIT] {"ts":"2026-08-03T05:39:48.017Z","method":"POST","path":"/api/billing/mpesa/callback","userId":"anonymous","status":200,"durationMs":28335}
+ POST /api/billing/mpesa/callback 200 in 28.4s (compile: 9ms, render: 28.4s)
+ GET /api/auth/csrf 200 in 56ms (compile: 30ms, render: 26ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r52sx0004oem8nyup7ag5', role: 'SCHOOL_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 12.2s (compile: 10ms, render: 12.2s)
+[AUDIT] {"ts":"2026-08-03T05:40:32.410Z","method":"GET","path":"/api/notifications","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":1738}
+ GET /api/notifications 200 in 1984ms (compile: 225ms, render: 1759ms)
+[AUDIT] {"ts":"2026-08-03T05:40:40.362Z","method":"GET","path":"/api/billing/invoices","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":6933}
+ GET /api/billing/invoices 200 in 7.8s (compile: 896ms, render: 7.0s)
+ GET /api/auth/csrf 200 in 56ms (compile: 30ms, render: 26ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r52sx0004oem8nyup7ag5', role: 'SCHOOL_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 11.6s (compile: 8ms, render: 11.6s)
+[AUDIT] {"ts":"2026-08-03T05:41:11.683Z","method":"GET","path":"/api/billing/invoices","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":6949}
+ GET /api/billing/invoices 200 in 7.0s (compile: 13ms, render: 7.0s)
+[AUDIT] {"ts":"2026-08-03T05:41:13.609Z","method":"GET","path":"/api/notifications","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":1708}
+ GET /api/notifications 200 in 1750ms (compile: 14ms, render: 1736ms)
+ GET /api/auth/csrf 200 in 55ms (compile: 29ms, render: 25ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r52sx0004oem8nyup7ag5', role: 'SCHOOL_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 12.6s (compile: 8ms, render: 12.6s)
+[AUDIT] {"ts":"2026-08-03T05:42:08.665Z","method":"GET","path":"/api/billing/invoices","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":9554}
+ GET /api/billing/invoices 200 in 10.5s (compile: 917ms, render: 9.6s)
+[INFO] Checkout completed — subscription activated {
+  localSubId: 'cms5r69vz002koem84u3wuavx',
+  stripeSubId: 'sub_TESTSTRIPE001'
+}
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].invoice.create()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__91904a39._.js:2619:164
+
+  2616     if (existing) return existing;
+  2617 }
+  2618 const invoiceNumber = await getNextInvoiceNumber();
+→ 2619 const invoice = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].invoice.create(
+Unique constraint failed on the fields: (`invoiceNumber`)
+[AUDIT] {"ts":"2026-08-03T05:43:20.465Z","method":"POST","path":"/api/webhooks/stripe","userId":"anonymous","status":200,"durationMs":18028}
+ POST /api/webhooks/stripe 200 in 20.1s (compile: 2.1s, render: 18.1s)
+[INFO] Checkout completed — subscription activated {
+  localSubId: 'cms5r69vz002koem84u3wuavx',
+  stripeSubId: 'sub_TESTSTRIPE002'
+}
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> admin@demoschool.edu
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> emitcenter@gmail.com
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> admin@elimunova.ai
+[Payment] handlePaymentSuccess complete {
+  subscriptionId: 'cms5r69vz002koem84u3wuavx',
+  invoice: 'INV-000021',
+  method: 'STRIPE'
+}
+[AUDIT] {"ts":"2026-08-03T05:48:03.891Z","method":"POST","path":"/api/webhooks/stripe","userId":"anonymous","status":200,"durationMs":45903}
+ POST /api/webhooks/stripe 200 in 47s (compile: 813ms, render: 46s)
+ GET /api/auth/csrf 200 in 51ms (compile: 25ms, render: 26ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 18.4s (compile: 9ms, render: 18.4s)
+[AUDIT] {"ts":"2026-08-03T05:50:52.850Z","method":"GET","path":"/api/super-admin/ai-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":12663}
+ GET /api/super-admin/ai-config 200 in 13.9s (compile: 1233ms, render: 12.7s)
+[AUDIT] {"ts":"2026-08-03T05:51:02.204Z","method":"POST","path":"/api/super-admin/ai-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":9132}
+ POST /api/super-admin/ai-config 200 in 9.2s (compile: 22ms, render: 9.1s)
+ GET /api/auth/csrf 200 in 75ms (compile: 23ms, render: 51ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r52sx0004oem8nyup7ag5', role: 'SCHOOL_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 14.1s (compile: 7ms, render: 14.1s)
+[AUDIT] {"ts":"2026-08-03T05:55:45.503Z","method":"GET","path":"/api/school-admin/payment-methods","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":21083}
+ GET /api/school-admin/payment-methods 200 in 22.1s (compile: 996ms, render: 21.1s)
+[AUDIT] {"ts":"2026-08-03T05:55:58.613Z","method":"POST","path":"/api/school-admin/payment-methods","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":12935}
+ POST /api/school-admin/payment-methods 200 in 13.0s (compile: 9ms, render: 13.0s)
+✓ Finished filesystem cache database compaction in 10.0s
+[AUDIT] {"ts":"2026-08-03T05:56:14.589Z","method":"GET","path":"/api/school-admin/payment-methods","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":15940}
+ GET /api/school-admin/payment-methods 200 in 16.0s (compile: 8ms, render: 16.0s)
+[AUDIT] {"ts":"2026-08-03T05:56:25.634Z","method":"POST","path":"/api/school-admin/payment-methods","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":10995}
+ POST /api/school-admin/payment-methods 200 in 11.0s (compile: 13ms, render: 11.0s)
+Subscription status request for user: cms5r52sx0004oem8nyup7ag5 (SCHOOL_ADMIN)
+Subscription context determined: userId=undefined, schoolId=cms5r52el0003oem85b3m7iku
+Subscription info retrieved: {
+  isActive: true,
+  isTrial: false,
+  isExpired: false,
+  daysRemaining: 9999,
+  status: 'FREEMIUM',
+  packageName: 'Premium Plan',
+  endDate: 2026-08-28T00:00:00.000Z
+}
+[AUDIT] {"ts":"2026-08-03T05:56:30.588Z","method":"GET","path":"/api/subscription/status","userId":"cms5r52sx0004oem8nyup7ag5","status":200,"durationMs":4644}
+ GET /api/subscription/status 200 in 4.9s (compile: 281ms, render: 4.7s)
+ GET /api/auth/csrf 200 in 70ms (compile: 31ms, render: 39ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 28.1s (compile: 9ms, render: 28.1s)
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> admin@demoschool.edu
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> emitcenter@gmail.com
+[EmailProvider] No email provider configured — logged only: Payment received — KSh 115.38 (Premium Plan) -> admin@elimunova.ai
+[Payment] handlePaymentSuccess complete {
+  subscriptionId: 'cmscti39w004boeu4362j2z3b',
+  invoice: 'INV-000021',
+  method: 'MANUAL'
+}
+[AUDIT] {"ts":"2026-08-03T05:58:30.880Z","method":"POST","path":"/api/billing/renew","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":53623}
+ POST /api/billing/renew 200 in 54s (compile: 852ms, render: 54s)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/auth/csrf 200 in 232ms (compile: 118ms, render: 115ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 72s (compile: 12ms, render: 72s)
+[AUDIT] {"ts":"2026-08-03T07:53:10.271Z","method":"GET","path":"/api/super-admin/stripe-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2666}
+ GET /api/super-admin/stripe-config 200 in 4.9s (compile: 2.2s, render: 2.7s)
+[AUDIT] {"ts":"2026-08-03T07:53:14.103Z","method":"GET","path":"/api/super-admin/mpesa-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2045}
+ GET /api/super-admin/mpesa-config 200 in 3.8s (compile: 1732ms, render: 2.1s)
+[AUDIT] {"ts":"2026-08-03T07:53:14.681Z","method":"POST","path":"/api/super-admin/mpesa-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":494}
+ POST /api/super-admin/mpesa-config 200 in 566ms (compile: 29ms, render: 537ms)
+[AUDIT] {"ts":"2026-08-03T07:53:36.117Z","method":"GET","path":"/api/super-admin/ai-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":19720}
+ GET /api/super-admin/ai-config 200 in 21.4s (compile: 1631ms, render: 19.8s)
+ GET /api/auth/csrf 200 in 48ms (compile: 23ms, render: 24ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 2.2min (compile: 7ms, render: 2.2min)
+ POST /api/webhooks/stripe 400 in 10.3s (compile: 14ms, render: 10.3s)
+ POST /api/super-admin/test-email 200 in 38.0s (compile: 1367ms, render: 36.7s)
+[AUDIT] {"ts":"2026-08-03T07:57:06.035Z","method":"POST","path":"/api/super-admin/test-email","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":47171}
+✓ Finished filesystem cache database compaction in 11.9s
+ GET /api/auth/csrf 200 in 61ms (compile: 30ms, render: 31ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 66s (compile: 13ms, render: 66s)
+[AUDIT] {"ts":"2026-08-03T07:58:57.675Z","method":"POST","path":"/api/super-admin/test-email","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":248}
+ POST /api/super-admin/test-email 200 in 292ms (compile: 13ms, render: 279ms)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/auth/csrf 200 in 54ms (compile: 28ms, render: 26ms)
+ GET /api/auth/csrf 200 in 54ms (compile: 27ms, render: 27ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 29.5s (compile: 19ms, render: 29.4s)
+[AI] groq/llama-3.3-70b-versatile — 5660ms, 477 tokens
+[AUDIT] {"ts":"2026-08-03T08:29:42.597Z","method":"POST","path":"/api/ai/chat","userId":"anonymous","status":200,"durationMs":7291}
+ POST /api/ai/chat 200 in 8.0s (compile: 698ms, render: 7.3s)
+[AI] groq/llama-3.3-70b-versatile — 6827ms, 1803 tokens
+[AUDIT] {"ts":"2026-08-03T08:29:50.407Z","method":"POST","path":"/api/ai/generate-lesson-plan","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":7093}
+ POST /api/ai/generate-lesson-plan 200 in 7.6s (compile: 526ms, render: 7.1s)
+Generating scheme of work for topics: [ 'Plants', 'Animals', 'Environment' ]
+Generating scheme of work for: {
+  subject: 'Science',
+  grade: 'Grade 6',
+  topics: [ 'Plants', 'Animals', 'Environment' ],
+  duration: 4
+}
+[AI] groq/llama-3.3-70b-versatile — 7979ms, 3276 tokens
+Scheme of work generated successfully, length: 11655
+[AUDIT] {"ts":"2026-08-03T08:30:01.318Z","method":"POST","path":"/api/ai/generate-scheme-of-work","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":8275}
+ POST /api/ai/generate-scheme-of-work 200 in 10.8s (compile: 2.5s, render: 8.3s)
+[AI] groq/llama-3.3-70b-versatile — 4561ms, 1806 tokens
+[AUDIT] {"ts":"2026-08-03T08:30:12.619Z","method":"POST","path":"/api/ai/generate-exam","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":10582}
+ POST /api/ai/generate-exam 200 in 11.2s (compile: 555ms, render: 10.6s)
+[AI] groq/llama-3.3-70b-versatile — 6176ms, 847 tokens
+[AUDIT] {"ts":"2026-08-03T08:30:21.788Z","method":"POST","path":"/api/student/career","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":7854}
+ POST /api/student/career 200 in 9.1s (compile: 1201ms, render: 7.9s)
+○ Compiling /api/ai/generate-presentation ...
+Generating AI presentation: History - The Scramble for Africa
+Subject: History Grade: Grade 9 Topic: The Scramble for Africa
+Generate images: true
+Generating AI content for presentation...
+[AI] groq/llama-3.3-70b-versatile — 7033ms, 1544 tokens
+AI presentation generated successfully
+[AUDIT] {"ts":"2026-08-03T08:30:33.808Z","method":"POST","path":"/api/ai/generate-presentation","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":7558}
+ POST /api/ai/generate-presentation 200 in 11.9s (compile: 4.3s, render: 7.6s)
+✓ Finished filesystem cache database compaction in 12.6s
+ GET /api/auth/csrf 200 in 72ms (compile: 38ms, render: 34ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r61eg0018oem80p4mckxy', role: 'STUDENT' }
+ POST /api/auth/callback/credentials 200 in 17.4s (compile: 9ms, render: 17.4s)
+[AI] groq/llama-3.3-70b-versatile — 5754ms, 1001 tokens
+[AUDIT] {"ts":"2026-08-03T08:32:52.594Z","method":"POST","path":"/api/student/career","userId":"cms5r61eg0018oem80p4mckxy","status":200,"durationMs":17992}
+ POST /api/student/career 200 in 18.0s (compile: 36ms, render: 18.0s)
+ GET /api/auth/csrf 200 in 67ms (compile: 34ms, render: 34ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 42s (compile: 14ms, render: 42s)
+[AI] groq/llama-3.3-70b-versatile — 14209ms, 423 tokens
+[AUDIT] {"ts":"2026-08-03T08:36:32.685Z","method":"POST","path":"/api/ai/chat","userId":"anonymous","status":200,"durationMs":18830}
+ POST /api/ai/chat 200 in 20.2s (compile: 1295ms, render: 18.9s)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /api/auth/csrf 200 in 83ms (compile: 34ms, render: 50ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 21.8s (compile: 9ms, render: 21.8s)
+[AUDIT] {"ts":"2026-08-03T09:33:52.099Z","method":"POST","path":"/api/super-admin/ai-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":24359}
+ POST /api/super-admin/ai-config 200 in 26.0s (compile: 1594ms, render: 24.4s)
+[AUDIT] {"ts":"2026-08-03T09:34:12.398Z","method":"GET","path":"/api/super-admin/ai-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":20167}
+ GET /api/super-admin/ai-config 200 in 20.2s (compile: 34ms, render: 20.2s)
+[AUDIT] {"ts":"2026-08-03T09:34:38.622Z","method":"POST","path":"/api/super-admin/stripe-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":25198}
+ POST /api/super-admin/stripe-config 200 in 26.1s (compile: 910ms, render: 25.2s)
+[AUDIT] {"ts":"2026-08-03T09:34:40.677Z","method":"GET","path":"/api/super-admin/stripe-config","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1982}
+ GET /api/super-admin/stripe-config 200 in 2.0s (compile: 9ms, render: 2.0s)
+ PUT /api/super-admin/stripe-config 400 in 2.8s (compile: 8ms, render: 2.8s)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET /auth/signin 200 in 1938ms (compile: 666ms, render: 1271ms)
+ GET /api/auth/session 200 in 99ms (compile: 52ms, render: 47ms)
+ GET /auth/signin 200 in 272ms (compile: 22ms, render: 250ms)
+ GET /api/auth/session 200 in 114ms (compile: 45ms, render: 69ms)
+ GET /api/auth/session 200 in 48ms (compile: 12ms, render: 36ms)
+ GET / 200 in 404ms (compile: 293ms, render: 111ms)
+○ Compiling /pricing ...
+ GET /auth/signin 200 in 126ms (compile: 18ms, render: 108ms)
+ GET /pricing 200 in 5.0s (compile: 4.7s, render: 259ms)
+ GET /api/auth/providers 200 in 79ms (compile: 39ms, render: 39ms)
+ GET /api/auth/csrf 200 in 55ms (compile: 18ms, render: 36ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 27.0s (compile: 17ms, render: 27.0s)
+ GET /api/auth/session 200 in 74ms (compile: 40ms, render: 34ms)
+ GET /api/auth/session 200 in 41ms (compile: 12ms, render: 29ms)
+ GET /api/auth/session 200 in 127ms (compile: 16ms, render: 111ms)
+ GET /super-admin/dashboard 200 in 1354ms (compile: 984ms, proxy.ts: 231ms, render: 140ms)
+[AUDIT] {"ts":"2026-08-03T09:49:38.719Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":4893}
+ GET /api/super-admin/live-metrics 200 in 5.0s (compile: 24ms, render: 4.9s)
+[AUDIT] {"ts":"2026-08-03T09:49:50.763Z","method":"GET","path":"/api/packages/overview","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":15339}
+ GET /api/packages/overview 200 in 16.9s (compile: 1469ms, render: 15.4s)
+Subscription status request for user: cmi353t100000q64cbltxpd81 (SUPER_ADMIN)
+[AUDIT] {"ts":"2026-08-03T09:49:51.141Z","method":"GET","path":"/api/subscription/status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":329}
+ GET /api/subscription/status 200 in 362ms (compile: 12ms, render: 350ms)
+[AUDIT] {"ts":"2026-08-03T09:49:51.156Z","method":"GET","path":"/api/dashboard/recent-schools","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":16307}
+ GET /api/dashboard/recent-schools?limit=5 200 in 17.3s (compile: 902ms, render: 16.3s)
+[AUDIT] {"ts":"2026-08-03T09:49:54.231Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":15459}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 15.5s (compile: 14ms, render: 15.5s)
+[AUDIT] {"ts":"2026-08-03T09:49:54.952Z","method":"GET","path":"/api/dashboard/stats","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":18974}
+ GET /api/dashboard/stats 200 in 21.1s (compile: 1981ms, render: 19.1s)
+[AUDIT] {"ts":"2026-08-03T09:50:01.910Z","method":"GET","path":"/api/system-status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":26797}
+ GET /api/system-status 200 in 28.0s (compile: 1173ms, render: 26.8s)
+[AUDIT] {"ts":"2026-08-03T09:50:01.922Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":10710}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 10.8s (compile: 16ms, render: 10.7s)
+Subscription status request for user: cmi353t100000q64cbltxpd81 (SUPER_ADMIN)
+[AUDIT] {"ts":"2026-08-03T09:50:02.277Z","method":"GET","path":"/api/subscription/status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":312}
+ GET /api/subscription/status 200 in 349ms (compile: 18ms, render: 331ms)
+[AUDIT] {"ts":"2026-08-03T09:50:03.097Z","method":"GET","path":"/api/contact-messages","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":11732}
+ GET /api/contact-messages?limit=1&read=false 200 in 11.9s (compile: 174ms, render: 11.8s)
+[AUDIT] {"ts":"2026-08-03T09:50:04.879Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":10603}
+ GET /api/super-admin/live-metrics 200 in 10.6s (compile: 14ms, render: 10.6s)
+[AUDIT] {"ts":"2026-08-03T09:50:07.918Z","method":"GET","path":"/api/packages/overview","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":12929}
+ GET /api/packages/overview 200 in 13.0s (compile: 10ms, render: 13.0s)
+[AUDIT] {"ts":"2026-08-03T09:50:18.377Z","method":"GET","path":"/api/super-admin/trends","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":44486}
+ GET /api/super-admin/trends 200 in 45s (compile: 37ms, render: 45s)
+[AUDIT] {"ts":"2026-08-03T09:50:21.912Z","method":"GET","path":"/api/dashboard/recent-schools","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":19903}
+ GET /api/dashboard/recent-schools?limit=5 200 in 19.9s (compile: 14ms, render: 19.9s)
+[AUDIT] {"ts":"2026-08-03T09:50:35.563Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":27602}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 27.6s (compile: 12ms, render: 27.6s)
+[AUDIT] {"ts":"2026-08-03T09:50:35.574Z","method":"GET","path":"/api/dashboard/stats","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":32443}
+ GET /api/dashboard/stats 200 in 32.5s (compile: 8ms, render: 32.5s)
+[AUDIT] {"ts":"2026-08-03T09:50:36.216Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":17796}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 17.8s (compile: 13ms, render: 17.8s)
+[AUDIT] {"ts":"2026-08-03T09:50:37.758Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":15811}
+ GET /api/super-admin/live-metrics 200 in 15.8s (compile: 9ms, render: 15.8s)
+[AUDIT] {"ts":"2026-08-03T09:50:45.132Z","method":"GET","path":"/api/system-status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":40217}
+ GET /api/system-status 200 in 40s (compile: 11ms, render: 40s)
+[AUDIT] {"ts":"2026-08-03T09:50:46.772Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":11150}
+ GET /api/super-admin/live-metrics 200 in 11.2s (compile: 15ms, render: 11.2s)
+[AUDIT] {"ts":"2026-08-03T09:50:48.424Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":12136}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 12.2s (compile: 20ms, render: 12.2s)
+[AUDIT] {"ts":"2026-08-03T09:50:48.890Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":13238}
+ GET /api/super-admin/live-metrics 200 in 13.3s (compile: 40ms, render: 13.3s)
+[AUDIT] {"ts":"2026-08-03T09:50:52.403Z","method":"GET","path":"/api/dashboard/recent-schools","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":14541}
+ GET /api/dashboard/recent-schools?limit=5 200 in 14.6s (compile: 23ms, render: 14.6s)
+[AUDIT] {"ts":"2026-08-03T09:50:59.472Z","method":"GET","path":"/api/super-admin/trends","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":56965}
+ GET /api/super-admin/trends 200 in 57s (compile: 9ms, render: 57s)
+[AUDIT] {"ts":"2026-08-03T09:51:00.456Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":11950}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 12.0s (compile: 22ms, render: 12.0s)
+[AUDIT] {"ts":"2026-08-03T09:51:01.752Z","method":"GET","path":"/api/packages/overview","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":14891}
+ GET /api/packages/overview 200 in 15.0s (compile: 24ms, render: 14.9s)
+[AUDIT] {"ts":"2026-08-03T09:51:02.376Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":13365}
+ GET /api/super-admin/live-metrics 200 in 13.4s (compile: 15ms, render: 13.4s)
+[AUDIT] {"ts":"2026-08-03T09:51:03.009Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":10557}
+ GET /api/notifications?userId=cmi353t100000q64cbltxpd81 200 in 10.6s (compile: 13ms, render: 10.6s)
+[AUDIT] {"ts":"2026-08-03T09:51:06.833Z","method":"GET","path":"/api/system-status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":21610}
+ GET /api/system-status 200 in 21.7s (compile: 31ms, render: 21.7s)
+[AUDIT] {"ts":"2026-08-03T09:51:08.366Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":8822}
+ GET /api/super-admin/live-metrics 200 in 8.9s (compile: 18ms, render: 8.9s)
+[AUDIT] {"ts":"2026-08-03T09:51:09.901Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":9237}
+ GET /api/super-admin/live-metrics 200 in 9.3s (compile: 21ms, render: 9.3s)
+[AUDIT] {"ts":"2026-08-03T09:51:09.908Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":8123}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 8.2s (compile: 9ms, render: 8.1s)
+○ Compiling /super-admin/system-health ...
+ GET /super-admin/system-health 200 in 3.8s (compile: 3.7s, proxy.ts: 39ms, render: 95ms)
+ GET /super-admin/system-health 200 in 99ms (compile: 18ms, proxy.ts: 19ms, render: 62ms)
+[AUDIT] {"ts":"2026-08-03T09:51:11.440Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":7247}
+ GET /api/super-admin/live-metrics 200 in 7.3s (compile: 17ms, render: 7.3s)
+[AUDIT] {"ts":"2026-08-03T09:51:13.384Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3384}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 3.5s (compile: 56ms, render: 3.4s)
+[AUDIT] {"ts":"2026-08-03T09:51:13.400Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3434}
+ GET /api/super-admin/live-metrics 200 in 3.5s (compile: 15ms, render: 3.5s)
+[AUDIT] {"ts":"2026-08-03T09:51:15.947Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2425}
+ GET /api/super-admin/live-metrics 200 in 2.5s (compile: 32ms, render: 2.5s)
+[AUDIT] {"ts":"2026-08-03T09:51:20.147Z","method":"GET","path":"/api/system-status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5948}
+ GET /api/system-status 200 in 6.0s (compile: 45ms, render: 6.0s)
+[AUDIT] {"ts":"2026-08-03T09:51:25.611Z","method":"GET","path":"/api/system-status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5430}
+ GET /api/system-status 200 in 5.5s (compile: 11ms, render: 5.5s)
+[AUDIT] {"ts":"2026-08-03T09:51:35.912Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1702}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1746ms (compile: 16ms, render: 1731ms)
+[AUDIT] {"ts":"2026-08-03T09:51:36.531Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2273}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.3s (compile: 18ms, render: 2.3s)
+ GET /super-admin/audit-log 200 in 2.2s (compile: 1997ms, proxy.ts: 27ms, render: 198ms)
+ GET /super-admin/audit-log 200 in 124ms (compile: 17ms, proxy.ts: 27ms, render: 80ms)
+[AUDIT] {"ts":"2026-08-03T09:51:51.170Z","method":"GET","path":"/api/security/logs","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2734}
+ GET /api/security/logs?page=1&limit=50 200 in 4.3s (compile: 1494ms, render: 2.8s)
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 30, connection limit: 5)
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 31.2s (compile: 13ms, render: 31.2s)
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__d28045b6._.js:1896:150
+
+  1893     orderBy.createdAt = sortOrder;
+  1894 }
+  1895 const [logs, total] = await Promise.all([
+→ 1896     __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.findMany(
+Server has closed the connection.
+ GET /api/security/logs?page=1&limit=50 500 in 51s (compile: 10ms, render: 51s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 15.9s (compile: 14ms, render: 15.9s)
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__d28045b6._.js:1896:150
+
+  1893     orderBy.createdAt = sortOrder;
+  1894 }
+  1895 const [logs, total] = await Promise.all([
+→ 1896     __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/security/logs?page=3&limit=50 500 in 16.2s (compile: 10ms, render: 16.2s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__d28045b6._.js:1926:150
+
+  1923         }
+  1924     }
+  1925 }),
+→ 1926 __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.count(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 30, connection limit: 5)
+ GET /api/security/logs?page=2&limit=50 500 in 32.2s (compile: 20ms, render: 32.2s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__d28045b6._.js:1896:150
+
+  1893     orderBy.createdAt = sortOrder;
+  1894 }
+  1895 const [logs, total] = await Promise.all([
+→ 1896     __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.findMany(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 30, connection limit: 5)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Timed out fetching a new connection from the connection pool. More info: http://pris.ly/d/connection-pool (Current connection pool timeout: 30, connection limit: 5)
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 31.6s (compile: 16ms, render: 31.6s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__d28045b6._.js:1926:150
+
+  1923         }
+  1924     }
+  1925 }),
+→ 1926 __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].securityLog.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?userId=cmi353t100000q64cbltxpd81 500 in 25.4s (compile: 15ms, render: 25.3s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 16.7s (compile: 45ms, render: 16.7s)
+ GET /api/auth/session 200 in 71ms (compile: 42ms, render: 29ms)
+ GET /api/auth/session 200 in 53ms (compile: 9ms, render: 44ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 8.3s (compile: 13ms, render: 8.2s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 9.0s (compile: 8ms, render: 9.0s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 1134ms (compile: 9ms, render: 1125ms)
+ POST /api/auth/_log 200 in 153ms (compile: 96ms, render: 57ms)
+ GET /api/auth/session 200 in 176ms (compile: 59ms, render: 117ms)
+ GET /super-admin/audit-log 200 in 965ms (compile: 34ms, proxy.ts: 43ms, render: 889ms)
+ GET /api/auth/session 200 in 88ms (compile: 46ms, render: 42ms)
+ GET /api/auth/session 200 in 47ms (compile: 13ms, render: 34ms)
+Subscription status request for user: cmi353t100000q64cbltxpd81 (SUPER_ADMIN)
+[AUDIT] {"ts":"2026-08-03T09:55:05.063Z","method":"GET","path":"/api/subscription/status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":726}
+ GET /api/subscription/status 200 in 1075ms (compile: 326ms, render: 749ms)
+Subscription status request for user: cmi353t100000q64cbltxpd81 (SUPER_ADMIN)
+[AUDIT] {"ts":"2026-08-03T09:55:05.891Z","method":"GET","path":"/api/subscription/status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":256}
+ GET /api/subscription/status 200 in 292ms (compile: 11ms, render: 280ms)
+ GET /api/user-profile?userId=cmi353t100000q64cbltxpd81 200 in 3.9s (compile: 509ms, render: 3.4s)
+ GET /api/user-profile?userId=cmi353t100000q64cbltxpd81 200 in 34ms (compile: 12ms, render: 21ms)
+[AUDIT] {"ts":"2026-08-03T09:55:08.697Z","method":"GET","path":"/api/contact-messages","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5402}
+ GET /api/contact-messages?limit=1&read=false 200 in 5.5s (compile: 22ms, render: 5.4s)
+[AUDIT] {"ts":"2026-08-03T09:55:10.235Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5924}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 6.2s (compile: 307ms, render: 5.9s)
+[AUDIT] {"ts":"2026-08-03T09:55:10.240Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5881}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 6.2s (compile: 342ms, render: 5.9s)
+[AUDIT] {"ts":"2026-08-03T09:55:12.418Z","method":"GET","path":"/api/security/logs","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":8448}
+ GET /api/security/logs?page=1&limit=50 200 in 8.5s (compile: 17ms, render: 8.5s)
+[AUDIT] {"ts":"2026-08-03T09:55:13.610Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3325}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 3.4s (compile: 12ms, render: 3.3s)
+[AUDIT] {"ts":"2026-08-03T09:55:14.228Z","method":"GET","path":"/api/user-profile","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":9707}
+[AUDIT] {"ts":"2026-08-03T09:55:15.457Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5148}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 5.2s (compile: 37ms, render: 5.2s)
+[AUDIT] {"ts":"2026-08-03T09:55:17.812Z","method":"GET","path":"/api/security/logs","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5358}
+ GET /api/security/logs?page=1&limit=50 200 in 5.4s (compile: 12ms, render: 5.4s)
+[AUDIT] {"ts":"2026-08-03T09:55:19.039Z","method":"GET","path":"/api/user-profile","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":11132}
+[AUDIT] {"ts":"2026-08-03T09:56:07.989Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3051}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.1s (compile: 17ms, render: 3.1s)
+[AUDIT] {"ts":"2026-08-03T09:57:16.680Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":11747}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 11.8s (compile: 20ms, render: 11.8s)
+[AUDIT] {"ts":"2026-08-03T09:58:07.014Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2080}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.1s (compile: 22ms, render: 2.1s)
+ GET /api/auth/session 200 in 126ms (compile: 64ms, render: 62ms)
+ GET /api/auth/session 200 in 45ms (compile: 12ms, render: 32ms)
+[AUDIT] {"ts":"2026-08-03T09:58:43.184Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2984}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 3.0s (compile: 11ms, render: 3.0s)
+[AUDIT] {"ts":"2026-08-03T09:59:08.412Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3506}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.5s (compile: 12ms, render: 3.5s)
+ GET /api/auth/session 200 in 133ms (compile: 59ms, render: 74ms)
+ GET /api/auth/session 200 in 82ms (compile: 20ms, render: 62ms)
+[AUDIT] {"ts":"2026-08-03T10:00:06.270Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2094}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 2.1s (compile: 11ms, render: 2.1s)
+[AUDIT] {"ts":"2026-08-03T10:00:06.881Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1991}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.0s (compile: 12ms, render: 2.0s)
+[AUDIT] {"ts":"2026-08-03T10:01:08.839Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3891}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.9s (compile: 28ms, render: 3.9s)
+[AUDIT] {"ts":"2026-08-03T10:02:35.922Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1897}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1939ms (compile: 17ms, render: 1923ms)
+[AUDIT] {"ts":"2026-08-03T10:03:36.243Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2236}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.3s (compile: 24ms, render: 2.3s)
+ GET /api/auth/session 200 in 108ms (compile: 54ms, render: 55ms)
+ GET /api/auth/session 200 in 63ms (compile: 19ms, render: 45ms)
+[AUDIT] {"ts":"2026-08-03T10:03:41.969Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1740}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1790ms (compile: 17ms, render: 1773ms)
+[AUDIT] {"ts":"2026-08-03T10:04:35.988Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2007}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.1s (compile: 30ms, render: 2.1s)
+ GET /api/auth/session 200 in 90ms (compile: 43ms, render: 47ms)
+ GET /api/auth/session 200 in 95ms (compile: 18ms, render: 77ms)
+[AUDIT] {"ts":"2026-08-03T10:05:05.990Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1863}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1898ms (compile: 16ms, render: 1882ms)
+[AUDIT] {"ts":"2026-08-03T10:05:35.803Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1805}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1890ms (compile: 57ms, render: 1834ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 875ms (compile: 44ms, render: 831ms)
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 5.2s (compile: 44ms, render: 5.2s)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 982ms (compile: 16ms, render: 965ms)
+ GET /api/auth/session 200 in 111ms (compile: 78ms, render: 33ms)
+ GET /api/auth/session 200 in 42ms (compile: 9ms, render: 32ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 927ms (compile: 8ms, render: 919ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 921ms (compile: 11ms, render: 910ms)
+ GET /api/auth/session 200 in 109ms (compile: 57ms, render: 53ms)
+ GET /api/auth/session 200 in 66ms (compile: 17ms, render: 49ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 880ms (compile: 16ms, render: 864ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 920ms (compile: 33ms, render: 887ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 942ms (compile: 33ms, render: 910ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 914ms (compile: 32ms, render: 881ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 1000ms (compile: 38ms, render: 961ms)
+ GET /api/auth/session 200 in 101ms (compile: 52ms, render: 50ms)
+ GET /api/auth/session 200 in 54ms (compile: 8ms, render: 46ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 879ms (compile: 10ms, render: 869ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 891ms (compile: 28ms, render: 864ms)
+ GET /api/auth/session 200 in 55ms (compile: 26ms, render: 29ms)
+ GET /api/auth/session 200 in 69ms (compile: 9ms, render: 60ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 916ms (compile: 10ms, render: 906ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 938ms (compile: 31ms, render: 907ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 921ms (compile: 45ms, render: 877ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 919ms (compile: 13ms, render: 905ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 954ms (compile: 35ms, render: 919ms)
+ GET /api/auth/session 200 in 115ms (compile: 50ms, render: 65ms)
+ GET /api/auth/session 200 in 64ms (compile: 16ms, render: 48ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 974ms (compile: 22ms, render: 952ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 882ms (compile: 32ms, render: 851ms)
+ GET /api/auth/session 200 in 90ms (compile: 43ms, render: 48ms)
+ GET /api/auth/session 200 in 73ms (compile: 14ms, render: 58ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 832ms (compile: 10ms, render: 822ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1870:175
+
+  1867         count
+  1868     });
+  1869 }
+→ 1870 const notifications = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.findMany(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?unreadOnly=true&limit=5 500 in 2.1s (compile: 19ms, render: 2.1s)
+ GET /api/auth/session 200 in 120ms (compile: 56ms, render: 65ms)
+ GET /api/auth/session 200 in 60ms (compile: 15ms, render: 45ms)
+prisma:error 
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count()` invocation in
+C:\Users\Home\Desktop\Elimu Nova\EduGeniusnAI\.next\dev\server\chunks\[root-of-the-server]__015d4f3a._.js:1863:171
+
+  1860 };
+  1861 if (unreadOnly) where.isRead = false;
+  1862 if (countOnly) {
+→ 1863     const count = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["prisma"].notification.count(
+Can't reach database server at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`
+
+Please make sure your database server is running at `ep-steep-feather-ahzjj8zt-pooler.c-3.us-east-1.aws.neon.tech:5432`.
+ GET /api/notifications?countOnly=true&unreadOnly=true 500 in 1689ms (compile: 11ms, render: 1677ms)
+ GET /api/auth/session 200 in 103ms (compile: 51ms, render: 52ms)
+ GET /api/auth/session 200 in 60ms (compile: 12ms, render: 48ms)
+[AUDIT] {"ts":"2026-08-03T10:25:09.740Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5607}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 5.6s (compile: 13ms, render: 5.6s)
+[AUDIT] {"ts":"2026-08-03T10:25:35.653Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1737}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1782ms (compile: 15ms, render: 1766ms)
+[AUDIT] {"ts":"2026-08-03T10:25:52.696Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1852}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1896ms (compile: 18ms, render: 1878ms)
+[AUDIT] {"ts":"2026-08-03T10:26:06.417Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1491}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1548ms (compile: 34ms, render: 1513ms)
+[AUDIT] {"ts":"2026-08-03T10:27:35.747Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1791}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1843ms (compile: 19ms, render: 1824ms)
+[AUDIT] {"ts":"2026-08-03T10:28:35.717Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1803}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1836ms (compile: 14ms, render: 1823ms)
+ GET /api/auth/session 200 in 134ms (compile: 70ms, render: 64ms)
+ GET /api/auth/session 200 in 44ms (compile: 9ms, render: 35ms)
+[AUDIT] {"ts":"2026-08-03T10:29:35.901Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1867}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1989ms (compile: 104ms, render: 1885ms)
+[AUDIT] {"ts":"2026-08-03T10:29:37.535Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3176}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 3.2s (compile: 9ms, render: 3.2s)
+ GET /api/auth/session 200 in 361ms (compile: 45ms, render: 316ms)
+ GET /api/auth/session 200 in 54ms (compile: 11ms, render: 44ms)
+[AUDIT] {"ts":"2026-08-03T10:30:36.152Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2138}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.2s (compile: 74ms, render: 2.2s)
+[AUDIT] {"ts":"2026-08-03T10:30:38.019Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3551}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 3.6s (compile: 30ms, render: 3.6s)
+[AUDIT] {"ts":"2026-08-03T10:31:35.689Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1756}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1795ms (compile: 13ms, render: 1782ms)
+ GET /api/auth/csrf 200 in 67ms (compile: 30ms, render: 36ms)
+[AUDIT] {"ts":"2026-08-03T10:32:36.425Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2485}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.5s (compile: 15ms, render: 2.5s)
+ GET /api/auth/csrf 200 in 59ms (compile: 27ms, render: 33ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 13.0s (compile: 11ms, render: 13.0s)
+○ Compiling /api/export/lesson-plan ...
+[AUDIT] {"ts":"2026-08-03T10:33:17.905Z","method":"POST","path":"/api/export/lesson-plan","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":7540}
+ POST /api/export/lesson-plan 200 in 13.0s (compile: 5.5s, render: 7.6s)
+ POST /api/export/scheme-of-work 400 in 6.1s (compile: 2.1s, render: 4.0s)
+[AUDIT] {"ts":"2026-08-03T10:33:35.750Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1807}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1857ms (compile: 19ms, render: 1839ms)
+ GET /api/auth/csrf 200 in 58ms (compile: 31ms, render: 27ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 11.3s (compile: 11ms, render: 11.3s)
+[AUDIT] {"ts":"2026-08-03T10:34:07.774Z","method":"POST","path":"/api/export/lesson-plan","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6153}
+ POST /api/export/lesson-plan 200 in 6.2s (compile: 10ms, render: 6.2s)
+[AUDIT] {"ts":"2026-08-03T10:34:14.869Z","method":"POST","path":"/api/export/scheme-of-work","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":6947}
+ POST /api/export/scheme-of-work 200 in 7.0s (compile: 15ms, render: 7.0s)
+ GET /api/auth/session 200 in 145ms (compile: 49ms, render: 96ms)
+ GET /api/auth/session 200 in 52ms (compile: 10ms, render: 42ms)
+[AUDIT] {"ts":"2026-08-03T10:34:35.843Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1813}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1941ms (compile: 89ms, render: 1852ms)
+[AUDIT] {"ts":"2026-08-03T10:34:36.233Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1688}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1725ms (compile: 13ms, render: 1712ms)
+ GET /api/auth/session 200 in 322ms (compile: 36ms, render: 286ms)
+ GET /api/auth/session 200 in 73ms (compile: 13ms, render: 60ms)
+[AUDIT] {"ts":"2026-08-03T10:35:36.147Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1780}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1813ms (compile: 14ms, render: 1798ms)
+[AUDIT] {"ts":"2026-08-03T10:35:37.319Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3383}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.4s (compile: 16ms, render: 3.4s)
+[AUDIT] {"ts":"2026-08-03T10:36:36.073Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2105}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.1s (compile: 13ms, render: 2.1s)
+[AUDIT] {"ts":"2026-08-03T10:37:36.584Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2641}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.7s (compile: 16ms, render: 2.7s)
+[AUDIT] {"ts":"2026-08-03T10:38:35.735Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1811}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1869ms (compile: 32ms, render: 1837ms)
+ GET /api/auth/session 200 in 69ms (compile: 30ms, render: 39ms)
+ GET /api/auth/session 200 in 49ms (compile: 12ms, render: 37ms)
+[AUDIT] {"ts":"2026-08-03T10:39:36.011Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2066}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.1s (compile: 31ms, render: 2.1s)
+[AUDIT] {"ts":"2026-08-03T10:39:37.938Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3482}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 3.5s (compile: 9ms, render: 3.5s)
+ GET /api/auth/session 200 in 121ms (compile: 51ms, render: 71ms)
+ GET /api/auth/session 200 in 772ms (compile: 44ms, render: 728ms)
+[AUDIT] {"ts":"2026-08-03T10:40:35.868Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1849}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1886ms (compile: 14ms, render: 1872ms)
+[AUDIT] {"ts":"2026-08-03T10:40:36.835Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2323}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 2.4s (compile: 55ms, render: 2.4s)
+[AUDIT] {"ts":"2026-08-03T10:41:37.132Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3221}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.3s (compile: 20ms, render: 3.2s)
+[AUDIT] {"ts":"2026-08-03T10:42:35.826Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1914}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1952ms (compile: 13ms, render: 1939ms)
+[AUDIT] {"ts":"2026-08-03T10:43:35.614Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1702}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1741ms (compile: 14ms, render: 1727ms)
+ GET /api/auth/session 200 in 336ms (compile: 35ms, render: 300ms)
+ GET /api/auth/session 200 in 48ms (compile: 12ms, render: 36ms)
+[AUDIT] {"ts":"2026-08-03T10:44:35.743Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1798}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1834ms (compile: 15ms, render: 1819ms)
+[AUDIT] {"ts":"2026-08-03T10:44:36.091Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1679}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1704ms (compile: 8ms, render: 1696ms)
+ GET /api/auth/session 200 in 354ms (compile: 36ms, render: 318ms)
+ GET /api/auth/session 200 in 74ms (compile: 14ms, render: 60ms)
+[AUDIT] {"ts":"2026-08-03T10:45:36.162Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1720}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1770ms (compile: 21ms, render: 1750ms)
+[AUDIT] {"ts":"2026-08-03T10:45:37.896Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3948}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 4.0s (compile: 19ms, render: 4.0s)
+[AUDIT] {"ts":"2026-08-03T10:46:35.727Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1805}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1844ms (compile: 18ms, render: 1826ms)
+[AUDIT] {"ts":"2026-08-03T10:47:35.733Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1804}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1839ms (compile: 12ms, render: 1827ms)
+[AUDIT] {"ts":"2026-08-03T10:48:39.083Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":5157}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 5.2s (compile: 14ms, render: 5.2s)
+ GET /api/auth/session 200 in 469ms (compile: 385ms, render: 84ms)
+ GET /api/auth/session 200 in 60ms (compile: 13ms, render: 47ms)
+[AUDIT] {"ts":"2026-08-03T10:49:36.285Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2364}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.4s (compile: 24ms, render: 2.4s)
+[AUDIT] {"ts":"2026-08-03T10:49:38.191Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3551}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 3.6s (compile: 14ms, render: 3.6s)
+ GET /api/auth/session 200 in 94ms (compile: 41ms, render: 54ms)
+ GET /api/auth/session 200 in 75ms (compile: 15ms, render: 59ms)
+[AUDIT] {"ts":"2026-08-03T10:50:35.859Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1830}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1875ms (compile: 21ms, render: 1854ms)
+[AUDIT] {"ts":"2026-08-03T10:50:36.274Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1811}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1873ms (compile: 40ms, render: 1833ms)
+[AUDIT] {"ts":"2026-08-03T10:51:38.764Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":4858}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 4.9s (compile: 16ms, render: 4.9s)
+[AUDIT] {"ts":"2026-08-03T10:52:35.694Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1773}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1814ms (compile: 14ms, render: 1800ms)
+✓ Finished filesystem cache database compaction in 11.5s
+✓ Compiled in 2ms
+✓ Finished filesystem cache database compaction in 12.6s
+ GET /auth/signin 200 in 2.5s (compile: 969ms, render: 1533ms)
+ GET /auth/signin 200 in 2.5s (compile: 1300ms, render: 1176ms)
+ GET /auth/signin 200 in 2.5s (compile: 1486ms, render: 988ms)
+ GET /super-admin/audit-log 200 in 23.3s (compile: 152ms, proxy.ts: 22.2s, render: 932ms)
+ GET /super-admin/audit-log 200 in 2.8s (compile: 345ms, proxy.ts: 1744ms, render: 721ms)
+ GET /super-admin/audit-log 200 in 2.8s (compile: 534ms, proxy.ts: 1742ms, render: 541ms)
+ GET /auth/signin 200 in 2.6s (compile: 39ms, render: 2.5s)
+ GET /auth/signin 200 in 2.3s (compile: 40ms, render: 2.3s)
+ GET /auth/signin 200 in 2.4s (compile: 234ms, render: 2.1s)
+ GET /super-admin/audit-log 200 in 2.7s (compile: 492ms, proxy.ts: 305ms, render: 1911ms)
+ GET /super-admin/audit-log 200 in 2.7s (compile: 700ms, proxy.ts: 313ms, render: 1702ms)
+ GET /super-admin/audit-log 200 in 3.1s (compile: 282ms, proxy.ts: 951ms, render: 1830ms)
+ GET /super-admin/audit-log 200 in 1635ms (compile: 178ms, proxy.ts: 80ms, render: 1377ms)
+ GET /auth/signin 200 in 1188ms (compile: 73ms, render: 1116ms)
+ GET /super-admin/audit-log 200 in 1580ms (compile: 326ms, proxy.ts: 402ms, render: 852ms)
+ GET /super-admin/audit-log 200 in 1533ms (compile: 252ms, proxy.ts: 629ms, render: 652ms)
+ GET /super-admin/audit-log 200 in 1514ms (compile: 441ms, proxy.ts: 614ms, render: 459ms)
+ GET /super-admin/audit-log 200 in 691ms (compile: 33ms, proxy.ts: 415ms, render: 244ms)
+ GET /auth/signin 200 in 1467ms (compile: 253ms, render: 1214ms)
+ GET /auth/signin 200 in 1473ms (compile: 55ms, render: 1418ms)
+ GET /super-admin/audit-log 200 in 1551ms (compile: 280ms, proxy.ts: 509ms, render: 762ms)
+ GET /super-admin/audit-log 200 in 1565ms (compile: 59ms, proxy.ts: 512ms, render: 994ms)
+ GET /super-admin/audit-log 200 in 1568ms (compile: 476ms, proxy.ts: 507ms, render: 584ms)
+ GET /super-admin/audit-log 200 in 1562ms (compile: 711ms, proxy.ts: 501ms, render: 350ms)
+ GET /auth/signin 200 in 1520ms (compile: 45ms, render: 1475ms)
+ GET /auth/signin 200 in 1528ms (compile: 261ms, render: 1266ms)
+ GET /super-admin/audit-log 200 in 1619ms (compile: 541ms, proxy.ts: 66ms, render: 1012ms)
+ GET /super-admin/audit-log 200 in 1626ms (compile: 840ms, proxy.ts: 79ms, render: 706ms)
+ GET /super-admin/audit-log 200 in 1650ms (compile: 49ms, proxy.ts: 1038ms, render: 564ms)
+ GET /super-admin/audit-log 200 in 1661ms (compile: 225ms, proxy.ts: 1039ms, render: 397ms)
+ GET /super-admin/audit-log 200 in 4.7s (compile: 3.2s, proxy.ts: 92ms, render: 1359ms)
+ GET /super-admin/audit-log 200 in 4.7s (compile: 3.4s, proxy.ts: 95ms, render: 1168ms)
+ GET /super-admin/audit-log 200 in 4.6s (compile: 3.6s, proxy.ts: 61ms, render: 985ms)
+ GET /super-admin/audit-log 200 in 4.7s (compile: 4.0s, proxy.ts: 104ms, render: 579ms)
+ GET /super-admin/audit-log 200 in 4.8s (compile: 4.3s, proxy.ts: 126ms, render: 359ms)
+ GET /super-admin/audit-log 200 in 4.6s (compile: 3.8s, proxy.ts: 53ms, render: 797ms)
+ GET /auth/signin 200 in 1518ms (compile: 106ms, render: 1411ms)
+ GET /auth/signin 200 in 1501ms (compile: 381ms, render: 1119ms)
+ GET /auth/signin 200 in 1499ms (compile: 611ms, render: 888ms)
+ GET /super-admin/audit-log 200 in 1629ms (compile: 59ms, proxy.ts: 878ms, render: 692ms)
+ GET /super-admin/audit-log 200 in 1771ms (compile: 439ms, proxy.ts: 811ms, render: 522ms)
+ GET /super-admin/audit-log 200 in 1847ms (compile: 245ms, proxy.ts: 860ms, render: 741ms)
+ GET /auth/signin 200 in 1757ms (compile: 47ms, render: 1709ms)
+ GET /auth/signin 200 in 1521ms (compile: 39ms, render: 1482ms)
+ GET /super-admin/audit-log 200 in 3.7s (compile: 271ms, proxy.ts: 266ms, render: 3.2s)
+ GET /super-admin/audit-log 200 in 3.8s (compile: 627ms, proxy.ts: 270ms, render: 2.9s)
+ GET /auth/signin 200 in 3.0s (compile: 407ms, render: 2.6s)
+ GET /super-admin/audit-log 200 in 3.6s (compile: 38ms, proxy.ts: 1010ms, render: 2.6s)
+ GET /auth/signin 200 in 491ms (compile: 37ms, render: 454ms)
+ GET /auth/signin 200 in 564ms (compile: 318ms, render: 246ms)
+ GET /auth/signin 200 in 4.1s (compile: 42ms, render: 4.1s)
+ GET /super-admin/audit-log 200 in 2.2s (compile: 255ms, proxy.ts: 141ms, render: 1817ms)
+ GET /super-admin/audit-log 200 in 2.2s (compile: 323ms, proxy.ts: 298ms, render: 1547ms)
+ GET /super-admin/audit-log 200 in 2.1s (compile: 636ms, proxy.ts: 507ms, render: 989ms)
+ GET /super-admin/audit-log 200 in 1660ms (compile: 50ms, proxy.ts: 880ms, render: 730ms)
+ GET /super-admin/audit-log 200 in 1327ms (compile: 416ms, proxy.ts: 330ms, render: 581ms)
+ GET /super-admin/audit-log 200 in 1574ms (compile: 71ms, proxy.ts: 59ms, render: 1444ms)
+ GET /super-admin/audit-log 200 in 1549ms (compile: 278ms, proxy.ts: 58ms, render: 1212ms)
+ GET /super-admin/audit-log 200 in 1560ms (compile: 82ms, proxy.ts: 494ms, render: 984ms)
+ GET /super-admin/audit-log 200 in 1369ms (compile: 262ms, proxy.ts: 291ms, render: 816ms)
+ GET /super-admin/audit-log 200 in 1339ms (compile: 240ms, proxy.ts: 274ms, render: 825ms)
+ GET /super-admin/audit-log 200 in 1342ms (compile: 445ms, proxy.ts: 268ms, render: 629ms)
+ GET /super-admin/audit-log 200 in 1387ms (compile: 77ms, proxy.ts: 78ms, render: 1232ms)
+ GET /super-admin/audit-log 200 in 1382ms (compile: 266ms, proxy.ts: 90ms, render: 1026ms)
+ GET /super-admin/audit-log 200 in 1358ms (compile: 77ms, proxy.ts: 462ms, render: 818ms)
+ GET /super-admin/audit-log 200 in 1166ms (compile: 220ms, proxy.ts: 270ms, render: 676ms)
+ GET /super-admin/audit-log 200 in 1473ms (compile: 173ms, proxy.ts: 238ms, render: 1061ms)
+ GET /super-admin/audit-log 200 in 1466ms (compile: 327ms, proxy.ts: 232ms, render: 907ms)
+ GET /super-admin/audit-log 200 in 899ms (compile: 579ms, proxy.ts: 64ms, render: 257ms)
+ GET /super-admin/audit-log 200 in 1198ms (compile: 224ms, proxy.ts: 741ms, render: 233ms)
+ GET /super-admin/audit-log 200 in 2.4s (compile: 60ms, proxy.ts: 63ms, render: 2.2s)
+ GET /super-admin/audit-log 200 in 1710ms (compile: 466ms, proxy.ts: 309ms, render: 935ms)
+ GET /api/auth/session 200 in 1814ms (compile: 1168ms, render: 645ms)
+ GET /api/auth/session 200 in 611ms (compile: 12ms, render: 599ms)
+ GET /api/auth/session 200 in 53ms (compile: 14ms, render: 39ms)
+Subscription status request for user: cmi353t100000q64cbltxpd81 (SUPER_ADMIN)
+[AUDIT] {"ts":"2026-08-03T10:54:29.471Z","method":"GET","path":"/api/subscription/status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1183}
+ GET /api/subscription/status 200 in 1770ms (compile: 562ms, render: 1208ms)
+[AUDIT] {"ts":"2026-08-03T10:54:29.751Z","method":"GET","path":"/api/contact-messages","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3890}
+ GET /api/contact-messages?limit=1&read=false 200 in 4.5s (compile: 561ms, render: 4.0s)
+Subscription status request for user: cmi353t100000q64cbltxpd81 (SUPER_ADMIN)
+[AUDIT] {"ts":"2026-08-03T10:54:30.284Z","method":"GET","path":"/api/subscription/status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":244}
+ GET /api/subscription/status 200 in 277ms (compile: 12ms, render: 264ms)
+[AUDIT] {"ts":"2026-08-03T10:54:30.576Z","method":"GET","path":"/api/security/logs","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2899}
+ GET /api/security/logs?page=1&limit=50 200 in 3.1s (compile: 181ms, render: 2.9s)
+ GET /api/user-profile?userId=cmi353t100000q64cbltxpd81 200 in 3.2s (compile: 730ms, render: 2.5s)
+ GET /api/user-profile?userId=cmi353t100000q64cbltxpd81 200 in 30ms (compile: 9ms, render: 21ms)
+[AUDIT] {"ts":"2026-08-03T10:54:31.470Z","method":"GET","path":"/api/user-profile","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3018}
+[AUDIT] {"ts":"2026-08-03T10:54:32.112Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":4182}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 4.4s (compile: 206ms, render: 4.2s)
+[AUDIT] {"ts":"2026-08-03T10:54:32.595Z","method":"GET","path":"/api/security/logs","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1982}
+ GET /api/security/logs?page=1&limit=50 200 in 2.0s (compile: 11ms, render: 2.0s)
+[AUDIT] {"ts":"2026-08-03T10:54:32.706Z","method":"GET","path":"/api/user-profile","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1784}
+[AUDIT] {"ts":"2026-08-03T10:54:32.930Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":4457}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 5.2s (compile: 750ms, render: 4.5s)
+[AUDIT] {"ts":"2026-08-03T10:54:33.608Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1454}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1493ms (compile: 14ms, render: 1479ms)
+[AUDIT] {"ts":"2026-08-03T10:54:34.469Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1499}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1531ms (compile: 10ms, render: 1521ms)
+✓ Compiled in 2.9s
+[AUDIT] {"ts":"2026-08-03T10:55:30.094Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2199}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.2s (compile: 12ms, render: 2.2s)
+[AUDIT] {"ts":"2026-08-03T10:56:29.585Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1702}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1730ms (compile: 9ms, render: 1721ms)
+[AUDIT] {"ts":"2026-08-03T10:57:30.106Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2226}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.3s (compile: 11ms, render: 2.2s)
+[AUDIT] {"ts":"2026-08-03T10:58:29.850Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1805}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1844ms (compile: 16ms, render: 1827ms)
+ GET /api/auth/session 200 in 70ms (compile: 32ms, render: 39ms)
+ GET /api/auth/session 200 in 48ms (compile: 13ms, render: 35ms)
+[AUDIT] {"ts":"2026-08-03T10:59:24.156Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1843}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1876ms (compile: 12ms, render: 1864ms)
+ GET /api/auth/session 200 in 51ms (compile: 9ms, render: 42ms)
+ GET /api/auth/session 200 in 39ms (compile: 11ms, render: 28ms)
+[AUDIT] {"ts":"2026-08-03T10:59:28.187Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2169}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 2.2s (compile: 13ms, render: 2.2s)
+[AUDIT] {"ts":"2026-08-03T10:59:29.387Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1503}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1531ms (compile: 8ms, render: 1523ms)
+[AUDIT] {"ts":"2026-08-03T11:00:31.300Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3395}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.4s (compile: 16ms, render: 3.4s)
+[AUDIT] {"ts":"2026-08-03T11:01:35.675Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1764}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1811ms (compile: 15ms, render: 1797ms)
+[AUDIT] {"ts":"2026-08-03T11:02:36.784Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2868}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.9s (compile: 12ms, render: 2.9s)
+[AUDIT] {"ts":"2026-08-03T11:03:37.248Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3328}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.4s (compile: 14ms, render: 3.4s)
+ GET /api/auth/session 200 in 77ms (compile: 41ms, render: 37ms)
+ GET /api/auth/session 200 in 54ms (compile: 12ms, render: 42ms)
+ GET /api/auth/session 200 in 57ms (compile: 11ms, render: 46ms)
+ GET /api/auth/session 200 in 54ms (compile: 12ms, render: 41ms)
+[AUDIT] {"ts":"2026-08-03T11:04:43.105Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":20928}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 21.0s (compile: 13ms, render: 21.0s)
+[AUDIT] {"ts":"2026-08-03T11:04:43.681Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":9770}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 9.8s (compile: 14ms, render: 9.8s)
+[AUDIT] {"ts":"2026-08-03T11:04:44.837Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1697}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1724ms (compile: 10ms, render: 1714ms)
+[AUDIT] {"ts":"2026-08-03T11:05:37.401Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3470}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.5s (compile: 28ms, render: 3.5s)
+[AUDIT] {"ts":"2026-08-03T11:06:35.780Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1853}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1905ms (compile: 29ms, render: 1876ms)
+ GET /api/ai/images/search?q=photosynthesis&limit=5 401 in 1588ms (compile: 1062ms, render: 526ms)
+[AUDIT] {"ts":"2026-08-03T11:07:36.144Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":2160}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 2.2s (compile: 36ms, render: 2.2s)
+ GET /api/auth/csrf 200 in 59ms (compile: 33ms, render: 26ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 12.8s (compile: 10ms, render: 12.8s)
+[AUDIT] {"ts":"2026-08-03T11:07:58.873Z","method":"GET","path":"/api/ai/images/search","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":4321}
+ GET /api/ai/images/search?q=photosynthesis&limit=4 200 in 4.3s (compile: 9ms, render: 4.3s)
+ GET /api/auth/csrf 200 in 53ms (compile: 27ms, render: 26ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cms5r55hv0007oem85luig434', role: 'TEACHER' }
+ POST /api/auth/callback/credentials 200 in 13.6s (compile: 13ms, render: 13.6s)
+[AUDIT] {"ts":"2026-08-03T11:08:35.640Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1674}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1733ms (compile: 33ms, render: 1700ms)
+✅ Image saved: elimu_2026_08_03_1785755309375_cms5r55h_photosynthesis_illustration.png (6261579 bytes) - URL: https://fcexpxlxizpdnquqdsgn.supabase.co/storage/v...
+[AUDIT] {"ts":"2026-08-03T11:08:59.148Z","method":"POST","path":"/api/ai/images/import","userId":"cms5r55hv0007oem85luig434","status":200,"durationMs":33686}
+ POST /api/ai/images/import 200 in 35.1s (compile: 1348ms, render: 33.7s)
+ GET /api/auth/session 200 in 78ms (compile: 40ms, render: 38ms)
+ GET /api/auth/session 200 in 43ms (compile: 13ms, render: 30ms)
+[AUDIT] {"ts":"2026-08-03T11:09:23.994Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1861}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1906ms (compile: 10ms, render: 1896ms)
+ GET /api/auth/session 200 in 51ms (compile: 13ms, render: 38ms)
+ GET /api/auth/session 200 in 57ms (compile: 17ms, render: 39ms)
+[AUDIT] {"ts":"2026-08-03T11:09:27.765Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1716}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1760ms (compile: 20ms, render: 1740ms)
+[AUDIT] {"ts":"2026-08-03T11:09:35.459Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1567}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1601ms (compile: 12ms, render: 1589ms)
+[AUDIT] {"ts":"2026-08-03T11:13:34.024Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3364}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.4s (compile: 32ms, render: 3.4s)
+ GET /api/auth/session 200 in 55ms (compile: 26ms, render: 28ms)
+ GET /api/auth/session 200 in 44ms (compile: 8ms, render: 37ms)
+[AUDIT] {"ts":"2026-08-03T11:14:23.731Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1689}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1718ms (compile: 10ms, render: 1708ms)
+ GET /api/auth/session 200 in 54ms (compile: 30ms, render: 24ms)
+ GET /api/auth/session 200 in 33ms (compile: 8ms, render: 25ms)
+[AUDIT] {"ts":"2026-08-03T11:14:27.424Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1425}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1456ms (compile: 17ms, render: 1439ms)
+[AUDIT] {"ts":"2026-08-03T11:14:35.277Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1379}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1403ms (compile: 9ms, render: 1395ms)
+[AUDIT] {"ts":"2026-08-03T11:15:35.638Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1711}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1768ms (compile: 32ms, render: 1737ms)
+[AUDIT] {"ts":"2026-08-03T11:16:35.742Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1809}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1864ms (compile: 27ms, render: 1836ms)
+[AUDIT] {"ts":"2026-08-03T11:17:35.706Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1753}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1820ms (compile: 38ms, render: 1781ms)
+[AUDIT] {"ts":"2026-08-03T11:18:37.307Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3375}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 3.4s (compile: 14ms, render: 3.4s)
+ GET /api/auth/session 200 in 61ms (compile: 30ms, render: 31ms)
+ GET /api/auth/session 200 in 45ms (compile: 11ms, render: 33ms)
+[AUDIT] {"ts":"2026-08-03T11:19:23.819Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1758}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1792ms (compile: 13ms, render: 1779ms)
+ GET /api/auth/session 200 in 55ms (compile: 10ms, render: 45ms)
+ GET /api/auth/session 200 in 49ms (compile: 13ms, render: 36ms)
+[AUDIT] {"ts":"2026-08-03T11:19:27.543Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1513}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1550ms (compile: 18ms, render: 1532ms)
+[AUDIT] {"ts":"2026-08-03T11:19:35.442Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1534}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1575ms (compile: 15ms, render: 1560ms)
+[AUDIT] {"ts":"2026-08-03T11:20:35.658Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1756}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1795ms (compile: 14ms, render: 1782ms)
+[AUDIT] {"ts":"2026-08-03T11:21:35.686Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1765}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1806ms (compile: 14ms, render: 1791ms)
+[AUDIT] {"ts":"2026-08-03T11:22:35.792Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1876}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1915ms (compile: 14ms, render: 1900ms)
+[AUDIT] {"ts":"2026-08-03T11:23:35.731Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1796}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1835ms (compile: 14ms, render: 1821ms)
+ GET /api/auth/session 200 in 65ms (compile: 34ms, render: 32ms)
+ GET /api/auth/session 200 in 51ms (compile: 10ms, render: 41ms)
+[AUDIT] {"ts":"2026-08-03T11:24:25.430Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":3351}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 3.4s (compile: 11ms, render: 3.4s)
+ GET /api/auth/session 200 in 54ms (compile: 8ms, render: 45ms)
+ GET /api/auth/session 200 in 45ms (compile: 11ms, render: 35ms)
+[AUDIT] {"ts":"2026-08-03T11:24:27.547Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1535}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 1575ms (compile: 17ms, render: 1558ms)
+[AUDIT] {"ts":"2026-08-03T11:24:35.385Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1492}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1531ms (compile: 13ms, render: 1518ms)
+[AUDIT] {"ts":"2026-08-03T11:25:35.710Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":1781}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 1821ms (compile: 13ms, render: 1808ms)
+ GET /api/auth/csrf 200 in 66ms (compile: 37ms, render: 29ms)
+ POST /api/auth/signout 200 in 46ms (compile: 12ms, render: 34ms)
+ GET /api/auth/session 200 in 367ms (compile: 326ms, render: 41ms)
+ GET /auth/signin 200 in 465ms (compile: 35ms, render: 430ms)
+ GET /api/auth/session 200 in 78ms (compile: 44ms, render: 34ms)
+ GET /api/auth/session 200 in 54ms (compile: 11ms, render: 43ms)
+prisma:error Error in PostgreSQL connection: Error { kind: Closed, cause: None }
+ GET / 200 in 342ms (compile: 242ms, render: 100ms)
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+prisma:error Error in PostgreSQL connection: Error { kind: Io, cause: Some(Os { code: 10054, kind: ConnectionReset, message: "An existing connection was forcibly closed by the remote host." }) }
+✓ Finished filesystem cache database compaction in 17.4s
+✓ Finished writing to filesystem cache in 13.2s
+ GET /auth/signin 200 in 537ms (compile: 142ms, render: 394ms)
+ GET /api/auth/providers 200 in 407ms (compile: 161ms, render: 246ms)
+ GET /api/auth/csrf 200 in 81ms (compile: 19ms, render: 62ms)
+[DEBUG] User found, checking password... 
+[INFO] Authentication successful: { userId: 'cmi353t100000q64cbltxpd81', role: 'SUPER_ADMIN' }
+ POST /api/auth/callback/credentials 200 in 14.4s (compile: 19ms, render: 14.4s)
+ GET /api/auth/session 200 in 72ms (compile: 33ms, render: 39ms)
+ GET /api/auth/session 200 in 48ms (compile: 13ms, render: 35ms)
+ GET /super-admin/dashboard 200 in 307ms (compile: 148ms, proxy.ts: 22ms, render: 137ms)
+[AUDIT] {"ts":"2026-08-03T14:18:44.011Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":4447}
+ GET /api/super-admin/live-metrics 200 in 4.7s (compile: 187ms, render: 4.5s)
+[AUDIT] {"ts":"2026-08-03T14:18:48.132Z","method":"GET","path":"/api/dashboard/stats","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":8277}
+ GET /api/dashboard/stats 200 in 8.5s (compile: 208ms, render: 8.3s)
+Subscription status request for user: cmi353t100000q64cbltxpd81 (SUPER_ADMIN)
+[AUDIT] {"ts":"2026-08-03T14:18:48.390Z","method":"GET","path":"/api/subscription/status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":213}
+ GET /api/subscription/status 200 in 246ms (compile: 14ms, render: 232ms)
+[AUDIT] {"ts":"2026-08-03T14:18:56.470Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":12418}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 12.5s (compile: 11ms, render: 12.4s)
+[AUDIT] {"ts":"2026-08-03T14:18:56.478Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":8052}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 8.1s (compile: 9ms, render: 8.1s)
+[AUDIT] {"ts":"2026-08-03T14:18:57.069Z","method":"GET","path":"/api/packages/overview","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":15981}
+ GET /api/packages/overview 200 in 17.4s (compile: 1445ms, render: 16.0s)
+Subscription status request for user: cmi353t100000q64cbltxpd81 (SUPER_ADMIN)
+[AUDIT] {"ts":"2026-08-03T14:18:57.396Z","method":"GET","path":"/api/subscription/status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":288}
+ GET /api/subscription/status 200 in 318ms (compile: 9ms, render: 309ms)
+[AUDIT] {"ts":"2026-08-03T14:18:57.705Z","method":"GET","path":"/api/dashboard/recent-schools","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":17359}
+ GET /api/dashboard/recent-schools?limit=5 200 in 18.1s (compile: 687ms, render: 17.4s)
+[AUDIT] {"ts":"2026-08-03T14:19:02.671Z","method":"GET","path":"/api/system-status","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":21417}
+ GET /api/system-status 200 in 23.1s (compile: 1607ms, render: 21.4s)
+[AUDIT] {"ts":"2026-08-03T14:19:03.470Z","method":"GET","path":"/api/contact-messages","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":6938}
+ GET /api/contact-messages?limit=1&read=false 200 in 7.0s (compile: 16ms, render: 7.0s)
+[AUDIT] {"ts":"2026-08-03T14:19:04.708Z","method":"GET","path":"/api/super-admin/live-metrics","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":8150}
+ GET /api/super-admin/live-metrics 200 in 8.2s (compile: 40ms, render: 8.2s)
+[AUDIT] {"ts":"2026-08-03T14:19:04.714Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":7228}
+ GET /api/notifications?countOnly=true&unreadOnly=true 200 in 7.3s (compile: 9ms, render: 7.2s)
+[AUDIT] {"ts":"2026-08-03T14:19:05.250Z","method":"GET","path":"/api/notifications","userId":"cmi353t100000q64cbltxpd81","status":200,"durationMs":7510}
+ GET /api/notifications?unreadOnly=true&limit=5 200 in 7.5s (compile: 9ms, render: 7.5s)

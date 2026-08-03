@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const GET = route({}, async (req, { user }) => {
+export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   const debug = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
@@ -168,9 +168,7 @@ export const GET = route({}, async (req, { user }) => {
   debug.tests.environment = {
     hasDatabase: !!process.env.DATABASE_URL,
     hasNextAuth: !!process.env.NEXTAUTH_SECRET,
-    hasNextAuthUrl: !!process.env.NEXTAUTH_URL,
     nodeEnv: process.env.NODE_ENV,
-    databaseUrlPrefix: process.env.DATABASE_URL?.substring(0, 20) + '...' || 'Not set'
   }
 
   return NextResponse.json(debug)

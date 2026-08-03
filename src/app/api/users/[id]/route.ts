@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { generateUsername } from '@/lib/bulk-import'
+
+async function uniqueUsername(first: string, last: string): Promise<string> {
+  let u = generateUsername(first, last)
+  let attempts = 0
+  while (await prisma.user.findUnique({ where: { username: u } })) {
+    attempts++
+    u = generateUsername(first, last, `${Date.now().toString(36)}${attempts}`)
+  }
+  return u
+}
 
 export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
   const { id } = params
@@ -146,6 +157,15 @@ export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
       }
     }
 
+    const nameChanged = (firstName && firstName !== existingUser.firstName) ||
+                        (lastName && lastName !== existingUser.lastName)
+    let newUsername: string | undefined
+    if (nameChanged) {
+      const newFirst = firstName || existingUser.firstName
+      const newLast = lastName || existingUser.lastName
+      newUsername = await uniqueUsername(newFirst, newLast)
+    }
+
     const updatedUser = await tx.user.update({
       where: { id },
       data: {
@@ -154,6 +174,7 @@ export const PUT = route({ auth: 'SUPER_ADMIN' }, async (req, { params }) => {
         ...(email && { email }),
         ...(phone && { phone }),
         ...(role && { role }),
+        ...(newUsername && { username: newUsername }),
         ...(isActive !== undefined && { isActive })
       }
     })

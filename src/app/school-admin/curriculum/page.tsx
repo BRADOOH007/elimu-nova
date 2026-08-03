@@ -12,6 +12,8 @@ import { Loader2, BookOpen, Plus, Search, Edit, Trash2, ChevronRight, ChevronDow
 import { useToast } from "@/hooks/use-toast"
 import { confirmToast } from '@/lib/confirm-toast'
 
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+
 interface Curriculum {
   id: string; name: string; type: string; grade: string
   isActive: boolean; description?: string
@@ -148,7 +150,7 @@ export default function CurriculumManagementPage() {
           <div className="space-y-4">
             <div><label className="text-sm text-gray-600">Name</label><Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. CBC Grade 7" /></div>
             <div><label className="text-sm text-gray-600">Type</label><Select value={type} onValueChange={setType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['CBC','CAMBRIDGE','IGCSE','IB','OTHER'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-            <div><label className="text-sm text-gray-600">Grade</label><Input value={grade} onChange={e => setGrade(e.target.value)} placeholder="e.g. Grade 7" /></div>
+            <div><label className="text-sm text-gray-600">Grade</label><select value={grade} onChange={e => setGrade(e.target.value)} className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select grade</option>{GRADES.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
             <div><label className="text-sm text-gray-600">Description</label><textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full p-3 border rounded-lg" /></div>
             <Button onClick={handleCreate} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-purple-600">Create</Button>
           </div>

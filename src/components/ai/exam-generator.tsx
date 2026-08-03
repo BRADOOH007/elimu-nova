@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,7 +55,24 @@ export function AIExamGenerator() {
   const [scheduling, setScheduling] = useState(false);
   const [scheduled, setScheduled] = useState(false);
   const [scheduleForm, setScheduleForm] = useState({ dueDate: '', dueTime: '08:00' });
+  // Structured exam payload (questions + answer key) so scheduled exams stay auto-gradable
+  const [structuredExam, setStructuredExam] = useState<any>(null);
+  const [answerKey, setAnswerKey] = useState<string | null>(null);
+  // Recipient targeting: exams go to ALL students or a whole class (never individuals)
+  const [classes, setClasses] = useState<{ id: string; name: string; subject: string; grade: string; studentCount?: number }[]>([]);
+  const [targetType, setTargetType] = useState<'all' | 'class'>('all');
+  const [targetClassId, setTargetClassId] = useState<string>('');
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetch('/api/teacher/classes')
+      .then(r => r.ok ? r.json() : { data: [], classes: [] })
+      .then(d => {
+        const list = Array.isArray(d.data) ? d.data : (d.classes || []);
+        setClasses(list);
+      })
+      .catch(() => {});
+  }, []);
 
   const handleGenerate = async () => {
     if (!examData.examTitle || !examData.subject || !examData.gradeLevel) {
@@ -65,6 +82,11 @@ export function AIExamGenerator() {
 
     setIsGenerating(true);
     setScheduled(false);
+    setStructuredExam(null);
+    setAnswerKey(null);
+    setTargetType('all');
+    setTargetClassId('');
+    setShowSchedule(false);
     try {
       const response = await fetch('/api/ai/generate-exam', {
         method: 'POST',
@@ -75,6 +97,12 @@ export function AIExamGenerator() {
       if (response.ok) {
         const data = await response.json();
         setGeneratedExam(data.examContent);
+        if (data.structured?.questions?.length) {
+          setStructuredExam(data.structured);
+          try { setAnswerKey(JSON.stringify(data.structured.answerKey || {})) } catch {}
+        } else if (data.answerKey) {
+          setAnswerKey(typeof data.answerKey === 'string' ? data.answerKey : JSON.stringify(data.answerKey));
+        }
       } else {
         const errorData = await response.json();
         toast({ title: errorData.error || 'Failed to generate exam', variant: 'destructive' });
@@ -89,22 +117,35 @@ export function AIExamGenerator() {
 
   const handleSchedule = async () => {
     if (!generatedExam || !scheduleForm.dueDate) return;
+    if (targetType === 'class' && !targetClassId) {
+      toast({ variant: 'destructive', title: 'Please select a class' });
+      return;
+    }
     setScheduling(true);
     try {
       const dueDate = new Date(`${scheduleForm.dueDate}T${scheduleForm.dueTime}:00`);
+      // Structured JSON content preserves question data for the timed-exam player;
+      // fall back to the student-safe markdown if no structured payload exists.
+      const content = structuredExam?.questions?.length
+        ? JSON.stringify({ questions: structuredExam.questions })
+        : generatedExam;
+      const body: any = {
+        title:       examData.examTitle,
+        description: examData.description || `${examData.subject} exam — ${examData.gradeLevel}`,
+        content,
+        dueDate:     dueDate.toISOString(),
+        subject:     examData.subject,
+        grade:       examData.gradeLevel,
+        isTimed:     true,
+        timeLimit:   examData.duration,
+        aiGradeable: true,
+      };
+      if (targetType === 'class' && targetClassId) body.classId = targetClassId;
+      if (answerKey) body.answerKey = answerKey;
       const res = await fetch('/api/assignments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title:       examData.examTitle,
-          description: examData.description || `${examData.subject} exam — ${examData.gradeLevel}`,
-          content:     generatedExam,
-          dueDate:     dueDate.toISOString(),
-          subject:     examData.subject,
-          grade:       examData.gradeLevel,
-          isTimed:     true,
-          timeLimit:   examData.duration,
-        }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed') }
       setScheduled(true);
@@ -485,7 +526,7 @@ export function AIExamGenerator() {
               Schedule Exam for Students
             </DialogTitle>
             <DialogDescription>
-              This will create an assignment visible to all students in your class.
+              This will create a timed exam visible to <strong>{targetType === 'all' ? 'all your students' : 'the selected class'}</strong>.
               They'll see it in their <strong>Assignments</strong> tab.
             </DialogDescription>
           </DialogHeader>
@@ -494,6 +535,32 @@ export function AIExamGenerator() {
               <strong>{examData.examTitle}</strong><br/>
               {examData.subject} · {examData.gradeLevel} · {examData.duration} minutes · {examData.totalMarks} marks
             </div>
+            <div>
+              <Label className="text-sm font-semibold">Send to</Label>
+              <Select value={targetType} onValueChange={v => { setTargetType(v as 'all' | 'class'); setTargetClassId('') }}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Choose recipient" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All students</SelectItem>
+                  <SelectItem value="class">A specific class</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {targetType === 'class' && (
+              <div>
+                <Label className="text-sm font-semibold">Class *</Label>
+                <Select value={targetClassId} onValueChange={setTargetClassId}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Select class…" /></SelectTrigger>
+                  <SelectContent>
+                    {classes.length === 0 && <SelectItem value="__none" disabled>No classes yet</SelectItem>}
+                    {classes.map(c => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name} · {c.subject} ({c.grade}){c.studentCount ? ` · ${c.studentCount} students` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label className="text-sm font-semibold">Due Date *</Label>
               <Input type="date" value={scheduleForm.dueDate}
@@ -509,7 +576,7 @@ export function AIExamGenerator() {
           </div>
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setShowSchedule(false)}>Cancel</Button>
-            <Button onClick={handleSchedule} disabled={scheduling || !scheduleForm.dueDate}
+            <Button onClick={handleSchedule} disabled={scheduling || !scheduleForm.dueDate || (targetType === 'class' && !targetClassId)}
               className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700">
               {scheduling ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scheduling…</> : <><Send className="w-4 h-4 mr-2" />Schedule Now</>}
             </Button>

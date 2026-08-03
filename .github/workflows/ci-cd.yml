@@ -5,6 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:  # Allows manually triggering the db-migration job
 
 env:
   NODE_VERSION: '20.x'
@@ -17,10 +18,10 @@ env:
   STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
   UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
   UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-  SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-  SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-  SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-  SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+  # SENTRY_* intentionally NOT set here: if SENTRY_DSN is present but SENTRY_AUTH_TOKEN
+  # is missing/invalid, the @sentry/nextjs build step fails sourcemap upload and breaks
+  # `next build`. The app builds and runs fine without these in CI (Vercel supplies them
+  # at deploy time).
 
 jobs:
   lint-and-typecheck:
@@ -28,10 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -50,10 +51,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -70,10 +71,10 @@ jobs:
     needs: [lint-and-typecheck, unit-tests]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -102,10 +103,10 @@ jobs:
     needs: build
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -132,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
@@ -167,7 +168,7 @@ jobs:
     environment: production
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
@@ -187,10 +188,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -201,15 +202,18 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      # Prisma migrations REQUIRE a direct (non-pooler) PostgreSQL connection.
+      # Store a direct Neon connection string as MIGRATE_DATABASE_URL.
+      # The pooled (-pooler) URL used by the app is rejected by PgBouncer.
       - name: Run database migration
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL || secrets.DATABASE_URL }}
 
       - name: Verify migration
         run: npx prisma migrate status
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL || secrets.DATABASE_URL }}
 
       - name: Notify on failure
         if: failure()
@@ -221,4 +225,4 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: '❌ Database migration failed. Check the workflow logs.'
-            }
+            })

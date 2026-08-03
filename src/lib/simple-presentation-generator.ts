@@ -19,6 +19,7 @@ export interface SimplePresentationSlide {
   title:        string
   content:      string[]
   imagePrompt?: string
+  imageUrl?:    string
   layout:       'title' | 'content' | 'image' | 'split'
   section?:     'introduction' | 'body' | 'conclusion'
   speakerNotes?: string
@@ -67,6 +68,14 @@ export class SimplePresentationGenerator {
       if (request.generateImages) {
         await this.generateImages(request.slides, request.imageStyle, imageMap, request.userId, request.teacherId)
         console.log(`✅ Images ready: ${imageMap.size}/${request.slides.length}`)
+      }
+
+      // Use pre-picked images (stock imports, previously generated) when present
+      for (const slide of request.slides) {
+        if (slide.imageUrl && !imageMap.has(slide.id)) {
+          const embeddable = await this.toEmbeddable(slide.imageUrl, slide.id)
+          if (embeddable) imageMap.set(slide.id, embeddable)
+        }
       }
 
       const total = request.slides.length
@@ -320,9 +329,9 @@ export class SimplePresentationGenerator {
     userId?: string,
     teacherId?: string,
   ): Promise<void> {
-    // Only generate for slides that have an imagePrompt and need an image
+    // Only generate for slides that have an imagePrompt, no pre-picked image, and need an image
     const imageSlides = slides.filter(s =>
-      s.imagePrompt && (s.layout === 'split' || s.layout === 'image')
+      !s.imageUrl && s.imagePrompt && (s.layout === 'split' || s.layout === 'image')
     )
 
     // TutorBot only generates 2 images (title + 1 body) to reduce latency
@@ -400,6 +409,23 @@ export class SimplePresentationGenerator {
         provider:   'openai-dalle-3',
       })
     } catch (e) { console.error('[IMG_SAVE] Failed to save image to bank', e) }
+  }
+
+  /**
+   * Convert a remote URL or data URI to a base64 data URI PptxGenJS can embed.
+   */
+  private async toEmbeddable(url: string, id: string): Promise<string | undefined> {
+    try {
+      if (url.startsWith('data:')) return url
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error(`fetch ${resp.status}`)
+      const buf = Buffer.from(await resp.arrayBuffer())
+      const contentType = resp.headers.get('content-type') || 'image/png'
+      return `data:${contentType};base64,${buf.toString('base64')}`
+    } catch (e) {
+      console.warn(`⚠️ Could not load pre-picked image for "${id}":`, e instanceof Error ? e.message : e)
+      return undefined
+    }
   }
 }
 

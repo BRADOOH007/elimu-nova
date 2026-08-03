@@ -94,8 +94,18 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
     })
   }
 
-  if (role === 'STUDENT' && schoolId) {
-    console.log('Student creation skipped - requires teacherId field')
+  if (role === 'STUDENT') {
+    if (!schoolId) {
+      return NextResponse.json({
+        error: 'schoolId is required when creating a student'
+      }, { status: 400 })
+    }
+    await prisma.student.create({
+      data: {
+        userId: newUser.id,
+        schoolId: schoolId
+      }
+    })
   }
 
   return NextResponse.json(newUser, { status: 201 })

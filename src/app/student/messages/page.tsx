@@ -5,11 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/hooks/use-toast'
 import {
-  MessageSquare, Send, Search, User, Clock, Loader2, Reply, CheckCheck
+  MessageSquare, Send, Search, User, Clock, Loader2, Reply, CheckCheck, Bell, Mail
 } from 'lucide-react'
 import ComposeMessageModal from '@/components/modals/compose-message-modal'
+import NotificationsTab from '@/components/notifications-tab'
 import { ClientDate, ClientDateTime } from '@/components/ui/client-date'
 
 interface Message {
@@ -104,27 +106,31 @@ export default function StudentMessagesPage() {
   return (
     <>
       <div className="h-[calc(100vh-80px)] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              Messages
+        <Tabs defaultValue="messages" className="flex flex-col flex-1 min-h-0">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-3 border-b border-slate-200 bg-white shrink-0 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-slate-900">Messages</h1>
               {unreadCount > 0 && (
                 <span className="text-xs font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full">{unreadCount}</span>
               )}
-            </h1>
-            <p className="text-slate-500 text-sm">Communicate with your teacher</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <TabsList className="h-8">
+                <TabsTrigger value="messages" className="text-xs h-7"><Mail className="w-3.5 h-3.5 mr-1.5"/>Messages</TabsTrigger>
+                <TabsTrigger value="notifications" className="text-xs h-7"><Bell className="w-3.5 h-3.5 mr-1.5"/>Notifications</TabsTrigger>
+              </TabsList>
+              <Button
+                onClick={() => setShowCompose(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 h-8 text-xs"
+              >
+                <Send className="w-3.5 h-3.5 mr-1.5" />New Message
+              </Button>
+            </div>
           </div>
-          <Button
-            onClick={() => setShowCompose(true)}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 shadow-md"
-          >
-            <Send className="w-4 h-4 mr-2" />New Message
-          </Button>
-        </div>
 
-        {/* Body — 2-column layout */}
-        <div className="flex flex-1 min-h-0">
+          {/* Messages tab — 2-column layout */}
+          <TabsContent value="messages" className="flex-1 flex min-h-0 m-0">
 
           {/* ── Left: Inbox list ── */}
           <div className="w-80 border-r border-slate-200 bg-white flex flex-col shrink-0">
@@ -264,7 +270,10 @@ export default function StudentMessagesPage() {
               </div>
             )}
           </div>
-        </div>
+        </TabsContent>
+
+        <TabsContent value="notifications" className="flex-1 overflow-y-auto m-0 p-0"><NotificationsTab compact /></TabsContent>
+        </Tabs>
       </div>
 
       <ComposeMessageModal

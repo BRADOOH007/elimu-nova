@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 
-export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
+export const POST = route({ auth: ['STUDENT', 'SUPER_ADMIN'] }, async (request, { user }) => {
   const { strengths, interests, grade, skills, goals } = await request.json()
 
   // Gather student's real academic data

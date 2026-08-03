@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 import { logger } from '@/lib/logger'
 import { route } from '@/lib/api-middleware'
+import { invalidateCacheForStripeSubscription } from '@/lib/subscription-service'
+import { handlePaymentSuccess, handlePaymentFailure } from '@/lib/payment-notifications'
 
 export const POST = route({ auth: 'none' }, async (req) => {
   const body      = await req.text()
@@ -51,10 +53,39 @@ export const POST = route({ auth: 'none' }, async (req) => {
         data: updateData,
       })
 
+      // Renewal just happened — invalidate the access cache so the subscriber
+      // is immediately unblocked (not stuck behind the 60s TTL).
+      try {
+        const sub = await prisma.subscription.findUnique({
+          where: { id: localSubId },
+          select: { userId: true, schoolId: true },
+        })
+        await invalidateCacheForStripeSubscription(stripeSubId || '')
+        if (sub?.schoolId) {
+          const { invalidateSubscriptionCache } = await import('@/lib/subscription-service')
+          await invalidateSubscriptionCache(sub.userId || undefined, sub.schoolId)
+        }
+      } catch (err) { logger.warn('Cache invalidation after checkout failed', err instanceof Error ? { error: err.message } : {}) }
+
       logger.info('Checkout completed — subscription activated', {
         localSubId,
         stripeSubId,
       })
+
+      // Create a local PAID invoice + notify + email, so Stripe payments are
+      // recorded in the same way as M-Pesa ones.
+      try {
+        const amount = typeof session.amount_total === 'number' ? session.amount_total / 100 : undefined
+        await handlePaymentSuccess({
+          subscriptionId: localSubId,
+          amount,
+          method: 'STRIPE',
+          receipt: session.id,
+          notes: `STRIPE_SESSION:${session.id}`,
+        })
+      } catch (err) {
+        logger.warn('Failed to record payment/invoice after checkout', err instanceof Error ? { error: err.message } : {})
+      }
       break
     }
 
@@ -64,18 +95,37 @@ export const POST = route({ auth: 'none' }, async (req) => {
         logger.info('No subscription associated with this invoice')
         break
       }
-      const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
 
-      await prisma.subscription.updateMany({
-        where: {
-          stripeSubscriptionId: subscription.id
-        },
-        data: {
-          status: 'ACTIVE'
-        }
+      // Resolve the local subscription directly from the Stripe subscription id
+      // (no live Stripe API call needed — resilient when keys are missing).
+      const localSubs = await prisma.subscription.findMany({
+        where: { stripeSubscriptionId: invoice.subscription },
       })
 
-      logger.info('Payment succeeded for subscription', { subscriptionId: subscription.id })
+      for (const localSub of localSubs) {
+        await prisma.subscription.update({
+          where: { id: localSub.id },
+          data: { status: 'ACTIVE' },
+        })
+
+        const amount = typeof invoice.amount_paid === 'number' ? invoice.amount_paid / 100 : undefined
+        try {
+          await handlePaymentSuccess({
+            subscriptionId: localSub.id,
+            amount,
+            method: 'STRIPE',
+            receipt: `in_${invoice.id}`,
+            notes: `STRIPE_INVOICE:${invoice.id}`,
+          })
+        } catch (err) {
+          logger.warn('Failed to record payment/invoice after invoice.payment_succeeded', err instanceof Error ? { error: err.message } : {})
+        }
+      }
+
+      // Renewal / successful payment — invalidate access cache immediately.
+      try { await invalidateCacheForStripeSubscription(invoice.subscription) } catch (err) { logger.warn('Cache invalidation failed', err instanceof Error ? { error: err.message } : {}) }
+
+      logger.info('Payment succeeded for subscription', { subscriptionId: invoice.subscription })
       break
     }
 
@@ -85,18 +135,33 @@ export const POST = route({ auth: 'none' }, async (req) => {
         logger.info('No subscription associated with this invoice')
         break
       }
-      const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
+
+      const localSubs = await prisma.subscription.findMany({
+        where: { stripeSubscriptionId: invoice.subscription },
+      })
 
       await prisma.subscription.updateMany({
         where: {
-          stripeSubscriptionId: subscription.id
+          stripeSubscriptionId: invoice.subscription
         },
         data: {
           status: 'INACTIVE'
         }
       })
 
-      logger.info('Payment failed for subscription', { subscriptionId: subscription.id })
+      for (const localSub of localSubs) {
+        try {
+          await handlePaymentFailure({
+            subscriptionId: localSub.id,
+            method: 'STRIPE',
+            reason: invoice.hosted_invoice_url || 'Card payment failed',
+          })
+        } catch (err) {
+          logger.warn('Failed to send payment-failure notification', err instanceof Error ? { error: err.message } : {})
+        }
+      }
+
+      logger.info('Payment failed for subscription', { subscriptionId: invoice.subscription })
       break
     }
 
@@ -135,6 +200,9 @@ export const POST = route({ auth: 'none' }, async (req) => {
           status
         }
       })
+
+      // Status changed (renewal/cancel/past_due) — invalidate access cache.
+      try { await invalidateCacheForStripeSubscription(subscription.id) } catch (err) { logger.warn('Cache invalidation failed', err instanceof Error ? { error: err.message } : {}) }
 
       logger.info('Subscription updated', { subscriptionId: subscription.id, status })
       break

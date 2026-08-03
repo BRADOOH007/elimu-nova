@@ -51,35 +51,30 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req) => {
       skip: (page - 1) * limit,
       take: limit,
       orderBy,
-      include: {
+      select: {
+        id: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        address: true,
         schoolAdmin: {
           include: {
-            school: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
+            school: { select: { id: true, name: true } }
           }
         },
         teacher: {
           include: {
-            school: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
+            school: { select: { id: true, name: true } }
           }
         },
         student: {
           include: {
-            school: {
-              select: {
-                id: true,
-                name: true
-              }
-            }
+            school: { select: { id: true, name: true } }
           }
         }
       }
@@ -218,8 +213,8 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req) => {
   })
 
   const responseBody = password
-    ? user
-    : { ...user, generatedPassword: finalPassword }
+    ? { ...user, password: undefined, address: undefined }
+    : { ...user, password: undefined, address: undefined, generatedPassword: finalPassword }
 
   return NextResponse.json(responseBody, { status: 201 })
 })

@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Save, AlertTriangle, Trash2, Edit } from 'lucide-react'
 
+const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE','Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies','Computer Studies','Home Science','Art & Design']
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+
 interface ClassForm {
   name: string
   subject: string
@@ -52,19 +55,25 @@ export function EditClassDialog({ open, onOpenChange, form, onFormChange, onSave
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Subject *</label>
-              <Input
+              <select
                 value={form.subject}
                 onChange={e => onFormChange({ ...form, subject: e.target.value })}
-                placeholder="e.g. Mathematics"
-              />
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select subject</option>
+                {SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
             <div>
               <label className="text-xs font-semibold text-slate-600 mb-1.5 block">Grade *</label>
-              <Input
+              <select
                 value={form.grade}
                 onChange={e => onFormChange({ ...form, grade: e.target.value })}
-                placeholder="e.g. Grade 4"
-              />
+                className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select grade</option>
+                {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
             </div>
           </div>
           <div>

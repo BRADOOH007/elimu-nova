@@ -8,14 +8,17 @@ export const GET = route({}, async (req, { user }) => {
   const classId = searchParams.get('classId')
   const status  = searchParams.get('status') || 'all'
 
-  let teacherId = ''
-  if (user.role === 'TEACHER') {
-    const t = await prisma.teacher.findUnique({ where: { userId: user.id } })
-    teacherId = t?.id || ''
-  }
-
   const whereClause: any = {
     subject: { startsWith: 'DISCUSSION:' },
+  }
+
+  if (classId) {
+    const [classStudents, classTeachers] = await Promise.all([
+      prisma.student.findMany({ where: { classId }, select: { id: true } }),
+      prisma.teacher.findMany({ where: { classes: { some: { id: classId } } }, select: { id: true } }),
+    ])
+    const ids = [...classStudents.map(s => s.id), ...classTeachers.map(t => t.id)]
+    whereClause.senderId = { in: ids }
   }
 
   if (status === 'pending')  whereClause.isRead = false

@@ -87,3 +87,30 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req) => {
 
     return NextResponse.json(paymentMethod, { status: 201 })
 })
+
+export const PATCH = route({ auth: 'SUPER_ADMIN' }, async (req) => {
+
+    const body = await req.json()
+    const { id, name, type, description, isActive } = body
+
+    if (!id) {
+      return NextResponse.json({ error: 'Missing payment method id' }, { status: 400 })
+    }
+
+    const existing = await prisma.paymentMethod.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ error: 'Payment method not found' }, { status: 404 })
+    }
+
+    const updated = await prisma.paymentMethod.update({
+      where: { id },
+      data: {
+        ...(name !== undefined ? { name } : {}),
+        ...(type !== undefined ? { type } : {}),
+        ...(description !== undefined ? { description } : {}),
+        ...(isActive !== undefined ? { isActive } : {}),
+      },
+    })
+
+    return NextResponse.json(updated)
+})
