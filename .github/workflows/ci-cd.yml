@@ -10,7 +10,7 @@ on:
 env:
   NODE_VERSION: '24.x'
   DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://localhost:5432/placeholder' }}
-  NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+  NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-test-secret-not-for-production-use' }}
   NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
