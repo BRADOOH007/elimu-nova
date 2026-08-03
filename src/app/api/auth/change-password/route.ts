@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 import { checkRateLimit, getClientIdentifier, rateLimitAuth } from '@/lib/rate-limit'
 
-export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
+export const POST = route({}, async (req, { user }) => {
   const rl = await checkRateLimit(`change-pw:${getClientIdentifier(req)}`, rateLimitAuth)
   if (!rl.allowed) {
     return NextResponse.json({ error: 'Too many attempts. Try again later.' }, { status: 429 })

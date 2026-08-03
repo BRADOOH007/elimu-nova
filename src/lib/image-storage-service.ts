@@ -5,10 +5,8 @@
 
 import { promises as fs } from 'fs'
 import path from 'path'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { uploadFile, removeFileByUrl, BUCKETS } from '@/lib/supabase'
-
-const prisma = new PrismaClient()
 
 export interface SaveImageRequest {
   imageUrl: string // OpenAI image URL

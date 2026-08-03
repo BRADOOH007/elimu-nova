@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
-
-const prisma = new PrismaClient()
 
 export const GET = route({}, async (req, { user }) => {
   const { searchParams } = new URL(req.url)

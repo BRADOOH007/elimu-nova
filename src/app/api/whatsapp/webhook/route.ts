@@ -4,6 +4,19 @@ import { logger } from '@/lib/logger'
 
 export const POST = async (req: Request) => {
   try {
+    const signature = req.headers.get('x-twilio-signature')
+    if (!signature) {
+      logger.warn('[WhatsApp Webhook] Missing x-twilio-signature header — request ignored')
+      return new Response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', {
+        headers: { 'Content-Type': 'text/xml' },
+      })
+    }
+
+    const authToken = process.env.WHATSAPP_AUTH_TOKEN
+    if (!authToken) {
+      logger.warn('[WhatsApp Webhook] WHATSAPP_AUTH_TOKEN not configured — accepting any valid-looking webhook')
+    }
+
     const formData = await req.formData()
     const from = String(formData.get('From') || '').replace('whatsapp:', '')
     const body = String(formData.get('Body') || '').trim().toLowerCase()
