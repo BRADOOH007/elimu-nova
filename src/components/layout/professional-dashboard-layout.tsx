@@ -115,7 +115,7 @@ export function ProfessionalDashboardLayout({
     const t = setTimeout(() => {
       setShowSplash(false)
       sessionStorage.setItem(`splash-shown-${userRole}`, '1')
-    }, 6000)
+    }, 2000)
     return () => clearTimeout(t)
   }, [])
 
