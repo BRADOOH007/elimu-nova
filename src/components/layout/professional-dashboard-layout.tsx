@@ -107,6 +107,7 @@ export function ProfessionalDashboardLayout({
     lastName: string
     avatar?: string
   }>({ firstName: userName, lastName: '', avatar: undefined })
+  const [avatarError, setAvatarError] = useState(false)
 
   /* ── Splash min-timer — only runs if splash is showing ── */
   useEffect(() => {
@@ -331,8 +332,8 @@ export function ProfessionalDashboardLayout({
                 className="w-7 h-7 sm:w-8 sm:h-8 bg-slate-200 rounded-full flex items-center justify-center overflow-hidden hover:ring-2 hover:ring-slate-400 transition-all shrink-0 ring-1 ring-slate-300"
                 aria-label="Profile"
               >
-                {userProfile.avatar
-                  ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+                {userProfile.avatar && !avatarError
+                  ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
                   : <span className="text-xs font-semibold text-slate-600">{(userProfile.firstName || userName).slice(0, 1).toUpperCase()}</span>
                 }
               </button>
@@ -358,8 +359,8 @@ export function ProfessionalDashboardLayout({
         {/* User strip */}
         <div className={`flex items-center gap-3 px-3 py-3 sm:py-4 border-b border-white/5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-700 flex items-center justify-center shrink-0 overflow-hidden ring-1 ring-white/10">
-            {userProfile.avatar
-              ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" />
+            {userProfile.avatar && !avatarError
+              ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
               : <span className="text-slate-300 font-semibold text-xs sm:text-sm">{(userProfile.firstName || userName).slice(0, 2).toUpperCase()}</span>
             }
           </div>
