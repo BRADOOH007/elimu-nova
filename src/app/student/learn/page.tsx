@@ -32,7 +32,7 @@ import { CourseChallengeWidget } from '@/components/student/course-challenge-wid
 import { SocraticTutor } from '@/components/student/socratic-tutor'
 import { WritingCoach } from '@/components/student/writing-coach'
 
-// ── Types ─────────────────────────────────────────────────────────────────
+// ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Types ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
 interface Assignment {
   id: string; title: string; description: string; content: string
   dueDate: string; status: string; subject: string; grade: number | null
@@ -43,6 +43,17 @@ interface QuizQ {
   question: string; type: string; level?: string; levelNumber?: number
   options?: string[]; correct_answer?: number; model_answer?: string
   explanation: string; cognitive_skill?: string
+}
+interface ActiveLessonData {
+  topic: string; subject: string; grade: string
+  preview: { whatYoullLearn: string; concepts: string[] }
+  content: string
+  recall: { question: string; type: 'mcq' | 'short' | 'fill'; options?: string[]; answer: string; explanation: string }[]
+  generatedAt: string
+}
+interface ReviewEntry {
+  topic: string; subject: string; grade: string
+  lastStudied: string; score: number; interval: number; nextReview: string
 }
 interface ChatMsg { role: 'user' | 'ai'; content: string }
 
@@ -80,12 +91,12 @@ export default function LearnPage() {
     if (typeof window !== 'undefined') {
       const p = new URLSearchParams(window.location.search)
       const t = p.get('tab')
-      if (t === 'quiz' || t === 'study' || t === 'assignments' || t === 'tutor' || t === 'explore' || t === 'progress' || t === 'achievements' || t === 'career' || t === 'whiteboard' || t === 'groups' || t === 'mastery' || t === 'challenge' || t === 'writing' || t === 'reviews') return t
+      if (t === 'quiz' || t === 'study' || t === 'assignments' || t === 'tutor' || t === 'explore' || t === 'whiteboard' || t === 'groups' || t === 'mastery' || t === 'challenge' || t === 'writing' || t === 'reviews') return t
     }
     return 'explore'
   })
 
-  // ── STUDY state ──────────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ STUDY state ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const [studySubject, setStudySubject] = useState('Mathematics')
   const [studyTopic,   setStudyTopic]   = useState('')
   const [studyGrade,   setStudyGrade]   = useState('Grade 4')
@@ -105,11 +116,18 @@ export default function LearnPage() {
   const [teachingLoading,setTeachingLoading]= useState(false)
   const [tutorMode,      setTutorMode]      = useState<'chat' | 'socratic'>('chat')
 
-  // ── LEARNING PATH state (continue where you left off) ─────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ ACTIVE RECALL study state ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+  const [activeLesson, setActiveLesson] = useState<ActiveLessonData | null>(null)
+  const [studyPhase, setStudyPhase] = useState<'preview' | 'learn' | 'recall' | 'done'>('preview')
+  const [recallAnswers, setRecallAnswers] = useState<(string | number)[]>([])
+  const [recallSubmitted, setRecallSubmitted] = useState(false)
+  const [recallScore, setRecallScore] = useState(0)
+
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ LEARNING PATH state (continue where you left off) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const [pathData, setPathData] = useState<{ topics: any[]; resumeTopic: any; completedCount: number; totalCount: number; percentComplete: number } | null>(null)
   const [pathLoading, setPathLoading] = useState(false)
 
-  // ── QUIZ state ───────────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ QUIZ state ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const [quizSubject,   setQuizSubject]   = useState('Mathematics')
   const [quizTopic,     setQuizTopic]     = useState('')
   const [quizGrade,     setQuizGrade]     = useState('Grade 4')
@@ -126,7 +144,7 @@ export default function LearnPage() {
   const [openFeedback,  setOpenFeedback]  = useState<Record<number,{isCorrect:boolean;feedback:string}>>({})
   const timerRef = useRef<NodeJS.Timeout>(null)
 
-  // ── ASSIGNMENTS state ────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ ASSIGNMENTS state ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const [assignments,  setAssignments]  = useState<Assignment[]>([])
   const [loadingAssn,  setLoadingAssn]  = useState(true)
   const [selAssn,      setSelAssn]      = useState<Assignment | null>(null)
@@ -136,7 +154,7 @@ export default function LearnPage() {
   const [uploading,    setUploading]    = useState(false)
   const [result,       setResult]       = useState<{grade?:number;feedback?:string}|null>(null)
 
-  // ── Shared progress state for achievements ────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Shared progress state for achievements ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const [progressData, setProgressData] = useState({ xp: 0, streak: 0, masteryScore: 0, totalStudyTime: 0, completedAssignments: 0, accuracy: 0, totalQuestions: 0 })
 
   useEffect(() => {
@@ -162,7 +180,7 @@ export default function LearnPage() {
       .catch(() => {})
   }, [])
 
-  // ── Callback from CurriculumBrowser to start studying a topic ──────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Callback from CurriculumBrowser to start studying a topic ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const handleExploreTopic = (subject: string, topic: string, learningOutcomes?: string[]) => {
     setStudySubject(subject)
     setStudyTopic(topic)
@@ -170,7 +188,7 @@ export default function LearnPage() {
     generateLesson(subject, topic, learningOutcomes)
   }
 
-  // ── Learning path: fetch ordered topics + progress for resume ─────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Learning path: fetch ordered topics + progress for resume ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const fetchLearningPath = useCallback(async (subject = studySubject, grade = studyGrade) => {
     setPathLoading(true)
     try {
@@ -244,13 +262,13 @@ export default function LearnPage() {
       || null
 
     if (next) {
-      toast({ title: '✅ Topic completed!', description: `Next: ${next.topicName} — starting automatically…` })
+      toast({ title: 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Topic completed!', description: `Next: ${next.topicName} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â starting automaticallyÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦` })
       await new Promise(res => setTimeout(res, 1200))
       setStudyTopic(next.topicName)
       generateLesson(subject, next.topicName)
       await fetchLearningPath(subject, studyGrade)
     } else {
-      toast({ title: '🎉 You finished the whole subject path!', description: 'All topics complete. Amazing work!' })
+      toast({ title: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Â° You finished the whole subject path!', description: 'All topics complete. Amazing work!' })
       await fetchLearningPath(subject, studyGrade)
     }
   }
@@ -352,7 +370,7 @@ export default function LearnPage() {
     } catch (e) { console.error('Failed to restore context:', e) }
   }, [])
 
-  // ── Timer for quiz ───────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Timer for quiz ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   useEffect(() => {
     if (timeLeft > 0 && !submitted) {
       timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000)
@@ -369,7 +387,7 @@ export default function LearnPage() {
     } finally { setLoadingAssn(false) }
   }
 
-  // ── Timer for study session ──────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Timer for study session ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   useEffect(() => {
     if (!sessionActive || !sessionStart) return
     const id = setInterval(() => setElapsed(Math.floor((Date.now() - sessionStart.getTime()) / 1000)), 1000)
@@ -381,7 +399,7 @@ export default function LearnPage() {
     setSessionStart(new Date())
     setElapsed(0)
     setCompleted(false)
-    toast({ title: '📖 Study session started!' })
+    toast({ title: 'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã¢â‚¬â€œ Study session started!' })
   }
 
   const handleEndSession = async () => {
@@ -408,7 +426,7 @@ export default function LearnPage() {
       if (r.ok) {
         setCompleted(true)
         setSessionActive(false)
-        toast({ title: '✅ Session saved!', description: `Studied for ${durationMin} min` })
+        toast({ title: 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Session saved!', description: `Studied for ${durationMin} min` })
       }
     } catch (e) { console.warn('[StudentLearn] handleCompleteSession error:', e) } finally { setCompleting(false) }
   }
@@ -427,7 +445,7 @@ export default function LearnPage() {
           lessonContent: content,
           subject: studySubject,
           topic: studyTopic,
-          message: `Teach me "${studyTopic}" interactively. Explain the key concepts step by step, ask me questions to check understanding, give examples, and adapt based on my responses. Don't lecture — have a conversation with me. Let me know when you're ready and ask me the first question.`
+          message: `Teach me "${studyTopic}" interactively. Explain the key concepts step by step, ask me questions to check understanding, give examples, and adapt based on my responses. Don't lecture ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â have a conversation with me. Let me know when you're ready and ask me the first question.`
         })
       })
       const d = await r.json()
@@ -471,34 +489,87 @@ export default function LearnPage() {
     return `${m}:${sec.toString().padStart(2, '0')}`
   }
 
-  // ── STUDY: generate notes + start teaching ─────────────────────────
-  const generateLesson = async (subjectArg?: string, topicArg?: string, learningOutcomes?: string[]) => {
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ STUDY: generate notes + start teaching ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
+  const generateLesson = async (subjectArg?: string, topicArg?: string, _outcomes?: string[]) => {
     const subject = subjectArg || studySubject
     const topic = topicArg || studyTopic
     if (!topic.trim()) { toast({ variant:'destructive', title:'Enter a topic first' }); return }
-    setStudying(true); setLessonMd('')
+    setStudying(true); setActiveLesson(null); setStudyPhase('preview'); setRecallAnswers([])
+    setRecallSubmitted(false); setRecallScore(0)
     try {
-      const r = await fetch('/api/ai/generate-lesson-content', {
+      const r = await fetch('/api/ai/generate-active-lesson', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ lesson:{ title:topic, subject, grade:studyGrade }, learningOutcomes, studentLevel:'intermediate', learningStyle:'visual' })
+        body: JSON.stringify({ subject, topic, grade: studyGrade })
       })
       const d = await r.json()
       if (r.ok) {
+        setActiveLesson(d)
         setLessonMd(d.content || '')
-        handleStartTeaching(d.content || '')
         markTopicStarted(subject, topic, d.content || '')
         await fetchLearningPath(subject, studyGrade)
-      }
-      else throw new Error(d.error)
+      } else throw new Error(d.error)
     } catch(e:any) { toast({ variant:'destructive', title:'Could not generate lesson', description:e.message }) }
     finally { setStudying(false) }
+  }
+
+  const handleRecallChange = (i: number, val: string | number) => {
+    setRecallAnswers(prev => { const next = [...prev]; next[i] = val; return next })
+  }
+
+  const submitRecall = () => {
+    if (!activeLesson) return
+    let correct = 0
+    activeLesson.recall.forEach((q, i) => {
+      const userAns = recallAnswers[i]
+      if (q.type === 'mcq' && userAns !== undefined) {
+        const idx = typeof userAns === 'number' ? userAns : parseInt(userAns as string)
+        const correctOpt = q.options?.findIndex(o => o === q.answer)
+        if (idx === correctOpt) correct++
+      } else if (typeof userAns === 'string') {
+        const norm = userAns.trim().toLowerCase()
+        const answerNorm = q.answer.trim().toLowerCase()
+        if (norm && (norm === answerNorm || norm.includes(answerNorm) || answerNorm.includes(norm))) correct++
+      }
+    })
+    const score = activeLesson.recall.length > 0 ? Math.round((correct / activeLesson.recall.length) * 100) : 0
+    setRecallScore(score)
+    setRecallSubmitted(true)
+    scheduleReview(activeLesson, score)
+  }
+
+  const scheduleReview = (lesson: ActiveLessonData, score: number) => {
+    try {
+      const raw = localStorage.getItem('elimunova_reviews')
+      const reviews: ReviewEntry[] = raw ? JSON.parse(raw) : []
+      const existing = reviews.findIndex(r => r.topic === lesson.topic && r.subject === lesson.subject)
+      const interval = score >= 80 ? 7 : score >= 50 ? 3 : 1
+      const nextReview = new Date()
+      nextReview.setDate(nextReview.getDate() + interval)
+      const entry: ReviewEntry = {
+        topic: lesson.topic, subject: lesson.subject, grade: lesson.grade,
+        lastStudied: new Date().toISOString(), score, interval,
+        nextReview: nextReview.toISOString(),
+      }
+      if (existing >= 0) reviews[existing] = entry
+      else reviews.push(entry)
+      localStorage.setItem('elimunova_reviews', JSON.stringify(reviews))
+    } catch { /* storage full ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â non-critical */ }
+  }
+
+  const getDueReviews = (): ReviewEntry[] => {
+    try {
+      const raw = localStorage.getItem('elimunova_reviews')
+      const reviews: ReviewEntry[] = raw ? JSON.parse(raw) : []
+      const now = new Date()
+      return reviews.filter(r => new Date(r.nextReview) <= now).sort((a, b) => new Date(a.nextReview).getTime() - new Date(b.nextReview).getTime())
+    } catch { return [] }
   }
 
   const saveNote = () => {
     if (!notes.trim()) return
     setSavedNotes(p => [{ id:Date.now().toString(), text:notes, topic:studyTopic||studySubject }, ...p])
     setNotes('')
-    toast({ title:'📝 Note saved!' })
+    toast({ title:'ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â Note saved!' })
   }
 
   const downloadNotes = () => {
@@ -509,7 +580,7 @@ export default function LearnPage() {
     URL.revokeObjectURL(url)
   }
 
-  // ── QUIZ: generate ───────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ QUIZ: generate ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const generateQuiz = async () => {
     if (!quizTopic.trim()) { toast({ variant:'destructive', title:'Enter a topic first' }); return }
     setGenQuiz(true); setQuestions([]); setAnswers({}); setSubmitted(false); setShowAns({}); setQIndex(0)
@@ -524,7 +595,7 @@ export default function LearnPage() {
       const qs = d.questions || []
       setQuestions(qs)
       setTimeLeft(qs.length * 90) // 90s per question
-      toast({ title:`✅ ${qs.length} questions ready!` })
+      toast({ title:`ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ ${qs.length} questions ready!` })
     } catch(e:any) { toast({ variant:'destructive', title:'Quiz generation failed', description:e.message }) }
     finally { setGenQuiz(false) }
   }
@@ -561,7 +632,6 @@ export default function LearnPage() {
           const fb: Record<number,{isCorrect:boolean;feedback:string}> = {}
           data.results?.forEach((res: any) => {
             fb[res.questionId] = { isCorrect: res.isCorrect, feedback: res.feedback }
-            setShowAns(prev => ({ ...prev, [res.questionId]: true }))
           })
           setOpenFeedback(fb)
         }
@@ -607,7 +677,7 @@ export default function LearnPage() {
 
   const fmtTime = (s:number) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`
 
-  // ── ASSIGNMENT: submit ───────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ ASSIGNMENT: submit ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   const handleSubmit = async () => {
     if (!selAssn || (!submitText.trim() && attachments.length === 0)) return
     setSubmitting(true); setResult(null)
@@ -620,7 +690,7 @@ export default function LearnPage() {
       if (!r.ok) throw new Error(d.error)
       setResult({ grade: d.submission?.grade, feedback: d.submission?.feedback })
       await fetchAssignments()
-      toast({ title:'✅ Submitted successfully!' })
+      toast({ title:'ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Submitted successfully!' })
     } catch(e:any) { setResult({ feedback: e.message }); toast({ variant:'destructive', title:'Submit failed' }) }
     finally { setSubmitting(false) }
   }
@@ -645,12 +715,12 @@ export default function LearnPage() {
     SUBMITTED:'bg-blue-100 text-blue-800', PENDING:'bg-yellow-100 text-yellow-800'
   }[s] || 'bg-gray-100 text-gray-700')
 
-  // ── UI ───────────────────────────────────────────────────────────────
+  // ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ UI ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Learning Hub</h1>
-        <p className="text-slate-500 text-sm">Study · Quiz · Assignments · AI Tutor</p>
+        <p className="text-slate-500 text-sm">Study Ãƒâ€šÃ‚Â· Quiz Ãƒâ€šÃ‚Â· Assignments Ãƒâ€šÃ‚Â· AI Tutor</p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -665,9 +735,6 @@ export default function LearnPage() {
               </span>}
           </TabsTrigger>
           <TabsTrigger value="tutor" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Brain className="w-4 h-4 mr-1.5"/>AI Tutor</TabsTrigger>
-          <TabsTrigger value="progress" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><TrendingUp className="w-4 h-4 mr-1.5"/>Progress</TabsTrigger>
-          <TabsTrigger value="achievements" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Trophy className="w-4 h-4 mr-1.5"/>Badges</TabsTrigger>
-          <TabsTrigger value="career" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-purple-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Compass className="w-4 h-4 mr-1.5"/>Career</TabsTrigger>
           <TabsTrigger value="whiteboard" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-cyan-500 data-[state=active]:to-blue-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Wand2 className="w-4 h-4 mr-1.5"/>Whiteboard</TabsTrigger>
           <TabsTrigger value="groups" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><MessagesSquare className="w-4 h-4 mr-1.5"/>Groups</TabsTrigger>
           <TabsTrigger value="mastery" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Trophy className="w-4 h-4 mr-1.5"/>Mastery</TabsTrigger>
@@ -676,7 +743,7 @@ export default function LearnPage() {
           <TabsTrigger value="writing" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-pink-500 data-[state=active]:to-rose-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><PenTool className="w-4 h-4 mr-1.5"/>Writing</TabsTrigger>
         </TabsList>
 
-        {/* ── STUDY TAB ───────────────────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ STUDY TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="study" className="space-y-4 mt-4">
           {pathData && !pathLoading && pathData.resumeTopic && pathData.resumeTopic.topicName !== studyTopic && (
             <Card className="border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-sm">
@@ -689,7 +756,7 @@ export default function LearnPage() {
                     Continue where you left off
                   </p>
                   <p className="text-xs text-emerald-700 truncate">
-                    {pathData.resumeTopic.topicName} · {pathData.completedCount} of {pathData.totalCount} topics done ({pathData.percentComplete}%)
+                    {pathData.resumeTopic.topicName} Ãƒâ€šÃ‚Â· {pathData.completedCount} of {pathData.totalCount} topics done ({pathData.percentComplete}%)
                   </p>
                 </div>
                 <Button size="sm" onClick={() => resumeTopicLesson(studySubject, pathData.resumeTopic.topicName, pathData.resumeTopic.lastContent || undefined)}
@@ -723,134 +790,186 @@ export default function LearnPage() {
                 </div>
               </div>
               <Button onClick={() => generateLesson()} disabled={studying||!studyTopic.trim()} className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 hover:shadow-lg hover:shadow-emerald-200 transition-all duration-300">
-                {studying ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Generating…</> : <><Play className="h-4 w-4 mr-2"/>Study This Topic</>}
+                {studying ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>GeneratingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</> : <><Play className="h-4 w-4 mr-2"/>Study This Topic</>}
               </Button>
             </CardContent>
           </Card>
 
-          {lessonMd && (
+          {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ ACTIVE RECALL 3-PHASE STUDY ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
+          {activeLesson && studyPhase !== 'done' && (
             <Card className="border-0 shadow-xl bg-white overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-semibold text-blue-200 uppercase tracking-widest mb-1">AI Lesson</p>
+                    <p className="text-xs font-semibold text-teal-200 uppercase tracking-widest mb-1">
+                      Phase {studyPhase === 'preview' ? '1/3' : studyPhase === 'learn' ? '2/3' : '3/3'} - Active Recall
+                    </p>
                     <CardTitle className="text-lg text-white font-extrabold">
-                      {studyTopic} — {studySubject}
+                      {activeLesson.topic} - {activeLesson.subject}
                     </CardTitle>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {sessionActive && (
-                      <span className="text-sm font-mono bg-white/20 rounded-lg px-3 py-1">
-                        {fmtElapsed(elapsed)}
-                      </span>
-                    )}
-                    {completed && (
-                      <span className="text-sm bg-green-500/30 text-green-100 rounded-lg px-3 py-1 font-semibold">Completed</span>
-                    )}
-                    <button
-                      onClick={() => { setLessonMd(''); setSessionActive(false); setSessionStart(null); setCompleted(false); setTeachingChat([]) }}
-                      className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-                    >
-                      <X className="h-4 w-4 text-white" />
-                    </button>
-                  </div>
-                </div>
-                  <div className="flex gap-2 mt-3 flex-wrap">
-                  {!sessionActive && !completed && (
-                    <Button size="sm" onClick={handleStartSession} className="bg-green-500 hover:bg-green-600 text-white border-0">
-                      <Play className="h-3.5 w-3.5 mr-1.5" />Start Studying
-                    </Button>
-                  )}
-                  {sessionActive && (
-                    <Button size="sm" onClick={handleEndSession} disabled={completing} className="bg-red-500 hover:bg-red-600 text-white border-0">
-                      {completing ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
-                      End Session
-                    </Button>
-                  )}
-                  {completed && (
-                    <Button size="sm" onClick={() => { setLessonMd(''); setSessionStart(null); setCompleted(false); setTeachingChat([]) }} variant="outline" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />Study Again
-                    </Button>
-                  )}
-                  {completed && (
-                    <Button size="sm" onClick={completeAndAdvance} className="bg-white text-emerald-700 hover:bg-emerald-50 border-0 font-semibold">
-                      <ArrowRight className="h-3.5 w-3.5 mr-1.5" />Complete &amp; Continue →
-                    </Button>
-                  )}
-
+                  <button
+                    onClick={() => { setActiveLesson(null); setStudyPhase('preview'); setRecallAnswers([]); setRecallSubmitted(false) }}
+                    className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors">
+                    <X className="h-4 w-4 text-white" />
+                  </button>
                 </div>
               </CardHeader>
-              <CardContent className="p-6">
-                <div className="max-h-[600px] overflow-y-auto pr-1">
-                  <MarkdownRenderer content={lessonMd} />
-                </div>
 
-                {lessonMd && (
-                  <div className="mt-6 border-t pt-4 space-y-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-amber-700">
-                      <Brain className="h-4 w-4" /> Practice Questions
+              <CardContent className="p-6">
+                {/* PHASE 1 - PREVIEW */}
+                {studyPhase === 'preview' && (
+                  <div className="space-y-6">
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                      <p className="text-sm font-semibold text-amber-800 mb-1">Preview - What you will learn</p>
+                      <p className="text-slate-700">{activeLesson.preview.whatYoullLearn}</p>
                     </div>
-                    <div className="max-h-[400px] overflow-y-auto space-y-3 pr-1">
-                      {teachingChat.length === 0 && !teachingLoading && (
-                        <div className="flex items-center gap-2 text-sm text-amber-600 py-4">
-                          <Loader2 className="h-4 w-4 animate-spin" /> Starting interactive practice…
-                        </div>
-                      )}
-                      {teachingChat.map((m, i) => (
-                        <div key={i} className={`flex items-end gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          {m.role === 'ai' && (
-                            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0">
-                              <Brain className="h-3.5 w-3.5 text-white" />
-                            </div>
-                          )}
-                          <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                            m.role === 'user'
-                              ? 'bg-blue-600 text-white rounded-br-sm'
-                              : 'bg-gray-100 border border-gray-200 rounded-bl-sm'
-                          }`}>
-                            <MarkdownRenderer content={m.content} />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700 mb-3">Key concepts you will master:</p>
+                      <div className="space-y-2">
+                        {activeLesson.preview.concepts.map((c, i) => (
+                          <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
+                            <span className="w-7 h-7 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold shrink-0">{i + 1}</span>
+                            <span className="text-sm text-slate-700">{c}</span>
                           </div>
-                        </div>
-                      ))}
-                      {teachingLoading && (
-                        <div className="flex items-end gap-2 justify-start">
-                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0">
-                            <Brain className="h-3.5 w-3.5 text-white" />
-                          </div>
-                          <div className="bg-gray-100 border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3">
-                            <div className="flex items-center gap-1.5">
-                              {[0,1,2].map(i => <div key={i} className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{animationDelay:`${i*0.15}s`}} />)}
-                              <span className="text-xs text-gray-400 ml-2">Teaching…</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex items-end gap-2">
-                      <textarea
-                        value={teachingInput}
-                        onChange={e => setTeachingInput(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTeachingMsg() } }}
-                        rows={1}
-                        placeholder="Ask a question, say 'explain more' or 'give an example'…"
-                        className="flex-1 resize-none border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 min-h-[38px] max-h-24"
-                      />
-                      <button
-                        onClick={sendTeachingMsg}
-                        disabled={teachingLoading || !teachingInput.trim()}
-                        className="h-9 w-9 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 flex items-center justify-center disabled:opacity-40 shrink-0 hover:opacity-90 transition-opacity"
-                      >
-                        <Send className="h-4 w-4 text-white" />
-                      </button>
+                    <Button onClick={() => setStudyPhase('learn')} className="w-full bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-semibold h-11">
+                      Start Learning
+                    </Button>
+                  </div>
+                )}
+
+                {/* PHASE 2 - LEARN */}
+                {studyPhase === 'learn' && (
+                  <div className="space-y-6">
+                    <div className="max-h-[450px] overflow-y-auto pr-1">
+                      <MarkdownRenderer content={activeLesson.content} />
                     </div>
-                    <p className="text-[10px] text-gray-400 text-center">Enter to send · Shift+Enter for new line</p>
+                    <Button onClick={() => { setStudyPhase('recall'); setRecallAnswers(new Array(activeLesson.recall.length).fill(undefined)) }}
+                      className="w-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold h-11">
+                      <Brain className="w-4 h-4 mr-2" />I'm Ready - Test Me!
+                    </Button>
+                  </div>
+                )}
+
+                {/* PHASE 3 - RECALL */}
+                {studyPhase === 'recall' && (
+                  <div className="space-y-6">
+                    <p className="text-sm font-semibold text-slate-600">Test your understanding - answer all {activeLesson.recall.length} questions:</p>
+                    {activeLesson.recall.map((q, i) => (
+                      <div key={i} className="border rounded-xl p-4 space-y-3">
+                        <p className="font-semibold text-slate-800 text-sm">{i + 1}. {q.question}</p>
+                        {q.type === 'mcq' && q.options ? (
+                          <div className="space-y-1.5">
+                            {q.options.map((opt, j) => {
+                              const isSel = recallAnswers[i] === j
+                              const isCorrect = recallSubmitted && j === q.options!.findIndex(o => o === q.answer)
+                              const isWrong = recallSubmitted && isSel && !isCorrect
+                              return (
+                                <button key={j} disabled={recallSubmitted}
+                                  onClick={() => handleRecallChange(i, j)}
+                                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border text-left text-sm transition-all
+                                    ${isCorrect ? 'bg-green-100 border-green-400 text-green-800' :
+                                      isWrong ? 'bg-red-100 border-red-400 text-red-800' :
+                                      isSel ? 'bg-blue-100 border-blue-400 text-blue-800' :
+                                      'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
+                                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+                                    ${isCorrect ? 'bg-green-500 text-white' : isWrong ? 'bg-red-500 text-white' : isSel ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                    {String.fromCharCode(65 + j)}
+                                  </span>
+                                  {opt}
+                                  {isCorrect && <CheckCircle className="ml-auto h-4 w-4 text-green-600 shrink-0" />}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              disabled={recallSubmitted}
+                              value={typeof recallAnswers[i] === 'string' ? recallAnswers[i] as string : ''}
+                              onChange={e => handleRecallChange(i, e.target.value)}
+                              placeholder="Type your answer..."
+                              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50"
+                            />
+                          </div>
+                        )}
+                        {recallSubmitted && (
+                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm">
+                            <span className="font-bold text-blue-800">Answer: </span>
+                            <span className="text-blue-700">{q.answer}</span>
+                            <p className="text-blue-600 text-xs mt-1">{q.explanation}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {!recallSubmitted ? (
+                      <Button onClick={submitRecall} className="w-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold h-11">
+                        <CheckCircle className="w-4 h-4 mr-2" />Submit Answers
+                      </Button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-4 text-center">
+                          <p className="text-3xl font-extrabold text-indigo-700">{recallScore}%</p>
+                          <p className="text-sm text-indigo-600">
+                            {recallScore >= 80 ? 'Excellent! You have mastered this topic.' :
+                             recallScore >= 50 ? 'Good progress! Review the explanations and try again.' :
+                             'Keep going! Try again after reviewing the content.'}
+                          </p>
+                          <p className="text-xs text-indigo-400 mt-1">
+                            Review scheduled in {recallScore >= 80 ? '7' : recallScore >= 50 ? '3' : '1'} day{recallScore >= 80 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button onClick={() => { setStudyPhase('learn'); setRecallSubmitted(false) }} variant="outline" className="flex-1">
+                            Review Content
+                          </Button>
+                          <Button onClick={() => { setStudyPhase('done'); handleEndSession(); completeAndAdvance() }} className="flex-1 bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-semibold">
+                            Complete and Continue
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {/* Notes — collapsible */}
+          {/* DONE */}
+          {activeLesson && studyPhase === 'done' && (
+            <Card className="border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-sm">
+              <CardContent className="p-6 text-center space-y-3">
+                <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto" />
+                <h3 className="text-lg font-bold text-emerald-900">Topic Completed</h3>
+                <p className="text-sm text-emerald-700">You scored <span className="font-bold">{recallScore}%</span> on {activeLesson.topic}.</p>
+                <p className="text-xs text-emerald-500">Next review: {recallScore >= 80 ? '7 days' : recallScore >= 50 ? '3 days' : 'tomorrow'}</p>
+                <div className="flex gap-2 pt-2">
+                  <Button onClick={() => { setActiveLesson(null); setStudyPhase('preview'); setRecallAnswers([]); setRecallSubmitted(false) }}
+                    variant="outline" className="flex-1">Pick Another Topic</Button>
+                  <Button onClick={() => { setStudyPhase('learn'); setRecallSubmitted(false); setRecallAnswers(new Array(activeLesson.recall.length).fill(undefined)) }}
+                    className="flex-1 bg-gradient-to-r from-teal-500 to-emerald-600 text-white font-semibold">Study Again</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* LOADING */}
+          {studying && !activeLesson && (
+            <Card>
+              <CardContent className="p-8 flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+                <p className="text-sm text-slate-600">Creating your personalized active-recall lesson...</p>
+                <p className="text-xs text-slate-400">This takes about 10 seconds</p>
+              </CardContent>
+            </Card>
+          )}
+
+
+
           <Card>
             <CardHeader className="cursor-pointer select-none" onClick={() => setNotesOpen(!notesOpen)}>
               <CardTitle className="text-base flex items-center justify-between">
@@ -885,7 +1004,7 @@ export default function LearnPage() {
           </Card>
         </TabsContent>
 
-        {/* ── QUIZ TAB ────────────────────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ QUIZ TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="quiz" className="space-y-4 mt-4">
           {genQuiz && questions.length === 0 ? (
             <Card>
@@ -898,8 +1017,8 @@ export default function LearnPage() {
                     </span>
                   </div>
                   <div className="text-center space-y-2">
-                    <p className="font-semibold text-slate-700">Generating your quiz…</p>
-                    <p className="text-xs text-slate-400">Creating {quizType === 'blooms' ? '6 Bloom\'s taxonomy' : '5 checkpoint'} questions for {quizSubject} — {quizTopic}</p>
+                    <p className="font-semibold text-slate-700">Generating your quizÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</p>
+                    <p className="text-xs text-slate-400">Creating {quizType === 'blooms' ? '6 Bloom\'s taxonomy' : '5 checkpoint'} questions for {quizSubject} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â {quizTopic}</p>
                   </div>
                   <div className="flex gap-1.5">
                     {[1,2,3,4,5].map(i => (
@@ -947,7 +1066,7 @@ export default function LearnPage() {
               ))}
                 </div>
                 <Button onClick={generateQuiz} disabled={genQuiz||!quizTopic.trim()} className="w-full bg-gradient-to-r from-indigo-500 to-violet-600 hover:shadow-lg hover:shadow-indigo-200 transition-all duration-300">
-                  {genQuiz ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Generating…</> : <><Zap className="h-4 w-4 mr-2"/>Generate Quiz</>}
+                  {genQuiz ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>GeneratingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</> : <><Zap className="h-4 w-4 mr-2"/>Generate Quiz</>}
                 </Button>
               </CardContent>
             </Card>
@@ -977,7 +1096,7 @@ export default function LearnPage() {
                 <div className={`rounded-2xl p-4 text-center ${score>=70?'bg-green-50 border border-green-200':score>=50?'bg-amber-50 border border-amber-200':'bg-red-50 border border-red-200'}`}>
                   <Award className={`h-8 w-8 mx-auto mb-2 ${score>=70?'text-green-600':score>=50?'text-amber-600':'text-red-600'}`}/>
                   <p className="text-2xl font-black text-slate-900">{score}%</p>
-                  <p className="text-sm text-slate-600">{score>=80?'Excellent! 🎉':score>=60?'Good work! 👍':score>=40?'Keep practising! 💪':'Review this topic 📚'}</p>
+                  <p className="text-sm text-slate-600">{score>=80?'Excellent! ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Â°':score>=60?'Good work! ÃƒÂ°Ã…Â¸Ã¢â‚¬ËœÃ‚Â':score>=40?'Keep practising! ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Âª':'Review this topic ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã…Â¡'}</p>
                 </div>
               )}
 
@@ -989,7 +1108,7 @@ export default function LearnPage() {
                 return (
                   <Card className={submitted&&(q.type==='multiple_choice'||q.type==='true_false') ? (isCorrect?'border-green-300 bg-green-50/30':'border-red-300 bg-red-50/30') : ''}>
                     <CardContent className="pt-5 space-y-4">
-                      {q.level && <Badge className="bg-purple-100 text-purple-800 text-xs">{q.level} — {q.cognitive_skill}</Badge>}
+                      {q.level && <Badge className="bg-purple-100 text-purple-800 text-xs">{q.level} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â {q.cognitive_skill}</Badge>}
                       <p className="font-semibold text-slate-800 leading-relaxed">{q.question}</p>
 
                       {/* MCQ options */}
@@ -1083,7 +1202,7 @@ export default function LearnPage() {
           )}
         </TabsContent>
 
-        {/* ── ASSIGNMENTS TAB ──────────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ ASSIGNMENTS TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="assignments" className="space-y-4 mt-4">
           {selAssn ? (
             <div className="space-y-4">
@@ -1096,7 +1215,7 @@ export default function LearnPage() {
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-base">{selAssn.title}</CardTitle>
-                      <p className="text-xs text-slate-500 mt-1">{selAssn.subject} · Due <ClientDate date={selAssn.dueDate} /></p>
+                      <p className="text-xs text-slate-500 mt-1">{selAssn.subject} Ãƒâ€šÃ‚Â· Due <ClientDate date={selAssn.dueDate} /></p>
                     </div>
                     <Badge className={statusColor(selAssn.status)}>{selAssn.status}</Badge>
                   </div>
@@ -1107,7 +1226,7 @@ export default function LearnPage() {
                   </div>
                   {selAssn.content && (
                     <div className="max-h-64 overflow-y-auto p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                      <MarkdownRenderer content={selAssn.content.replace(/## Answer Key[\s\S]*/i, '').replace(/📝 ANSWER KEY[\s\S]*/i, '')} />
+                      <MarkdownRenderer content={selAssn.content.replace(/## Answer Key[\s\S]*/i, '').replace(/ÃƒÂ°Ã…Â¸Ã¢â‚¬Å“Ã‚Â ANSWER KEY[\s\S]*/i, '')} />
                     </div>
                   )}
 
@@ -1129,7 +1248,7 @@ export default function LearnPage() {
                       <label className={`flex items-center gap-2 px-4 py-2.5 border-2 border-dashed rounded-xl cursor-pointer transition-colors ${uploading?'border-blue-300 bg-blue-50':'border-slate-200 hover:border-blue-300'}`}>
                         <input type="file" multiple className="hidden" onChange={handleFileUpload} disabled={uploading}
                           accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.txt"/>
-                        {uploading ? <><Loader2 className="h-4 w-4 text-blue-500 animate-spin"/><span className="text-sm text-blue-600">Uploading…</span></> :
+                        {uploading ? <><Loader2 className="h-4 w-4 text-blue-500 animate-spin"/><span className="text-sm text-blue-600">UploadingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</span></> :
                                      <><Paperclip className="h-4 w-4 text-slate-400"/><span className="text-sm text-slate-500">Attach files (images, PDF, Word)</span></>}
                       </label>
                       {attachments.length > 0 && attachments.map((a,i)=>(
@@ -1141,7 +1260,7 @@ export default function LearnPage() {
                       ))}
                       <Button onClick={handleSubmit} disabled={submitting||uploading||(!submitText.trim()&&attachments.length===0)}
                         className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:opacity-90">
-                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>Submitting…</> : <><Upload className="h-4 w-4 mr-2"/>Submit for AI Grading</>}
+                        {submitting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin"/>SubmittingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦</> : <><Upload className="h-4 w-4 mr-2"/>Submit for AI Grading</>}
                       </Button>
                     </div>
                   )}
@@ -1173,7 +1292,7 @@ export default function LearnPage() {
                     className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-2xl hover:border-blue-300 hover:shadow-md cursor-pointer transition-all group">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-800 truncate group-hover:text-blue-700">{a.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{a.subject} · Due <ClientDate date={a.dueDate} /></p>
+                      <p className="text-xs text-slate-400 mt-0.5">{a.subject} Ãƒâ€šÃ‚Â· Due <ClientDate date={a.dueDate} /></p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0 ml-3">
                       {a.grade!=null && <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">{Math.round(a.grade)}%</span>}
@@ -1187,7 +1306,7 @@ export default function LearnPage() {
           )}
         </TabsContent>
 
-        {/* ── AI TUTOR TAB ─────────────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ AI TUTOR TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="tutor" forceMount className={`mt-4 ${tab !== 'tutor' ? 'hidden' : ''}`}>
           <div className="space-y-3 mb-3">
             <div className="flex items-center gap-2">
@@ -1214,9 +1333,9 @@ export default function LearnPage() {
               <ChatContainer
                 onSend={handleAITutorChat}
                 headerTitle="AI Tutor"
-                headerSubtitle="Ask anything · Get instant explanations"
+                headerSubtitle="Ask anything Ãƒâ€šÃ‚Â· Get instant explanations"
                 quickPrompts={['Explain simply', 'Practice questions', 'Key formulas', 'Quiz me!', 'Summarise topic']}
-                placeholder="Ask anything — explain, practice, quiz me…"
+                placeholder="Ask anything ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â explain, practice, quiz meÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦"
                 icon="brain"
               />
             </div>
@@ -1227,7 +1346,7 @@ export default function LearnPage() {
           )}
         </TabsContent>
 
-        {/* ── EXPLORE TAB (Curriculum Browser) ─────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ EXPLORE TAB (Curriculum Browser) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="explore" className="mt-4 space-y-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900">Explore the Curriculum</h2>
@@ -1237,40 +1356,18 @@ export default function LearnPage() {
           <Recommendations onStudy={handleExploreTopic} />
         </TabsContent>
 
-        {/* ── PROGRESS TAB ──────────────────────────────────────── */}
-        <TabsContent value="progress" className="mt-4">
-          <ProgressDashboard />
-        </TabsContent>
 
-        {/* ── ACHIEVEMENTS TAB ──────────────────────────────────── */}
-        <TabsContent value="achievements" className="mt-4">
-          <Achievements
-            xp={progressData.xp}
-            streak={progressData.streak}
-            masteryScore={progressData.masteryScore}
-            totalStudyTime={progressData.totalStudyTime}
-            completedAssignments={progressData.completedAssignments}
-            accuracy={progressData.accuracy}
-            totalQuestions={progressData.totalQuestions}
-          />
-        </TabsContent>
-
-        {/* ── CAREER TAB ────────────────────────────────────────── */}
-        <TabsContent value="career" className="mt-4">
-          <CareerAssessment />
-        </TabsContent>
-
-        {/* ── WHITEBOARD TAB ────────────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ WHITEBOARD TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="whiteboard" className="mt-4">
           <AIWhiteboard />
         </TabsContent>
 
-        {/* ── STUDY GROUPS TAB ──────────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ STUDY GROUPS TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="groups" className="mt-4">
           <StudyGroups />
         </TabsContent>
 
-        {/* ── MASTERY TAB ──────────────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ MASTERY TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="mastery" className="mt-4 space-y-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Trophy className="h-5 w-5 text-purple-600" /> Mastery Gates</h2>
@@ -1280,7 +1377,7 @@ export default function LearnPage() {
           <KnowledgeMap subject={studySubject} />
         </TabsContent>
 
-        {/* ── COURSE CHALLENGE TAB ─────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ COURSE CHALLENGE TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="challenge" className="mt-4 space-y-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Swords className="h-5 w-5 text-amber-600" /> Course Challenge</h2>
@@ -1310,14 +1407,14 @@ export default function LearnPage() {
               unitName={quizTopic}
               grade={quizGrade}
               onComplete={(score, passed) => {
-                if (passed) toast({ title: '🎉 Challenge passed!', description: `Score: ${score}% — Mastery credit earned!` })
+                if (passed) toast({ title: 'ÃƒÂ°Ã…Â¸Ã…Â½Ã¢â‚¬Â° Challenge passed!', description: `Score: ${score}% ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Mastery credit earned!` })
                 else toast({ title: `Score: ${score}%`, description: 'You need 70% to pass. Keep practising!' })
               }}
             />
           )}
         </TabsContent>
 
-        {/* ── SPACED REPETITION TAB ────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ SPACED REPETITION TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="reviews" className="mt-4 space-y-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Repeat className="h-5 w-5 text-orange-600" /> Spaced Repetition</h2>
@@ -1333,13 +1430,50 @@ export default function LearnPage() {
           />
         </TabsContent>
 
-        {/* ── WRITING COACH TAB ────────────────────────────────── */}
+        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ WRITING COACH TAB ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <TabsContent value="writing" className="mt-4 space-y-4">
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><PenTool className="h-5 w-5 text-pink-600" /> Writing Coach</h2>
             <p className="text-sm text-slate-500">Get instant AI feedback on your writing. Improve grammar, structure, and content.</p>
           </div>
           <WritingCoach subject={studySubject} topic={studyTopic || 'General Writing'} />
+        </TabsContent>
+
+        {/* REVIEWS TAB */}
+        <TabsContent value="reviews" className="mt-4 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><Repeat className="h-5 w-5 text-orange-600" /> Spaced Reviews</h2>
+            <p className="text-sm text-slate-500">Topics due for review based on your spaced repetition schedule.</p>
+          </div>
+          {getDueReviews().length === 0 ? (
+            <Card>
+              <CardContent className="p-8 text-center space-y-2">
+                <CheckCircle className="h-12 w-12 text-emerald-400 mx-auto" />
+                <p className="text-sm font-semibold text-slate-700">No reviews due!</p>
+                <p className="text-xs text-slate-400">Complete more study sessions to build your review schedule.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {getDueReviews().map((r, i) => (
+                <Card key={i} className="border-orange-200 bg-white">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-slate-800">{r.topic}</p>
+                        <p className="text-xs text-slate-500">{r.subject} - {r.grade} - Last: {r.score}%</p>
+                        <p className="text-xs text-orange-600 mt-1 font-medium">Due for review</p>
+                      </div>
+                      <Button size="sm" onClick={() => { setStudySubject(r.subject); setStudyTopic(r.topic); setStudyGrade(r.grade); generateLesson(r.subject, r.topic); setTab('study') }}
+                        className="bg-gradient-to-r from-orange-500 to-red-600 text-white border-0 shrink-0">
+                        <Repeat className="h-3.5 w-3.5 mr-1.5" />Review
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

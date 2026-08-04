@@ -83,7 +83,13 @@ export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
       const res = await fetch(`/api/curriculum/strands?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`)
       if (res.ok) {
         const data = await res.json()
-        setStrands(data.strands || [])
+        const strandsArr = data.strands || []
+        if (strandsArr.length > 0) {
+          setStrands(strandsArr)
+        } else {
+          const fallback = getFallbackTopics(subject)
+          setStrands(fallback.map((t, i) => ({ id: `fb-${i}`, name: t, order: i })))
+        }
       } else {
         const fallback = getFallbackTopics(subject)
         setStrands(fallback.map((t, i) => ({ id: `fb-${i}`, name: t, order: i })))
