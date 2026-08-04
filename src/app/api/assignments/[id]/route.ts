@@ -105,6 +105,9 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user, p
     answerKey: isStudent ? undefined : assignment.answerKey,
     createdAt: assignment.createdAt,
     updatedAt: assignment.updatedAt,
+    videoUrl: assignment.videoUrl,
+    videoProvider: assignment.videoProvider,
+    videoDuration: assignment.videoDuration,
     teacher: {
       id: assignment.teacher.id,
       name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,

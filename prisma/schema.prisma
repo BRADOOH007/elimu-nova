@@ -760,6 +760,10 @@ model Assignment {
   subject      String?
   grade        String?
   schoolId     String?
+  // Video assignment fields
+  videoUrl      String? // URL of the uploaded or linked video
+  videoProvider String? // "youtube", "vimeo", or "upload"
+  videoDuration Int? // Video duration in seconds
   // Exam bank + structured exam data
   metadata     Json? // exam bank flags, term/type/savedAt
   questions    Json? // structured question array

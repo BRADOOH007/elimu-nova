@@ -49,6 +49,7 @@ export const BUCKETS = {
   PRESENTATIONS:   'presentations',   // PPTX files
   AI_IMAGES:       'ai-images',       // Generated images
   AVATARS:         'avatars',         // User profile pictures
+  VIDEOS:          'videos',          // Assignment/exam video uploads
 } as const
 
 /**

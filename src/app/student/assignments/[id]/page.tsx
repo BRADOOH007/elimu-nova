@@ -5,12 +5,13 @@ import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, ArrowLeft, Calendar, User2, FileText, Clock, CheckCircle, XCircle, Brain } from "lucide-react"
+import { Loader2, ArrowLeft, Calendar, User2, FileText, Clock, CheckCircle, XCircle, Brain, Play } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { useExamLockdown } from '@/hooks/use-exam-lockdown'
 import { LockdownOverlay } from '@/components/exam/lockdown-overlay'
 import ExamSplitPane from '@/components/exam/exam-split-pane'
+import AnswerGuide from '@/components/answer-guide'
 
 interface Question {
   id: number
@@ -35,6 +36,9 @@ interface AssignmentDetail {
   isTimed?: boolean
   timeLimit?: number | null
   answerKey?: string | null
+  videoUrl?: string | null
+  videoProvider?: string | null
+  videoDuration?: number | null
   teacher: { id: string; name: string; email: string }
   lessonPlan?: { id: string; title: string; subject: string; grade: string } | null
   mySubmission?: {
@@ -490,10 +494,38 @@ export default function StudentAssignmentDetailPage() {
                 )}
               </div>
             </div>
-            <Badge>{assignment.status}</Badge>
+            <div className="flex items-center gap-2">
+              <AnswerGuide type={assignment.isTimed ? 'exam' : 'assignment'} hasVideo={!!assignment.videoUrl} />
+              <Badge>{assignment.status}</Badge>
+            </div>
           </div>
 
           <p className="text-gray-700">{assignment.description}</p>
+
+          {/* Video player */}
+          {assignment.videoUrl && (
+            <div className="rounded-xl overflow-hidden bg-gray-900 shadow-lg">
+              {assignment.videoProvider === 'youtube' || assignment.videoProvider === 'vimeo' ? (
+                <iframe
+                  src={assignment.videoUrl}
+                  className="w-full aspect-video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <video src={assignment.videoUrl} controls className="w-full aspect-video" preload="metadata">
+                  Your browser does not support the video tag.
+                </video>
+              )}
+              <div className="px-4 py-2 bg-gray-800 flex items-center gap-2">
+                <Play className="w-3.5 h-3.5 text-gray-300" />
+                <span className="text-xs text-gray-300 font-medium">
+                  {assignment.videoProvider === 'youtube' ? 'YouTube Video' :
+                   assignment.videoProvider === 'vimeo' ? 'Vimeo Video' : 'Video Lecture'}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Exam intro screen */}
           {isTimedExam && !examStarted && (
