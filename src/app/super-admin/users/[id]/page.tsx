@@ -33,6 +33,9 @@ export default function SuperAdminUserDetailPage() {
   const [pwdError, setPwdError] = useState<string | null>(null)
   const [regenerating, setRegenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
+
+  useEffect(() => { setAvatarError(false) }, [user])
   const { toast } = useToast()
 
   useEffect(() => {
@@ -131,10 +134,10 @@ export default function SuperAdminUserDetailPage() {
             <div className="flex items-center gap-4">
               <div
                 className="w-16 h-16 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 text-xl font-semibold overflow-hidden cursor-pointer ring-1 ring-slate-300 hover:ring-2 hover:ring-slate-400 transition-all"
-                onClick={() => user.avatar && setShowAvatar(true)}
+                onClick={() => user.avatar && !avatarError && setShowAvatar(true)}
                 title={user.avatar ? 'Click to enlarge' : undefined}
               >
-                {user.avatar ? <img src={user.avatar} alt="" className="w-full h-full object-cover" /> : `${user.firstName[0]}${user.lastName[0]}`}
+                {user.avatar && !avatarError ? <img src={user.avatar} alt="" className="w-full h-full object-cover" onError={() => setAvatarError(true)} /> : `${user.firstName[0]}${user.lastName[0]}`}
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{user.firstName} {user.lastName}</h1>

@@ -30,6 +30,9 @@ export default function StudentMessagesPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [showCompose, setShowCompose] = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
+
+  useEffect(() => { setAvatarError(false) }, [selected?.id])
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const [page, setPage] = useState(1)
@@ -205,7 +208,7 @@ export default function StudentMessagesPage() {
                 <div className="px-6 py-4 bg-white border-b border-slate-200 shrink-0">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 overflow-hidden">
-                      {selected.from.avatar ? <img src={selected.from.avatar} alt="" className="w-full h-full object-cover" /> : selected.from.name.charAt(0)}
+                      {selected.from.avatar && !avatarError ? <img src={selected.from.avatar} alt="" className="w-full h-full object-cover" onError={() => setAvatarError(true)} /> : selected.from.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-900 text-sm">{selected.from.name}</p>

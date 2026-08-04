@@ -38,6 +38,7 @@ export default function ViewMessageModal({
   const [showReplyBox, setShowReplyBox] = useState(false)
   const [replyContent, setReplyContent] = useState('')
   const [sending, setSending] = useState(false)
+  const [avatarError, setAvatarError] = useState(false)
 
   if (!isOpen || !message) return null
 
@@ -82,7 +83,7 @@ export default function ViewMessageModal({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-xl font-bold overflow-hidden">
-                {message.from.avatar ? <img src={message.from.avatar} alt="" className="w-full h-full object-cover" /> : getInitials(message.from.name)}
+                {message.from.avatar && !avatarError ? <img src={message.from.avatar} alt="" className="w-full h-full object-cover" onError={() => setAvatarError(true)} /> : getInitials(message.from.name)}
               </div>
               <div>
                 <h2 className="text-2xl font-bold">{message.from.name}</h2>

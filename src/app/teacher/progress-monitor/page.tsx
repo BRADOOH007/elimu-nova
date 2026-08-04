@@ -372,7 +372,12 @@ export default function ProgressMonitorPage() {
               >
                 {/* Avatar */}
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
-                  {student.avatar ? <img src={student.avatar} alt="" className="w-full h-full object-cover" /> : <span className="text-white text-xs font-bold">{student.name.split(' ').map(n => n[0]).join('')}</span>}
+                  {student.avatar ? (
+                    <>
+                      <img src={student.avatar} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden') }} />
+                      <span className="text-white text-xs font-bold hidden">{student.name.split(' ').map(n => n[0]).join('')}</span>
+                    </>
+                  ) : <span className="text-white text-xs font-bold">{student.name.split(' ').map(n => n[0]).join('')}</span>}
                 </div>
 
                 {/* Name */}
