@@ -84,6 +84,9 @@ export default function ChatContainer({
     if (!plain) return
     const utterance = new SpeechSynthesisUtterance(plain)
     utterance.rate = 0.95; utterance.pitch = 1.05
+    const voices = synthRef.current.getVoices()
+    const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha'))
+    if (femaleVoice) utterance.voice = femaleVoice
     utterance.onend = () => setSpeakingId(null)
     utterance.onerror = () => setSpeakingId(null)
     setSpeakingId(id)
