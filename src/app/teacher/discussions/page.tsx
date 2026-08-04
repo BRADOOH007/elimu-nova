@@ -19,7 +19,7 @@ type Tab = 'pending' | 'approved' | 'all'
 export default function TeacherDiscussions() {
   const [discussions, setDiscussions] = useState<Discussion[]>([])
   const [loading, setLoading]         = useState(true)
-  const [tab, setTab]                 = useState<Tab>('pending')
+  const [tab, setTab]                 = useState<Tab>('approved')
   const [acting, setActing]           = useState<string | null>(null)
   const [reply, setReply]             = useState<Record<string, string>>({})
   const [sending, setSending]         = useState<string | null>(null)
@@ -87,7 +87,7 @@ export default function TeacherDiscussions() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Discussion Board</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Review and moderate student messages before they go live</p>
+          <p className="text-slate-500 text-sm mt-0.5">Community chat — all posts visible. Flagged messages appear under Pending.</p>
         </div>
         <button onClick={() => load(tab)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors">
           <RefreshCw className="h-4 w-4 text-slate-500" />
@@ -97,8 +97,8 @@ export default function TeacherDiscussions() {
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
         {([
-          ['pending',  `Pending${pendingCount > 0 ? ` (${pendingCount})` : ''}`, Clock],
-          ['approved', 'Approved', CheckCircle],
+          ['approved', 'Live Posts', CheckCircle],
+          ['pending',  `Flagged${pendingCount > 0 ? ` (${pendingCount})` : ''}`, AlertTriangle],
           ['all',      'All',      MessageSquare],
         ] as const).map(([key, label, Icon]) => (
           <button key={key} onClick={() => { setTab(key as Tab); setDiscussionPage(1) }}
@@ -117,7 +117,7 @@ export default function TeacherDiscussions() {
         <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
           <MessageSquare className="h-12 w-12 text-slate-300 mx-auto mb-3" />
           <p className="font-semibold text-slate-600">
-            {tab === 'pending' ? 'No messages waiting for review' : 'No messages here yet'}
+            {tab === 'pending' ? 'No flagged messages to review' : 'No messages here yet'}
           </p>
           <p className="text-slate-400 text-sm mt-1">
             {tab === 'pending' ? 'All caught up!' : 'Students can post from their Discussion page'}

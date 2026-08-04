@@ -8,7 +8,7 @@ import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
 import {
   BarChart3, BookOpen, ClipboardList, Calendar,
-  Brain, Trophy, MessageSquare, Sparkles, GraduationCap, CreditCard, BookMarked
+  Brain, Trophy, MessageSquare, MessagesSquare, Sparkles, GraduationCap, CreditCard, BookMarked
 } from 'lucide-react'
 import { DashboardLoading } from '@/components/ui/dashboard-loading'
 
@@ -32,6 +32,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { icon: ClipboardList, label: 'Assignments',href: '/student/assignments',  tourId: 'student-assignments' },
     { icon: Calendar,      label: 'Classes',    href: '/student/schedule',     tourId: 'student-classes'     },
     { icon: Trophy,        label: 'Progress',   href: '/student/progress',    tourId: 'student-progress'     },
+    { icon: MessagesSquare, label: 'Discussions', href: '/student/discussions', tourId: 'student-discussions' },
     { icon: Brain,         label: 'AI & Growth',href: '/student/ai-tutor',     tourId: 'student-ai-tutor'     },
     {
       icon: MessageSquare,
