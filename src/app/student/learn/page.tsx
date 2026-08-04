@@ -724,7 +724,7 @@ export default function LearnPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="w-full overflow-x-auto flex gap-1 px-2 bg-slate-100/80 p-1.5 rounded-2xl">
+        <TabsList className="w-full flex flex-wrap gap-2 p-2 bg-slate-100/80 rounded-2xl">\r
           <TabsTrigger value="explore" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><LayoutGrid className="w-4 h-4 mr-1.5"/>Explore</TabsTrigger>
           <TabsTrigger value="study" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><BookOpen className="w-4 h-4 mr-1.5"/>Study</TabsTrigger>
           <TabsTrigger value="quiz" className="shrink-0 whitespace-nowrap data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-500 data-[state=active]:to-violet-600 data-[state=active]:text-white rounded-xl px-3 py-2 transition-all duration-200"><Target className="w-4 h-4 mr-1.5"/>Quiz</TabsTrigger>
