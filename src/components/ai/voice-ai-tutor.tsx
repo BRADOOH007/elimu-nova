@@ -45,6 +45,9 @@ export function VoiceAITutor({ subject, topic, studentId }: { subject?: string; 
     utterance.lang = lang === 'sw' ? 'sw-KE' : 'en-US'
     utterance.rate = 0.9
     utterance.pitch = 1.1
+    const voices = synthRef.current.getVoices()
+    const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha'))
+    if (femaleVoice) utterance.voice = femaleVoice
     utterance.onstart = () => setIsSpeaking(true)
     utterance.onend = () => setIsSpeaking(false)
     utterance.onerror = () => setIsSpeaking(false)
