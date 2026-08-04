@@ -94,11 +94,7 @@ export function ProfessionalDashboardLayout({
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [settingsOpen,   setSettingsOpen]   = useState(false)
   const [profileOpen,    setProfileOpen]    = useState(false)
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === 'undefined') return false
-    const key = `splash-shown-${userRole}`
-    return !sessionStorage.getItem(key)
-  })
+  const [showSplash, setShowSplash] = useState(false)
    const { unreadCount, notificationUnread, totalUnread, refetch: refetchUnread } = useUnreadMessages()
   const { subscription, hasAccess } = useSubscription()
   const daysLeft = subscription?.daysRemaining ?? 0

@@ -101,7 +101,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
     return () => clearInterval(iv)
   }, [cfg.tips.length])
 
-  // Dismiss when visible → false, user clicks, OR after hard 3s timeout
+  // Dismiss when visible → false, user clicks, OR after hard 2s timeout
   useEffect(() => {
     let fadeTimer: NodeJS.Timeout
     let removeTimer: NodeJS.Timeout
@@ -109,7 +109,6 @@ export function DashboardSplash({ role, userName, visible }: Props) {
     const dismiss = () => {
       setProgress(100)
       setOpacity(0)
-      // Remove from DOM after fade completes
       removeTimer = setTimeout(() => setGone(true), 600)
     }
 
@@ -117,8 +116,12 @@ export function DashboardSplash({ role, userName, visible }: Props) {
       fadeTimer = setTimeout(dismiss, 100)
     }
 
-    // Hard safety: always dismiss within 3 seconds regardless
-    const hardTimer = setTimeout(dismiss, 2000)
+    const hardTimer = setTimeout(() => {
+      dismiss()
+      // Force-hide via DOM as safety net
+      const el = document.getElementById('dashboard-splash')
+      if (el) { el.style.display = 'none' }
+    }, 2000)
 
     return () => {
       clearTimeout(fadeTimer)

@@ -138,6 +138,9 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user })
       classId: assignment.classId,
       subject: assignment.subject,
       grade: assignment.grade,
+      videoUrl: assignment.videoUrl,
+      videoProvider: assignment.videoProvider,
+      videoDuration: assignment.videoDuration,
       teacher: {
         id: assignment.teacher.id,
         name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
@@ -214,7 +217,10 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     answerKey,
     classId,
     subject,
-    grade
+    grade,
+    videoUrl,
+    videoProvider,
+    videoDuration,
   } = body
 
   const teacher = await prisma.teacher.findUnique({
@@ -260,6 +266,9 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
       classId: classId || null,
       subject: subject || null,
       grade: grade || null,
+      videoUrl: videoUrl || null,
+      videoProvider: videoProvider || null,
+      videoDuration: videoDuration || null,
       students: studentConnect ? { connect: studentConnect } : undefined,
     },
     include: {
@@ -320,6 +329,9 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     classId: assignment.classId,
     subject: assignment.subject,
     grade: assignment.grade,
+    videoUrl: assignment.videoUrl,
+    videoProvider: assignment.videoProvider,
+    videoDuration: assignment.videoDuration,
     teacher: {
       id: assignment.teacher.id,
       name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,
