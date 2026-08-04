@@ -118,7 +118,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
     }
 
     // Hard safety: always dismiss within 3 seconds regardless
-    const hardTimer = setTimeout(dismiss, 3000)
+    const hardTimer = setTimeout(dismiss, 2000)
 
     return () => {
       clearTimeout(fadeTimer)
@@ -220,8 +220,8 @@ export function DashboardSplash({ role, userName, visible }: Props) {
       </div>
 
       {/* Bottom watermark */}
-      <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', color: '#334155', fontSize: 11, letterSpacing: 2, fontWeight: 500 }}>
-        ELIMUNOVA AI · Kenya's Smart Learning Platform
+      <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', color: '#475569', fontSize: 11, letterSpacing: 1, fontWeight: 500 }}>
+        Click anywhere to skip · ElimuNova AI
       </div>
     </div>
   )
