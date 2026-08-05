@@ -216,9 +216,11 @@ export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
         <div className="space-y-1">
           {strands.map(strand => (
             <div key={strand.id} className="border border-slate-200 rounded-xl overflow-hidden">
-              <button
+              <div
                 onClick={() => toggleStrand(strand.id, strand.name)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStrand(strand.id, strand.name) } }}
+                role="button" tabIndex={0}
+                className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
                   <BookOpen className="h-4 w-4 text-teal-500 shrink-0" />
@@ -234,7 +236,7 @@ export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
                   </button>
                   {expandedStrand === strand.id ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
                 </div>
-              </button>
+              </div>
               {expandedStrand === strand.id && (
                 <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-2">
                   {loadingSubstrands === strand.id ? (
