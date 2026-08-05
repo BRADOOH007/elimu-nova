@@ -187,7 +187,23 @@ export default function ViewAssignmentModal({ isOpen, onClose, assignmentId, onE
               <div className="mt-4">
                 <h4 className="font-semibold text-gray-900 mb-2">Assignment Content</h4>
                 <div className="bg-white rounded-lg p-6 border border-gray-200 shadow-sm">
-                  <MarkdownRenderer content={assignment.content} />
+                  {(() => {
+                    try {
+                      const parsed = JSON.parse(assignment.content)
+                      if (parsed && parsed.questions && Array.isArray(parsed.questions)) {
+                        return (
+                          <>
+                            <MarkdownRenderer content={typeof parsed.markdown === 'string' ? parsed.markdown : ''} />
+                            <div className="mt-3 px-3 py-2 bg-blue-50 rounded-lg text-xs text-blue-700 flex items-center gap-2">
+                              <FileText className="w-4 h-4 shrink-0" />
+                              {parsed.questions.length} structured question{parsed.questions.length !== 1 ? 's' : ''} — students answer interactively (radio buttons / checkboxes)
+                            </div>
+                          </>
+                        )
+                      }
+                    } catch { /* plain markdown */ }
+                    return <MarkdownRenderer content={assignment.content} />
+                  })()}
                 </div>
               </div>
             </div>

@@ -15,6 +15,12 @@ export const CreateStudentSchema = z.object({
   address: z.string().max(500).optional().nullable().or(z.literal('')),
   classId: z.string().optional().nullable().or(z.literal('')),
   password: z.string().min(6).max(100).optional(),
+  teacherId: z.string().optional().nullable().or(z.literal('')),
+  subjects: z.array(z.string()).optional(),
+  parentFirstName: z.string().optional().or(z.literal('')),
+  parentLastName: z.string().optional().or(z.literal('')),
+  parentEmail: z.string().optional().or(z.literal('')),
+  parentPhone: z.string().optional().or(z.literal('')),
 })
 
 export const UpdateStudentSchema = CreateStudentSchema.partial()

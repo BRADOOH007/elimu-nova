@@ -207,6 +207,10 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
   const [editQ, setEditQ] = useState<Question | null>(null)
   const [qf, setQf] = useState<Question>({ id: '', type: 'multiple_choice', text: '', marks: 1, options: ['A. ', 'B. ', 'C. ', 'D. '], correctAnswer: '' })
   const [examAnswerKey, setExamAnswerKey] = useState<string>('')
+  // Interactive (non-timed) structured assignments — MCQ questions answered via
+  // radio buttons by students, graded deterministically against this answer key.
+  const [structuredQuestions, setStructuredQuestions] = useState<Question[]>([])
+  const [structuredAnswerKey, setStructuredAnswerKey] = useState('')
   const [pdfUploading, setPdfUploading] = useState(false)
   const [pdfUrl, setPdfUrl] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -358,11 +362,17 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
           subject: initialData.subject || prev.subject,
           grade: initialData.grade || prev.grade,
         }))
+        if (initialData.questions?.length) {
+          setQuestions(initialData.questions)
+          setStructuredQuestions(initialData.questions)
+        }
+        if (initialData.answerKey) {
+          setExamAnswerKey(initialData.answerKey)
+          setStructuredAnswerKey(initialData.answerKey)
+        }
         if (initialData.isTimed) {
           setIsTimed(true)
           if (initialData.timeLimit) setTimeLimit(initialData.timeLimit)
-          if (initialData.questions?.length) setQuestions(initialData.questions)
-          if (initialData.answerKey) setExamAnswerKey(initialData.answerKey)
           setAiGrade(true)
         }
       } else {
@@ -396,6 +406,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
     setForm({ title: '', description: '', content: '', dueDate: '', dueTime: '23:59', lessonPlanId: '', subject: '', grade: '' })
     setSelectedIds([]); setClassFilter('all'); setStudentSearch(''); setStudentPage(1)
     setIsTimed(false); setTimeLimit(60); setAiGrade(false); setQuestions([]); setShowQF(false); setEditQ(null); setErrors({}); setExamAnswerKey(''); setPdfUrl('')
+    setStructuredQuestions([]); setStructuredAnswerKey('')
     setVideoUrl(''); setVideoProvider(''); setVideoDuration(0); setVideoName(''); setLinkInput('')
   }
 
@@ -456,8 +467,19 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
       setLoading(false); return
     }
     try {
+      // Interactive (non-timed) assignment: content embeds the structured
+      // questions (without answer keys — the server holds them) + the markdown.
+      const structuredAssignment = !isTimed && structuredQuestions.length > 0
       const body: any = {
-        title: form.title, description: desc, content: isTimed ? JSON.stringify({ questions }) : form.content,
+        title: form.title, description: desc,
+        content: isTimed
+          ? JSON.stringify({ questions })
+          : structuredAssignment
+            ? JSON.stringify({
+                questions: structuredQuestions.map(({ id, type, text, options, marks }) => ({ id, type, text, options, marks })),
+                markdown: form.content,
+              })
+            : form.content,
         subject: selLesson?.subject || form.subject, grade: selLesson?.grade || form.grade,
         dueDate: new Date(`${form.dueDate}T${form.dueTime}`).toISOString(),
         lessonPlanId: form.lessonPlanId || null,
@@ -476,6 +498,8 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
           const ak: Record<string, string> = {}; questions.forEach(q => { ak[String(q.id)] = q.correctAnswer })
           body.answerKey = JSON.stringify(ak)
         }
+      } else if (structuredAssignment) {
+        body.answerKey = structuredAnswerKey
       }
       const r = await fetch('/api/assignments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (r.ok) { onSuccess(); handleClose() }
@@ -515,24 +539,34 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
         // Handle structured response from smart assessment (new format)
         if (data.structured) {
           const { questions: structQs, answerKey, totalMarks } = data.structured
-          if (type === 'exam' && structQs?.length) {
-            // Convert structured questions to the modal's question format
+          if (structQs?.length) {
             const modalQuestions = structQs.map((q: any, i: number) => ({
               id: String(q.id || i + 1),
-              type: q.type === 'true_false' ? 'true_false' : q.type === 'short_answer' ? 'short_answer' : 'multiple_choice',
+              type: q.type === 'true_false' ? 'true_false' : (q.type === 'short_answer' || q.type === 'essay') ? 'short_answer' : 'multiple_choice',
               text: q.text,
               marks: q.marks || 1,
               options: q.options,
               correctAnswer: answerKey?.[String(q.id || i + 1)] || q.correctAnswer || '',
             }))
+            if (type === 'exam') {
+              setForm(prev => ({ ...prev, content: data.content }))
+              setIsTimed(true)
+              setTimeLimit(totalMarks > 60 ? 120 : 60)
+              setQuestions(modalQuestions)
+              setExamAnswerKey(JSON.stringify(answerKey || {}))
+              return
+            }
+            // Assignment type — keep the markdown in the editor for preview, but
+            // stash the structured questions + answer key so students get an
+            // interactive question-by-question answer sheet with radio buttons.
             setForm(prev => ({ ...prev, content: data.content }))
-            setIsTimed(true)
-            setTimeLimit(totalMarks > 60 ? 120 : 60)
+            setStructuredQuestions(modalQuestions)
+            setStructuredAnswerKey(JSON.stringify(answerKey || {}))
             setQuestions(modalQuestions)
             setExamAnswerKey(JSON.stringify(answerKey || {}))
             return
           }
-          // Assignment type — just set content
+          // Assignment type — no structured questions, just set content
           setForm(prev => ({ ...prev, content: data.content }))
           return
         }

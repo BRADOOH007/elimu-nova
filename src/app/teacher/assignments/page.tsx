@@ -794,6 +794,8 @@ export default function AssessmentsPage() {
                 subject: result.subject,
                 grade: result.grade,
                 topic: result.topic,
+                questions: result.questions,
+                answerKey: result.answerKey,
               })
               setShowCreateModal(true)
             }

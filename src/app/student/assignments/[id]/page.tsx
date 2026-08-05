@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, ArrowLeft, Calendar, User2, FileText, Clock, CheckCircle, XCircle, Brain, Play } from "lucide-react"
+import { Loader2, ArrowLeft, Calendar, User2, FileText, Clock, CheckCircle, XCircle, Brain, Play, ChevronLeft, ChevronRight } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { useExamLockdown } from '@/hooks/use-exam-lockdown'
@@ -14,7 +14,7 @@ import ExamSplitPane from '@/components/exam/exam-split-pane'
 import AnswerGuide from '@/components/answer-guide'
 
 interface Question {
-  id: number
+  id: number | string
   text: string
   type: "multiple_choice" | "short_answer" | "true_false"
   options?: string[]
@@ -23,6 +23,7 @@ interface Question {
 
 interface ExamContent {
   questions: Question[]
+  markdown?: string
 }
 
 interface AssignmentDetail {
@@ -103,6 +104,7 @@ export default function StudentAssignmentDetailPage() {
   const [answerKey, setAnswerKey] = useState<Record<string, string>>({})
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [currentQuestion, setCurrentQuestion] = useState(0)
+  const [contentMarkdown, setContentMarkdown] = useState("")
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null)
   const [examStarted, setExamStarted] = useState(false)
   const [examSubmitted, setExamSubmitted] = useState(false)
@@ -110,7 +112,11 @@ export default function StudentAssignmentDetailPage() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const hasSubmittedRef = useRef(false)
 
-  const isTimedExam = assignment?.isTimed === true && questions.length > 0
+  const hasStructuredQuestions = questions.length > 0
+  const isTimedExam = assignment?.isTimed === true && hasStructuredQuestions
+  // Interactive assignment: structured MCQ questions answered one at a time via
+  // radio buttons (no timer, no lockdown) — then deterministically graded.
+  const isInteractiveAssignment = !assignment?.isTimed && hasStructuredQuestions && !examSubmitted
 
   const lockdown = useExamLockdown(assignmentId, isTimedExam && examStarted && !examSubmitted)
 
@@ -166,6 +172,7 @@ export default function StudentAssignmentDetailPage() {
       const parsed = parseExamContent(a.content)
       const key = parseAnswerKey(a.answerKey)
       setQuestions(parsed.questions)
+      setContentMarkdown(parsed.markdown || "")
       setAnswerKey(key)
 
       if (a.isTimed && parsed.questions.length > 0) {
@@ -206,10 +213,17 @@ export default function StudentAssignmentDetailPage() {
     sessionStorage.setItem(`exam_${assignmentId}_started`, now)
   }
 
-  const handleAnswer = (questionId: number, answer: string) => {
+  const handleAnswer = (questionId: number | string, answer: string) => {
     const updated = { ...answers, [String(questionId)]: answer }
     setAnswers(updated)
     sessionStorage.setItem(`exam_${assignmentId}_answers`, JSON.stringify(updated))
+  }
+
+  // Selecting an MCQ / true-false option automatically advances to the next
+  // question ("as they go to the next questions").
+  const handleSelectAndContinue = (questionId: number | string, answer: string) => {
+    handleAnswer(questionId, answer)
+    setCurrentQuestion(prev => Math.min(prev + 1, questions.length - 1))
   }
 
   const handleSubmitExamWithAnswers = async (examAnswers: Record<string, string>, timeSpent: number) => {
@@ -222,7 +236,7 @@ export default function StudentAssignmentDetailPage() {
 
     // Build the grading payload WITHOUT the answer key (never sent to the client).
     // The server grades securely using the stored answerKey + AI.
-    const shortAnswerQuestions: { id: number; text: string; studentAnswer: string; correctAnswer?: string; marks: number }[] = []
+    const shortAnswerQuestions: { id: number | string; text: string; studentAnswer: string; correctAnswer?: string; marks: number }[] = []
     for (const q of questions) {
       const studentAns = examAnswers[String(q.id)] || ''
       if (q.type === 'short_answer' && studentAns.trim()) {
@@ -545,12 +559,127 @@ export default function StudentAssignmentDetailPage() {
 
           {/* Regular assignment content */}
           {!isTimedExam && assignment.content && (
+            hasStructuredQuestions ? (
+              <>
+                <div className="p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
+                  <div className="flex items-center mb-3 text-gray-700 font-semibold">
+                    <FileText className="w-4 h-4 mr-2 text-blue-600"/> Assignment Content
+                  </div>
+                  <MarkdownRenderer content={contentMarkdown} />
+                </div>
+
+                {/* Interactive answer sheet — one question at a time */}
+                <div className="space-y-3">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-green-600"/> Your Answers
+                  </h2>
+                  <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
+                    <div className="flex flex-wrap gap-1.5">
+                      {questions.map((q, i) => {
+                        const answered = !!(answers[String(q.id)] || '').trim()
+                        return (
+                          <button key={String(q.id)} type="button" onClick={() => setCurrentQuestion(i)}
+                            className={`w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center transition-all ${
+                              i === currentQuestion ? 'ring-2 ring-blue-500 ring-offset-1' : ''
+                            } ${answered ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-500 hover:bg-slate-300'}`}
+                            title={`Question ${i + 1}: ${answered ? 'Answered' : 'Not answered'}`}>
+                            {i + 1}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {Object.values(answers).filter(a => (a || '').trim()).length} of {questions.length} answered
+                    </div>
+
+                    {questions[currentQuestion] && (() => {
+                      const q = questions[currentQuestion]
+                      return (
+                        <div className="border border-slate-200 rounded-xl p-5 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <Badge variant="outline" className="text-xs">Question {currentQuestion + 1} of {questions.length}</Badge>
+                            <Badge variant="outline" className="text-xs">{q.marks || 1} mark{q.marks !== 1 ? 's' : ''}</Badge>
+                          </div>
+                          <p className="text-sm font-medium text-gray-800">{q.text}</p>
+
+                          {q.type === 'multiple_choice' && q.options && (
+                            <div className="space-y-2">
+                              {q.options.map((opt, oi) => {
+                                const letter = opt.charAt(0)
+                                const isSelected = answers[String(q.id)] === letter
+                                return (
+                                  <label key={oi} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                                    isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300 bg-white'
+                                  }`}>
+                                    <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                      isSelected ? 'border-blue-500' : 'border-slate-300'
+                                    }`}>
+                                      {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+                                    </div>
+                                    <span className="text-sm text-gray-700">{opt}</span>
+                                    <input type="radio" name={`ans_${q.id}`} value={letter} checked={isSelected}
+                                      onChange={() => handleSelectAndContinue(q.id, letter)} className="hidden" />
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {q.type === 'true_false' && (
+                            <div className="flex gap-3">
+                              {['True', 'False'].map(val => {
+                                const letter = val.charAt(0).toUpperCase()
+                                const isSelected = answers[String(q.id)] === letter
+                                return (
+                                  <button key={val} type="button" onClick={() => handleSelectAndContinue(q.id, letter)}
+                                    className={`flex-1 py-3 rounded-xl text-sm font-bold transition-all ${
+                                      isSelected ? 'bg-blue-600 text-white shadow-lg' : 'bg-white border-2 border-slate-200 text-slate-600 hover:border-blue-300'
+                                    }`}>
+                                    {val}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
+
+                          {q.type === 'short_answer' && (
+                            <Textarea value={answers[String(q.id)] || ''}
+                              onChange={(e) => handleAnswer(q.id, e.target.value)}
+                              placeholder="Write your answer here..." rows={q.marks > 3 ? 5 : 3} className="text-sm" />
+                          )}
+                        </div>
+                      )
+                    })()}
+
+                    <div className="flex items-center justify-between pt-1">
+                      <Button variant="outline" size="sm" disabled={currentQuestion === 0}
+                        onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}>
+                        <ChevronLeft className="w-4 h-4 mr-1" /> Previous
+                      </Button>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm"
+                          onClick={() => setCurrentQuestion(prev => Math.min(questions.length - 1, prev + 1))}
+                          disabled={currentQuestion >= questions.length - 1}>
+                          Next <ChevronRight className="w-4 h-4 ml-1" />
+                        </Button>
+                        <Button size="sm" disabled={isSubmitting || Object.values(answers).filter(a => (a || '').trim()).length === 0}
+                          onClick={handleSubmitExam}
+                          className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+                          {isSubmitting ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                          {isSubmitting ? 'Submitting...' : 'Submit for Check'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-white border border-slate-200 shadow-sm">
                 <div className="flex items-center mb-3 text-gray-700 font-semibold">
                   <FileText className="w-4 h-4 mr-2 text-blue-600"/> Assignment Content
                 </div>
-                <MarkdownRenderer content={assignment.content.replace(/## Answer Key[\s\S]*/i, '').replace(/📝 ANSWER KEY[\s\S]*/i, '')} />
+                <MarkdownRenderer content={(assignment.content || '').replace(/## Answer Key[\s\S]*/i, '').replace(/📝 ANSWER KEY[\s\S]*/i, '')} />
               </div>
 
               {/* Smart answer sheet */}
@@ -688,6 +817,7 @@ export default function StudentAssignmentDetailPage() {
                 })()}
               </div>
             </div>
+            )
           )}
 
           {/* Regular assignment workspace (no content) */}

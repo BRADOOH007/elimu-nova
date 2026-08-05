@@ -16,7 +16,7 @@ export const GET = route({}, async (req, { user, params }) => {
       return NextResponse.json({ error: 'grade and subject are required' }, { status: 400 })
     }
 
-    const where: any = { type: 'CBC', grade, subject, isActive: true }
+    const where: any = { type: 'CBC', grade, subject: { contains: subject, mode: 'insensitive' }, isActive: true }
     if (term !== undefined) where.term = term
 
     const curriculums = await prisma.curriculum.findMany({
@@ -30,7 +30,15 @@ export const GET = route({}, async (req, { user, params }) => {
 
     const strands = await prisma.curriculumStrand.findMany({
       where: { curriculumId: { in: curriculums.map(c => c.id) } },
-      select: { id: true, name: true, order: true },
+      select: {
+        id: true,
+        name: true,
+        order: true,
+        substrands: {
+          select: { id: true, name: true, description: true, learningOutcomes: true, order: true },
+          orderBy: { order: 'asc' },
+        },
+      },
       orderBy: { order: 'asc' },
     })
 

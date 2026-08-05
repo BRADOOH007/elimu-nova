@@ -62,16 +62,30 @@ export const POST = route({ auth: ['SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (req,
         const plainPwd = generatePassword()
         const hashedPwd = await bcrypt.hash(plainPwd, 12)
 
-        await prisma.user.create({
-          data: {
-            username,
-            firstName,
-            lastName,
-            email: email || undefined,
-            password: hashedPwd,
-            role: 'TEACHER',
-            schoolId,
-          } as any,
+        const createdUser = await prisma.$transaction(async (tx) => {
+          const u = await tx.user.create({
+            data: {
+              username,
+              firstName,
+              lastName,
+              email: email || undefined,
+              password: hashedPwd,
+              role: 'TEACHER',
+              schoolId,
+            } as any,
+          })
+
+          await tx.teacher.create({
+            data: {
+              userId: u.id,
+              schoolId,
+              subjects: [],
+              qualification: '',
+              experience: '',
+            } as any,
+          })
+
+          return u
         })
 
         results.push({ firstName, lastName, email, username, password: plainPwd, status: 'created' })
