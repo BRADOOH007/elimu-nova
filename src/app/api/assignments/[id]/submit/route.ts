@@ -41,6 +41,14 @@ function parseAnswerKey(raw: string | null | undefined): Record<string, string> 
   return key
 }
 
+// File-only submissions send a placeholder instead of readable text. The AI
+// grades what it sees but the result is inherently low-confidence.
+function isPlaceholderContent(content: string): boolean {
+  const c = String(content || '').trim()
+  if (!c) return true
+  return /^\(?see attached file\)?$/i.test(c) || /^\[attached(?: file)?\]$/i.test(c) || c === '—' || c === '-'
+}
+
 function gradeObjective(q: any, studentAnswer: string, correctAnswer: string): boolean | null {
   const s = normalizeAnswer(studentAnswer)
   const c = normalizeAnswer(correctAnswer)
@@ -268,30 +276,68 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user, params }) => 
   })
 
   let updatedSubmission = submission
-  if (assignment.aiGradeable) {
-    try {
-      // Prefer deterministic answer-key grading for objective questions
-      let grading: {
-        grade: number
-        feedback: string
-        confidence?: number
-        questionScores?: any
-        needsRevision?: boolean
-        revisionNotes?: string
-      } | null = await tryDeterministicGrade(submission.assignment, content)
+  // The system always auto-grades every submission. No manual teacher marking.
+  try {
+    // Prefer deterministic answer-key grading for objective questions
+    let grading: {
+      grade: number
+      feedback: string
+      confidence?: number
+      questionScores?: any
+      needsRevision?: boolean
+      revisionNotes?: string
+    } | null = await tryDeterministicGrade(submission.assignment, content)
 
-      if (!grading) {
-        const rubricData = await findBestRubricForAssignment(submission.assignment)
-        grading = await OpenAIService.gradeSubmission({
-          assignmentTitle: submission.assignment.title,
-          assignmentInstructions: submission.assignment.description || '',
-          submissionContent: content,
-          rubric: rubricData ? JSON.stringify(rubricData) : undefined,
-          answerKey: assignment.answerKey || undefined,
-          maxPoints: 100
-        })
+    if (!grading) {
+      const rubricData = await findBestRubricForAssignment(submission.assignment)
+      grading = await OpenAIService.gradeSubmission({
+        assignmentTitle: submission.assignment.title,
+        assignmentInstructions: submission.assignment.description || '',
+        submissionContent: content,
+        rubric: rubricData ? JSON.stringify(rubricData) : undefined,
+        answerKey: assignment.answerKey || undefined,
+        maxPoints: 100
+      })
+
+      // File-only / placeholder submissions can't be read accurately — flag it.
+      if (isPlaceholderContent(content)) {
+        grading.confidence = Math.min(grading.confidence ?? 1, 0.35)
+        grading.feedback = `${grading.feedback || 'Auto-graded.'} This submission contained an attached file the system could not read, so the grade is low-confidence.`
       }
+    }
 
+    updatedSubmission = await prisma.submission.update({
+      where: { id: submission.id },
+      data: {
+        grade: grading.grade,
+        feedback: grading.feedback,
+        status: 'GRADED',
+        gradedAt: new Date(),
+        isAiGraded: true,
+        aiGradingMetadata: grading,
+        aiConfidence: grading.confidence,
+        questionScores: grading.questionScores,
+        needsRevision: grading.needsRevision,
+        revisionNotes: grading.revisionNotes
+      },
+      include: {
+        student: {
+          include: { user: { select: { firstName: true, lastName: true } } }
+        },
+        assignment: true
+      }
+    })
+  } catch (e) {
+    // One retry before giving up — grading must not silently fail.
+    console.error('AI grading failed, retrying once:', e)
+    try {
+      const grading = await OpenAIService.gradeSubmission({
+        assignmentTitle: submission.assignment.title,
+        assignmentInstructions: submission.assignment.description || '',
+        submissionContent: content,
+        answerKey: assignment.answerKey || undefined,
+        maxPoints: 100
+      })
       updatedSubmission = await prisma.submission.update({
         where: { id: submission.id },
         data: {
@@ -313,8 +359,8 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user, params }) => 
           assignment: true
         }
       })
-    } catch (e) {
-      console.error('AI grading failed:', e)
+    } catch (e2) {
+      console.error('AI grading retry failed:', e2)
     }
   }
 

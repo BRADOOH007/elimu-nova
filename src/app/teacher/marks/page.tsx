@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react'
 import {
   ClipboardList, Brain, Save, RefreshCw, CheckCircle,
-  TrendingUp, TrendingDown, AlertTriangle, Sparkles,
-  BarChart3, Users, Target, ChevronDown
+  TrendingUp, TrendingDown, AlertTriangle, Sparkles, Target
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -18,25 +17,11 @@ interface AIAnalysis {
   stats: { avg: string; max: number; min: number; below: number; above: number; total: number }
 }
 
-const GRADE_SYSTEMS = [
-  { value: 'percentage',  label: 'Percentage (0–100)' },
-  { value: 'cbc_lower',   label: 'CBC Grade 1–6 (BE/AE/ME/EE)' },
-  { value: 'cbc_upper',   label: 'CBC Grade 7–9 (BE2–EE1)' },
-]
-
-const CBC_LOWER_GUIDE = [
-  { level: 'EE', range: '80–100', color: 'bg-blue-100 text-blue-700' },
-  { level: 'ME', range: '60–79',  color: 'bg-green-100 text-green-700' },
-  { level: 'AE', range: '40–59',  color: 'bg-amber-100 text-amber-700' },
-  { level: 'BE', range: '0–39',   color: 'bg-red-100 text-red-700' },
-]
-
 export default function MarksPage() {
   const { toast } = useToast()
   const [classes,      setClasses]      = useState<ClassInfo[]>([])
   const [assignments,  setAssignments]  = useState<Assignment[]>([])
   const [selectedAsn,  setSelectedAsn]  = useState('')
-  const [gradeSystem,  setGradeSystem]  = useState('percentage')
   const [marks,        setMarks]        = useState<Record<string, string>>({})
   const [feedback,     setFeedback]     = useState<Record<string, string>>({})
   const [saving,       setSaving]       = useState(false)
@@ -85,7 +70,7 @@ export default function MarksPage() {
     }
   }
 
-  const saveMarks = async (withAI = false) => {
+  const saveFeedback = async (withAI = false) => {
     if (!selectedAsn) return
     if (withAI) setAnalysing(true); else setSaving(true)
 
@@ -99,43 +84,21 @@ export default function MarksPage() {
       const res  = await fetch('/api/teacher/marks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assignmentId: selectedAsn, marks: marksArray, gradeSystem, analyseWithAI: withAI }),
+        body: JSON.stringify({ assignmentId: selectedAsn, marks: marksArray, analyseWithAI: withAI }),
       })
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: 'Failed to save marks' }))
-        throw new Error(err.error || 'Failed to save marks')
+        const err = await res.json().catch(() => ({ error: 'Failed to save feedback' }))
+        throw new Error(err.error || 'Failed to save feedback')
       }
       const data = await res.json()
       setSaved(true)
       if (data.analysis) setAnalysis(data.analysis)
-      toast({ title: 'Marks saved', variant: 'success' })
+      toast({ title: 'Feedback saved', variant: 'success' })
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' })
     } finally {
       setSaving(false); setAnalysing(false)
     }
-  }
-
-  const getCBCBadge = (score: string) => {
-    const n = parseFloat(score)
-    if (isNaN(n)) return null
-    if (gradeSystem === 'cbc_lower') {
-      if (n >= 80) return { level: 'EE', color: 'bg-blue-100 text-blue-700' }
-      if (n >= 60) return { level: 'ME', color: 'bg-green-100 text-green-700' }
-      if (n >= 40) return { level: 'AE', color: 'bg-amber-100 text-amber-700' }
-      return { level: 'BE', color: 'bg-red-100 text-red-700' }
-    }
-    if (gradeSystem === 'cbc_upper') {
-      if (n >= 90) return { level: 'EE1', color: 'bg-blue-100 text-blue-700' }
-      if (n >= 75) return { level: 'EE2', color: 'bg-blue-50 text-blue-600' }
-      if (n >= 58) return { level: 'ME1', color: 'bg-green-100 text-green-700' }
-      if (n >= 41) return { level: 'ME2', color: 'bg-green-50 text-green-600' }
-      if (n >= 31) return { level: 'AE1', color: 'bg-amber-100 text-amber-700' }
-      if (n >= 21) return { level: 'AE2', color: 'bg-amber-50 text-amber-600' }
-      if (n >= 11) return { level: 'BE1', color: 'bg-red-100 text-red-700' }
-      return { level: 'BE2', color: 'bg-red-200 text-red-800' }
-    }
-    return null
   }
 
   const perfColor = (label: string) => {
@@ -169,8 +132,8 @@ export default function MarksPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Marks Entry & Exam Analysis</h1>
-        <p className="text-slate-500 text-sm mt-0.5">Enter marks for any assignment and get AI-powered class insights</p>
+        <h1 className="text-2xl font-bold text-slate-900">Results Review & Class Analysis</h1>
+        <p className="text-slate-500 text-sm mt-0.5">All submissions are auto-graded by the system. Review scores and add feedback.</p>
       </div>
 
       {/* Controls */}
@@ -180,23 +143,7 @@ export default function MarksPage() {
           {assignments.length === 0 && <option value="">No assignments found</option>}
           {assignments.map(a => <option key={a.id} value={a.id}>{a.title} ({a.subject})</option>)}
         </select>
-
-        <select value={gradeSystem} onChange={e => { setGradeSystem(e.target.value); setSaved(false) }}
-          className="h-10 px-3 border border-slate-200 rounded-xl text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-          {GRADE_SYSTEMS.map(g => <option key={g.value} value={g.value}>{g.label}</option>)}
-        </select>
       </div>
-
-      {/* CBC guide */}
-      {gradeSystem !== 'percentage' && (
-        <div className="flex flex-wrap gap-2">
-          {CBC_LOWER_GUIDE.map(g => (
-            <span key={g.level} className={`text-xs font-medium px-2.5 py-1 rounded-full ${g.color}`}>
-              {g.level}: {g.range}%
-            </span>
-          ))}
-        </div>
-      )}
 
       {/* Marks table */}
       {currentAsn && (
@@ -207,22 +154,23 @@ export default function MarksPage() {
               <p className="text-xs text-slate-400">{currentAsn.subject} · {currentAsn.submissions.length} students · Max {currentAsn.totalMarks} marks</p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => saveMarks(false)} disabled={saving}
+              <button onClick={() => saveFeedback(false)} disabled={saving}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-all ${saved ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-slate-800 text-white hover:bg-slate-700'}`}>
                 {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : saved ? <CheckCircle className="h-4 w-4" /> : <Save className="h-4 w-4" />}
-                {saving ? 'Saving...' : saved ? 'Saved' : 'Save Marks'}
+                {saving ? 'Saving...' : saved ? 'Saved' : 'Save Feedback'}
               </button>
-              <button onClick={() => saveMarks(true)} disabled={analysing}
+              <button onClick={() => saveFeedback(true)} disabled={analysing}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:opacity-90 disabled:opacity-60 transition-all">
                 {analysing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {analysing ? 'Analysing...' : 'Save + AI Analysis'}
+                {analysing ? 'Analysing...' : 'Save Feedback + AI Analysis'}
               </button>
             </div>
           </div>
 
           <div className="divide-y divide-slate-100">
             {currentAsn.submissions.map(sub => {
-              const badge = getCBCBadge(marks[sub.studentId] || '')
+              const score = marks[sub.studentId]
+              const numeric = parseFloat(score)
               return (
                 <div key={sub.id} className="flex items-center gap-4 px-5 py-3">
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
@@ -230,19 +178,15 @@ export default function MarksPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-slate-800 text-sm truncate">{sub.studentName}</p>
-                    <p className="text-xs text-slate-400">{sub.status}</p>
+                    <p className="text-xs text-slate-400">{sub.grade !== null ? 'Auto-graded' : sub.status}</p>
                   </div>
-                  {badge && (
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${badge.color}`}>{badge.level}</span>
+                  {sub.grade !== null && !isNaN(numeric) ? (
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${numeric >= 80 ? 'bg-blue-100 text-blue-700' : numeric >= 50 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      {numeric}%
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-300 shrink-0">Pending auto-grade</span>
                   )}
-                  <input
-                    type="number"
-                    min={0} max={currentAsn.totalMarks}
-                    value={marks[sub.studentId] || ''}
-                    onChange={e => { setMarks(p => ({ ...p, [sub.studentId]: e.target.value })); setSaved(false) }}
-                    placeholder="Score"
-                    className="w-20 h-9 px-3 text-center border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 shrink-0"
-                  />
                   <input
                     type="text"
                     value={feedback[sub.studentId] || ''}

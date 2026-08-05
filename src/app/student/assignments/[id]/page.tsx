@@ -175,10 +175,12 @@ export default function StudentAssignmentDetailPage() {
       setContentMarkdown(parsed.markdown || "")
       setAnswerKey(key)
 
-      if (a.isTimed && parsed.questions.length > 0) {
+      if (parsed.questions.length > 0) {
         const saved = sessionStorage.getItem(`exam_${assignmentId}_answers`)
-        const savedStarted = sessionStorage.getItem(`exam_${assignmentId}_started`)
         if (saved) setAnswers(JSON.parse(saved))
+      }
+      if (a.isTimed && parsed.questions.length > 0) {
+        const savedStarted = sessionStorage.getItem(`exam_${assignmentId}_started`)
         if (savedStarted) setStartedAt(savedStarted)
       }
 

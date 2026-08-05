@@ -86,6 +86,7 @@ export const POST = route({}, async (req, { user }) => {
               grade: r.grade || '',
               teacherId,
               schoolId: schoolId || '',
+              aiGradeable: true,
               dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
             } as any,
           })

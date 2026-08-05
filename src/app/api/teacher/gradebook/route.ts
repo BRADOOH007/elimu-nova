@@ -67,34 +67,10 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   }
 })
 
-export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
-  try {
-    const body = await req.json()
-    const { assignmentId, marks } = body
-
-    if (!assignmentId || !marks) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    const teacher = await prisma.teacher.findUnique({ where: { userId: user.id }, select: { id: true, schoolId: true } })
-    if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
-
-    const results = await prisma.$transaction(
-      marks.map((m: { studentId: string; score: number }) =>
-        prisma.submission.updateMany({
-          where: {
-            studentId: m.studentId,
-            assignmentId,
-            assignment: { teacherId: teacher.id },
-          },
-          data: { grade: m.score },
-        })
-      )
-    )
-
-    return NextResponse.json({ success: true, updated: results.reduce((s: number, r: any) => s + r.count, 0) })
-  } catch (error) {
-    log.error('Error saving gradebook:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+export const POST = route({ auth: 'TEACHER' }, async () => {
+  // Grading is fully automatic. Teachers cannot enter or change grades.
+  return NextResponse.json(
+    { error: 'Grading is automatic. Teachers cannot enter grades.', code: 'GRADING_AUTOMATIC' },
+    { status: 400 }
+  )
 })

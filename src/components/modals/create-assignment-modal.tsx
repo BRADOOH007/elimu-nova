@@ -55,6 +55,12 @@ interface Question {
 
 const STEPS = ['Details', 'Media', 'Content', 'Students', 'Review'] as const
 
+// Strip correctAnswer (and any other grader-only fields) from questions before
+// they are embedded in student-facing content. The server holds the answer key.
+function studentSafeQuestions(questions: Question[]) {
+  return questions.map(({ id, type, text, options, marks }) => ({ id, type, text, options, marks }))
+}
+
 function initials(name: string) {
   return name.split(' ').map(s => s[0]).filter(Boolean).join('').slice(0, 2).toUpperCase()
 }
@@ -323,7 +329,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
                   if (q.answer) ak[k] = q.answer
                 })
                 const totalMarks = modalQuestions.reduce((s: number, q: { marks: number }) => s + q.marks, 0)
-                setForm(prev => ({ ...prev, content: JSON.stringify({ questions: modalQuestions }) }))
+                setForm(prev => ({ ...prev, content: JSON.stringify({ questions: studentSafeQuestions(modalQuestions) }) }))
                 setIsTimed(true)
                 setAiGrade(true)
                 setTimeLimit(totalMarks > 60 ? 120 : 60)
@@ -473,7 +479,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
       const body: any = {
         title: form.title, description: desc,
         content: isTimed
-          ? JSON.stringify({ questions })
+          ? JSON.stringify({ questions: studentSafeQuestions(questions) })
           : structuredAssignment
             ? JSON.stringify({
                 questions: structuredQuestions.map(({ id, type, text, options, marks }) => ({ id, type, text, options, marks })),
@@ -576,7 +582,7 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
           try {
             const parsed = JSON.parse(data.content)
             if (parsed.questions && parsed.answerKey) {
-              setForm(prev => ({ ...prev, content: JSON.stringify({ questions: parsed.questions }) }))
+              setForm(prev => ({ ...prev, content: JSON.stringify({ questions: parsed.questions.map((q: any) => ({ id: q.id, type: q.type, text: q.text, options: q.options, marks: q.marks })) }) }))
               setIsTimed(true)
               setTimeLimit(parsed.totalMarks > 60 ? 120 : 60)
               setQuestions(parsed.questions)
@@ -854,9 +860,16 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
             <div className="space-y-5">
               {/* Toolbar */}
               <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold text-gray-700">
-                  {isTimed ? 'Exam Questions' : 'Assignment Content'}
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-semibold text-gray-700">
+                    {isTimed ? 'Exam Questions' : 'Assignment Content'}
+                  </Label>
+                  {!isTimed && structuredQuestions.length > 0 && (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                      {structuredQuestions.length} interactive MCQ question{structuredQuestions.length !== 1 ? 's' : ''} — students answer with radio buttons
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <AnswerGuide type={isTimed ? 'exam' : 'assignment'} hasVideo={!!videoUrl} />
                   {!isTimed && form.content && (
