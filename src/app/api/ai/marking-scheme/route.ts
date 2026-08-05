@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN', 'SCHOOL_ADMIN'] }, async (request, { user }) => {
     const { examContent, subject, grade, totalMarks = 100, documentContext } = await request.json()
@@ -69,20 +70,23 @@ Rules:
 - For essays: list key marking points with marks allocated
 - Mark allocation must add up to ${totalMarks}`
 
+    try {
     const raw = await OpenAIService.generateLongContent([
       { role: 'system', content: 'You are a CBC examiner. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 3000, temperature: 0.3 })
 
-    const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
-    if (start === -1 || end <= start) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
+    const json = cleanAiJson(raw)
+    if (!json) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
+    const scheme = JSON.parse(json)
 
-    const scheme = JSON.parse(raw.slice(start, end + 1))
-
-    // Build print-ready HTML
     const html = buildMarkingSchemeHTML(scheme, subject, grade)
 
     return NextResponse.json({ scheme, html, subject, grade })
+  } catch (e: any) {
+    console.error('[MarkingScheme] Failed:', e)
+    return NextResponse.json({ error: 'Failed to generate marking scheme. Please try again.' }, { status: 500 })
+  }
 })
 
 function esc(s: any) {

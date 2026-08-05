@@ -15,6 +15,7 @@ import { prisma } from '@/lib/prisma'
 import { uploadFile, BUCKETS } from '@/lib/supabase'
 import { route } from '@/lib/api-middleware'
 import { generateLessonPlanPDF } from '@/lib/kicd-lesson-plan-pdf'
+import { parseLessonContent } from '@/lib/lesson-plan-content'
 
 export const POST = route({}, async (req, { user }) => {
   const body = await req.json()
@@ -145,32 +146,52 @@ function buildLessonPlanHTML(
   const year = new Date().getFullYear()
   const date = new Date().toLocaleDateString('en-KE', { day:'2-digit', month:'long', year:'numeric' })
 
-  // Normalise content — handle both structured JSON and plain string
-  let c: any = {}
-  if (content && typeof content === 'object') {
-    c = content
-  } else if (typeof content === 'string') {
-    c = { generatedContent: content }
-  }
+  // Normalise content — structured JSON object, JSON string, or plain markdown string
+  const c: any = parseLessonContent(content) ?? {}
 
+  const header = c.lessonHeader || {}
   const lessonTitle    = esc(title || c.title || topic || 'Lesson Plan')
-  const lessonSubject  = esc(subject || c.subject || '')
-  const lessonGrade    = esc(grade || c.grade || '')
-  const lessonDuration = esc(duration || c.duration || 40)
+  const lessonSubject  = esc(subject || c.subject || header.learningArea || '')
+  const lessonGrade    = esc(grade || c.grade || header.grade || '')
+  const lessonDuration = esc(duration || c.duration || header.duration || 40)
   const strand         = esc(c.strand || '')
   const subStrand      = esc(c.subStrand || topic || '')
-  const slos           = esc(c.specificLearningOutcomes || c.objectives || '')
+  const slos           = c.specificLearningOutcomes || c.objectives || ''
   const keyQs          = c.keyInquiryQuestions || []
+  const comps          = c.coreCompetencies || []
+  const values         = c.values || []
+  const pcis           = c.pcis || []
   const resources      = c.learningResources   || []
   const assessment     = esc(c.assessment || c.conclusion?.assessment || '')
+  const extended       = esc(c.extendedActivities || '')
   const homework       = esc(c.homework || '')
   const reflection     = esc(c.teacherReflection || c.reflection || '')
+  const differentiation = c.differentiation || null
+  const org            = c.organisationOfLearning || null
 
   const intro     = c.introduction  || null
   const mainAct   = c.mainActivity  || null
   const practAct  = c.practiceActivity || null
   const conc      = c.conclusion    || null
   const rawContent = c.generatedContent || ''
+
+  const slosList = (Array.isArray(slos) ? slos : [slos]).filter(Boolean)
+  const chips = [...comps.map((x: any) => ({ text: x, cls: 'chip-purple' })), ...values.map((x: any) => ({ text: x, cls: 'chip-green' })), ...pcis.map((x: any) => ({ text: x, cls: 'chip-amber' }))]
+
+  const orgSteps: Array<[string, any]> = [
+    ['Introduction', org?.introduction], ['Step 1', org?.step1], ['Step 2', org?.step2],
+    ['Step 3', org?.step3], ['Conclusion', org?.conclusion],
+  ].filter(([, s]) => !!s) as Array<[string, any]>
+
+  const orgHtml = org
+    ? orgSteps.map(([label, s]) => `
+      <div class="org-step">
+        <div class="phase-title">${label} (${esc(s.duration || '')} min)</div>
+        ${s.teacherActivity || s.teacherActions ? `<p><strong>Teacher:</strong> ${esc(s.teacherActivity || s.teacherActions)}</p>` : ''}
+        ${s.learnerActivity || s.studentActions ? `<p><strong>Learner:</strong> ${esc(s.learnerActivity || s.studentActions)}</p>` : ''}
+        ${(!s.teacherActivity && !s.learnerActivity && s.activity) ? `<p>${esc(s.activity)}</p>` : ''}
+      </div>`).join('')
+    : ''
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -281,6 +302,32 @@ function buildLessonPlanHTML(
       font-size: 8.5pt;
     }
 
+    /* Organisation-of-learning step list (KICD) */
+    .org-grid {
+      border: 1px solid #9dadc4;
+      border-top: none;
+    }
+    .org-step {
+      border-bottom: 1px solid #dde5f0;
+      padding: 6px 8px;
+      font-size: 9pt;
+      line-height: 1.5;
+    }
+    .org-step:last-child { border-bottom: none; }
+    .org-step p { margin: 2px 0; }
+
+    /* Chip tags for competencies / values / PCIs */
+    .chip {
+      display: inline-block;
+      border-radius: 10px;
+      padding: 2px 8px;
+      margin: 2px;
+      font-size: 8pt;
+    }
+    .chip-purple { background: #f0e7ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+    .chip-green  { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .chip-amber  { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+
     /* 2-col grid */
     .two-col {
       display: grid;
@@ -340,9 +387,9 @@ function buildLessonPlanHTML(
   <!-- ── Meta information table ────────────────────────────────── -->
   <table class="meta-table">
     <tr>
-      <td class="lbl">School</td><td>&nbsp;</td>
-      <td class="lbl">Teacher</td><td>${esc(teacherName)}</td>
-      <td class="lbl">Date</td><td>${date}</td>
+      <td class="lbl">School</td><td>${esc(header.school || '&nbsp;')}</td>
+      <td class="lbl">Teacher</td><td>${esc(header.teacher || teacherName)}</td>
+      <td class="lbl">Date</td><td>${esc(header.date || date)}</td>
     </tr>
     <tr>
       <td class="lbl">Subject</td><td>${lessonSubject}</td>
@@ -354,6 +401,12 @@ function buildLessonPlanHTML(
       <td class="lbl">Sub-Strand</td><td colspan="3">${subStrand || '&nbsp;'}</td>
     </tr>
     <tr>
+      <td class="lbl">Term</td><td>${esc(header.term || '&nbsp;')}</td>
+      <td class="lbl">Week</td><td>${esc(header.week || '&nbsp;')}</td>
+      <td class="lbl">Lesson</td><td>${esc(header.lesson || '&nbsp;')}</td>
+    </tr>
+    ${header.enrolment ? `<tr><td class="lbl">Enrolment</td><td colspan="5">${esc(header.enrolment)}</td></tr>` : ''}
+    <tr>
       <td class="lbl">Lesson Title</td><td colspan="5">${lessonTitle}</td>
     </tr>
   </table>
@@ -362,7 +415,7 @@ function buildLessonPlanHTML(
   <div class="section">
     <div class="section-header">Specific Learning Outcomes (SLOs)</div>
     <div class="section-body">
-      ${slos ? `<p>${slos}</p>` : '<p>By the end of the lesson, the learner should be able to:</p>'}
+      ${slosList.length > 0 ? '<ul>' + slosList.map((s: any, i: number) => `<li>${i + 1}. ${esc(s)}</li>`).join('') + '</ul>' : '<p>By the end of the lesson, the learner should be able to:</p>'}
     </div>
   </div>
 
@@ -374,10 +427,22 @@ function buildLessonPlanHTML(
     </div>
   </div>
 
-  <!-- ── Lesson Development (3 phases) ─────────────────────────── -->
+  <!-- ── Competencies / Values / PCIs ─────────────────────────── -->
+  ${chips.length > 0 ? `
+  <div class="section">
+    <div class="section-header">Core Competencies / Values / PCIs</div>
+    <div class="section-body">
+      ${chips.map((ch: any) => `<span class="chip ${ch.cls}">${esc(ch.text)}</span>`).join('')}
+    </div>
+  </div>
+  ` : ''}
+
+  <!-- ── Lesson Development ───────────────────────────────────── -->
   <div class="section">
     <div class="section-header">Lesson Development</div>
-    ${(intro || mainAct || conc) ? `
+    ${orgHtml ? `
+    <div class="org-grid">${orgHtml}</div>
+    ` : (intro || mainAct || conc) ? `
     <div class="phase-grid">
       <div class="phase-cell">
         <div class="phase-title">Introduction (${intro?.duration || 10} min)</div>
@@ -419,10 +484,21 @@ function buildLessonPlanHTML(
   </div>
 
   <!-- ── Homework / Extension ──────────────────────────────────── -->
-  ${homework ? `
+  ${(extended || homework) ? `
   <div class="section">
-    <div class="section-header">Homework / Extension Activity</div>
-    <div class="section-body"><p>${homework}</p></div>
+    <div class="section-header">Extended Activities / Homework</div>
+    <div class="section-body"><p>${extended || homework}</p></div>
+  </div>
+  ` : ''}
+
+  <!-- ── Differentiation (legacy) ───────────────────────────────── -->
+  ${differentiation && (differentiation.support || differentiation.extension) ? `
+  <div class="section">
+    <div class="section-header">Differentiation</div>
+    <div class="section-body">
+      ${differentiation.support ? `<p><strong>Support:</strong> ${esc(differentiation.support)}</p>` : ''}
+      ${differentiation.extension ? `<p><strong>Extension:</strong> ${esc(differentiation.extension)}</p>` : ''}
+    </div>
   </div>
   ` : ''}
 

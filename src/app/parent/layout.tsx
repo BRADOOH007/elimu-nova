@@ -1,7 +1,6 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
@@ -10,17 +9,12 @@ import {
   BarChart3, Users, ClipboardList, BookOpen,
   MessageSquare, Settings, CreditCard
 } from 'lucide-react'
-import { DashboardLoading } from '@/components/ui/dashboard-loading'
+import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const { schoolInfo } = useSchoolInfo()
   const { totalUnread } = useUnreadMessages()
-  const [timedOut, setTimedOut] = useState(false)
-  useEffect(() => {
-    const t = setTimeout(() => setTimedOut(true), 4000)
-    return () => clearTimeout(t)
-  }, [])
 
   const isSchoolParent = !!session?.user?.schoolId
 
@@ -42,18 +36,19 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
     { icon: Settings, label: 'Settings', href: '/parent/settings', tourId: 'parent-settings' },
   ]
 
-  if (status === 'loading' && !timedOut) return <DashboardLoading />
-  if (!session) return <DashboardLoading />
+  if (!session) return null
 
   return (
-    <ProfessionalDashboardLayout
-      userRole="PARENT"
-      userName={session.user?.name || 'Parent'}
-      userEmail={session.user?.email || ''}
-      schoolName={schoolInfo?.school?.name || 'Loading...'}
-      sidebarItems={sidebarItems}
-    >
-      <SubscriptionGuard>{children}</SubscriptionGuard>
-    </ProfessionalDashboardLayout>
+    <DashboardSessionGate>
+      <ProfessionalDashboardLayout
+        userRole="PARENT"
+        userName={session.user?.name || 'Parent'}
+        userEmail={session.user?.email || ''}
+        schoolName={schoolInfo?.school?.name || 'Loading...'}
+        sidebarItems={sidebarItems}
+      >
+        <SubscriptionGuard>{children}</SubscriptionGuard>
+      </ProfessionalDashboardLayout>
+    </DashboardSessionGate>
   )
 }

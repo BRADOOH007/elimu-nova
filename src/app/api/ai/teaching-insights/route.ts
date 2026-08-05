@@ -1,11 +1,12 @@
 /**
  * POST /api/ai/teaching-insights
- * Comprehensive Teaching Insights — AI class-wide analysis for teacher
+ * Comprehensive Teaching Insights â€” AI class-wide analysis for teacher
  */
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const { classId } = await request.json()
@@ -108,9 +109,9 @@ Provide actionable teaching insights. Return ONLY valid JSON:
       { role: 'user', content: prompt },
     ], { maxTokens: 1500, temperature: 0.5 })
 
-    const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
-    if (start === -1 || end <= start) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
+    const json = cleanAiJson(raw)
+    if (!json) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
 
-    const insights = JSON.parse(raw.slice(start, end + 1))
+    const insights = JSON.parse(json)
     return NextResponse.json({ insights, classStats: { total: students.length, classAvg, atRisk, excelling, subjectAvgs } })
 })

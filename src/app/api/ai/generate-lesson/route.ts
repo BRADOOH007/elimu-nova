@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (req, { user }) => {
     const body = await req.json()
@@ -11,14 +12,14 @@ export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, 
     const approach = approaches[Math.floor(Math.random() * approaches.length)]
 
     const content = await OpenAIService.generateText([
-      { role: 'system', content: `You are an expert AI tutor creating unique lesson content for Kenyan students. Use a ${approach} approach — vary examples and structure every time. Return ONLY valid JSON with: title, subject, grade, difficulty, duration, type, objectives (array), prerequisites (array), insights (array), content (detailed markdown lesson body).` },
+      { role: 'system', content: `You are an expert AI tutor creating unique lesson content for Kenyan students. Use a ${approach} approach Ã¢â‚¬â€ vary examples and structure every time. Return ONLY valid JSON with: title, subject, grade, difficulty, duration, type, objectives (array), prerequisites (array), insights (array), content (detailed markdown lesson body).` },
       { role: 'user',   content: `Create a unique, personalized lesson for: Subject: ${subject}, Topic: ${topic}, Grade: ${grade || 'Grade 8'}, Level: ${difficulty || 'intermediate'}, Style: ${learningStyle || 'visual'}. Request ID: ${requestId}. Use a Kenya-specific example that's different from any previous lesson. Return ONLY valid JSON.` },
     ], { maxTokens: 2000, temperature: 0.85 })
 
     let lessonData: any = {}
     try {
-      const start = content.indexOf('{'); const end = content.lastIndexOf('}')
-      if (start !== -1 && end > start) lessonData = JSON.parse(content.slice(start, end + 1))
+      const json = cleanAiJson(content)
+      if (json) lessonData = JSON.parse(json)
     } catch { lessonData = { title: topic, subject, grade, content } }
 
     return NextResponse.json({

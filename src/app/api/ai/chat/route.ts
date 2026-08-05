@@ -1,85 +1,51 @@
 import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { stripLatex } from '@/lib/clean-ai-text'
 import { route } from '@/lib/api-middleware'
+import { buildStudentContext, extractAndStoreMemory } from '@/lib/student-memory'
 
-export const POST = route({ auth: 'none' }, async (request, { user }) => {
+export const POST = route({ auth: 'none' }, async (request) => {
     const { message, context, lessonContext, schemeContext, assignmentsContext, autoTeach, lessonContent, subject, topic, messages } = await request.json()
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
-    // ── Build system prompt based on context ──────────────────────────────
+    // â”€â”€ Build system prompt based on context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     let systemPrompt = `You are Hope, an AI teaching assistant for ElimuNova AI. You help teachers and students with education in Kenya. Be helpful, practical, and encouraging. Respond in English unless asked about Kiswahili.`
+    let studentId: string | null = null
 
     if (context === 'teacher_assistant') {
       systemPrompt = `You are Hope, an AI teaching assistant for ElimuNova AI. You help Kenyan teachers with:
-1. Lesson Planning — Create detailed, engaging CBC-aligned lesson plans
-2. Curriculum Development — Structure curricula and learning objectives  
-3. Assessment Ideas — Suggest creative, CBC-appropriate assessments
-4. Student Engagement — Make learning interactive and practical
-5. Differentiation — Adapt content for different learning styles
-6. Classroom Management — Positive learning environment strategies
+1. Lesson Planning â€” Create detailed, engaging CBC-aligned lesson plans
+2. Curriculum Development â€” Structure curricula and learning objectives  
+3. Assessment Ideas â€” Suggest creative, CBC-appropriate assessments
+4. Student Engagement â€” Make learning interactive and practical
+5. Differentiation â€” Adapt content for different learning styles
+6. Classroom Management â€” Positive learning environment strategies
 
 Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan education context.`
 
     } else if (context === 'student_tutor') {
       let contextInfo = ''
 
-      // Fetch personal context for this student
+      // Fetch personal context for this student.
+      // The route uses auth:'none' so the anonymous "Hope" demo keeps working,
+      // so we resolve the session ourselves and personalise when logged in.
       try {
-        if (user?.role === 'STUDENT') {
+        const session = await getServerSession(authOptions)
+        if (session?.user?.id && session.user.role === 'STUDENT') {
           const student = await prisma.student.findUnique({
-            where: { userId: user.id },
-            include: {
-              user: { select: { firstName: true, lastName: true } },
-              class: { include: { teacher: true } }
-            }
+            where: { userId: session.user.id },
+            select: { id: true }
           })
 
           if (student) {
-            // Student name
-            contextInfo += `\n\nYou are talking to ${student.user.firstName} ${student.user.lastName}.`
-            if (student.class) {
-              contextInfo += ` They are in ${student.class.name || 'a class'}`
-              if (student.class.grade) contextInfo += ` (Grade ${student.class.grade})`
-              contextInfo += '.'
-            }
-
-            const [lessonPlans, sharedSchemes, recentSessions] = await Promise.all([
-              prisma.lessonPlan.findMany({
-                where: { teacherId: student.class?.teacherId, isShared: true },
-                select: { title: true, subject: true, grade: true },
-                take: 5
-              }),
-              prisma.sharedSchemeOfWork.findMany({
-                where: { studentId: student.id } as any,
-                include: { schemeOfWork: { select: { title: true, subject: true, grade: true } } },
-                take: 3
-              }),
-              prisma.studySession.findMany({
-                where: { studentId: student.id },
-                orderBy: { createdAt: 'desc' },
-                select: { subject: true, topic: true, duration: true },
-                take: 5
-              })
-            ])
-
-            if (lessonPlans.length > 0) {
-              contextInfo += `\n\nTheir teacher has shared these lesson plans: ${lessonPlans.map(p => `${p.title} (${p.subject} ${p.grade})`).join(', ')}.`
-            }
-            if (sharedSchemes.length > 0) {
-              contextInfo += `\n\nShared schemes of work: ${sharedSchemes.map(s => `${(s as any).schemeOfWork.title} (${(s as any).schemeOfWork.subject})`).join(', ')}`
-            }
-            if (recentSessions.length > 0) {
-              const topics = [...new Set(recentSessions.map(s => s.topic).filter(Boolean))].slice(0, 3)
-              const subjects = [...new Set(recentSessions.map(s => s.subject).filter(Boolean))].slice(0, 3)
-              if (subjects.length > 0) contextInfo += `\n\nRecently studying: ${subjects.join(', ')}${topics.length > 0 ? ` — topics: ${topics.join(', ')}` : ''}.`
-            }
-
-            contextInfo += `\n\nUse the student's name naturally in conversation. Adapt your explanations to their level. Reference their recent study topics when relevant. Be encouraging and personal.`
+            studentId = student.id
+            contextInfo = `\n\n${await buildStudentContext(student.id)}`
           }
         }
       } catch (e) {
@@ -89,11 +55,11 @@ Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan
       // Inject lesson/scheme/assignment context if provided
       if (lessonContext?.lessonPlan) {
         const { title, subject, grade, content } = lessonContext.lessonPlan
-        contextInfo += `\n\nCURRENT LESSON: "${title}" — ${subject}, ${grade}.\nContent summary: ${(content?.generatedContent || '').slice(0, 400)}`
+        contextInfo += `\n\nCURRENT LESSON: "${title}" â€” ${subject}, ${grade}.\nContent summary: ${(content?.generatedContent || '').slice(0, 400)}`
       }
       if (schemeContext?.schemeOfWork) {
         const { title, subject, grade } = schemeContext.schemeOfWork
-        contextInfo += `\n\nCURRENT SCHEME: "${title}" — ${subject}, ${grade}.`
+        contextInfo += `\n\nCURRENT SCHEME: "${title}" â€” ${subject}, ${grade}.`
       }
       if (assignmentsContext?.assignments?.length) {
         const names = assignmentsContext.assignments.slice(0, 3).map((a: any) => a.title).join(', ')
@@ -114,13 +80,13 @@ Teaching rules:
 3. After each answer: tell them if they were correct, give a brief explanation, then move to the next question.
 4. Each MCQ must have 4 options labelled A, B, C, D.
 5. Use Kenyan examples and contexts.
-6. Be encouraging — praise correct answers, gently correct wrong ones with a clearer explanation.
+6. Be encouraging â€” praise correct answers, gently correct wrong ones with a clearer explanation.
 7. After all 5 questions, ask if they want to review any topic again or try more questions.
-8. Stay educational — answer ANY question naturally, then gently guide back to learning`
+8. Stay educational â€” answer ANY question naturally, then gently guide back to learning`
       }
     }
 
-    // ── Call AI through waterfall ─────────────────────────────────────────
+    // â”€â”€ Call AI through waterfall â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const chatMessages: { role: 'user' | 'system' | 'assistant'; content: string }[] = [
       { role: 'system', content: systemPrompt },
     ]
@@ -136,6 +102,12 @@ Teaching rules:
       chatMessages,
       { maxTokens: autoTeach ? 1200 : 1000, temperature: autoTeach ? 0.75 : 0.7 }
     )
+
+    // Fire-and-forget: learn durable facts about the student from this exchange
+    if (studentId) {
+      extractAndStoreMemory(studentId, { userMessage: message, aiResponse: detailed.content, subject, topic })
+        .catch(() => {})
+    }
 
     return NextResponse.json({
       response: stripLatex(detailed.content),

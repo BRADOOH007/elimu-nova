@@ -7,28 +7,21 @@ import { useTour } from './TourProvider'
 import { useTourState } from './useTourState'
 import { TOUR_CONFIGS } from '@/config/tours'
 
-const ROLE_TOUR_MAP: Record<string, string> = {
-  TEACHER: 'teacher-onboarding',
-  STUDENT: 'student-onboarding',
-  SCHOOL_ADMIN: 'school-admin-onboarding',
-  PARENT: 'parent-onboarding',
-}
-
 export function TourLauncher() {
   const { data: session } = useSession()
   const pathname = usePathname()
   const { startTour, isActive } = useTour()
   const { isCompleted, markCompleted } = useTourState()
   const launchedRef = useRef(false)
+  const delayRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    if (!session?.user?.role || isActive) return
+    if (!session?.user?.role || isActive || launchedRef.current) return
 
     const role = session.user.role as keyof typeof TOUR_CONFIGS
     const config = TOUR_CONFIGS[role]
     if (!config) return
 
-    // Already completed — never show again
     if (isCompleted(role)) return
 
     const resumeRaw = sessionStorage.getItem('tour-resume-active')
@@ -36,27 +29,21 @@ export function TourLauncher() {
       sessionStorage.removeItem('tour-resume-active')
       try {
         const { tourId, stepIndex } = JSON.parse(resumeRaw)
+        launchedRef.current = true
         startTour(tourId, config.steps, stepIndex)
         return
-      } catch (e) { console.warn('[Tour] Failed to parse resume active:', e) }
+      } catch { /* ignore */ }
     }
 
     const firstStep = config.steps[0]
     if (firstStep?.navigateTo && pathname !== firstStep.navigateTo) return
 
-    if (!launchedRef.current) {
-      launchedRef.current = true
+    launchedRef.current = true
+    delayRef.current = setTimeout(() => {
+      startTour(config.id, config.steps)
+    }, 800)
 
-      // Mark completed immediately — synchronously — so even if the user
-      // navigates away before the setTimeout fires, the tour won't re-show
-      localStorage.setItem(`tour-${role.toLowerCase()}-completed`, new Date().toISOString())
-      markCompleted(role)
-
-      const t = setTimeout(() => {
-        startTour(config.id, config.steps)
-      }, 1500)
-      return () => clearTimeout(t)
-    }
+    return () => { if (delayRef.current) clearTimeout(delayRef.current) }
   }, [session?.user?.role, pathname, isActive, startTour, isCompleted, markCompleted])
 
   return null

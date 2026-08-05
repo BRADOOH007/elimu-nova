@@ -248,6 +248,9 @@ model Teacher {
   // Generated notes
   notes TeacherNote[]
 
+  // Document Library for curriculum intelligence
+  documentLibrary DocumentLibrary[]
+
   deletedAt DateTime?
 
   @@map("teachers")
@@ -339,6 +342,9 @@ model Student {
   topicProgress    TopicProgress[]
   courseChallenges CourseChallenge[]
   writingSubmissions WritingSubmission[]
+
+  // Persistent AI memory
+  memory StudentMemory?
 
   deletedAt DateTime?
 
@@ -2048,6 +2054,24 @@ model ReviewSchedule {
   @@map("review_schedules")
 }
 
+// Persistent AI memory for a student — lets the tutor "keep learning
+// about them" across conversations. Stores durable facts (interests,
+// struggles, strengths, goals, preferences) extracted from chats,
+// plus a short natural-language summary. Injected into tutor prompts.
+model StudentMemory {
+  id        String   @id @default(cuid())
+  studentId String   @unique
+  summary   String   @default("") // AI-written short summary of the learner
+  facts     Json?                 // Array<{ id, fact, category, source, createdAt, lastSeenAt }>
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@map("student_memory")
+}
+
 // Per-topic progress for the sequential "learning path" —
 // tracks where a student left off so they can resume a lesson
 // they didn't finish, and which topics are complete/next.
@@ -2117,4 +2141,29 @@ model WritingSubmission {
 
   @@index([studentId, subject])
   @@map("writing_submissions")
+}
+
+// Curriculum Intelligence — Document Library for AI knowledge base
+model DocumentLibrary {
+  id           String   @id @default(cuid())
+  title        String
+  documentType String   // "scheme_of_work" | "lesson_plan" | "exam" | "curriculum_guide" | "resource"
+  grade        String
+  subject      String
+  term         Int?
+  strandName   String?
+  content      String   @db.Text // Full extracted text
+  metadata     Json?    // { strandCount, substrandCount, outcomeCount, weekCount, formattingStyle, sections }
+  sourceId     String?  // Original uploaded file ID
+  teacherId    String?
+  isProcessed  Boolean  @default(true)
+  uploadedAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+
+  @@index([grade, subject, documentType])
+  @@index([teacherId])
+  @@map("document_library")
 }

@@ -12,7 +12,6 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: [
-          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), fullscreen=(self)' },
@@ -29,10 +28,11 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https://api.zoom.us https://*.sentry.io https://*.stripe.com https://*.supabase.co https://*.cloudinary.com wss:",
-              "frame-src 'self' https://*.stripe.com https://source.zoom.us https://zoom.us",
+              "frame-src 'self' https://*.stripe.com https://source.zoom.us https://zoom.us https://www.youtube.com https://*.youtube.com https://player.vimeo.com",
               "media-src 'self' https: blob:",
               "object-src 'none'",
               "base-uri 'self'",
+              "frame-ancestors 'self'",
             ].join('; '),
           },
         ],

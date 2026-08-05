@@ -41,9 +41,9 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   const [activeTourId, setActiveTourId] = useState<string | null>(null)
   const [steps, setSteps] = useState<TourStep[]>([])
   const [stepIndex, setStepIndex] = useState(0)
-  const [isActive, setIsActive] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  const isActive = activeTourId !== null
 
   const currentStep = steps[stepIndex] ?? null
   const totalSteps = steps.length
@@ -52,11 +52,9 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setActiveTourId(tourId)
     setSteps(newSteps)
     setStepIndex(startIndex)
-    setIsActive(true)
   }, [])
 
   const endTour = useCallback(() => {
-    setIsActive(false)
     setActiveTourId(null)
     setSteps([])
     setStepIndex(0)
@@ -68,10 +66,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     if (currentStep.beforeNext === 'navigateToPage' && currentStep.navigateTo) {
       const nextIdx = stepIndex + 1
       if (nextIdx < totalSteps) {
-        sessionStorage.setItem('tour-resume', JSON.stringify({
-          tourId: activeTourId,
-          stepIndex: nextIdx,
-        }))
+        sessionStorage.setItem('tour-resume', JSON.stringify({ tourId: activeTourId, stepIndex: nextIdx }))
         setStepIndex(nextIdx)
         router.push(currentStep.navigateTo)
       } else {
@@ -97,15 +92,15 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   }, [totalSteps])
 
   useEffect(() => {
-    if (isActive) return
+    if (activeTourId) return
     const raw = sessionStorage.getItem('tour-resume')
     if (!raw) return
     try {
       const { tourId: tid, stepIndex: idx } = JSON.parse(raw)
       sessionStorage.setItem('tour-resume-active', JSON.stringify({ tourId: tid, stepIndex: idx }))
       sessionStorage.removeItem('tour-resume')
-    } catch (e) { console.warn('[Tour] Failed to parse resume data:', e) }
-  }, [pathname, isActive])
+    } catch { /* ignore */ }
+  }, [pathname, activeTourId])
 
   return (
     <TourContext.Provider value={{

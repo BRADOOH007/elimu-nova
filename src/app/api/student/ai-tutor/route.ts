@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { NotificationGenerator } from '@/lib/notification-generator'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
+import { buildStudentContext, extractAndStoreMemory } from '@/lib/student-memory'
 
 // POST - Create AI tutor session
 export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
@@ -28,6 +29,7 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
     include: {
       user: true,
       school: true,
+      class: true,
       teacher: {
         include: {
           user: true
@@ -43,6 +45,7 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
       include: {
         user: true,
         school: true,
+        class: true,
         teacher: { include: { user: true } },
         analytics: true
       }
@@ -107,6 +110,9 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
     providedContext: context
   }
 
+  // Personalised profile: grade, frequent subjects, mastery, stored memory
+  const personalContext = await buildStudentContext(student.id)
+
   // Generate AI response using OpenAI AI
   const aiResponse = await generateAIResponse({
     sessionType,
@@ -114,7 +120,8 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
     topic,
     question,
     context: aiContext,
-    student: student
+    student: student,
+    personalContext
   })
 
   // Create AI tutor session record
@@ -132,6 +139,14 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
 
   // Generate notification for teacher
   await NotificationGenerator.aiTutorHelpRequested(student.id, question, subject || undefined)
+
+  // Fire-and-forget: learn durable facts about this student from the exchange
+  extractAndStoreMemory(student.id, {
+    userMessage: question,
+    aiResponse,
+    subject: subject || undefined,
+    topic: topic || undefined,
+  }).catch(() => {})
 
   return NextResponse.json({
     success: true,
@@ -184,7 +199,8 @@ async function generateAIResponse({
   topic,
   question,
   context,
-  student
+  student,
+  personalContext
 }: {
   sessionType: string
   subject?: string
@@ -192,6 +208,7 @@ async function generateAIResponse({
   question: string
   context: any
   student: any
+  personalContext?: string
 }): Promise<string> {
   try {
     // Get teacher's materials for context
@@ -327,7 +344,7 @@ async function generateAIResponse({
           role: 'system',
           content: `You are an AI tutor for ElimuNova helping a Kenyan student named ${aiContext.student.name} in ${aiContext.student.grade}.
 Their teacher is ${aiContext.student.teacher}. Available subjects: ${aiContext.student.subjects?.join(', ') || 'General'}.
-Be encouraging, clear, and use Kenyan examples. Give step-by-step guidance. Session type: ${sessionType}.`,
+Be encouraging, clear, and use Kenyan examples. Give step-by-step guidance. Session type: ${sessionType}.${personalContext ? `\n\nABOUT THIS STUDENT (use this to personalise your teaching):\n${personalContext}` : ''}`,
         },
         {
           role: 'user',

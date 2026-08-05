@@ -49,7 +49,7 @@ import {
 } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { LessonPlanViewer } from '@/components/lesson-plan/lesson-plan-viewer'
 
 interface LessonPlan {
   id: string
@@ -906,41 +906,11 @@ export default function PlanningPage() {
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-2">Content</h4>
-              {(() => {
-                const c = selectedLessonPlan?.content ?? selectedScheme?.content
-                const extract = (raw: any): string | null => {
-                  if (typeof raw === 'string') {
-                    try {
-                      const parsed = JSON.parse(raw)
-                      return parsed.generatedContent ?? parsed.content ?? parsed.lessonPlan ?? JSON.stringify(parsed, null, 2)
-                    } catch {
-                      return raw
-                    }
-                  }
-                  if (raw && typeof raw === 'object') {
-                    return raw.generatedContent ?? raw.content ?? raw.lessonPlan ?? JSON.stringify(raw, null, 2)
-                  }
-                  return null
-                }
-                let text = extract(c)
-                if (text && (teacherName || currentDate)) {
-                  const t = text
-                  text = text
-                    .replace(/[|]\s*Teacher\s*[|]\s*_{3,}\s*/g, `| Teacher | ${teacherName || '________'} `)
-                    .replace(/[|]\s*Date\s*[|]\s*_{3,}\s*/g, `| Date | ${currentDate || '________'} `)
-                    .replace(/_{3,}/g, match => {
-                      const ctx = t.slice(Math.max(0, t.indexOf(match) - 60), t.indexOf(match))
-                      if (/Teacher|Prepared by/i.test(ctx)) return teacherName || match
-                      if (/Date/i.test(ctx)) return currentDate || match
-                      return match
-                    })
-                }
-                return text ? (
-                  <MarkdownRenderer content={text} />
-                ) : (
-                  <p className="text-gray-500 italic text-sm">No content available</p>
-                )
-              })()}
+              <LessonPlanViewer
+                content={selectedLessonPlan?.content ?? selectedScheme?.content}
+                teacherName={teacherName || undefined}
+                date={currentDate || undefined}
+              />
             </div>
             <div className="flex justify-end space-x-2">
               {selectedLessonPlan && (

@@ -32,7 +32,8 @@ import {
   Zap,
   Paperclip,
   X,
-  File
+  File,
+  Play
 } from "lucide-react"
 
 interface Assignment {
@@ -62,6 +63,9 @@ interface Assignment {
     submittedAt: string
     gradedAt: string | null
   }>
+  videoUrl?: string | null
+  videoProvider?: string | null
+  videoDuration?: number | null
 }
 
 interface AIInsights {
@@ -529,6 +533,12 @@ export default function AssignmentsPage() {
                           <Badge variant="outline" className="bg-white/70 backdrop-blur-sm">
                             {assignment.subject}
                           </Badge>
+                          {assignment.videoUrl && (
+                            <Badge variant="outline" className="flex items-center gap-1 text-violet-600 border-violet-300 bg-violet-50">
+                              <Play className="w-3 h-3 fill-violet-500" />
+                              Video
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-gray-600 mb-3">{assignment.description}</p>
                         <div className="flex items-center space-x-6 text-sm text-gray-500">

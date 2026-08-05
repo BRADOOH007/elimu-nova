@@ -40,6 +40,30 @@ export class KICDLessonPlanPDF {
       this.text(`${c.strand || ''}${c.strand && c.subStrand ? ' → ' : ''}${c.subStrand || ''}`)
     }
 
+    // Header meta (school / term / week / lesson / enrolment)
+    const h = c.lessonHeader || {}
+    const headerMeta: string[] = []
+    if (h.school) headerMeta.push(`School: ${h.school}`)
+    if (h.term) headerMeta.push(`Term: ${h.term}`)
+    if (h.week) headerMeta.push(`Week: ${h.week}`)
+    if (h.lesson) headerMeta.push(`Lesson: ${h.lesson}`)
+    if (h.enrolment) headerMeta.push(`Enrolment: ${h.enrolment}`)
+    if (headerMeta.length > 0) {
+      this.sectionTitle('Lesson Details')
+      headerMeta.forEach((m: string) => this.bullet(m))
+    }
+
+    // Core competencies / values / PCIs
+    const comps = c.coreCompetencies || []
+    const values = c.values || []
+    const pcis = c.pcis || []
+    if (comps.length > 0 || values.length > 0 || pcis.length > 0) {
+      this.sectionTitle('Core Competencies / Values / PCIs')
+      if (comps.length) { this.text('Core Competencies:'); comps.forEach((x: string) => this.bullet(x)) }
+      if (values.length) { this.text('Values:'); values.forEach((x: string) => this.bullet(x)) }
+      if (pcis.length) { this.text('Pertinent & Contemporary Issues:'); pcis.forEach((x: string) => this.bullet(x)) }
+    }
+
     // Specific Learning Outcomes
     const slos = c.specificLearningOutcomes
       ? (Array.isArray(c.specificLearningOutcomes) ? c.specificLearningOutcomes : [c.specificLearningOutcomes])
@@ -105,6 +129,14 @@ export class KICDLessonPlanPDF {
     if (c.extendedActivities || c.homework) {
       this.sectionTitle('Extended Activities / Homework')
       this.text(String(c.extendedActivities || c.homework))
+    }
+
+    // Differentiation (legacy)
+    const diff = c.differentiation
+    if (diff && (diff.support || diff.extension)) {
+      this.sectionTitle('Differentiation')
+      if (diff.support) this.text(`Support: ${diff.support}`)
+      if (diff.extension) this.text(`Extension: ${diff.extension}`)
     }
 
     // Reflection

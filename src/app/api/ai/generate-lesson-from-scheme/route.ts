@@ -14,13 +14,14 @@ import { OpenAIService } from '@/lib/openai-service'
 import { buildKICDLessonPrompt } from '@/lib/cbc-context'
 import type { KICDRow } from '@/app/api/ai/generate-scheme-structured/route'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
     const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
     const {
-      schemeId,        // optional — link to existing scheme
+      schemeId,        // optional Ã¢â‚¬â€ link to existing scheme
       row,             // KICDRow data
       subject,
       grade,
@@ -134,13 +135,12 @@ Use local examples. Each activity should have clear timing and instructions.`
       { maxTokens: 2000, temperature: 0.5 }
     )
 
-    // Robust JSON extraction — find first { and last }
+    // Robust JSON extraction Ã¢â‚¬â€ find first { and last }
     let lessonData: any = {}
     try {
-      const start = raw.indexOf('{')
-      const end   = raw.lastIndexOf('}')
-      if (start === -1 || end === -1 || end <= start) throw new Error('No JSON object found')
-      lessonData = JSON.parse(raw.slice(start, end + 1))
+      const json = cleanAiJson(raw)
+      if (!json) throw new Error('No JSON object found')
+      lessonData = JSON.parse(json)
     } catch (e) {
       return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })
     }
@@ -150,7 +150,7 @@ Use local examples. Each activity should have clear timing and instructions.`
     // Save to DB linked to scheme
     const title = lessonData.title || `${subject} - ${row.subStrand} - Week ${row.week} Lesson ${row.lesson}`
 
-    // ── Dedup: never create duplicates for the same scheme row ──
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Dedup: never create duplicates for the same scheme row Ã¢â€â‚¬Ã¢â€â‚¬
     // A lesson plan for this scheme + week + lesson already exists? Return it.
     if (schemeId) {
       const existingForRow = await prisma.lessonPlan.findFirst({

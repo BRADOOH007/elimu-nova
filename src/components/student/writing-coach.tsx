@@ -17,6 +17,7 @@ interface WritingFeedback {
   content: { score: number; strengths: string[]; improvements: string[] }
   vocabulary: { score: number; good_words: string[]; better_alternatives: Record<string, string> }
   tips: string[]
+  gibberish?: boolean
 }
 
 interface WritingCoachProps {
@@ -97,6 +98,19 @@ export function WritingCoach({ subject = 'English', topic = 'Writing' }: Writing
           </>
         ) : (
           <div className="space-y-4">
+            {feedback.gibberish ? (
+              <div className="p-5 bg-red-50 border-2 border-red-200 rounded-2xl text-center space-y-3">
+                <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
+                <p className="text-3xl font-black text-red-600">0%</p>
+                <p className="text-sm text-red-700 font-semibold">This couldn't be scored</p>
+                <p className="text-sm text-red-600">{feedback.overall}</p>
+                <div className="flex items-center gap-2 justify-center p-3 bg-red-100 rounded-xl text-left">
+                  <BookOpen className="h-4 w-4 text-red-500 shrink-0" />
+                  <p className="text-xs text-red-700">Your writing must use readable words so it can be marked. Rewrite your answer and submit again.</p>
+                </div>
+              </div>
+            ) : (
+              <>
             {/* Overall Score */}
             <div className={`p-4 rounded-2xl text-center ${feedback.score && feedback.score >= 70 ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
               <p className="text-3xl font-black text-slate-900">{feedback.score || '—'}%</p>
@@ -175,6 +189,8 @@ export function WritingCoach({ subject = 'English', topic = 'Writing' }: Writing
                   {feedback.tips.map((tip, i) => <li key={i}>• {tip}</li>)}
                 </ul>
               </div>
+            )}
+              </>
             )}
 
             <div className="flex gap-2">

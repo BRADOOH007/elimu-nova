@@ -3,6 +3,8 @@ import { OpenAIService } from '@/lib/openai-service'
 import { prisma } from '@/lib/prisma'
 import { buildKICDLessonPrompt } from '@/lib/cbc-context'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
+import { getCurriculumContext, buildCurriculumPromptSection, getDocumentExamples, buildDocumentExamplesSection } from '@/lib/curriculum-intelligence'
 
 export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const body = await request.json()
@@ -46,8 +48,18 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, 
       : ''
 
     const kicdContext = buildKICDLessonPrompt(grade, subject)
+
+    // Fetch curriculum intelligence — official outcomes + teacher examples
+    const curriculumCtx = await getCurriculumContext(grade, subject, { topic })
+    const curriculumSection = curriculumCtx ? buildCurriculumPromptSection(curriculumCtx) : ''
+    const docExamples = await getDocumentExamples(grade, subject, 'lesson_plan', 2)
+    const examplesSection = buildDocumentExamplesSection(docExamples)
+
     const systemPrompt = `You are a Kenyan CBC/CBE curriculum expert creating detailed lesson plans in the official KICD format.${templateBlock}
 ${kicdContext}
+
+${curriculumSection}
+${examplesSection}
 
 Return a JSON object EXACTLY matching this KICD 11-section structure:
 {
@@ -114,10 +126,9 @@ Use local examples. Each activity should have clear timing and instructions.`
 
       let lessonData: any = {}
       try {
-        const start = raw.indexOf('{')
-        const end = raw.lastIndexOf('}')
-        if (start === -1 || end === -1 || end <= start) throw new Error('No JSON found')
-        lessonData = JSON.parse(raw.slice(start, end + 1))
+        const json = cleanAiJson(raw)
+        if (!json) throw new Error('No JSON found')
+        lessonData = JSON.parse(json)
       } catch (e) {
         console.warn('[LessonPlan] AI returned invalid JSON:', e, 'Raw:', raw.slice(0, 200))
         return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })
@@ -131,7 +142,7 @@ Use local examples. Each activity should have clear timing and instructions.`
       })
     }
 
-    // ── Term mode: generate multiple lessons across weeks ──
+    // â”€â”€ Term mode: generate multiple lessons across weeks â”€â”€
     const finalWeeks = weeksCount || 13
     const finalLessonsPerWeek = lessonsPerWeek || 5
     const topicsList: string[] = requestTopics || (topic ? [topic] : [])
@@ -187,10 +198,9 @@ Return ONLY valid JSON. No markdown or explanation.`
 
     let termData: any = {}
     try {
-      const start = raw.indexOf('{')
-      const end = raw.lastIndexOf('}')
-      if (start === -1 || end === -1 || end <= start) throw new Error('No JSON found')
-      termData = JSON.parse(raw.slice(start, end + 1))
+      const json = cleanAiJson(raw)
+      if (!json) throw new Error('No JSON found')
+      termData = JSON.parse(json)
     } catch (e) {
       console.warn('[GenerateLessonPlan] Term JSON parse failed:', e)
       return NextResponse.json({ error: 'AI returned invalid format. Please try again.' }, { status: 500 })

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, ShieldAlert, Globe, MessageSquare, Inbox, Activity, ScrollText, Package, UploadCloud, Database, MessageCircle } from 'lucide-react'
-import { DashboardLoading } from '@/components/ui/dashboard-loading'
+import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
@@ -41,17 +41,19 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { icon: Database,      label: "System Health", href: "/super-admin/system-health" },
   ]
 
-  if (!session) return <DashboardLoading />
+  if (!session) return null
 
   return (
-    <ProfessionalDashboardLayout
-      userRole="SUPER_ADMIN"
-      userName={session.user?.name || 'Super Admin'}
-      userEmail={session.user?.email || ''}
-      schoolName="ElimuNova AI Platform"
-      sidebarItems={sidebarItems}
-    >
-      {children}
-    </ProfessionalDashboardLayout>
+    <DashboardSessionGate>
+      <ProfessionalDashboardLayout
+        userRole="SUPER_ADMIN"
+        userName={session.user?.name || 'Super Admin'}
+        userEmail={session.user?.email || ''}
+        schoolName="ElimuNova AI Platform"
+        sidebarItems={sidebarItems}
+      >
+        {children}
+      </ProfessionalDashboardLayout>
+    </DashboardSessionGate>
   )
 }
