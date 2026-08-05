@@ -53,6 +53,7 @@ import { EditTeacherModal } from "@/components/modals/edit-teacher-modal"
 import EnrollStudentModal from "@/components/modals/enroll-student-modal"
 import EditStudentModal from "@/components/modals/edit-student-modal"
 import BulkStudentUploadModal from "@/components/modals/bulk-student-upload-modal"
+import BulkTeacherUploadModal from "@/components/modals/bulk-teacher-upload-modal"
 import { useRouter } from 'next/navigation'
 import { confirmToast } from '@/lib/confirm-toast'
 
@@ -95,8 +96,9 @@ export default function PeoplePage() {
   const [isEnrollStudentModalOpen, setIsEnrollStudentModalOpen] = useState(false)
   const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false)
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false)
+  const [isBulkTeacherUploadOpen, setIsBulkTeacherUploadOpen] = useState(false)
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
-  const [classes, setClasses] = useState<Array<{ id: string; name: string }>>([])
+  const [classes, setClasses] = useState<Array<{ id: string; name: string; grade: string }>>([])
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
 
@@ -125,7 +127,7 @@ export default function PeoplePage() {
 
       if (classesRes.ok) {
         const data = await classesRes.json()
-        setClasses((data.classes || []).map((c: any) => ({ id: c.id, name: c.name })))
+        setClasses((data.classes || []).map((c: any) => ({ id: c.id, name: c.name, grade: c.grade || '' })))
       }
     } catch (error) {
       console.error('Error fetching data:', error)
@@ -428,13 +430,13 @@ export default function PeoplePage() {
               {activeTab === 'teachers' ? 'Enroll Teacher' : 'Enroll Student'}
             </Button>
             {activeTab === 'students' && (
-              <Button
-                onClick={() => setIsBulkUploadOpen(true)}
-                variant="outline"
-                className="border-blue-300 text-blue-700 hover:bg-blue-50"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Bulk Upload
+              <Button onClick={() => setIsBulkUploadOpen(true)} variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                <Upload className="w-4 h-4 mr-2" />Bulk Upload Students
+              </Button>
+            )}
+            {activeTab === 'teachers' && (
+              <Button onClick={() => setIsBulkTeacherUploadOpen(true)} variant="outline" className="border-blue-300 text-blue-700 hover:bg-blue-50">
+                <Upload className="w-4 h-4 mr-2" />Bulk Upload
               </Button>
             )}
           </div>
@@ -757,10 +759,22 @@ export default function PeoplePage() {
       <BulkStudentUploadModal
         isOpen={isBulkUploadOpen}
         onClose={() => setIsBulkUploadOpen(false)}
+        classes={classes}
         onSuccess={(count) => {
           setIsBulkUploadOpen(false)
           fetchData()
           setSuccessMessage(`${count} students imported successfully`)
+          setTimeout(() => setSuccessMessage(''), 4000)
+        }}
+      />
+
+      <BulkTeacherUploadModal
+        isOpen={isBulkTeacherUploadOpen}
+        onClose={() => setIsBulkTeacherUploadOpen(false)}
+        onSuccess={(count) => {
+          setIsBulkTeacherUploadOpen(false)
+          fetchData()
+          setSuccessMessage(`${count} teachers imported successfully`)
           setTimeout(() => setSuccessMessage(''), 4000)
         }}
       />

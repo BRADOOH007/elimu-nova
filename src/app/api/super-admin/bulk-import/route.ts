@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
-import { generateUsername } from '@/lib/bulk-import'
+import { generateUsername, generatePassword } from '@/lib/bulk-import'
+import bcrypt from 'bcryptjs'
 
 export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
@@ -45,12 +46,15 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
             suffixAttempt++
             username = generateUsername(r.firstName || r.name, r.lastName || '', `${Date.now().toString(36)}${suffixAttempt}`)
           }
+          const plainPwd = generatePassword()
+          const hashedPwd = await bcrypt.hash(plainPwd, 12)
           await prisma.user.create({
             data: {
               username,
               firstName: r.firstName || r.name,
               lastName: r.lastName || '',
               email: r.email,
+              password: hashedPwd,
               role: (r.role || 'TEACHER').toUpperCase(),
               schoolId: school?.id || null,
             } as any,
