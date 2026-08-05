@@ -69,6 +69,9 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
     status: 'PENDING'
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  // Structured (interactive MCQ) assignments store { questions, markdown } JSON
+  // in content — keep the questions alongside the markdown the teacher edits.
+  const [embeddedQuestions, setEmbeddedQuestions] = useState<any[]>([])
 
   // Video state
   const [videoUrl, setVideoUrl] = useState('')
@@ -84,10 +87,23 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
   useEffect(() => {
     if (assignment && isOpen) {
       const dueDate = new Date(assignment.dueDate)
+      // Structured interactive assignments store { questions, markdown } JSON.
+      // Show the markdown in the editor and keep the questions to re-wrap on save.
+      const raw = assignment.content || ''
+      let content = raw
+      let embedded: any[] = []
+      try {
+        const parsed = JSON.parse(raw)
+        if (parsed && parsed.questions && Array.isArray(parsed.questions) && typeof parsed.markdown === 'string') {
+          content = parsed.markdown
+          embedded = parsed.questions
+        }
+      } catch { /* not structured */ }
+      setEmbeddedQuestions(embedded)
       setFormData({
         title: assignment.title || '',
         description: assignment.description || '',
-        content: assignment.content || '',
+        content,
         dueDate: dueDate.toISOString().split('T')[0],
         dueTime: dueDate.toTimeString().slice(0, 5),
         lessonPlanId: assignment.lessonPlan?.id || '',
@@ -230,7 +246,9 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
-          content: formData.content,
+          content: embeddedQuestions.length > 0
+            ? JSON.stringify({ questions: embeddedQuestions, markdown: formData.content })
+            : formData.content,
           dueDate: dueDateTime.toISOString(),
           status: formData.status,
           lessonPlanId: formData.lessonPlanId || null,

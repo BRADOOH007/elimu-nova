@@ -210,6 +210,8 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
         id: teacher.id,
         name: `${teacher.user.firstName} ${teacher.user.lastName}`,
         email: teacher.user.email,
+        username: newUser.username,
+        password,
         status: teacher.user.isActive ? 'Active' : 'Inactive',
         joinDate: teacher.user.createdAt.toISOString().split('T')[0]
       }

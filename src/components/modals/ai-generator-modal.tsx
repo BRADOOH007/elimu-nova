@@ -59,6 +59,8 @@ export interface AIGeneratorResult {
   subject: string
   grade: string
   topic: string
+  questions?: { id: string; type: string; text: string; marks: number; options?: string[]; correctAnswer: string }[]
+  answerKey?: string
 }
 
 interface AIGeneratorModalProps {
@@ -72,6 +74,56 @@ interface GeneratedContent {
   title: string;
   content: string;
   metadata?: any;
+  questions?: { id: string; type: string; text: string; marks: number; options?: string[]; correctAnswer: string }[];
+  answerKey?: string;
+}
+
+function SmartTopicField({
+  placeholder,
+  loading,
+  groups,
+  value,
+  onChange,
+}: {
+  placeholder: string
+  loading: boolean
+  groups: Strand[]
+  value: string
+  onChange: (v: string) => void
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-400">
+        <Loader2 className="w-4 h-4 animate-spin" /> Loading curriculum topics...
+      </div>
+    )
+  }
+  if (groups.length > 0) {
+    return (
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <option value="">Select a topic</option>
+        {groups.map(strand => (
+          <optgroup key={strand.strandName} label={strand.strandName}>
+            {strand.substrands.map(sub => (
+              <option key={sub.name} value={sub.name}>{sub.name}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    )
+  }
+  return (
+    <Input
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+    />
+  )
 }
 
 export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGeneratorModalProps) {
@@ -100,30 +152,61 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
       setAvailableTopics([])
       return
     }
+    let cancelled = false
     setLoadingTopics(true)
+    const fallbackTopics = TOPIC_SUGGESTIONS[formData.subject] || []
+
+    const buildGroups = (strands: any[]): Strand[] => {
+      const hasSubstrands = strands.some(s => Array.isArray(s.substrands) && s.substrands.length > 0)
+      const groups: Strand[] = []
+      if (hasSubstrands) {
+        strands.forEach(s => {
+          groups.push({
+            strandName: s.name,
+            substrands: s.substrands.map((sub: any) => ({
+              name: sub.name,
+              description: sub.description || sub.name,
+              learningOutcomes: sub.learningOutcomes || [],
+            })),
+          })
+        })
+        return groups
+      }
+      const names = strands.map((s: any) => s.name)
+      fallbackTopics.forEach(t => {
+        if (!names.some(n => n.toLowerCase() === t.toLowerCase())) names.push(t)
+      })
+      return [{
+        strandName: strands.length > 0 ? 'Suggested Topics' : 'Curriculum Topics',
+        substrands: names.map(n => ({ name: n, description: n, learningOutcomes: [] })),
+      }]
+    }
+
+    const clearStaleTopic = (groups: Strand[]) => {
+      const all = groups.flatMap(g => g.substrands.map(sub => sub.name))
+      setFormData(prev => (prev.topic && !all.includes(prev.topic)) ? { ...prev, topic: '' } : prev)
+    }
+
     fetch(`/api/curriculum/strands?subject=${encodeURIComponent(formData.subject)}&grade=${encodeURIComponent(formData.grade)}`)
-      .then(r => r.json())
+      .then(r => (r.ok ? r.json() : { strands: [] }))
       .then(data => {
-        if (data.strands) setAvailableTopics(data.strands)
-        else {
-          const fallbackTopics = TOPIC_SUGGESTIONS[formData.subject] || []
-          setAvailableTopics([{
-            strandName: 'Suggested Topics',
-            substrands: fallbackTopics.map(name => ({ name, description: name, learningOutcomes: [] }))
-          }])
-        }
+        if (cancelled) return
+        const strands = Array.isArray(data.strands) ? data.strands : []
+        const groups = buildGroups(strands)
+        setAvailableTopics(groups)
+        clearStaleTopic(groups)
       })
       .catch(() => {
-        const fallbackTopics = TOPIC_SUGGESTIONS[formData.subject] || []
-        setAvailableTopics([{
-          strandName: 'Suggested Topics',
-          substrands: fallbackTopics.map(name => ({ name, description: name, learningOutcomes: [] }))
-        }])
+        if (cancelled) return
+        const groups = buildGroups([])
+        setAvailableTopics(groups)
+        clearStaleTopic(groups)
       })
-      .finally(() => setLoadingTopics(false))
+      .finally(() => {
+        if (!cancelled) setLoadingTopics(false)
+      })
+    return () => { cancelled = true }
   }, [formData.subject, formData.grade])
-
-  const allTopics = availableTopics.flatMap(s => s.substrands.map(sub => sub.name))
 
   const handleGenerate = async () => {
     if (!formData.subject || !formData.grade || !formData.topic) {
@@ -145,11 +228,27 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
 
       if (response.ok) {
         const data = await response.json()
+        // Capture structured questions + answer key (assignment/exam types) so
+        // the result can later power an interactive radio-button answer sheet.
+        const rawQuestions: any[] = data.structured?.questions || []
+        const answerKey: Record<string, string> | undefined = data.structured?.answerKey
+        const questions = rawQuestions.length
+          ? rawQuestions.map((q: any, i: number) => ({
+              id: String(q.id || i + 1),
+              type: q.type === 'true_false' ? 'true_false' : (q.type === 'short_answer' || q.type === 'essay') ? 'short_answer' : 'multiple_choice',
+              text: q.text,
+              marks: q.marks || 1,
+              options: q.options,
+              correctAnswer: answerKey?.[String(q.id || i + 1)] || q.correctAnswer || '',
+            }))
+          : undefined
         setGeneratedContent({
           type: activeTab as any,
           title: data.title,
           content: data.content,
-          metadata: data.metadata
+          metadata: data.metadata,
+          questions,
+          answerKey: questions ? JSON.stringify(answerKey || {}) : undefined,
         })
       } else {
         console.error('Failed to generate content')
@@ -198,6 +297,8 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
           subject: formData.subject,
           grade: formData.grade,
           topic: formData.topic,
+          questions: generatedContent.questions,
+          answerKey: generatedContent.answerKey,
         })
         onClose()
       } else {
@@ -344,35 +445,13 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                   <Label htmlFor="topic" className="text-sm font-medium text-gray-700">
                     Topic/Assignment *
                   </Label>
-                  {loadingTopics ? (
-                    <div className="flex items-center gap-2 h-10 px-3 bg-slate-50 rounded-xl border border-slate-200 text-sm text-slate-400">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Loading curriculum topics...
-                    </div>
-                  ) : allTopics.length > 0 ? (
-                    <select
-                      id="topic"
-                      value={formData.topic}
-                      onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
-                      className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select a topic</option>
-                      {availableTopics.map(strand => (
-                        <optgroup key={strand.strandName} label={strand.strandName}>
-                          {strand.substrands.map(sub => (
-                            <option key={sub.name} value={sub.name}>{sub.name}</option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                  ) : (
-                    <Input
-                      id="topic"
-                      value={formData.topic}
-                      onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
-                      placeholder="e.g., Quadratic Equations, Photosynthesis"
-                      className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
-                    />
-                  )}
+                  <SmartTopicField
+                    placeholder="e.g., Quadratic Equations, Photosynthesis"
+                    loading={loadingTopics}
+                    groups={availableTopics}
+                    value={formData.topic}
+                    onChange={(v) => setFormData(prev => ({ ...prev, topic: v }))}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -472,12 +551,12 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                   <Label htmlFor="topic" className="text-sm font-medium text-gray-700">
                     Presentation Topic *
                   </Label>
-                  <Input
-                    id="topic"
-                    value={formData.topic}
-                    onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                  <SmartTopicField
                     placeholder="e.g., Introduction to Algebra, The Solar System"
-                    className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                    loading={loadingTopics}
+                    groups={availableTopics}
+                    value={formData.topic}
+                    onChange={(v) => setFormData(prev => ({ ...prev, topic: v }))}
                   />
                 </div>
 
@@ -572,12 +651,12 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                   <Label htmlFor="topic" className="text-sm font-medium text-gray-700">
                     Assignment Topic *
                   </Label>
-                  <Input
-                    id="topic"
-                    value={formData.topic}
-                    onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                  <SmartTopicField
                     placeholder="e.g., Solving Linear Equations, Research on Climate Change"
-                    className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                    loading={loadingTopics}
+                    groups={availableTopics}
+                    value={formData.topic}
+                    onChange={(v) => setFormData(prev => ({ ...prev, topic: v }))}
                   />
                 </div>
 
@@ -672,12 +751,12 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                   <Label htmlFor="topic" className="text-sm font-medium text-gray-700">
                     Exam Topic *
                   </Label>
-                  <Input
-                    id="topic"
-                    value={formData.topic}
-                    onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                  <SmartTopicField
                     placeholder="e.g., Quadratic Equations, Photosynthesis"
-                    className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                    loading={loadingTopics}
+                    groups={availableTopics}
+                    value={formData.topic}
+                    onChange={(v) => setFormData(prev => ({ ...prev, topic: v }))}
                   />
                 </div>
 
@@ -799,12 +878,12 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
                   <Label htmlFor="topic" className="text-sm font-medium text-gray-700">
                     Project Theme *
                   </Label>
-                  <Input
-                    id="topic"
-                    value={formData.topic}
-                    onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
+                  <SmartTopicField
                     placeholder="e.g., Sustainable City Design, Historical Timeline"
-                    className="bg-white/70 backdrop-blur-sm border-0 shadow-sm focus:ring-2 focus:ring-purple-500"
+                    loading={loadingTopics}
+                    groups={availableTopics}
+                    value={formData.topic}
+                    onChange={(v) => setFormData(prev => ({ ...prev, topic: v }))}
                   />
                 </div>
 

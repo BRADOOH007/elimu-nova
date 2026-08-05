@@ -9,7 +9,7 @@ import { Loader2, Clock, AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, 
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 
 interface Question {
-  id: number
+  id: number | string
   text: string
   type: 'multiple_choice' | 'short_answer' | 'true_false'
   options?: string[]
