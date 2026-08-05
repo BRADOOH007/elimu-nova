@@ -4,6 +4,7 @@
  * usable for download. Mirrors the HTML export structure.
  */
 import jsPDF from 'jspdf'
+import { normalizeLessonContent } from '@/lib/lesson-plan-content'
 
 interface OrgStep {
   duration?: number
@@ -25,6 +26,7 @@ export class KICDLessonPlanPDF {
   }
 
   generate(c: any, meta: { title?: string; subject?: string; grade?: string; topic?: string; teacherName?: string }): jsPDF {
+    c = normalizeLessonContent(c) ?? {}
     const doc = this.doc
     const title = meta.title || c.title || meta.topic || 'Lesson Plan'
     const subject = meta.subject || c.subject || c.lessonHeader?.learningArea || ''

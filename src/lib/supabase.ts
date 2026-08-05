@@ -50,6 +50,8 @@ export const BUCKETS = {
   AI_IMAGES:       'ai-images',       // Generated images
   AVATARS:         'avatars',         // User profile pictures
   VIDEOS:          'videos',          // Assignment/exam video uploads
+  TEACHER_DOCUMENTS: 'teacher-documents', // Reference docs (schemes, exams, curriculum)
+  STUDENT_SUBMISSIONS: 'student-submissions', // Student assignment/exam submissions
 } as const
 
 /**

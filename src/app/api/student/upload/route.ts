@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { route } from '@/lib/api-middleware'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin, BUCKETS, ensureBucket } from '@/lib/supabase'
 import { saveFileLocally } from '@/lib/local-storage'
 
 export const dynamic = 'force-dynamic'
@@ -14,7 +14,7 @@ const ALLOWED_TYPES = [
 ]
 
 const MAX_SIZE_MB = 10
-const BUCKET = 'student-submissions'
+const BUCKET = BUCKETS.STUDENT_SUBMISSIONS
 
 export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
   let formData: FormData
@@ -63,6 +63,12 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
   const bytes = await file.arrayBuffer()
   const buffer = Buffer.from(bytes)
   const path = `submissions/${user.id}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+
+  await ensureBucket(BUCKET, {
+    public: true,
+    allowedMimeTypes: ALLOWED_TYPES,
+    fileSizeLimit: MAX_SIZE_MB * 1024 * 1024,
+  })
 
   const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
     .from(BUCKET)

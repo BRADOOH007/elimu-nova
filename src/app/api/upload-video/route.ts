@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { route } from '@/lib/api-middleware'
-import { supabaseAdmin, BUCKETS } from '@/lib/supabase'
+import { supabaseAdmin, BUCKETS, ensureBucket } from '@/lib/supabase'
 import { prisma } from '@/lib/prisma'
 
 const ALLOWED_TYPES = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo']
@@ -39,18 +39,11 @@ export const POST = route({ auth: ['TEACHER'] }, async (req, { user }) => {
   const buffer = Buffer.from(bytes)
 
   if (supabaseAdmin) {
-    const { data: buckets } = await supabaseAdmin.storage.listBuckets()
-    const bucketExists = buckets?.some((b: any) => b.name === bucket)
-    if (!bucketExists) {
-      const { error: createError } = await supabaseAdmin.storage.createBucket(bucket, {
-        public: true,
-        fileSizeLimit: MAX_SIZE,
-      })
-      if (createError && !String(createError.message).toLowerCase().includes('already')) {
-        console.error('Video bucket creation error:', createError)
-        return NextResponse.json({ error: `Storage setup failed: ${createError.message}` }, { status: 500 })
-      }
-    }
+    await ensureBucket(bucket, {
+      public: true,
+      allowedMimeTypes: ALLOWED_TYPES,
+      fileSizeLimit: MAX_SIZE,
+    })
 
     const { error: uploadError } = await supabaseAdmin.storage
       .from(bucket)

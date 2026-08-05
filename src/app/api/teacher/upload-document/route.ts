@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin, BUCKETS, ensureBucket } from '@/lib/supabase'
 import { saveFileLocally } from '@/lib/local-storage'
 import { PDFParse } from 'pdf-parse'
 import * as mammoth from 'mammoth'
 import { storeDocumentInLibrary } from '@/lib/document-processor'
+import { ingestDocument } from '@/lib/rag-pipeline'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,7 @@ const ALLOWED_TYPES = [
 ]
 
 const MAX_SIZE_MB = 20
-const BUCKET = 'teacher-documents'
+const BUCKET = BUCKETS.TEACHER_DOCUMENTS
 
 export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
@@ -65,6 +66,12 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
       }
       publicUrl = localUrl
     } else {
+      await ensureBucket(BUCKET, {
+        public: true,
+        allowedMimeTypes: ALLOWED_TYPES,
+        fileSizeLimit: MAX_SIZE_MB * 1024 * 1024,
+      })
+
       const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
         .from(BUCKET)
         .upload(path, buffer, { contentType: file.type, upsert: true })
@@ -118,6 +125,11 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
         undefined,
         publicUrl
       )
+
+      // Chunk and embed for RAG — runs in background, don't block response
+      ingestDocument(documentId, extractedText, { grade, subject, title: file.name, source: publicUrl })
+        .then(count => console.log(`[Upload] Indexed ${count} chunks for document ${documentId}`))
+        .catch(e => console.warn('[Upload] Embedding failed:', e))
     }
 
     // Also keep the teacher template updated (backward compat)
