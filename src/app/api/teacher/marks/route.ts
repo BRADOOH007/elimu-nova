@@ -3,30 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 import { OpenAIService } from '@/lib/openai-service'
 
-const CBC_LEVELS_LOWER = [
-  { level: 'BE', label: 'Below Expectations',      min: 0,  max: 39,  points: 1 },
-  { level: 'AE', label: 'Approaching Expectations', min: 40, max: 59,  points: 2 },
-  { level: 'ME', label: 'Meeting Expectations',     min: 60, max: 79,  points: 3 },
-  { level: 'EE', label: 'Exceeding Expectations',   min: 80, max: 100, points: 4 },
-]
-
-function getCBCGrade(score: number, isUpper = false): string {
-  if (!isUpper) {
-    if (score >= 80) return 'EE'
-    if (score >= 60) return 'ME'
-    if (score >= 40) return 'AE'
-    return 'BE'
-  }
-  if (score >= 90) return 'EE1'
-  if (score >= 75) return 'EE2'
-  if (score >= 58) return 'ME1'
-  if (score >= 41) return 'ME2'
-  if (score >= 31) return 'AE1'
-  if (score >= 21) return 'AE2'
-  if (score >= 11) return 'BE1'
-  return 'BE2'
-}
-
 export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
     const teacher = await prisma.teacher.findUnique({
@@ -85,7 +61,7 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
 export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   try {
     const body = await req.json()
-    const { assignmentId, marks, gradeSystem = 'percentage', analyseWithAI = false } = body
+    const { assignmentId, marks, analyseWithAI = false } = body
 
     // Verify the assignment belongs to this teacher
     const teacher = await prisma.teacher.findUnique({ where: { userId: user.id }, select: { id: true } })
@@ -94,21 +70,15 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     if (!assignment) return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
     if (assignment.teacherId !== teacher.id) return NextResponse.json({ error: 'Access denied' }, { status: 403 })
 
+    // Grading is fully automatic — teachers only add review feedback.
+    // Any score passed in the body is ignored and never written to the submission.
     const updates = await Promise.all(
       marks.map(async (m: any) => {
-        const cbcGrade = gradeSystem === 'cbc_lower'
-          ? getCBCGrade(m.score, false)
-          : gradeSystem === 'cbc_upper'
-          ? getCBCGrade(m.score, true)
-          : null
-
+        const feedback = String(m.feedback || '').trim()
+        if (!feedback) return null
         return (prisma as any).submission.updateMany({
           where: { assignmentId, studentId: m.studentId },
-          data: {
-            grade:    m.score,
-            feedback: m.feedback || (cbcGrade ? `${cbcGrade}: ${m.feedback || ''}`.trim() : m.feedback),
-            status:   'GRADED',
-          },
+          data: { feedback },
         })
       })
     )

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const GET = route({}, async (req, { user }) => {
+export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   const { searchParams } = new URL(req.url)
   const subject = searchParams.get('subject') || ''
   const grade   = searchParams.get('grade')   || ''
@@ -11,9 +11,11 @@ export const GET = route({}, async (req, { user }) => {
   const search  = searchParams.get('search')  || ''
 
   const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
+  if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
   const conditions: any[] = [
     { metadata: { path: ['isExamBank'], equals: true } },
+    { teacherId: teacher.id },
   ]
   if (subject) conditions.push({ subject: { contains: subject, mode: 'insensitive' } })
   if (grade)   conditions.push({ grade:   { contains: grade,   mode: 'insensitive' } })
@@ -21,10 +23,8 @@ export const GET = route({}, async (req, { user }) => {
   if (term)    conditions.push({ metadata: { path: ['term'], equals: term } })
   if (type)    conditions.push({ metadata: { path: ['type'], equals: type } })
 
-  const where: any = { AND: conditions }
-
   const exams = await prisma.assignment.findMany({
-    where,
+    where: { AND: conditions },
     include: { teacher: { include: { user: true } } },
     orderBy: { createdAt: 'desc' },
     take: 100,
@@ -33,7 +33,7 @@ export const GET = route({}, async (req, { user }) => {
   return NextResponse.json({ exams })
 })
 
-export const POST = route({}, async (req, { user }) => {
+export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
   let teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
   if (!teacher) {
     teacher = await prisma.teacher.create({ data: { userId: user.id } })
@@ -67,6 +67,7 @@ export const POST = route({}, async (req, { user }) => {
       content:     content ?? '',
       answerKey:   answerKey ?? null,
       isTimed:     isTimed ?? false,
+      aiGradeable: true,
       timeLimit:   timeLimit ?? null,
       startTime:   startTime ?? null,
       metadata:    bankMetadata,

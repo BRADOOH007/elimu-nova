@@ -10,11 +10,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   BookOpen, Brain, CheckCircle, Loader2, RefreshCw, Play, Target, X,
-  Compass, Repeat, GitBranch, ArrowRight, Sparkles, Trophy, Flame, Clock, Star
+  Compass, Repeat, GitBranch, ArrowRight, Sparkles, Trophy, Flame, Clock, Star, Zap, AlertCircle
 } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { CurriculumBrowser } from '@/components/student/curriculum-browser'
 import { Recommendations } from '@/components/student/recommendations'
+import { FocusTimer } from '@/components/student/focus-timer'
+import { AIStudyBuddy } from '@/components/student/ai-study-buddy'
+import { getGameState, updateStreak, awardXP, completeLesson, completeQuiz, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
+import { addMistake, getMistakeCount, markMistakeReviewed, getUnreviewedMistakes } from '@/lib/mistake-bank'
 
 // Types & constants (keep from original)
 interface QuizQ {
@@ -78,9 +82,33 @@ export default function LearnPage() {
   const [savedNotes, setSavedNotes] = useState<Array<{id:string;text:string;topic:string}>>([])
   const [notesOpen, setNotesOpen] = useState(false)
 
-  // Streak (mock — replace with real data)
-  const [streak, setStreak] = useState(3)
-  const [todayLessons, setTodayLessons] = useState(2)
+  // ── Gamification State (XP, Levels, Streak) ─────────────────
+  const [gameState, setGameState] = useState(() => updateStreak(getGameState()))
+  const [showXpGain, setShowXpGain] = useState<{ amount: number; visible: boolean }>({ amount: 0, visible: false })
+  const todayStr = new Date().toISOString().split('T')[0]
+
+  // Daily challenge
+  const [dailyTopic, setDailyTopic] = useState('')
+  const [dailySubject, setDailySubject] = useState('')
+  const [dailyDone, setDailyDone] = useState(!!localStorage.getItem(`daily_done_${todayStr}`))
+
+  // Mistake review
+  const [mistakeMode, setMistakeMode] = useState(false)
+  const [mistakeIdx, setMistakeIdx] = useState(0)
+
+  const flashXp = (amount: number) => {
+    setShowXpGain({ amount, visible: true })
+    setTimeout(() => setShowXpGain({ amount: 0, visible: false }), 2000)
+  }
+
+  const addXp = (amount: number) => {
+    setGameState(prev => { const gs = awardXP(prev, amount); persistGameState(gs); return gs })
+    flashXp(amount)
+  }
+
+  const levelName = getLevelName(gameState.level)
+  const xpProgress = getXpToNextLevel(gameState.xp)
+  const unreviewedMistakes = getUnreviewedMistakes()
 
   // ── Learning Path ──────────────────────────────────────────
   const fetchLearningPath = async (subj?: string, grade?: string) => {
@@ -131,6 +159,16 @@ export default function LearnPage() {
     setStudySubject(subject); setStudyTopic(topic); generateLesson(subject, topic)
   }
 
+  const startDailyChallenge = () => {
+    if (!dailyTopic) return
+    setStudySubject(dailySubject)
+    setStudyTopic(dailyTopic)
+    localStorage.setItem(`daily_done_${todayStr}`, '1')
+    setDailyDone(true)
+    addXp(XP_REWARDS.dailyChallenge)
+    generateLesson(dailySubject, dailyTopic)
+  }
+
   // ── Active Recall Handlers ────────────────────────────────
   const handleRecallChange = (i: number, val: string | number) => {
     setRecallAnswers(prev => { const next = [...prev]; next[i] = val; return next })
@@ -144,12 +182,16 @@ export default function LearnPage() {
       if (q.type === 'mcq' && userAns !== undefined) {
         const idx = typeof userAns === 'number' ? userAns : parseInt(userAns as string)
         if (idx === (q.options?.findIndex(o => o === q.answer) ?? -1)) correct++
-      } else if (typeof userAns === 'string' && userAns.trim().toLowerCase().includes(q.answer.trim().toLowerCase())) correct++
+        else addMistake(q.question, q.options?.[idx] || String(userAns), q.answer, activeLesson.topic, activeLesson.subject)
+      } else if (typeof userAns === 'string') {
+        if (userAns.trim().toLowerCase().includes(q.answer.trim().toLowerCase())) correct++
+        else addMistake(q.question, userAns, q.answer, activeLesson.topic, activeLesson.subject)
+      }
     })
     const score = activeLesson.recall.length > 0 ? Math.round((correct / activeLesson.recall.length) * 100) : 0
     setRecallScore(score); setRecallSubmitted(true)
     scheduleReview(activeLesson, score)
-    setTodayLessons(p => p + 1)
+    addXp(XP_REWARDS.lessonComplete + (correct * 5))
   }
 
   const scheduleReview = (lesson: ActiveLessonData, score: number) => {
@@ -195,12 +237,15 @@ export default function LearnPage() {
   const submitQuiz = () => {
     let correct = 0
     quizQuestions.forEach((q, i) => {
+      const ans = quizAnswers[i]
       if (q.type === 'multiple_choice' || q.type === 'true_false') {
-        if (quizAnswers[i] !== undefined && Number(quizAnswers[i]) === q.correct_answer) correct++
+        if (ans !== undefined && Number(ans) === q.correct_answer) correct++
+        else if (q.options) addMistake(q.question, q.options[Number(ans)] || String(ans), q.options[q.correct_answer!] || '', studyTopic, studySubject)
       }
     })
     const score = quizQuestions.length > 0 ? Math.round((correct / quizQuestions.length) * 100) : 0
     setQuizScore(score); setQuizSubmitted(true)
+    addXp(XP_REWARDS.quizCorrect * Math.max(1, correct))
   }
 
   // ── Spaced Repetition ─────────────────────────────────────
@@ -227,22 +272,104 @@ export default function LearnPage() {
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
 
-      {/* ── Greeting + Streak Bar ── */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">Your Learning Journey</h1>
-          <p className="text-slate-500 text-sm mt-0.5">Study a topic, take a quiz, beat your streak</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5">
-            <Flame className="h-4 w-4 text-amber-500" />
-            <span className="text-sm font-bold text-amber-700">{streak} day streak</span>
+      {/* ── Greeting + XP Bar + Daily Challenge ── */}
+      <div className="space-y-3">
+        {/* Top Bar */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-2xl font-extrabold text-slate-900">Your Learning Journey</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Study a topic, take a quiz, beat your streak</p>
           </div>
-          <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5">
-            <Target className="h-4 w-4 text-emerald-500" />
-            <span className="text-sm font-bold text-emerald-700">{todayLessons} today</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5">
+              <Flame className="h-4 w-4 text-amber-500" />{gameState.streak}d
+            </div>
+            <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1.5">
+              <Zap className="h-4 w-4 text-indigo-500" />Lv.{gameState.level}
+            </div>
+            {getMistakeCount().unreviewed > 0 && (
+              <button onClick={() => { setMistakeMode(true); setMistakeIdx(0) }}
+                className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-full px-3 py-1.5 hover:bg-red-100">
+                <AlertCircle className="h-4 w-4 text-red-500" />{getMistakeCount().unreviewed}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* XP Progress Bar */}
+        <div className="bg-white border border-slate-200 rounded-xl p-3">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-xs font-bold text-slate-700">{levelName}</span>
+            </div>
+            <span className="text-xs font-bold text-indigo-600">{gameState.xp} XP</span>
+          </div>
+          <div className="bg-slate-100 rounded-full h-2 overflow-hidden relative">
+            <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 rounded-full transition-all duration-500" style={{width:`${xpProgress.progress}%`}} />
+          </div>
+          <div className="flex justify-between mt-1">
+            <span className="text-[10px] text-slate-400">{levelName}</span>
+            <span className="text-[10px] text-slate-400">{getLevelName(gameState.level + 1)}</span>
+          </div>
+        </div>
+
+        {/* XP Gain Toast */}
+        {showXpGain.visible && (
+          <div className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-full px-4 py-1.5 text-sm font-bold inline-flex items-center gap-1.5 animate-bounce">
+            <Zap className="h-4 w-4" />+{showXpGain.amount} XP!
+          </div>
+        )}
+
+        {/* Daily Challenge */}
+        {!dailyDone && dailyTopic && (
+          <Card className="border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={startDailyChallenge}>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                  <Trophy className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-amber-900">Daily Challenge</p>
+                  <p className="text-xs text-amber-700">{dailySubject}: {dailyTopic} — +{XP_REWARDS.dailyChallenge} XP</p>
+                </div>
+              </div>
+              <Play className="h-5 w-5 text-amber-600" />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Focus Timer (collapsible) */}
+        {activeLesson && studyPhase === 'learn' && <FocusTimer onComplete={(m) => addXp(10)} />}
+
+        {/* Mistake Review */}
+        {mistakeMode && unreviewedMistakes.length > 0 && (
+          <Card className="border-2 border-red-300 bg-gradient-to-r from-red-50 to-rose-50 shadow-sm">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="font-bold text-red-800 text-sm flex items-center gap-2"><AlertCircle className="h-4 w-4" />Mistake Review ({mistakeIdx + 1}/{unreviewedMistakes.length})</p>
+                <button onClick={() => setMistakeMode(false)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
+              </div>
+              {(() => {
+                const m = unreviewedMistakes[mistakeIdx]
+                if (!m) return null
+                return (
+                  <div className="space-y-2 bg-white rounded-xl p-3">
+                    <p className="text-sm text-slate-700 font-semibold">{m.question}</p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded">Your answer: {m.yourAnswer}</span>
+                      <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded">Correct: {m.correctAnswer}</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { markMistakeReviewed(m.id); setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Got it</Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Skip</Button>
+                    </div>
+                  </div>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* ── Due Reviews ── */}
@@ -525,6 +652,13 @@ export default function LearnPage() {
           </CardContent>
         )}
       </Card>
+
+      {/* AI Study Buddy — always visible at bottom */}
+      <AIStudyBuddy
+        currentSubject={studySubject}
+        currentTopic={studyTopic}
+        onStartStudy={(s, t) => { setStudySubject(s); setStudyTopic(t); generateLesson(s, t) }}
+      />
     </div>
   )
 }

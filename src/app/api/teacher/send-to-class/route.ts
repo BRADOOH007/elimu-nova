@@ -69,6 +69,7 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
         grade:       grade || null,
         isTimed:     isTimed,
         timeLimit:   timeLimit || null,
+        aiGradeable: true,
         students: { connect: targetStudents },
       },
       select: {

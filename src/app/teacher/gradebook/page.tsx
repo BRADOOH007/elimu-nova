@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
-  BarChart3, Save, Download, Loader2, CheckCircle, Users, BookOpen, ClipboardList,
-  TrendingUp, TrendingDown, Minus, ChevronDown, ChevronUp, Keyboard
+  BarChart3, Download, Loader2, CheckCircle, Users, BookOpen, ClipboardList,
+  TrendingUp, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -26,13 +26,7 @@ export default function GradebookPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [stats, setStats] = useState<any>(null)
   const [selectedAsn, setSelectedAsn] = useState('')
-  const [marks, setMarks] = useState<Record<string, string>>({})
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [focusIndex, setFocusIndex] = useState(0)
-  const [showGuide, setShowGuide] = useState(false)
-  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
   useEffect(() => {
     fetch('/api/teacher/gradebook')
@@ -41,14 +35,7 @@ export default function GradebookPage() {
         setClasses(d.classes || [])
         setAssignments(d.assignments || [])
         setStats(d.stats)
-        if (d.assignments?.length > 0) {
-          setSelectedAsn(d.assignments[0].id)
-          const existing: Record<string, string> = {}
-          d.assignments[0].submissions.forEach((s: Submission) => {
-            if (s.grade !== null) existing[s.studentId] = String(s.grade)
-          })
-          setMarks(existing)
-        }
+        if (d.assignments?.length > 0) setSelectedAsn(d.assignments[0].id)
       })
       .catch(() => toast({ title: 'Failed to load gradebook', variant: 'destructive' }))
       .finally(() => setLoading(false))
@@ -59,71 +46,6 @@ export default function GradebookPage() {
 
   const handleSelect = (id: string) => {
     setSelectedAsn(id)
-    setSaved(false)
-    const asn = assignments.find(a => a.id === id)
-    if (asn) {
-      const existing: Record<string, string> = {}
-      asn.submissions.forEach(s => { if (s.grade !== null) existing[s.studentId] = String(s.grade) })
-      setMarks(existing)
-    }
-    setFocusIndex(0)
-  }
-
-  const setGrade = (studentId: string, value: string) => {
-    setMarks(p => ({ ...p, [studentId]: value }))
-    setSaved(false)
-  }
-
-  const saveMarks = async () => {
-    if (!selectedAsn) return
-    setSaving(true)
-    try {
-      const marksArray = Object.entries(marks).map(([studentId, score]) => ({
-        studentId,
-        score: parseFloat(score) || 0,
-      }))
-      const res = await fetch('/api/teacher/gradebook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assignmentId: selectedAsn, marks: marksArray }),
-      })
-      if (res.ok) {
-        setSaved(true)
-        toast({ title: 'Grades saved successfully' })
-      } else {
-        const err = await res.json().catch(() => ({ error: 'Failed' }))
-        toast({ title: 'Error', description: err.error, variant: 'destructive' })
-      }
-    } catch {
-      toast({ title: 'Error saving grades', variant: 'destructive' })
-    } finally { setSaving(false) }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent, idx: number) => {
-    if (e.key === 'ArrowDown' || e.key === 'Enter') {
-      e.preventDefault()
-      const next = Math.min(idx + 1, submissions.length - 1)
-      setFocusIndex(next)
-      inputRefs.current[submissions[next]?.studentId]?.focus()
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      const prev = Math.max(idx - 1, 0)
-      setFocusIndex(prev)
-      inputRefs.current[submissions[prev]?.studentId]?.focus()
-    } else if (e.key === 'Tab' && !e.shiftKey) {
-      if (idx === submissions.length - 1) {
-        e.preventDefault()
-        inputRefs.current[submissions[0]?.studentId]?.focus()
-        setFocusIndex(0)
-      }
-    } else if (e.key === 'Tab' && e.shiftKey) {
-      if (idx === 0) {
-        e.preventDefault()
-        const last = submissions.length - 1
-        inputRefs.current[submissions[last]?.studentId]?.focus()
-        setFocusIndex(last)
-      }
-    }
   }
 
   const exportCSV = () => {
@@ -132,7 +54,7 @@ export default function GradebookPage() {
       ['Student', 'Score'],
       ...submissions.map(s => [
         `${s.student.user.firstName} ${s.student.user.lastName}`,
-        marks[s.studentId] || '',
+        s.grade ?? '',
       ]),
       [],
       ['Grade Distribution'],
@@ -146,33 +68,8 @@ export default function GradebookPage() {
     URL.revokeObjectURL(url)
   }
 
-  const applyCurve = (points: number) => {
-    setMarks(prev => {
-      const next = { ...prev }
-      Object.keys(next).forEach(id => {
-        const v = parseFloat(next[id])
-        if (!isNaN(v)) next[id] = String(Math.min(100, Math.max(0, v + points)))
-      })
-      return next
-    })
-    setSaved(false)
-  }
-
-  const bulkPass = () => {
-    const threshold = 50
-    setMarks(prev => {
-      const next = { ...prev }
-      Object.keys(next).forEach(id => {
-        const v = parseFloat(next[id])
-        if (!isNaN(v) && v < threshold) next[id] = String(threshold)
-      })
-      return next
-    })
-    setSaved(false)
-  }
-
-  const graded = submissions.filter(s => marks[s.studentId] && marks[s.studentId] !== '')
-  const numericGrades = graded.map(s => parseFloat(marks[s.studentId])).filter(v => !isNaN(v))
+  const graded = submissions.filter(s => s.grade !== null)
+  const numericGrades = graded.map(s => s.grade as number)
   const avg = numericGrades.length > 0 ? (numericGrades.reduce((a, b) => a + b, 0) / numericGrades.length).toFixed(1) : '—'
   const maxGrade = numericGrades.length > 0 ? Math.max(...numericGrades) : 0
   const minGrade = numericGrades.length > 0 ? Math.min(...numericGrades) : 0
@@ -188,26 +85,10 @@ export default function GradebookPage() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Smart Gradebook</h1>
-          <p className="text-sm text-gray-500">Keyboard-navigable grade entry with live stats and analysis</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setShowGuide(!showGuide)}>
-          <Keyboard className="w-4 h-4 mr-2" /> Shortcuts
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Gradebook</h1>
+        <p className="text-sm text-gray-500">All grades are auto-generated by the system. Review results here.</p>
       </div>
-
-      {showGuide && (
-        <Card className="border-0 shadow-md bg-gradient-to-br from-blue-50 to-indigo-50">
-          <CardContent className="p-4 text-sm space-y-1">
-            <p><kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono border">Tab</kbd> Next student</p>
-            <p><kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono border">Shift+Tab</kbd> Previous student</p>
-            <p><kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono border">↑</kbd> <kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono border">↓</kbd> Navigate students</p>
-            <p><kbd className="px-1.5 py-0.5 bg-white rounded text-xs font-mono border">Enter</kbd> Move to next student</p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Grade Distribution + Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -277,19 +158,8 @@ export default function GradebookPage() {
         </select>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => applyCurve(5)} title="Add 5 points to all grades">
-            <TrendingUp className="w-3.5 h-3.5 mr-1" /> Curve +5
-          </Button>
-          <Button variant="outline" size="sm" onClick={bulkPass} title="Set all below 50 to 50">
-            <CheckCircle className="w-3.5 h-3.5 mr-1" /> Min 50
-          </Button>
           <Button variant="outline" size="sm" onClick={exportCSV}>
             <Download className="w-3.5 h-3.5 mr-1" /> CSV
-          </Button>
-          <Button onClick={saveMarks} disabled={saving || !selectedAsn}
-            className={`${saved ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-900 hover:bg-gray-800'} text-white`}>
-            {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : saved ? <CheckCircle className="w-4 h-4 mr-1" /> : <Save className="w-4 h-4 mr-1" />}
-            {saving ? 'Saving...' : saved ? 'Saved' : 'Save All'}
           </Button>
         </div>
       </div>
@@ -305,17 +175,14 @@ export default function GradebookPage() {
               <div className="w-24 text-center">Status</div>
               <div className="w-16 text-center">%</div>
             </div>
-            {submissions.map((sub, idx) => {
-              const score = marks[sub.studentId]
-              const numeric = parseFloat(score)
-              const pct = !isNaN(numeric) && currentAsn.totalMarks > 0 ? Math.round((numeric / currentAsn.totalMarks) * 100) : 0
+            {submissions.map((sub) => {
+              const numeric = sub.grade
+              const pct = numeric !== null && currentAsn.totalMarks > 0 ? Math.round((numeric / currentAsn.totalMarks) * 100) : 0
               const name = `${sub.student.user.firstName} ${sub.student.user.lastName}`
-              const isFocused = idx === focusIndex
 
               return (
                 <div key={sub.id}
-                  className={`flex items-center gap-4 px-5 py-2.5 transition-colors ${isFocused ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-                  onClick={() => { setFocusIndex(idx); inputRefs.current[sub.studentId]?.focus() }}
+                  className="flex items-center gap-4 px-5 py-2.5 transition-colors hover:bg-gray-50"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0">
                     <span className="text-white text-[10px] font-bold">{name.split(' ').map(n => n[0]).join('')}</span>
@@ -323,28 +190,20 @@ export default function GradebookPage() {
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-gray-900 truncate">{name}</p>
                   </div>
-                  <input
-                    ref={el => { inputRefs.current[sub.studentId] = el }}
-                    type="number"
-                    min={0} max={currentAsn.totalMarks}
-                    value={score || ''}
-                    onChange={e => setGrade(sub.studentId, e.target.value)}
-                    onKeyDown={e => handleKeyDown(e, idx)}
-                    onFocus={() => setFocusIndex(idx)}
-                    placeholder="—"
-                    className={`w-20 h-9 px-2 text-center border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 shrink-0 ${isFocused ? 'ring-2 ring-blue-500 border-blue-500' : 'border-gray-200'}`}
-                  />
+                  <div className="w-20 text-center font-bold text-sm text-gray-800">
+                    {numeric !== null ? numeric : '—'}
+                  </div>
                   <div className="w-24 text-center">
-                    {score && !isNaN(numeric) ? (
+                    {numeric !== null ? (
                       <Badge className={`border-0 text-xs ${pct >= 80 ? 'bg-green-100 text-green-700' : pct >= 50 ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
                         {pct >= 80 ? 'Excellent' : pct >= 50 ? 'Pass' : 'Fail'}
                       </Badge>
                     ) : (
-                      <span className="text-xs text-gray-300">—</span>
+                      <span className="text-xs text-gray-300">Pending</span>
                     )}
                   </div>
                   <div className="w-16 text-center font-bold text-sm text-gray-800">
-                    {score && !isNaN(numeric) ? `${pct}%` : '—'}
+                    {numeric !== null ? `${pct}%` : '—'}
                   </div>
                 </div>
               )

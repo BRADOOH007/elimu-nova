@@ -47,6 +47,7 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
       dueDate: new Date(Date.now() + (duration || 7) * 24 * 60 * 60 * 1000),
       status: 'PENDING',
       teacherId: student.teacherId ?? '',
+      aiGradeable: true,
       students: {
         connect: [{ id: student.id }]
       },

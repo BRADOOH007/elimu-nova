@@ -2,6 +2,28 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
+// Belt-and-suspenders: strip any grader-only keys (correctAnswer/answer) from
+// question objects embedded in content, so legacy exams created before content
+// sanitization can never expose answers to students.
+function sanitizeContentForStudent(content: string | null): string | null {
+  if (!content) return content
+  try {
+    const parsed = JSON.parse(content)
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.questions)) {
+      parsed.questions = parsed.questions.map((q: any) => {
+        const safe: Record<string, unknown> = {}
+        for (const [k, v] of Object.entries(q)) {
+          if (k === 'correctAnswer' || k === 'answer') continue
+          safe[k] = v
+        }
+        return safe
+      })
+      return JSON.stringify(parsed)
+    }
+  } catch { /* not JSON — leave as-is */ }
+  return content
+}
+
 export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user, params }) => {
   const { id } = params
 
@@ -96,7 +118,7 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user, p
     id: assignment.id,
     title: assignment.title,
     description: assignment.description,
-    content: assignment.content,
+    content: isStudent ? sanitizeContentForStudent(assignment.content) : assignment.content,
     dueDate: assignment.dueDate,
     status: assignment.status,
     isTimed: assignment.isTimed,

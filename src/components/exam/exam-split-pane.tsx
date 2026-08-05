@@ -87,7 +87,7 @@ export default function ExamSplitPane({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
-  const handleAnswer = (qId: number, value: string) => {
+  const handleAnswer = (qId: number | string, value: string) => {
     const updated = { ...answers, [String(qId)]: value }
     setAnswers(updated)
     answersRef.current = updated
