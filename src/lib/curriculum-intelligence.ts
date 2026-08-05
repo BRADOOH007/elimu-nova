@@ -6,6 +6,7 @@ import {
   CBC_THEMES,
   CBC_SUBJECT_LESSON_ALLOCATION,
 } from '@/lib/cbc-context'
+import { retrieveRelevantContext } from '@/lib/rag-pipeline'
 
 export interface CurriculumContext {
   grade: string
@@ -251,7 +252,12 @@ export async function buildFullGenerationContext(
     generationType: 'scheme_of_work' | 'lesson_plan'
     teacherId?: string
   }
-): Promise<{ curriculumSection: string; examplesSection: string; context: CurriculumContext | null }> {
+): Promise<{
+  curriculumSection: string
+  examplesSection: string
+  ragContext: string
+  context: CurriculumContext | null
+}> {
   const context = await getCurriculumContext(grade, subject, {
     topic: options.topic,
     strandName: options.strandName,
@@ -261,8 +267,17 @@ export async function buildFullGenerationContext(
     ? buildCurriculumPromptSection(context)
     : ''
 
-  const examples = await getDocumentExamples(grade, subject, options.generationType, 3)
-  const examplesSection = buildDocumentExamplesSection(examples)
+  let examplesSection = ''
+  try {
+    const examples = await getDocumentExamples(grade, subject, options.generationType, 3)
+    examplesSection = buildDocumentExamplesSection(examples)
+  } catch { /* document_library table may not exist yet */ }
 
-  return { curriculumSection, examplesSection, context }
+  let ragContext = ''
+  try {
+    const searchQuery = [grade, subject, options.topic || '', options.strandName || ''].filter(Boolean).join(' ')
+    ragContext = await retrieveRelevantContext(searchQuery, grade, subject, options.generationType, 3)
+  } catch { /* pgvector may not be enabled yet */ }
+
+  return { curriculumSection, examplesSection, ragContext, context }
 }

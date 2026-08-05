@@ -14,7 +14,7 @@ import { prisma } from '@/lib/prisma'
 import { type AIMessage, callAI } from '@/lib/ai-provider'
 import { buildKICDSchemePrompt, CBC_SUBJECT_LESSON_ALLOCATION } from '@/lib/cbc-context'
 import { route } from '@/lib/api-middleware'
-import { getCurriculumContext, buildCurriculumPromptSection, getDocumentExamples, buildDocumentExamplesSection } from '@/lib/curriculum-intelligence'
+import { buildFullGenerationContext } from '@/lib/curriculum-intelligence'
 
 export interface KICDRow {
   week: number; lesson: number; strand: string; subStrand: string
@@ -258,11 +258,10 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
 
     const kicdCtx = buildKICDSchemePrompt(grade, subject)
 
-    // Fetch curriculum intelligence — official outcomes + teacher examples
-    const curriculumCtx = await getCurriculumContext(grade, subject)
-    const curriculumSection = curriculumCtx ? buildCurriculumPromptSection(curriculumCtx) : ''
-    const docExamples = await getDocumentExamples(grade, subject, 'scheme_of_work', 3)
-    const examplesSection = buildDocumentExamplesSection(docExamples)
+    // Fetch curriculum intelligence — official outcomes + teacher examples + RAG
+    const { curriculumSection, examplesSection, ragContext } = await buildFullGenerationContext(
+      grade, subject as string, { generationType: 'scheme_of_work' }
+    )
 
     const topicsStr = topics.map(t => `- ${t.strand} → ${t.subStrand}`).join('\n')
 
@@ -277,6 +276,7 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
       try {
         const systemPrompt = `You are a Kenyan CBC/CBE education expert creating official KICD schemes of work.${templateBlock}${kicdCtx}
 ${curriculumSection}
+${ragContext}
 ${examplesSection}
 Return ONLY a raw JSON array. First char [ last char ]. No markdown. No explanation.
 Each object: {"week":<1-${weeksCount}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"By the end of the lesson, the learner should be able to...","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":40}
@@ -311,6 +311,7 @@ CBC-aligned. Kenya-specific examples. ${grade} ${subject}. Distribute topics: ${
         try {
           const systemPrompt = `You are a Kenyan CBC/CBE education expert creating official KICD schemes of work.${kicdCtx}
 ${curriculumSection}
+${ragContext}
 ${examplesSection}
 Return ONLY a raw JSON array. First char [ last char ]. No markdown. No explanation.
 Each object: {"week":<${startWeek}-${startWeek + chunkWeeks - 1}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"By the end of the lesson, the learner should be able to...","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":40}

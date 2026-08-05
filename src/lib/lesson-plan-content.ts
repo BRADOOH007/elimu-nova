@@ -61,7 +61,7 @@ export function extractMarkdownContent(content: any): string | null {
 const HEADER_ALIASES: Record<string, string> = {
   shule: 'school',
   mwalimu: 'teacher',
-  eneolasomaso: 'learningArea',
+  eneolamasomo: 'learningArea',
   eneolakujifunza: 'learningArea',
   somo: 'lesson',
   darasa: 'grade',

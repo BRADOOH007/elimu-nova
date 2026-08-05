@@ -108,29 +108,30 @@ function toArray(v: any): string[] {
 }
 
 export function LessonCard({ lesson, teacherName, date }: { lesson: any; teacherName?: string; date?: string }) {
-  const useKICD = isKICDFormat(lesson)
-  const header = lesson.lessonHeader || {}
-  const school = header.school || lesson.school || ''
+  const l = normalizeLessonContent(lesson) ?? {}
+  const useKICD = isKICDFormat(l)
+  const header = l.lessonHeader || {}
+  const school = header.school || l.school || ''
   const teacher = header.teacher || teacherName || ''
   const dateStr = header.date || date || ''
-  const enrolment = header.enrolment || lesson.enrolment
+  const enrolment = header.enrolment || l.enrolment
 
-  const slos = toArray(lesson.specificLearningOutcomes)
-  const kips = toArray(lesson.keyInquiryQuestions)
-  const comps = toArray(lesson.coreCompetencies)
-  const values = toArray(lesson.values)
-  const pcis = toArray(lesson.pcis)
-  const resources = toArray(lesson.learningResources)
+  const slos = toArray(l.specificLearningOutcomes)
+  const kips = toArray(l.keyInquiryQuestions)
+  const comps = toArray(l.coreCompetencies)
+  const values = toArray(l.values)
+  const pcis = toArray(l.pcis)
+  const resources = toArray(l.learningResources)
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3">
-        <h3 className="text-white font-bold text-sm">{lesson.title || 'Lesson Plan'}</h3>
+        <h3 className="text-white font-bold text-sm">{l.title || 'Lesson Plan'}</h3>
         <div className="flex flex-wrap gap-2 mt-1">
-          {(lesson.duration || header.duration) && (
-            <span className="text-blue-100 text-xs"><Clock className="w-3 h-3 inline mr-1" />{lesson.duration || header.duration} min</span>
+          {(l.duration || header.duration) && (
+            <span className="text-blue-100 text-xs"><Clock className="w-3 h-3 inline mr-1" />{l.duration || header.duration} min</span>
           )}
-          {useKICD && lesson.strand && <span className="text-blue-100 text-xs"><BookOpen className="w-3 h-3 inline mr-1" />{lesson.strand}</span>}
+          {useKICD && l.strand && <span className="text-blue-100 text-xs"><BookOpen className="w-3 h-3 inline mr-1" />{l.strand}</span>}
         </div>
       </div>
       <div className="p-4 space-y-3">
@@ -144,23 +145,23 @@ export function LessonCard({ lesson, teacherName, date }: { lesson: any; teacher
             {header.term && <div><span className="font-medium">Term:</span> {header.term}</div>}
             {header.week && <div><span className="font-medium">Week:</span> {header.week}</div>}
             {header.lesson && <div><span className="font-medium">Lesson:</span> {header.lesson}</div>}
-            {(header.duration || lesson.duration) && <div><span className="font-medium">Duration:</span> {header.duration || lesson.duration} min</div>}
+            {(header.duration || l.duration) && <div><span className="font-medium">Duration:</span> {header.duration || l.duration} min</div>}
             {dateStr && <div><span className="font-medium">Date:</span> {dateStr}</div>}
             {enrolment ? <div><span className="font-medium">Enrolment:</span> {enrolment}</div> : null}
           </div>
         )}
 
         {/* ── Strand / Sub-Strand ── */}
-        {(lesson.strand || lesson.subStrand) && (
+        {(l.strand || l.subStrand) && (
           <SectionBlock label="Strand / Sub-Strand">
-            <p>{lesson.strand}{lesson.strand && lesson.subStrand ? ' → ' : ''}{lesson.subStrand}</p>
+            <p>{l.strand}{l.strand && l.subStrand ? ' → ' : ''}{l.subStrand}</p>
           </SectionBlock>
         )}
 
         {/* ── SLOs ── */}
         {slos.length > 0 && (
-          <SectionBlock label={Array.isArray(lesson.specificLearningOutcomes) ? 'Specific Learning Outcomes' : 'Learning Outcomes'}>
-            {Array.isArray(lesson.specificLearningOutcomes)
+          <SectionBlock label={Array.isArray(l.specificLearningOutcomes) ? 'Specific Learning Outcomes' : 'Learning Outcomes'}>
+            {Array.isArray(l.specificLearningOutcomes)
               ? slos.map((slo, i) => <p key={i} className="mb-0.5">{i + 1}. {slo}</p>)
               : <p>{slos[0]}</p>}
           </SectionBlock>
@@ -209,46 +210,46 @@ export function LessonCard({ lesson, teacherName, date }: { lesson: any; teacher
         )}
 
         {/* ── Organisation of Learning (KICD) ── */}
-        {lesson.organisationOfLearning ? (
+        {l.organisationOfLearning ? (
           <>
-            <Step label="Introduction" step={lesson.organisationOfLearning.introduction} />
-            <Step label="Step 1" step={lesson.organisationOfLearning.step1} />
-            <Step label="Step 2" step={lesson.organisationOfLearning.step2} />
-            <Step label="Step 3" step={lesson.organisationOfLearning.step3} />
-            <Step label="Conclusion" step={lesson.organisationOfLearning.conclusion} />
+            <Step label="Introduction" step={l.organisationOfLearning.introduction} />
+            <Step label="Step 1" step={l.organisationOfLearning.step1} />
+            <Step label="Step 2" step={l.organisationOfLearning.step2} />
+            <Step label="Step 3" step={l.organisationOfLearning.step3} />
+            <Step label="Conclusion" step={l.organisationOfLearning.conclusion} />
           </>
         ) : (
           <>
             {/* ── Legacy structure (backward compat) ── */}
-            {lesson.introduction && (
+            {l.introduction && (
               <SectionBlock label="Introduction">
-                <p className="text-xs text-slate-500 mb-0.5">{lesson.introduction.duration} min</p>
-                <p>{lesson.introduction.activity}</p>
+                <p className="text-xs text-slate-500 mb-0.5">{l.introduction.duration} min</p>
+                <p>{l.introduction.activity}</p>
               </SectionBlock>
             )}
-            {lesson.mainActivity && (
+            {l.mainActivity && (
               <SectionBlock label="Main Activity">
-                <p className="text-xs text-slate-500 mb-0.5">{lesson.mainActivity.duration} min</p>
-                <p>{lesson.mainActivity.activity}</p>
-                {lesson.mainActivity.coreCompetencies && toArray(lesson.mainActivity.coreCompetencies).length > 0 && (
+                <p className="text-xs text-slate-500 mb-0.5">{l.mainActivity.duration} min</p>
+                <p>{l.mainActivity.activity}</p>
+                {l.mainActivity.coreCompetencies && toArray(l.mainActivity.coreCompetencies).length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {toArray(lesson.mainActivity.coreCompetencies).map((c, i) => (
+                    {toArray(l.mainActivity.coreCompetencies).map((c, i) => (
                       <span key={i} className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">{c}</span>
                     ))}
                   </div>
                 )}
               </SectionBlock>
             )}
-            {lesson.practiceActivity && (
+            {l.practiceActivity && (
               <SectionBlock label="Practice">
-                <p className="text-xs text-slate-500 mb-0.5">{lesson.practiceActivity.duration} min</p>
-                <p>{lesson.practiceActivity.activity}</p>
+                <p className="text-xs text-slate-500 mb-0.5">{l.practiceActivity.duration} min</p>
+                <p>{l.practiceActivity.activity}</p>
               </SectionBlock>
             )}
-            {lesson.conclusion && (
+            {l.conclusion && (
               <SectionBlock label="Conclusion">
-                <p className="text-xs text-slate-500 mb-0.5">{lesson.conclusion.duration} min</p>
-                <p>{lesson.conclusion.activity}</p>
+                <p className="text-xs text-slate-500 mb-0.5">{l.conclusion.duration} min</p>
+                <p>{l.conclusion.activity}</p>
               </SectionBlock>
             )}
           </>
@@ -264,31 +265,31 @@ export function LessonCard({ lesson, teacherName, date }: { lesson: any; teacher
         )}
 
         {/* ── Assessment ── */}
-        {lesson.assessment && (
+        {l.assessment && (
           <SectionBlock label="Assessment">
-            <p>{lesson.assessment}</p>
+            <p>{l.assessment}</p>
           </SectionBlock>
         )}
 
         {/* ── Extended Activities (KICD) / Legacy fields ── */}
-        {(lesson.extendedActivities || lesson.homework) && (
-          <SectionBlock label={lesson.extendedActivities ? 'Extended Activities' : 'Homework'}>
-            <p>{lesson.extendedActivities || lesson.homework}</p>
+        {(l.extendedActivities || l.homework) && (
+          <SectionBlock label={l.extendedActivities ? 'Extended Activities' : 'Homework'}>
+            <p>{l.extendedActivities || l.homework}</p>
           </SectionBlock>
         )}
 
         {/* ── Differentiation (legacy) ── */}
-        {lesson.differentiation && (
+        {l.differentiation && (
           <SectionBlock label="Differentiation">
-            {lesson.differentiation.support && <p className="mb-0.5"><span className="font-medium">Support:</span> {lesson.differentiation.support}</p>}
-            {lesson.differentiation.extension && <p><span className="font-medium">Extension:</span> {lesson.differentiation.extension}</p>}
+            {l.differentiation.support && <p className="mb-0.5"><span className="font-medium">Support:</span> {l.differentiation.support}</p>}
+            {l.differentiation.extension && <p><span className="font-medium">Extension:</span> {l.differentiation.extension}</p>}
           </SectionBlock>
         )}
 
         {/* ── Reflection ── */}
-        {(lesson.reflection || lesson.teacherReflection) && (
+        {(l.reflection || l.teacherReflection) && (
           <SectionBlock label="Teacher Reflection">
-            <p className="italic text-slate-500">{lesson.reflection || lesson.teacherReflection}</p>
+            <p className="italic text-slate-500">{l.reflection || l.teacherReflection}</p>
           </SectionBlock>
         )}
       </div>

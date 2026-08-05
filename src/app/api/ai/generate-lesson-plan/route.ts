@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { buildKICDLessonPrompt } from '@/lib/cbc-context'
 import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
-import { getCurriculumContext, buildCurriculumPromptSection, getDocumentExamples, buildDocumentExamplesSection } from '@/lib/curriculum-intelligence'
+import { buildFullGenerationContext } from '@/lib/curriculum-intelligence'
 
 export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const body = await request.json()
@@ -49,16 +49,16 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, 
 
     const kicdContext = buildKICDLessonPrompt(grade, subject)
 
-    // Fetch curriculum intelligence — official outcomes + teacher examples
-    const curriculumCtx = await getCurriculumContext(grade, subject, { topic })
-    const curriculumSection = curriculumCtx ? buildCurriculumPromptSection(curriculumCtx) : ''
-    const docExamples = await getDocumentExamples(grade, subject, 'lesson_plan', 2)
-    const examplesSection = buildDocumentExamplesSection(docExamples)
+    // Fetch curriculum intelligence — official outcomes + teacher examples + RAG
+    const { curriculumSection, examplesSection, ragContext } = await buildFullGenerationContext(
+      grade, subject as string, { generationType: 'lesson_plan', topic: topic as string }
+    )
 
     const systemPrompt = `You are a Kenyan CBC/CBE curriculum expert creating detailed lesson plans in the official KICD format.${templateBlock}
 ${kicdContext}
 
 ${curriculumSection}
+${ragContext}
 ${examplesSection}
 
 Return a JSON object EXACTLY matching this KICD 11-section structure:

@@ -15,7 +15,7 @@ import { prisma } from '@/lib/prisma'
 import { uploadFile, BUCKETS } from '@/lib/supabase'
 import { route } from '@/lib/api-middleware'
 import { generateLessonPlanPDF } from '@/lib/kicd-lesson-plan-pdf'
-import { parseLessonContent } from '@/lib/lesson-plan-content'
+import { normalizeLessonContent } from '@/lib/lesson-plan-content'
 
 export const POST = route({}, async (req, { user }) => {
   const body = await req.json()
@@ -147,7 +147,7 @@ function buildLessonPlanHTML(
   const date = new Date().toLocaleDateString('en-KE', { day:'2-digit', month:'long', year:'numeric' })
 
   // Normalise content — structured JSON object, JSON string, or plain markdown string
-  const c: any = parseLessonContent(content) ?? {}
+  const c: any = normalizeLessonContent(content) ?? {}
 
   const header = c.lessonHeader || {}
   const lessonTitle    = esc(title || c.title || topic || 'Lesson Plan')

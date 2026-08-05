@@ -3,7 +3,7 @@ import { generateAIContent } from '@/lib/openrouter-ai';
 import { PDFParse } from 'pdf-parse';
 import * as mammoth from 'mammoth';
 import { route } from '@/lib/api-middleware';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, BUCKETS, ensureBucket } from '@/lib/supabase';
 import { saveFileLocally } from '@/lib/local-storage';
 
 const ALLOWED_TYPES = [
@@ -58,14 +58,19 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
       }
       documentUrl = localUrl;
     } else {
+      await ensureBucket(BUCKETS.TEACHER_DOCUMENTS, {
+        public: true,
+        allowedMimeTypes: ALLOWED_TYPES,
+        fileSizeLimit: MAX_SIZE_MB * 1024 * 1024,
+      });
       const { data: docUpload, error: docError } = await supabaseAdmin.storage
-        .from('teacher-documents')
+        .from(BUCKETS.TEACHER_DOCUMENTS)
         .upload(docPath, buffer, { contentType: file.type, upsert: true });
       if (docError) {
         console.error('Supabase upload error:', docError);
         return NextResponse.json({ error: `Upload failed: ${docError.message}` }, { status: 500 });
       }
-      const { data: docUrlData } = supabaseAdmin.storage.from('teacher-documents').getPublicUrl(docUpload.path);
+      const { data: docUrlData } = supabaseAdmin.storage.from(BUCKETS.TEACHER_DOCUMENTS).getPublicUrl(docUpload.path);
       documentUrl = docUrlData.publicUrl;
     }
 

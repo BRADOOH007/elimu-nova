@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { route } from '@/lib/api-middleware'
-import { supabaseAdmin, BUCKETS } from '@/lib/supabase'
+import { supabaseAdmin, BUCKETS, ensureBucket } from '@/lib/supabase'
 import { saveFileLocally, removeFileLocally } from '@/lib/local-storage'
 import { prisma } from '@/lib/prisma'
 
@@ -60,19 +60,11 @@ export const POST = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_
   const bucket = BUCKETS.AVATARS
 
   // Ensure the bucket exists
-  const { data: buckets } = await supabaseAdmin.storage.listBuckets()
-  const bucketExists = buckets?.some((b: any) => b.name === bucket)
-  if (!bucketExists) {
-    const { error: createError } = await supabaseAdmin.storage.createBucket(bucket, {
-      public: true,
-      allowedMimeTypes: ALLOWED_TYPES,
-      fileSizeLimit: 5 * 1024 * 1024,
-    })
-    if (createError) {
-      console.error('Bucket creation error:', createError)
-      return NextResponse.json({ error: `Storage setup failed: ${createError.message}` }, { status: 500 })
-    }
-  }
+  await ensureBucket(bucket, {
+    public: true,
+    allowedMimeTypes: ALLOWED_TYPES,
+    fileSizeLimit: 5 * 1024 * 1024,
+  })
 
   // Get current avatar to delete old file
   const currentUser = await prisma.user.findUnique({
