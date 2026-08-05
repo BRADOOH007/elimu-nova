@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { saveFileLocally } from '@/lib/local-storage'
 import { PDFParse } from 'pdf-parse'
 import * as mammoth from 'mammoth'
+import { storeDocumentInLibrary } from '@/lib/document-processor'
 
 export const dynamic = 'force-dynamic'
 
@@ -77,15 +78,15 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
       publicUrl = urlData.publicUrl
     }
 
-    // Extract text content for AI context
+    // Extract FULL text content — no truncation
     let extractedText: string | null = null
     if (file.type === 'text/plain') {
-      extractedText = buffer.toString('utf-8').slice(0, 8000)
+      extractedText = buffer.toString('utf-8')
     } else if (file.type === 'application/pdf') {
       try {
         const pdf = new PDFParse({ data: buffer })
         const result = await pdf.getText({})
-        extractedText = result.text.slice(0, 8000)
+        extractedText = result.text
       } catch (parseErr) {
         console.warn('PDF text extraction failed:', parseErr)
       }
@@ -95,21 +96,40 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     ) {
       try {
         const { value } = await mammoth.extractRawText({ buffer })
-        extractedText = value.slice(0, 8000)
+        extractedText = value
       } catch (parseErr) {
         console.warn('Word document extraction failed:', parseErr)
       }
     }
 
-    // Store extracted text in teacher record for AI context
+    // Auto-detect grade and subject from filename or form data
+    const manualGrade = (formData.get('grade') as string) || ''
+    const manualSubject = (formData.get('subject') as string) || ''
+    const { grade, subject } = extractGradeSubject(file.name, manualGrade, manualSubject, extractedText || '')
+
+    let documentId: string | null = null
+    if (extractedText && extractedText.length > 50) {
+      // Store in the permanent Document Library — never overwrites
+      documentId = await storeDocumentInLibrary(
+        extractedText,
+        file.name,
+        grade,
+        subject,
+        undefined,
+        publicUrl
+      )
+    }
+
+    // Also keep the teacher template updated (backward compat)
     const teacher = await prisma.teacher.findUnique({ where: { userId: user.id } })
     if (teacher && extractedText) {
       const updateData: any = {}
-      if (docType === 'lesson-plan')       updateData.lessonPlanTemplate = extractedText
-      if (docType === 'scheme-of-work')    updateData.schemeOfWorkTemplate = extractedText
-      if (docType === 'exam')              updateData.examTemplate = extractedText
-      if (docType === 'assignment' || docType === 'general') updateData.assignmentTemplate = extractedText
-      if (docType === 'curriculum')        updateData.curriculumTemplate = extractedText
+      const templateText = extractedText.slice(0, 8000)
+      if (docType === 'lesson-plan')       updateData.lessonPlanTemplate = templateText
+      if (docType === 'scheme-of-work')    updateData.schemeOfWorkTemplate = templateText
+      if (docType === 'exam')              updateData.examTemplate = templateText
+      if (docType === 'assignment' || docType === 'general') updateData.assignmentTemplate = templateText
+      if (docType === 'curriculum')        updateData.curriculumTemplate = templateText
       if (Object.keys(updateData).length > 0) {
         await prisma.teacher.update({
           where: { id: teacher.id },
@@ -124,8 +144,11 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
       name: file.name,
       type: file.type,
       docType,
-      extractedText,
-      message: `${docType === 'lesson-plan' ? 'Lesson plan' : docType === 'scheme-of-work' ? 'Scheme of work' : 'Document'} uploaded. AI will use this as context when generating content.`
+      grade,
+      subject,
+      documentId,
+      extractedText: extractedText?.slice(0, 200),
+      message: 'Document uploaded and indexed for AI knowledge base.',
     })
 
   } catch (error) {
@@ -136,3 +159,38 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     )
   }
 })
+
+function extractGradeSubject(
+  filename: string,
+  manualGrade: string,
+  manualSubject: string,
+  content: string
+): { grade: string; subject: string } {
+  let grade = manualGrade
+  let subject = manualSubject
+
+  if (!grade) {
+    const gradeMatch = content.match(/grade\s*(\d{1,2})/i) || filename.match(/grade\s*(\d{1,2})/i)
+    if (gradeMatch) grade = `Grade ${gradeMatch[1]}`
+    const formMatch = content.match(/form\s*(\d{1,2})/i) || filename.match(/form\s*(\d{1,2})/i)
+    if (formMatch) grade = `Form ${formMatch[1]}`
+  }
+
+  if (!subject) {
+    const subjects = ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies',
+      'Physics', 'Chemistry', 'Biology', 'History', 'Geography', 'Agriculture',
+      'Business Studies', 'Computer Studies', 'CRE', 'Home Science', 'Music']
+    for (const s of subjects) {
+      if (content.toLowerCase().includes(s.toLowerCase()) ||
+          filename.toLowerCase().includes(s.toLowerCase())) {
+        subject = s
+        break
+      }
+    }
+  }
+
+  return {
+    grade: grade || 'General',
+    subject: subject || 'General',
+  }
+}

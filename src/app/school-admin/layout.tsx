@@ -1,7 +1,6 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
@@ -9,16 +8,11 @@ import {
   BarChart3, Users, School, Settings,
   CreditCard, FileText, Calendar, BookOpen, ClipboardList, Activity
 } from 'lucide-react'
-import { DashboardLoading } from '@/components/ui/dashboard-loading'
+import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
 export default function SchoolAdminLayout({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const { schoolInfo } = useSchoolInfo()
-  const [timedOut, setTimedOut] = useState(false)
-  useEffect(() => {
-    const t = setTimeout(() => setTimedOut(true), 4000)
-    return () => clearTimeout(t)
-  }, [])
 
   const sidebarItems = [
     { icon: BarChart3,  label: 'Overview',  href: '/school-admin/dashboard', tourId: 'admin-dashboard' },
@@ -34,18 +28,19 @@ export default function SchoolAdminLayout({ children }: { children: React.ReactN
     { icon: Settings,   label: 'Settings',  href: '/school-admin/settings',  tourId: 'admin-settings'  },
   ]
 
-  if (status === 'loading' && !timedOut) return <DashboardLoading />
-  if (!session) return <DashboardLoading />
+  if (!session) return null
 
   return (
-    <ProfessionalDashboardLayout
-      userRole="SCHOOL_ADMIN"
-      userName={session.user?.name || 'School Admin'}
-      userEmail={session.user?.email || ''}
-      schoolName={schoolInfo?.school?.name || 'Loading...'}
-      sidebarItems={sidebarItems}
-    >
-      <SubscriptionGuard>{children}</SubscriptionGuard>
-    </ProfessionalDashboardLayout>
+    <DashboardSessionGate>
+      <ProfessionalDashboardLayout
+        userRole="SCHOOL_ADMIN"
+        userName={session.user?.name || 'School Admin'}
+        userEmail={session.user?.email || ''}
+        schoolName={schoolInfo?.school?.name || 'Loading...'}
+        sidebarItems={sidebarItems}
+      >
+        <SubscriptionGuard>{children}</SubscriptionGuard>
+      </ProfessionalDashboardLayout>
+    </DashboardSessionGate>
   )
 }

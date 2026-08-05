@@ -19,7 +19,7 @@ import {
 import {
   ClipboardList, Plus, Search, Filter, Calendar, Clock, User, MoreHorizontal,
   Eye, Edit, Trash2, Download, Users, CheckCircle, AlertCircle, FileText,
-  Brain, GraduationCap, Database, Lightbulb
+  Brain,   GraduationCap, Database, Lightbulb, Play
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -73,6 +73,9 @@ interface Assignment {
     gradedSubmissions: number
     pendingSubmissions: number
   }
+  videoUrl?: string | null
+  videoProvider?: string | null
+  videoDuration?: number | null
 }
 
 interface Exam {
@@ -518,10 +521,18 @@ export default function AssessmentsPage() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Badge className={getStatusColor(assignment.status)}>
-                        {getStatusIcon(assignment.status)}
-                        <span className="ml-1">{assignment.status}</span>
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getStatusColor(assignment.status)}>
+                          {getStatusIcon(assignment.status)}
+                          <span className="ml-1">{assignment.status}</span>
+                        </Badge>
+                        {assignment.videoUrl && (
+                          <Badge variant="outline" className="flex items-center gap-1 text-violet-600 border-violet-300 bg-violet-50">
+                            <Play className="w-3 h-3 fill-violet-500" />
+                            Video
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center text-sm text-gray-500">
                         <Calendar className="w-4 h-4 mr-1" />
                         {new Date(assignment.dueDate).toLocaleDateString()}

@@ -497,3 +497,28 @@ button, a {
 .animate-tour-tooltip-in {
   animation: tour-tooltip-in 0.3s ease-out;
 }
+
+@keyframes tour-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Tour anti-extension hardening - prevent browser extensions from blurring or hiding tour UI */
+[data-tour-overlay],
+[data-tour-tooltip],
+[data-tour-step],
+[data-tour-overlay] *,
+[data-tour-tooltip] *,
+[data-tour-step] * {
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  pointer-events: auto;
+}
+[data-tour-overlay],
+[data-tour-overlay] * {
+  pointer-events: none !important;
+}
+[data-tour-tooltip] {
+  pointer-events: auto !important;
+}

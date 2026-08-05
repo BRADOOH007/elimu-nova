@@ -23,7 +23,7 @@ export const POST = route({}, async (req) => {
         content: `You are an AI tutor creating clear, well-structured study content for ${lessonGrade} ${lessonSubject} students.
 Adapt to ${studentLevel || 'intermediate'} level and ${learningStyle || 'visual'} learning style.
 Make it easy to understand and study from.
-IMPORTANT: Do NOT use LaTeX, TeX or MathJax. Write all maths in plain text — use "/" for fractions, "^2" for powers, "_____" for blanks.`
+IMPORTANT: Do NOT use LaTeX, TeX or MathJax. Write all maths in plain text â€” use "/" for fractions, "^2" for powers, "_____" for blanks.`
       },
       {
         role: 'user',

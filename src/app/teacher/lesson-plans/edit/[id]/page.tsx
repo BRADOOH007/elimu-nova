@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { LessonPlanViewer } from '@/components/lesson-plan/lesson-plan-viewer'
+import { parseLessonContent } from '@/lib/lesson-plan-content'
 import { Loader2, ArrowLeft, Save, Eye, Edit3, BookOpen, GraduationCap, Calendar } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
@@ -22,7 +23,8 @@ export default function EditLessonPlanPage() {
   const [title,   setTitle]       = useState('')
   const [subject, setSubject]     = useState('')
   const [grade,   setGrade]       = useState('')
-  const [content, setContent]     = useState('')
+  const [content, setContent]     = useState<any>(null)
+  const [jsonText, setJsonText]   = useState('')
   const [mode,    setMode]        = useState<'preview' | 'edit'>('preview')
   const [hasImageBank, setHasImageBank] = useState(false)
 
@@ -35,8 +37,9 @@ export default function EditLessonPlanPage() {
         setTitle(lp.title || '')
         setSubject(lp.subject || '')
         setGrade(lp.grade || '')
-        const raw = lp.content
-        setContent(typeof raw === 'string' ? raw : (raw?.generatedContent || raw?.content || ''))
+        const parsed = parseLessonContent(lp.content)
+        setContent(parsed)
+        setJsonText(JSON.stringify(parsed ?? {}, null, 2))
         setHasImageBank(lp.imageBankEnabled || false)
       })
       .catch(() => toast({ variant: 'destructive', title: 'Failed to load lesson plan' }))
@@ -46,10 +49,20 @@ export default function EditLessonPlanPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      let payload = content
+      if (mode === 'edit') {
+        try {
+          payload = JSON.parse(jsonText)
+        } catch {
+          toast({ variant: 'destructive', title: 'Invalid JSON', description: 'Fix the JSON before saving.' })
+          setSaving(false)
+          return
+        }
+      }
       const r = await fetch(`/api/lesson-plans/${id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, subject, grade, content: { generatedContent: content } }),
+        body: JSON.stringify({ title, subject, grade, content: payload }),
       })
       if (!r.ok) { const d = await r.json(); throw new Error(d.error) }
       toast({ title: 'Lesson plan saved!' })
@@ -119,15 +132,18 @@ export default function EditLessonPlanPage() {
           {mode === 'edit' ? (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="text-sm font-semibold text-slate-700">Content (Markdown)</label>
-                <Badge variant="outline" className="text-xs">.md</Badge>
+                <label className="text-sm font-semibold text-slate-700">Content (Structured JSON)</label>
+                <Badge variant="outline" className="text-xs">.json</Badge>
               </div>
               <textarea
-                value={content}
-                onChange={e => setContent(e.target.value)}
+                value={jsonText}
+                onChange={e => setJsonText(e.target.value)}
                 rows={28}
                 className="w-full font-mono text-sm border border-slate-200 rounded-xl p-4 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
               />
+              <p className="text-xs text-slate-500 mt-2">
+                The structured JSON is stored as-is and rendered into the professional layout on every surface (View, PDF, Word).
+              </p>
             </div>
           ) : (
             <div>
@@ -135,9 +151,7 @@ export default function EditLessonPlanPage() {
                 <label className="text-sm font-semibold text-slate-700">Lesson Preview</label>
                 <Badge variant="secondary" className="text-xs">Rendered</Badge>
               </div>
-              <div className="prose max-w-none">
-                <MarkdownRenderer content={content} />
-              </div>
+              <LessonPlanViewer content={content} />
             </div>
           )}
         </CardContent>

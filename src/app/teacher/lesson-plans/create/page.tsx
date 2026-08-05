@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { COUNTRIES, getCurriculaByCountry, getSubjectsForCurriculum, getGradesForCurriculum } from '@/lib/curricula'
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
+import { LessonPlanViewer } from '@/components/lesson-plan/lesson-plan-viewer'
 import {
   BookOpen, Loader2, Save, Download, Share2, Plus, Trash2,
   FileText, Calendar, Clock, Target, BookCheck, Lightbulb,
@@ -414,200 +415,6 @@ export default function CreateLessonPlan() {
     setExpandedLesson(prev => prev === key ? null : key)
   }
 
-  const SectionBlock = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div className="border-l-2 border-blue-200 pl-3 mb-3">
-      <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">{label}</p>
-      <div className="text-sm text-slate-700">{children}</div>
-    </div>
-  )
-
-  const isKICDFormat = (lesson: LessonPlanData) => lesson.organisationOfLearning || lesson.coreCompetencies
-
-  const renderStep = (label: string, step: KICDOrganisationStep) => (
-    <SectionBlock label={label}>
-      <p className="text-xs text-slate-500 mb-0.5">{step.duration} min</p>
-      <div className="text-xs mb-1"><span className="font-medium text-blue-700">Teacher:</span> {step.teacherActivity}</div>
-      <div className="text-xs"><span className="font-medium text-green-700">Learner:</span> {step.learnerActivity}</div>
-    </SectionBlock>
-  )
-
-  const renderLessonCard = (lesson: LessonPlanData, index?: number) => {
-    const useKICD = isKICDFormat(lesson)
-
-    return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden" key={index || 0}>
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3">
-        <h3 className="text-white font-bold text-sm">{lesson.title || 'Lesson Plan'}</h3>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {lesson.duration && <span className="text-blue-100 text-xs"><Clock className="w-3 h-3 inline mr-1" />{lesson.duration} min</span>}
-          {useKICD && lesson.strand && <span className="text-blue-100 text-xs"><BookOpen className="w-3 h-3 inline mr-1" />{lesson.strand}</span>}
-        </div>
-      </div>
-      <div className="p-4 space-y-3">
-        {/* ── KICD Header row ── */}
-        {useKICD && lesson.lessonHeader && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2 text-xs bg-slate-50 rounded-lg p-3 border border-slate-100">
-            {lesson.lessonHeader.school && <div><span className="font-medium">School:</span> {lesson.lessonHeader.school}</div>}
-            {lesson.lessonHeader.grade && <div><span className="font-medium">Grade:</span> {lesson.lessonHeader.grade}</div>}
-            {lesson.lessonHeader.term && <div><span className="font-medium">Term:</span> {lesson.lessonHeader.term}</div>}
-            {lesson.lessonHeader.week && <div><span className="font-medium">Week:</span> {lesson.lessonHeader.week}</div>}
-            {lesson.lessonHeader.lesson && <div><span className="font-medium">Lesson:</span> {lesson.lessonHeader.lesson}</div>}
-            {lesson.lessonHeader.duration && <div><span className="font-medium">Duration:</span> {lesson.lessonHeader.duration} min</div>}
-            {lesson.lessonHeader.date && <div><span className="font-medium">Date:</span> {lesson.lessonHeader.date}</div>}
-            {lesson.lessonHeader.enrolment ? <div><span className="font-medium">Enrolment:</span> {lesson.lessonHeader.enrolment}</div> : null}
-          </div>
-        )}
-
-        {/* ── Strand / Sub-Strand ── */}
-        {(lesson.strand || lesson.subStrand) && (
-          <SectionBlock label="Strand / Sub-Strand">
-            <p>{lesson.strand}{lesson.strand && lesson.subStrand ? ' → ' : ''}{lesson.subStrand}</p>
-          </SectionBlock>
-        )}
-
-        {/* ── SLOs ── */}
-        {lesson.specificLearningOutcomes && (Array.isArray(lesson.specificLearningOutcomes) ? (
-          <SectionBlock label="Specific Learning Outcomes">
-            {lesson.specificLearningOutcomes.map((slo, i) => (
-              <p key={i} className="mb-0.5">{i + 1}. {slo}</p>
-            ))}
-          </SectionBlock>
-        ) : (
-          <SectionBlock label="Learning Outcomes">
-            <p>{lesson.specificLearningOutcomes as string}</p>
-          </SectionBlock>
-        ))}
-
-        {/* ── KIQs ── */}
-        {lesson.keyInquiryQuestions && lesson.keyInquiryQuestions.length > 0 && (
-          <SectionBlock label="Key Inquiry Question(s)">
-            <ul className="list-disc list-inside space-y-0.5">
-              {lesson.keyInquiryQuestions.map((q, i) => <li key={i}>{q}</li>)}
-            </ul>
-          </SectionBlock>
-        )}
-
-        {/* ── Core Competencies (KICD) ── */}
-        {lesson.coreCompetencies && lesson.coreCompetencies.length > 0 && (
-          <SectionBlock label="Core Competencies">
-            <div className="flex flex-wrap gap-1">
-              {lesson.coreCompetencies.map((c, i) => (
-                <span key={i} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">{c}</span>
-              ))}
-            </div>
-          </SectionBlock>
-        )}
-
-        {/* ── Values (KICD) ── */}
-        {lesson.values && lesson.values.length > 0 && (
-          <SectionBlock label="Values">
-            <div className="flex flex-wrap gap-1">
-              {lesson.values.map((v, i) => (
-                <span key={i} className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">{v}</span>
-              ))}
-            </div>
-          </SectionBlock>
-        )}
-
-        {/* ── PCIs (KICD) ── */}
-        {lesson.pcis && lesson.pcis.length > 0 && (
-          <SectionBlock label="Pertinent & Contemporary Issues">
-            <div className="flex flex-wrap gap-1">
-              {lesson.pcis.map((p, i) => (
-                <span key={i} className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{p}</span>
-              ))}
-            </div>
-          </SectionBlock>
-        )}
-
-        {/* ── Organisation of Learning (KICD) ── */}
-        {lesson.organisationOfLearning ? (
-          <>
-            {lesson.organisationOfLearning.introduction && renderStep('Introduction', lesson.organisationOfLearning.introduction)}
-            {lesson.organisationOfLearning.step1 && renderStep('Step 1', lesson.organisationOfLearning.step1)}
-            {lesson.organisationOfLearning.step2 && renderStep('Step 2', lesson.organisationOfLearning.step2)}
-            {lesson.organisationOfLearning.step3 && renderStep('Step 3', lesson.organisationOfLearning.step3)}
-            {lesson.organisationOfLearning.conclusion && renderStep('Conclusion', lesson.organisationOfLearning.conclusion)}
-          </>
-        ) : (
-          <>
-            {/* ── Legacy structure (backward compat) ── */}
-            {lesson.introduction && (
-              <SectionBlock label="Introduction">
-                <p className="text-xs text-slate-500 mb-0.5">{lesson.introduction.duration} min</p>
-                <p>{lesson.introduction.activity}</p>
-              </SectionBlock>
-            )}
-            {lesson.mainActivity && (
-              <SectionBlock label="Main Activity">
-                <p className="text-xs text-slate-500 mb-0.5">{lesson.mainActivity.duration} min</p>
-                <p>{lesson.mainActivity.activity}</p>
-                {lesson.mainActivity.coreCompetencies && lesson.mainActivity.coreCompetencies.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {lesson.mainActivity.coreCompetencies.map((c, i) => (
-                      <span key={i} className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">{c}</span>
-                    ))}
-                  </div>
-                )}
-              </SectionBlock>
-            )}
-            {lesson.practiceActivity && (
-              <SectionBlock label="Practice">
-                <p className="text-xs text-slate-500 mb-0.5">{lesson.practiceActivity.duration} min</p>
-                <p>{lesson.practiceActivity.activity}</p>
-              </SectionBlock>
-            )}
-            {lesson.conclusion && (
-              <SectionBlock label="Conclusion">
-                <p className="text-xs text-slate-500 mb-0.5">{lesson.conclusion.duration} min</p>
-                <p>{lesson.conclusion.activity}</p>
-              </SectionBlock>
-            )}
-          </>
-        )}
-
-        {/* ── Learning Resources ── */}
-        {lesson.learningResources && lesson.learningResources.length > 0 && (
-          <SectionBlock label="Resources">
-            <ul className="list-disc list-inside space-y-0.5">
-              {lesson.learningResources.map((r, i) => <li key={i}>{r}</li>)}
-            </ul>
-          </SectionBlock>
-        )}
-
-        {/* ── Assessment ── */}
-        {lesson.assessment && (
-          <SectionBlock label="Assessment">
-            <p>{lesson.assessment}</p>
-          </SectionBlock>
-        )}
-
-        {/* ── Extended Activities (KICD) / Legacy fields ── */}
-        {(lesson.extendedActivities || lesson.homework) && (
-          <SectionBlock label={lesson.extendedActivities ? 'Extended Activities' : 'Homework'}>
-            <p>{lesson.extendedActivities || lesson.homework}</p>
-          </SectionBlock>
-        )}
-
-        {/* ── Differentiation (legacy) ── */}
-        {lesson.differentiation && (
-          <SectionBlock label="Differentiation">
-            {lesson.differentiation.support && <p className="mb-0.5"><span className="font-medium">Support:</span> {lesson.differentiation.support}</p>}
-            {lesson.differentiation.extension && <p><span className="font-medium">Extension:</span> {lesson.differentiation.extension}</p>}
-          </SectionBlock>
-        )}
-
-        {/* ── Reflection ── */}
-        {(lesson.reflection || lesson.teacherReflection) && (
-          <SectionBlock label="Teacher Reflection">
-            <p className="italic text-slate-500">{lesson.reflection || lesson.teacherReflection}</p>
-          </SectionBlock>
-        )}
-      </div>
-    </div>
-  )
-  }
-
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -886,7 +693,7 @@ export default function CreateLessonPlan() {
               </Button>
             </div>
           </div>
-          {renderLessonCard(generatedLesson)}
+          <LessonPlanViewer content={generatedLesson} />
         </div>
       )}
 
@@ -923,7 +730,7 @@ export default function CreateLessonPlan() {
                           </div>
                           {isExpanded ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
                         </button>
-                        {isExpanded && <div className="px-3 pb-3">{renderLessonCard(lesson as LessonPlanData)}</div>}
+                        {isExpanded && <div className="px-3 pb-3"><LessonPlanViewer content={lesson} /></div>}
                       </div>
                     )
                   })}

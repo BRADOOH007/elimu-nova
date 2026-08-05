@@ -168,7 +168,7 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT'] }, async (req, { user, p
 export const PUT = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   const { id } = params
   const body = await req.json()
-  const { title, description, content, dueDate, status, studentIds } = body
+  const { title, description, content, dueDate, status, studentIds, videoUrl, videoProvider, videoDuration } = body
 
   const teacher = await prisma.teacher.findUnique({
     where: { userId: user.id }
@@ -196,7 +196,10 @@ export const PUT = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
       status: status ? status.toUpperCase() : undefined,
       students: studentIds ? {
         set: studentIds.map((id: string) => ({ id }))
-      } : undefined
+      } : undefined,
+      videoUrl: videoUrl !== undefined ? videoUrl : undefined,
+      videoProvider: videoProvider !== undefined ? videoProvider : undefined,
+      videoDuration: videoDuration !== undefined ? videoDuration : undefined,
     },
     include: {
       teacher: {
@@ -246,6 +249,9 @@ export const PUT = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
     status: assignment.status,
     createdAt: assignment.createdAt,
     updatedAt: assignment.updatedAt,
+    videoUrl: assignment.videoUrl,
+    videoProvider: assignment.videoProvider,
+    videoDuration: assignment.videoDuration,
     teacher: {
       id: assignment.teacher.id,
       name: `${assignment.teacher.user.firstName} ${assignment.teacher.user.lastName}`,

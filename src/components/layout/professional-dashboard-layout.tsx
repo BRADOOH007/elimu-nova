@@ -122,13 +122,13 @@ export function ProfessionalDashboardLayout({
       return
     }
     try {
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 3000)
-      const res = await fetch(`/api/user-profile?userId=${session.user.id}`, { signal: controller.signal })
-      clearTimeout(timeout)
+      const res = await fetch(`/api/user-profile?userId=${session.user.id}`)
       if (res.ok) {
         const p = await res.json()
         setUserProfile({ firstName: p.firstName, lastName: p.lastName, avatar: p.avatar })
+        setAvatarError(false)
+      } else {
+        console.warn('[Dashboard] Profile fetch failed:', res.status)
       }
     } catch (e) { console.warn('[Dashboard] Profile fetch failed:', e) }
     setShowSplash(false)
@@ -329,7 +329,7 @@ export function ProfessionalDashboardLayout({
                 aria-label="Profile"
               >
                 {userProfile.avatar && !avatarError
-                  ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
+                  ? <img key={userProfile.avatar} src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
                   : <span className="text-xs font-semibold text-slate-600">{(userProfile.firstName || userName).slice(0, 1).toUpperCase()}</span>
                 }
               </button>
@@ -356,7 +356,7 @@ export function ProfessionalDashboardLayout({
         <div className={`flex items-center gap-3 px-3 py-3 sm:py-4 border-b border-white/5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-700 flex items-center justify-center shrink-0 overflow-hidden ring-1 ring-white/10">
             {userProfile.avatar && !avatarError
-              ? <img src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
+              ? <img key={userProfile.avatar} src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
               : <span className="text-slate-300 font-semibold text-xs sm:text-sm">{(userProfile.firstName || userName).slice(0, 2).toUpperCase()}</span>
             }
           </div>

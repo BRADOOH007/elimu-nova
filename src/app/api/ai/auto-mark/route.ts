@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const { submissionId, assignmentTitle, submissionText, rubric, totalMarks = 100 } = await request.json()
@@ -52,15 +53,15 @@ Analyse the submission and return ONLY a valid JSON object:
 Grading scale: EE=80-100%, ME=60-79%, AE=40-59%, BE=0-39%
 Be encouraging but honest. Use Kenyan educational context.`
 
+    try {
     const raw = await OpenAIService.generateText([
       { role: 'system', content: 'You are a CBC teacher. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 1000, temperature: 0.3 })
 
-    const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
-    if (start === -1 || end <= start) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
-
-    const result = JSON.parse(raw.slice(start, end + 1))
+    const json = cleanAiJson(raw)
+    if (!json) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
+    const result = JSON.parse(json)
 
     // If submissionId provided, update the DB record
     if (submissionId) {
@@ -77,4 +78,8 @@ Be encouraging but honest. Use Kenyan educational context.`
     }
 
     return NextResponse.json({ result, submissionId })
+    } catch (e: any) {
+      console.error('[AutoMark] Failed:', e)
+      return NextResponse.json({ error: 'Failed to auto-mark. Please try again.' }, { status: 500 })
+    }
 })

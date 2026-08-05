@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,9 +18,15 @@ import {
   Clock,
   AlertCircle,
   Eye,
-  Edit3
+  Edit3,
+  Video,
+  Upload,
+  Link,
+  Play,
+  Loader2,
 } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
+import { useToast } from '@/hooks/use-toast'
 
 const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','IRE','Agriculture','Physics','Chemistry','Biology','History','Geography','Business Studies','Computer Studies','Home Science','Art & Design']
 const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
@@ -64,6 +70,16 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
+  // Video state
+  const [videoUrl, setVideoUrl] = useState('')
+  const [videoProvider, setVideoProvider] = useState<'youtube' | 'vimeo' | 'upload' | ''>('')
+  const [videoName, setVideoName] = useState('')
+  const [videoUploading, setVideoUploading] = useState(false)
+  const [linkInput, setLinkInput] = useState('')
+  const videoDropRef = useRef<HTMLDivElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
+  const { toast } = useToast()
+
   // Initialize form data when assignment changes
   useEffect(() => {
     if (assignment && isOpen) {
@@ -80,6 +96,9 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
         status: assignment.status || 'PENDING'
       })
       setSelectedStudents(assignment.students?.map((s: any) => s.id) || [])
+      setVideoUrl(assignment.videoUrl || '')
+      setVideoProvider(assignment.videoProvider || '')
+      setVideoName(assignment.videoUrl ? (assignment.videoProvider === 'youtube' ? 'YouTube' : assignment.videoProvider === 'vimeo' ? 'Vimeo' : 'Uploaded Video') : '')
     }
   }, [assignment, isOpen])
 
@@ -146,6 +165,54 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
     return Object.keys(newErrors).length === 0
   }
 
+  const uploadVideo = async (file: File) => {
+    if (file.size > 500 * 1024 * 1024) { toast({ title: 'Video too large (max 500MB)', variant: 'destructive' }); return }
+    setVideoUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const r = await fetch('/api/upload-video', { method: 'POST', body: fd })
+      if (r.ok) {
+        const data = await r.json()
+        setVideoUrl(data.url)
+        setVideoProvider('upload')
+        setVideoName(data.name || file.name)
+        toast({ title: 'Video uploaded successfully' })
+      } else {
+        const err = await r.json()
+        toast({ title: err.error || 'Video upload failed', variant: 'destructive' })
+      }
+    } catch { toast({ title: 'Video upload failed', variant: 'destructive' }) }
+    finally { setVideoUploading(false) }
+  }
+
+  const parseVideoLink = (url: string) => {
+    const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/)
+    if (ytMatch) {
+      setVideoUrl(`https://www.youtube.com/embed/${ytMatch[1]}`)
+      setVideoProvider('youtube')
+      setLinkInput('')
+      toast({ title: 'YouTube video linked' })
+      return
+    }
+    const vmMatch = url.match(/vimeo\.com\/(\d+)/)
+    if (vmMatch) {
+      setVideoUrl(`https://player.vimeo.com/video/${vmMatch[1]}`)
+      setVideoProvider('vimeo')
+      setLinkInput('')
+      toast({ title: 'Vimeo video linked' })
+      return
+    }
+    toast({ title: 'Paste a valid YouTube or Vimeo URL', variant: 'destructive' })
+  }
+
+  const clearVideo = () => {
+    setVideoUrl('')
+    setVideoProvider('')
+    setVideoName('')
+    setLinkInput('')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -167,7 +234,10 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
           dueDate: dueDateTime.toISOString(),
           status: formData.status,
           lessonPlanId: formData.lessonPlanId || null,
-          studentIds: selectedStudents
+          studentIds: selectedStudents,
+          videoUrl: videoUrl || null,
+          videoProvider: videoProvider || null,
+          videoDuration: 0,
         })
       })
 
@@ -421,6 +491,85 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
               </p>
             )}
             </div>
+          </div>
+
+          {/* Video */}
+          <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+              <Video className="w-5 h-5 text-violet-600" />
+              Video <span className="text-sm text-gray-400 font-normal">(optional)</span>
+            </h3>
+
+            {videoUrl ? (
+              <div className="space-y-3">
+                <div className="bg-gray-900 rounded-xl overflow-hidden shadow">
+                  {videoProvider === 'youtube' || videoProvider === 'vimeo' ? (
+                    <iframe src={videoUrl} className="w-full aspect-video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  ) : (
+                    <video src={videoUrl} controls className="w-full aspect-video" preload="metadata" />
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Play className="w-4 h-4 text-green-500" />
+                    <span className="font-medium">{videoName || videoProvider}</span>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={clearVideo} className="h-8 text-xs text-red-500 hover:text-red-600">
+                    <X className="w-3.5 h-3.5 mr-1" /> Remove
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  ref={videoDropRef}
+                  className={`relative p-5 rounded-xl border-2 border-dashed transition-colors cursor-pointer text-center
+                    ${videoUploading ? 'border-violet-300 bg-violet-50' : 'border-gray-300 hover:border-violet-400 hover:bg-gray-50'}`}
+                  onClick={() => !videoUploading && videoInputRef.current?.click()}
+                  onDragOver={e => { e.preventDefault(); if (videoDropRef.current) videoDropRef.current.classList.add('border-violet-400', 'bg-violet-50') }}
+                  onDragLeave={() => { if (videoDropRef.current) videoDropRef.current.classList.remove('border-violet-400', 'bg-violet-50') }}
+                  onDrop={e => {
+                    e.preventDefault()
+                    if (videoDropRef.current) videoDropRef.current.classList.remove('border-violet-400', 'bg-violet-50')
+                    const f = e.dataTransfer.files?.[0]
+                    if (f) uploadVideo(f)
+                  }}
+                >
+                  <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo" className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadVideo(f) }} />
+                  {videoUploading ? (
+                    <div className="space-y-2">
+                      <Loader2 className="w-6 h-6 mx-auto animate-spin text-violet-500" />
+                      <p className="text-xs font-medium text-violet-700">Uploading...</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="w-10 h-10 rounded-full bg-violet-100 flex items-center justify-center mx-auto">
+                        <Upload className="w-5 h-5 text-violet-600" />
+                      </div>
+                      <p className="text-xs font-medium text-gray-700">Upload Video</p>
+                      <p className="text-[10px] text-gray-400">MP4, WebM, MOV, AVI &bull; Max 500MB</p>
+                    </div>
+                  )}
+                </div>
+                <div className="p-5 rounded-xl border border-gray-200 bg-gray-50 flex flex-col justify-center space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mx-auto">
+                    <Link className="w-5 h-5 text-red-500" />
+                  </div>
+                  <p className="text-xs font-medium text-gray-700 text-center">YouTube / Vimeo Link</p>
+                  <div className="flex gap-2">
+                    <Input value={linkInput} onChange={e => setLinkInput(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..." 
+                      className="h-8 text-xs flex-1" 
+                      onKeyDown={e => { if (e.key === 'Enter' && linkInput.trim()) parseVideoLink(linkInput) }} />
+                    <Button type="button" size="sm" onClick={() => linkInput.trim() && parseVideoLink(linkInput)}
+                      disabled={!linkInput.trim()} className="h-8 text-xs bg-red-500 hover:bg-red-600 text-white">
+                      Link
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Content */}

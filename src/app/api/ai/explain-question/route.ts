@@ -1,10 +1,11 @@
 /**
  * POST /api/ai/explain-question
- * AI Explain Question — step-by-step explanation for any exam question
+ * AI Explain Question â€” step-by-step explanation for any exam question
  */
 import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const POST = route({}, async (request, { user }) => {
     const { question, subject, grade, selectedAnswer, correctAnswer, context } = await request.json()
@@ -22,7 +23,7 @@ ${context ? `\nContext: ${context}` : ''}
 
 Provide a clear, step-by-step explanation in this JSON format:
 {
-  "summary": "One sentence — what concept this tests",
+  "summary": "One sentence â€” what concept this tests",
   "correctAnswer": "${correctAnswer || 'See steps'}",
   "steps": [
     { "step": 1, "title": "Step title", "explanation": "Clear explanation using Kenyan examples" },
@@ -45,8 +46,8 @@ Rules:
       { role: 'user', content: prompt },
     ], { maxTokens: 800, temperature: 0.5 })
 
-    const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
-    if (start === -1 || end <= start) return NextResponse.json({ error: 'Invalid format' }, { status: 500 })
+    const json = cleanAiJson(raw)
+    if (!json) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
 
-    return NextResponse.json(JSON.parse(raw.slice(start, end + 1)))
+    return NextResponse.json(JSON.parse(json))
 })

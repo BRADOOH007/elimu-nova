@@ -246,7 +246,8 @@ export class TutorOrchestrator {
   async generateMessage(
     userMessage: string,
     task: TutorTask,
-    sessionId?: string
+    sessionId?: string,
+    personalContext?: string
   ): Promise<TutorResponse> {
     // Get or create session
     let session = sessionId
@@ -272,7 +273,7 @@ export class TutorOrchestrator {
     const context = await this.getTeacherContext(task)
 
     // Build AI prompt
-    const systemPrompt = this.buildSystemPrompt(task, context)
+    const systemPrompt = this.buildSystemPrompt(task, context, personalContext)
     const conversationHistory = (session.last10Messages as any[]) || []
 
     // Call AI with better parameters for natural conversation
@@ -443,13 +444,17 @@ export class TutorOrchestrator {
     return context
   }
 
-  private buildSystemPrompt(task: TutorTask, context: any): string {
+  private buildSystemPrompt(task: TutorTask, context: any, personalContext?: string): string {
     const hasLessonPlan = context.lessonPlan && Object.keys(context.lessonPlan).length > 0
     const hasScheme = context.scheme && Object.keys(context.scheme).length > 0
 
+    const personalBlock = personalContext
+      ? `\n\nABOUT THIS STUDENT (use this to personalise your teaching):\n${personalContext}`
+      : ''
+
     if (!hasLessonPlan && !hasScheme) {
       // General tutoring mode - no specific lesson plan
-      return `You are a friendly, knowledgeable AI tutor helping a student learn ${task.subject}.
+      return `You are a friendly, knowledgeable AI tutor helping a student learn ${task.subject}.${personalBlock}
 
 🎯 YOUR ROLE:
 You're like a patient, understanding teacher who genuinely cares about helping students learn. You can answer ANY question the student has about ${task.subject} or related topics.
@@ -520,7 +525,7 @@ KEEP IT:
     }
 
     // Structured lesson mode - has lesson plan or scheme
-    return `You are a friendly AI tutor teaching ${task.subject} - specifically about **${task.topic}**.
+    return `You are a friendly AI tutor teaching ${task.subject} - specifically about **${task.topic}**.${personalBlock}
 
 🎯 TODAY'S LESSON:
 - Topic: ${task.topic}

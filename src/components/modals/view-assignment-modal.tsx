@@ -17,7 +17,8 @@ import {
   User,
   Download,
   Edit,
-  Trash2
+  Trash2,
+  Play,
 } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { confirmToast } from '@/lib/confirm-toast'
@@ -162,6 +163,23 @@ export default function ViewAssignmentModal({ isOpen, onClose, assignmentId, onE
                   <p className="text-blue-700">
                     <strong>{assignment.lessonPlan.title}</strong> - {assignment.lessonPlan.subject} ({assignment.lessonPlan.grade})
                   </p>
+                </div>
+              )}
+
+              {/* Video */}
+              {assignment.videoUrl && (
+                <div className="rounded-xl overflow-hidden bg-gray-900 mb-4 shadow">
+                  {assignment.videoProvider === 'youtube' || assignment.videoProvider === 'vimeo' ? (
+                    <iframe src={assignment.videoUrl} className="w-full aspect-video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                  ) : (
+                    <video src={assignment.videoUrl} controls className="w-full aspect-video" preload="metadata" />
+                  )}
+                  <div className="px-4 py-2 bg-gray-800 flex items-center gap-2">
+                    <Play className="w-3.5 h-3.5 text-gray-300" />
+                    <span className="text-xs text-gray-300 font-medium">
+                      {assignment.videoProvider === 'youtube' ? 'YouTube Video' : assignment.videoProvider === 'vimeo' ? 'Vimeo Video' : 'Video Lecture'}
+                    </span>
+                  </div>
                 </div>
               )}
 

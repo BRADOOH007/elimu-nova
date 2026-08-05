@@ -28,9 +28,13 @@ export const PUT = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
     const body = await req.json()
     const { title, subject, grade, content, schemeOfWorkId } = body
 
+    const contentString = typeof content === 'object' && content !== null
+      ? JSON.stringify(content)
+      : content
+
     const updated = await prisma.lessonPlan.update({
       where: { id },
-      data: { title, subject, grade, content, schemeOfWorkId }
+      data: { title, subject, grade, content: contentString, schemeOfWorkId }
     })
 
     return NextResponse.json(updated)

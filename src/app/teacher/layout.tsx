@@ -1,7 +1,6 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
@@ -10,18 +9,12 @@ import {
   BarChart3, Users, BookOpen, ClipboardList,
   Wand2, Radio, Mail, CreditCard, Calendar, Brain, Activity
 } from 'lucide-react'
-import { DashboardLoading } from '@/components/ui/dashboard-loading'
+import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const { schoolInfo } = useSchoolInfo()
   const { totalUnread } = useUnreadMessages()
-  // Hard timeout — never show loading screen for more than 4 seconds
-  const [timedOut, setTimedOut] = useState(false)
-  useEffect(() => {
-    const t = setTimeout(() => setTimedOut(true), 4000)
-    return () => clearTimeout(t)
-  }, [])
 
   const isSchoolTeacher = !!session?.user?.schoolId
 
@@ -48,20 +41,19 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
       : []),
   ]
 
-  // Show loading only while NextAuth is actively hydrating AND we haven't timed out
-  if (status === 'loading' && !timedOut) return <DashboardLoading />
-  // If unauthenticated after timeout or after auth resolves, middleware handles redirect
-  if (!session) return <DashboardLoading />
+  if (!session) return null
 
   return (
-    <ProfessionalDashboardLayout
-      userRole="TEACHER"
-      userName={session.user?.name || 'Teacher'}
-      userEmail={session.user?.email || ''}
-      schoolName={schoolInfo?.school?.name || 'Loading...'}
-      sidebarItems={sidebarItems}
-    >
-      <SubscriptionGuard>{children}</SubscriptionGuard>
-    </ProfessionalDashboardLayout>
+    <DashboardSessionGate>
+      <ProfessionalDashboardLayout
+        userRole="TEACHER"
+        userName={session.user?.name || 'Teacher'}
+        userEmail={session.user?.email || ''}
+        schoolName={schoolInfo?.school?.name || 'Loading...'}
+        sidebarItems={sidebarItems}
+      >
+        <SubscriptionGuard>{children}</SubscriptionGuard>
+      </ProfessionalDashboardLayout>
+    </DashboardSessionGate>
   )
 }
