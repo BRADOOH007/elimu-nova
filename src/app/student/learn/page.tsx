@@ -423,7 +423,23 @@ export default function LearnPage() {
         setLessonMd(d.content || '')
         markTopicStarted(subject, topic, d.content || '')
         await fetchLearningPath(subject, studyGrade)
-      } else throw new Error(d.error)
+      } else {
+        // Fallback to old markdown generation
+        const fb = await fetch('/api/ai/generate-lesson-content', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ lesson:{ title:topic, subject, grade:studyGrade }, studentLevel:'intermediate', learningStyle:'visual' })
+        })
+        if (fb.ok) {
+          const fbData = await fb.json()
+          setLessonMd(fbData.content || '')
+          setActiveLesson(null)
+          markTopicStarted(subject, topic, fbData.content || '')
+          await fetchLearningPath(subject, studyGrade)
+          toast({ title:'Lesson generated', description:'Studying in classic mode' })
+        } else {
+          throw new Error(d.error || 'Could not generate lesson')
+        }
+      }
     } catch(e:any) { toast({ variant:'destructive', title:'Could not generate lesson', description:e.message }) }
     finally { setStudying(false) }
   }
@@ -788,6 +804,25 @@ export default function LearnPage() {
 
             {/* Loading / generated content */}
             {studying && <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-blue-500" /><span className="ml-3 text-slate-500">Generating your lesson...</span></div>}
+
+            {/* Fallback: classic markdown lesson (when JSON generation fails) */}
+            {!studying && lessonMd && !activeLesson && (
+              <Card className="border-0 shadow-xl bg-white overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white pb-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg text-white font-extrabold">{studyTopic} - {studySubject}</CardTitle>
+                    <button onClick={() => setLessonMd('')} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"><X className="h-4 w-4 text-white" /></button>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="max-h-[500px] overflow-y-auto"><MarkdownRenderer content={lessonMd} /></div>
+                  <div className="mt-4 flex gap-2">
+                    <Button onClick={() => setLessonMd('')} variant="outline" className="flex-1">Close</Button>
+                    <Button onClick={() => { completeAndAdvance(); setLessonMd('') }} className="flex-1 bg-gradient-to-r from-teal-500 to-emerald-600 text-white">Complete &amp; Continue</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Active recall lesson */}
             {activeLesson && !studying && (

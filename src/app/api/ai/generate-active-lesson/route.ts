@@ -8,8 +8,20 @@ interface ActiveLesson {
   grade: string
   preview: { whatYoullLearn: string; concepts: string[] }
   content: string
-  recall: { question: string; type: 'mcq' | 'short' | 'fill'; options?: string[]; answer: string; explanation: string }[]
+  recall: { question: string; type: string; options?: string[]; answer: string; explanation: string }[]
   generatedAt: string
+}
+
+function cleanJson(raw: string): string {
+  let cleaned = raw.trim()
+  if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7)
+  if (cleaned.startsWith('```')) cleaned = cleaned.slice(3)
+  if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3)
+  const start = cleaned.indexOf('{')
+  const end = cleaned.lastIndexOf('}')
+  if (start === -1 || end <= start) return ''
+  cleaned = cleaned.slice(start, end + 1)
+  return cleaned
 }
 
 export const POST = route({}, async (req) => {
@@ -23,86 +35,76 @@ export const POST = route({}, async (req) => {
   const gradeStr = grade || 'Grade 8'
   const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
-  const prompt = `You are an expert tutor creating a STUDENT-FRIENDLY active recall lesson for a ${gradeStr} student studying ${subject}.
+  const prompt = `Create a study lesson for a ${gradeStr} student learning ${subject} about "${topic}".
 
-Topic: "${topic}"
+You MUST return valid JSON. Escape all double quotes inside strings with backslash.
+Use Kenyan examples where natural.
 
-Write in plain English. No LaTeX. No lesson plan format. No "key inquiry questions" or "learning outcomes" — this is for a student to study from, not a teacher's lesson plan. Keep it conversational but clear.
-
-Return ONLY valid JSON with this exact structure:
 {
   "preview": {
-    "whatYoullLearn": "One sentence telling the student what they will understand after this lesson",
-    "concepts": ["3 key concepts they will master, in simple words"]
+    "whatYoullLearn": "In one short sentence, what the student will understand after this lesson",
+    "concepts": ["First concept", "Second concept", "Third concept"]
   },
-  "content": "The core lesson content in markdown. Structure it as:
-## [First Concept Name]
-2-3 short paragraphs explaining it clearly. Include a simple example with step-by-step working.
-## [Second Concept Name]
-Same format. Make it feel like a friendly tutor explaining.
-## [Third Concept Name]
-Same format. End with a 'Key Point' box that summarises the most important thing to remember.",
+  "content": "Write as plain text with ## headings for each concept. 2-3 short paragraphs per concept. Include a worked example with step-by-step working. Keep it conversational and friendly. Max 500 words total. Do NOT use any special characters that break JSON.",
   "recall": [
     {
-      "question": "A multiple choice question testing the FIRST concept",
+      "question": "MCQ about the first concept",
       "type": "mcq",
-      "options": ["Wrong but plausible option A", "Correct answer", "Wrong but plausible option C", "Wrong but plausible option D"],
+      "options": ["Wrong A", "Correct answer", "Wrong C", "Wrong D"],
       "answer": "Correct answer",
-      "explanation": "Brief why the correct answer is right and why the wrong ones are tempting"
+      "explanation": "Why the correct answer is right"
     },
     {
-      "question": "A short-answer question testing the SECOND concept",
+      "question": "Short-answer about the second concept",
       "type": "short",
-      "options": null,
-      "answer": "Expected answer (short)",
+      "answer": "Expected answer",
       "explanation": "Brief explanation"
     },
     {
-      "question": "A fill-in-the-blank or calculation question testing the THIRD concept",
+      "question": "Calculation or fill-blank about the third concept",
       "type": "fill",
-      "options": null,
       "answer": "The answer",
       "explanation": "Brief explanation"
     },
     {
-      "question": "Another question testing understanding",
+      "question": "Another MCQ",
       "type": "mcq",
-      "options": ["Option A", "Option B", "Correct option", "Option D"],
-      "answer": "Correct option",
+      "options": ["Wrong", "Wrong", "Correct", "Wrong"],
+      "answer": "Correct",
       "explanation": "Brief explanation"
     },
     {
-      "question": "A final application question",
+      "question": "Final application question",
       "type": "short",
-      "options": null,
       "answer": "Expected answer",
       "explanation": "Brief explanation"
     }
   ]
 }
 
-CRITICAL RULES:
-- The content must be conversational and student-friendly — like a good tutor talking to them
-- Never use "Key Inquiry Questions", "Learning Outcomes", "Specific Objectives" or any curriculum-planning terminology
-- Never reference grade levels, exams (KCSE/KCPE), or "the syllabus" in the content — just teach the concept
-- Use Kenyan examples where natural (KES currency, Kenyan names, local contexts)
-- Make the recall questions genuinely test understanding, not just memorisation
-- The total content should take about 3-4 minutes to read
-- Request ID: ${requestId}`
+RULES:
+- Only return the JSON object. No markdown. No explanation. No backticks.
+- Escape all double quotes inside text fields with backslash
+- The content field must be valid JSON string (escape newlines as \\n, double quotes as \\\")
+- Make questions test real understanding, not memorization
+- Request: ${requestId}`
 
   try {
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are an educational AI. Return ONLY valid JSON. No markdown backticks, no extra text.' },
+      {
+        role: 'system',
+        content: 'You are an AI that returns ONLY valid, parseable JSON. Never wrap in backticks. Escape all double quotes inside strings. Your entire output must be a single JSON object.',
+      },
       { role: 'user', content: prompt },
-    ], { maxTokens: 2500, temperature: 0.7 })
+    ], { maxTokens: 4000, temperature: 0.3 })
 
-    const start = raw.indexOf('{')
-    const end = raw.lastIndexOf('}')
-    if (start === -1 || end <= start) {
+    const json = cleanJson(raw)
+    if (!json) {
+      console.error('[ActiveLesson] Could not extract JSON from:', raw.slice(0, 200))
       throw new Error('AI returned invalid JSON format')
     }
 
-    const lesson: ActiveLesson = JSON.parse(raw.slice(start, end + 1))
+    const lesson: ActiveLesson = JSON.parse(json)
     lesson.topic = topic
     lesson.subject = subject
     lesson.grade = gradeStr
