@@ -1,197 +1,215 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { MessageSquare, Send, Loader2, CheckCircle, X, Users, ShieldAlert } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { useSession } from 'next-auth/react'
+import { Send, Loader2, CheckCircle, Users, Shield, Smile } from 'lucide-react'
 
 interface Discussion {
   id: string; topic: string; message: string
-  senderName: string; senderRole: string
+  senderName: string; senderRole: string; senderId: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: string; flagged?: boolean
 }
 
-export default function StudentDiscussions() {
-  const [discussions, setDiscussions] = useState<Discussion[]>([])
-  const [loading, setLoading]         = useState(true)
-  const [showForm, setShowForm]       = useState(false)
-  const [topic, setTopic]             = useState('')
-  const [message, setMessage]         = useState('')
-  const [posting, setPosting]         = useState(false)
-  const [posted, setPosted]           = useState(false)
-  const [flagged, setFlagged]         = useState(false)
+const EMOJIS = ['😊','👍','🎉','💡','📚','🔥','❤️','✅','🤔','👋','🙌','✨']
 
-  const TOPICS = [
-    'Question about today\'s lesson',
-    'Help with assignment',
-    'Concept I don\'t understand',
-    'Request for extra resources',
-    'General discussion',
-    'Other',
-  ]
+export default function StudentDiscussions() {
+  const { data: session } = useSession()
+  const [discussions, setDiscussions] = useState<Discussion[]>([])
+  const [loading, setLoading] = useState(true)
+  const [message, setMessage] = useState('')
+  const [topic, setTopic] = useState('General')
+  const [posting, setPosting] = useState(false)
+  const [showEmoji, setShowEmoji] = useState(false)
+  const [flagged, setFlagged] = useState(false)
+  const [onlineCount, setOnlineCount] = useState(8)
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const feedRef = useRef<HTMLDivElement>(null)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const currentUserId = session?.user?.id || ''
+  const currentUserName = session?.user?.name || 'You'
 
   const load = async () => {
-    setLoading(true)
     try {
-      const res  = await fetch('/api/discussions?status=all')
+      const res = await fetch('/api/discussions?status=all')
       const data = await res.json()
-      setDiscussions((data.discussions || []).filter(
-        (d: Discussion) => d.status === 'approved'
-      ))
-    } catch { console.error('Failed to load discussions') }
+      setDiscussions((data.discussions || []).filter((d: Discussion) => d.status === 'approved'))
+    } catch { /* ignore */ }
     finally { setLoading(false) }
   }
 
   useEffect(() => { load() }, [])
+  useEffect(() => {
+    intervalRef.current = setInterval(load, 15000)
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+  }, [])
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [discussions])
 
-  const post = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!topic || !message.trim()) return
+  const send = async () => {
+    if (!message.trim() || posting) return
+    const text = `${topic}: ${message}`
     setPosting(true); setFlagged(false)
     try {
       const res = await fetch('/api/discussions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ topic, message }),
       })
       if (res.ok) {
         const data = await res.json()
         if (data.discussion?.flagged) setFlagged(true)
-        setPosted(true)
-        setTopic('')
         setMessage('')
-        setShowForm(false)
-        setTimeout(() => { setPosted(false); setFlagged(false) }, 5000)
+        setShowEmoji(false)
+        setTimeout(() => setFlagged(false), 4000)
         await load()
       }
-    } catch { console.error('Failed to post') }
+    } catch { /* ignore */ }
     finally { setPosting(false) }
   }
 
-  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('en-GB', {
-    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-  })
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
+  }
+
+  const insertEmoji = (emoji: string) => {
+    setMessage(p => p + emoji)
+    setShowEmoji(false)
+  }
+
+  const fmtTime = (iso: string) => {
+    const d = new Date(iso)
+    const now = new Date()
+    const diff = now.getTime() - d.getTime()
+    if (diff < 60000) return 'Just now'
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  }
 
   const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').toUpperCase()
 
   const avatarColor = (name: string) => {
-    const colors = ['from-blue-500 to-purple-600', 'from-teal-500 to-emerald-600', 'from-amber-500 to-orange-600', 'from-pink-500 to-rose-600', 'from-indigo-500 to-violet-600']
+    const colors = ['from-blue-500 to-purple-600','from-teal-500 to-emerald-600','from-amber-500 to-orange-600','from-pink-500 to-rose-600','from-indigo-500 to-violet-600','from-cyan-500 to-blue-600']
     const i = name.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % colors.length
     return colors[i]
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Users className="h-5 w-5 text-blue-600" />
-            Discussion Board
-          </h1>
-          <p className="text-slate-500 text-sm mt-0.5">Community chat — all students can post and read</p>
+    <div className="flex flex-col h-[calc(100vh-80px)] max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="shrink-0 px-4 sm:px-6 py-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+              <Users className="h-5 w-5 text-purple-600" />Student Lounge
+            </h1>
+            <p className="text-slate-500 text-sm">Live Community Chat</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+              <span className="text-xs font-semibold text-emerald-700">{onlineCount} Online</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-200 rounded-full px-3 py-1.5">
+              <Shield className="h-3.5 w-3.5 text-purple-500" />
+              <span className="text-xs font-semibold text-purple-700">Moderated & Safe</span>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-all shadow-sm"
-        >
-          {showForm ? <X className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
-          {showForm ? 'Cancel' : 'Post'}
-        </button>
       </div>
 
       {flagged && (
-        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-          <ShieldAlert className="h-5 w-5 text-amber-500 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-amber-800">Message flagged</p>
-            <p className="text-xs text-amber-600">Inappropriate words were filtered. Keep it respectful.</p>
-          </div>
+        <div className="shrink-0 mx-4 sm:mx-6 mb-2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+          <Shield className="h-4 w-4 text-amber-500 shrink-0" />
+          <p className="text-xs text-amber-700">Message filtered. Keep it respectful.</p>
         </div>
       )}
 
-      {showForm && (
-        <div className="bg-white border border-blue-200 rounded-2xl p-5 shadow-sm">
-          <h2 className="font-semibold text-slate-800 mb-4">New Post</h2>
-          <form onSubmit={post} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Topic</label>
-              <div className="flex flex-wrap gap-2">
-                {TOPICS.map(t => (
-                  <button key={t} type="button" onClick={() => setTopic(t)}
-                    className={`px-3 py-1.5 rounded-full text-sm border transition-all ${
-                      topic === t
-                        ? 'bg-blue-600 text-white border-transparent'
-                        : 'border-slate-200 text-slate-600 hover:border-blue-300'
-                    }`}>
-                    {t}
-                  </button>
+      {/* Chat Feed */}
+      <div ref={feedRef} className="flex-1 overflow-y-auto mx-4 sm:mx-6 mb-2 p-4 space-y-4 bg-slate-50/50 rounded-2xl border border-slate-200">
+        {loading ? (
+          <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-purple-500" /></div>
+        ) : discussions.length === 0 ? (
+          <div className="text-center py-16 space-y-2">
+            <Users className="h-10 w-10 text-slate-300 mx-auto" />
+            <p className="font-semibold text-slate-500">No messages yet</p>
+            <p className="text-xs text-slate-400">Be the first to say hello!</p>
+          </div>
+        ) : (
+          discussions.map((d, i) => {
+            const isMe = d.senderId === currentUserId || d.senderName === currentUserName
+            const showAvatar = i === 0 || discussions[i - 1]?.senderName !== d.senderName
+            return (
+              <div key={d.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                {!isMe ? (
+                  <div className="flex gap-2.5 max-w-[80%]">
+                    {showAvatar ? (
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarColor(d.senderName)} flex items-center justify-center shrink-0 mt-1`}>
+                        <span className="text-white text-xs font-bold">{getInitials(d.senderName)}</span>
+                      </div>
+                    ) : <div className="w-8 shrink-0" />}
+                    <div className="min-w-0">
+                      {showAvatar && <p className="text-xs font-semibold text-slate-700 mb-1">{d.senderName}</p>}
+                      <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-100 shadow-xs">
+                        <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-wide mb-1">{d.topic}</p>
+                        <p className="text-sm text-slate-700">{d.message}</p>
+                        <p className="text-[10px] text-slate-400 mt-1.5">{fmtTime(d.createdAt)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="max-w-[80%]">
+                    <div className="bg-purple-600 text-white p-3 rounded-2xl rounded-tr-none shadow-xs">
+                      <p className="text-[10px] font-semibold text-purple-200 uppercase tracking-wide mb-1">{d.topic}</p>
+                      <p className="text-sm">{d.message}</p>
+                      <p className="text-[10px] text-purple-200 mt-1.5">{fmtTime(d.createdAt)}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input Bar */}
+      <div className="shrink-0 px-4 sm:px-6 pb-4">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 flex items-end gap-2">
+          <div className="relative">
+            <button onClick={() => setShowEmoji(!showEmoji)}
+              className={`p-2 rounded-xl transition-colors ${showEmoji ? 'bg-purple-100 text-purple-600' : 'text-slate-400 hover:text-slate-600'}`}>
+              <Smile className="h-5 w-5" />
+            </button>
+            {showEmoji && (
+              <div className="absolute bottom-full left-0 mb-2 bg-white rounded-xl shadow-xl border border-slate-200 p-2 grid grid-cols-6 gap-1 z-10">
+                {EMOJIS.map(e => (
+                  <button key={e} onClick={() => insertEmoji(e)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 rounded-lg text-lg">{e}</button>
                 ))}
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Your message</label>
-              <textarea
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                placeholder="Share your thoughts, ask a question, or start a discussion..."
-                rows={4}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                required
-              />
-              <p className="text-xs text-slate-400 mt-1">Be respectful — inappropriate language is filtered automatically</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button type="submit" disabled={posting || !topic || !message.trim()}
-                className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition-all">
-                {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                {posting ? 'Posting...' : 'Post to Board'}
-              </button>
-              <p className="text-xs text-slate-400">Your post will be visible to all students</p>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {posted && !flagged && (
-        <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-          <CheckCircle className="h-5 w-5 text-green-500 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold text-green-800">Posted!</p>
-            <p className="text-xs text-green-600">Your message is now visible to everyone.</p>
+            )}
           </div>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="h-7 w-7 text-blue-500 animate-spin" />
-        </div>
-      ) : discussions.length === 0 ? (
-        <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
-          <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-          <p className="font-semibold text-slate-600">No discussions yet</p>
-          <p className="text-slate-400 text-sm mt-1">Be the first to start a conversation!</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {discussions.map(d => (
-            <div key={d.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarColor(d.senderName)} flex items-center justify-center shrink-0 shadow-sm`}>
-                    <span className="text-white text-xs font-bold">{getInitials(d.senderName)}</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">{d.senderName}</p>
-                    <p className="text-xs text-slate-400">{fmtDate(d.createdAt)}</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1.5">{d.topic}</p>
-              <p className="text-slate-700 text-sm leading-relaxed">{d.message}</p>
+          <div className="flex-1 min-w-0">
+            <div className="flex gap-1.5 mb-1.5">
+              {['General','Question','Help','Resource','Other'].map(t => (
+                <button key={t} onClick={() => setTopic(t)}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${topic === t ? 'bg-purple-100 border-purple-300 text-purple-700 font-semibold' : 'border-slate-200 text-slate-500 hover:border-slate-300'}`}>{t}</button>
+              ))}
             </div>
-          ))}
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message..."
+              rows={1}
+              className="w-full resize-none border-0 bg-transparent text-sm focus:outline-none min-h-[24px] max-h-24 p-0"
+            />
+          </div>
+          <button onClick={send} disabled={posting || !message.trim()}
+            className="bg-purple-600 text-white p-2.5 rounded-xl hover:bg-purple-700 transition-colors shrink-0 disabled:opacity-40">
+            {posting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+          </button>
         </div>
-      )}
+      </div>
     </div>
   )
 }
