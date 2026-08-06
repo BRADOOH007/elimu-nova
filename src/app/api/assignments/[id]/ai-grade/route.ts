@@ -35,7 +35,7 @@ export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, 
     return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
   }
 
-  let prompt = `You are an expert teacher grading a student assignment. Please grade the following submission carefully.
+  let prompt = `You are a warm, encouraging expert teacher grading a student assignment. Please grade the following submission carefully and fairly.
 
 Assignment Title: ${assignment.title}
 Assignment Description: ${assignment.description}
@@ -47,7 +47,7 @@ ${submission.content}
 
 Please provide:
 1. A numerical grade (0-100)
-2. Detailed feedback for the student
+2. Encouraging, detailed feedback for the student (acknowledge their effort, highlight a strength, give 1-2 kind suggestions, and end with motivation)
 3. A breakdown of scores by question (if applicable)
 4. Specific suggestions for improvement
 
@@ -92,19 +92,22 @@ Make sure your response is valid JSON without any markdown formatting.`
     console.error('Failed to parse AI grading response:', parseError)
     gradingResult = {
       grade: 0,
-      feedback: 'AI grading failed. Please grade manually.',
+      feedback: 'Your work is being reviewed carefully. Please check back soon — keep up the great effort!',
       confidence: 0,
       questionScores: [],
       needsRevision: true,
-      revisionNotes: 'AI grading failed'
+      revisionNotes: 'AI grading could not be completed'
     }
   }
+
+  const safeGrade = Math.max(0, Math.min(100, Number(gradingResult.grade) || 0))
+  const safeFeedback = String(gradingResult.feedback || 'Good effort!')
 
   const updatedSubmission = await prisma.submission.update({
     where: { id: submissionId },
     data: {
-      grade: gradingResult.grade,
-      feedback: gradingResult.feedback,
+      grade: safeGrade,
+      feedback: safeFeedback,
       status: 'GRADED',
       gradedAt: new Date(),
       isAiGraded: true,

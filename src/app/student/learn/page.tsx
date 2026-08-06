@@ -1,15 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Progress } from '@/components/ui/progress'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
-  BookOpen, Brain, CheckCircle, Loader2, RefreshCw, Play, Target, X,
+  BookOpen, Brain, CheckCircle, Loader2, Play, Target, X,
   Compass, Repeat, GitBranch, ArrowRight, Sparkles, Trophy, Flame, Clock, Star, Zap, AlertCircle
 } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
@@ -17,7 +16,7 @@ import { CurriculumBrowser } from '@/components/student/curriculum-browser'
 import { Recommendations } from '@/components/student/recommendations'
 import { FocusTimer } from '@/components/student/focus-timer'
 import { AIStudyBuddy } from '@/components/student/ai-study-buddy'
-import { getGameState, updateStreak, awardXP, completeLesson, completeQuiz, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
+import { getGameState, updateStreak, awardXP, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
 import { addMistake, getMistakeCount, markMistakeReviewed, getUnreviewedMistakes } from '@/lib/mistake-bank'
 
 // Types & constants (keep from original)
@@ -270,395 +269,448 @@ export default function LearnPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 space-y-6 pb-24">
+    <div className="min-h-screen bg-slate-50 pb-28">
 
-      {/* ── Greeting + XP Bar + Daily Challenge ── */}
-      <div className="space-y-3">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-extrabold text-slate-900">Your Learning Journey</h1>
-            <p className="text-slate-500 text-sm mt-0.5">Study a topic, take a quiz, beat your streak</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-full px-3 py-1.5">
-              <Flame className="h-4 w-4 text-amber-500" />{gameState.streak}d
+      {/* ═══ HERO ═══ */}
+      <header className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white">
+        <div className="absolute -top-24 -right-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-fuchsia-400/25 blur-3xl" />
+        <div className="absolute top-1/2 left-1/3 h-40 w-40 rounded-full bg-cyan-300/20 blur-3xl" />
+
+        <div className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-200">Learning Studio</p>
+              <h1 className="text-2xl font-extrabold sm:text-3xl">Your Learning Journey</h1>
+              <p className="mt-1 text-sm text-indigo-100/90">Study a topic, take a quiz, beat your streak</p>
             </div>
-            <div className="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1.5">
-              <Zap className="h-4 w-4 text-indigo-500" />Lv.{gameState.level}
-            </div>
-            {getMistakeCount().unreviewed > 0 && (
-              <button onClick={() => { setMistakeMode(true); setMistakeIdx(0) }}
-                className="flex items-center gap-1.5 bg-red-50 border border-red-200 rounded-full px-3 py-1.5 hover:bg-red-100">
-                <AlertCircle className="h-4 w-4 text-red-500" />{getMistakeCount().unreviewed}
-              </button>
-            )}
-          </div>
-        </div>
 
-        {/* XP Progress Bar */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              <span className="text-xs font-bold text-slate-700">{levelName}</span>
-            </div>
-            <span className="text-xs font-bold text-indigo-600">{gameState.xp} XP</span>
-          </div>
-          <div className="bg-slate-100 rounded-full h-2 overflow-hidden relative">
-            <div className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 rounded-full transition-all duration-500" style={{width:`${xpProgress.progress}%`}} />
-          </div>
-          <div className="flex justify-between mt-1">
-            <span className="text-[10px] text-slate-400">{levelName}</span>
-            <span className="text-[10px] text-slate-400">{getLevelName(gameState.level + 1)}</span>
-          </div>
-        </div>
-
-        {/* XP Gain Toast */}
-        {showXpGain.visible && (
-          <div className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-full px-4 py-1.5 text-sm font-bold inline-flex items-center gap-1.5 animate-bounce">
-            <Zap className="h-4 w-4" />+{showXpGain.amount} XP!
-          </div>
-        )}
-
-        {/* Daily Challenge */}
-        {!dailyDone && dailyTopic && (
-          <Card className="border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={startDailyChallenge}>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                  <Trophy className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-amber-900">Daily Challenge</p>
-                  <p className="text-xs text-amber-700">{dailySubject}: {dailyTopic} — +{XP_REWARDS.dailyChallenge} XP</p>
-                </div>
-              </div>
-              <Play className="h-5 w-5 text-amber-600" />
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Focus Timer (collapsible) */}
-        {activeLesson && studyPhase === 'learn' && <FocusTimer onComplete={(m) => addXp(10)} />}
-
-        {/* Mistake Review */}
-        {mistakeMode && unreviewedMistakes.length > 0 && (
-          <Card className="border-2 border-red-300 bg-gradient-to-r from-red-50 to-rose-50 shadow-sm">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="font-bold text-red-800 text-sm flex items-center gap-2"><AlertCircle className="h-4 w-4" />Mistake Review ({mistakeIdx + 1}/{unreviewedMistakes.length})</p>
-                <button onClick={() => setMistakeMode(false)} className="text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
-              </div>
-              {(() => {
-                const m = unreviewedMistakes[mistakeIdx]
-                if (!m) return null
-                return (
-                  <div className="space-y-2 bg-white rounded-xl p-3">
-                    <p className="text-sm text-slate-700 font-semibold">{m.question}</p>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded">Your answer: {m.yourAnswer}</span>
-                      <span className="text-green-600 bg-green-50 px-2 py-0.5 rounded">Correct: {m.correctAnswer}</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { markMistakeReviewed(m.id); setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Got it</Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Skip</Button>
-                    </div>
-                  </div>
-                )
-              })()}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      {/* ── Due Reviews ── */}
-      {dueReviews.length > 0 && (
-        <Card className="border-2 border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Repeat className="h-5 w-5 text-orange-600" />
-              <p className="font-semibold text-orange-800">{dueReviews.length} topic{dueReviews.length > 1 ? 's' : ''} due for review</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {dueReviews.slice(0, 3).map((r, i) => (
-                <Button key={i} size="sm" variant="outline" onClick={() => resumeTopicLesson(r.subject, r.topic)}
-                  className="border-orange-300 text-orange-700 hover:bg-orange-100 text-xs">
-                  <Repeat className="h-3 w-3 mr-1" />{r.topic} ({r.score}%)
-                </Button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Learning Path Progress ── */}
-      {pathData && (
-        <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <GitBranch className="h-4 w-4 text-blue-600" />
-                <span className="text-sm font-semibold text-blue-900">{studySubject} — {studyGrade}</span>
-              </div>
-              <span className="text-xs font-semibold text-blue-600">{pathData.completedCount}/{pathData.totalCount} topics</span>
-            </div>
-            <Progress value={pathData.percentComplete || 0} className="h-2.5" />
-            {pathData.resumeTopic && pathData.resumeTopic.topicName !== studyTopic && (
-              <div className="mt-3 flex items-center justify-between bg-white rounded-xl p-3 border border-blue-100">
-                <div>
-                  <p className="text-sm font-semibold text-blue-800">Continue: {pathData.resumeTopic.topicName}</p>
-                </div>
-                <Button size="sm" onClick={() => resumeTopicLesson(studySubject, pathData.resumeTopic.topicName)}
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white"><Play className="h-3.5 w-3.5 mr-1" />Resume</Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Curriculum Browser ── */}
-      {!activeLesson && !studying && !quickQuizOpen && (
-        <div>
-          <CurriculumBrowser onSelectTopic={handleExploreTopic} />
-          <Recommendations onStudy={handleExploreTopic} />
-        </div>
-      )}
-
-      {/* ── Loading ── */}
-      {studying && (
-        <Card><CardContent className="p-8 text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-500 mx-auto" />
-          <p className="text-sm text-slate-600">Creating your personalized lesson...</p>
-        </CardContent></Card>
-      )}
-
-      {/* ── Markdown Fallback Lesson ── */}
-      {!studying && lessonMd && !activeLesson && (
-        <Card className="border-0 shadow-xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg font-extrabold">{studyTopic} — {studySubject}</CardTitle>
-              <button onClick={() => setLessonMd('')} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"><X className="h-4 w-4" /></button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            <div className="max-h-[500px] overflow-y-auto"><MarkdownRenderer content={lessonMd} /></div>
-            <div className="mt-4 flex gap-2">
-              <Button onClick={() => { setLessonMd(''); setActiveLesson(null) }} variant="outline" className="flex-1">Pick Another Topic</Button>
-              <Button onClick={startQuickQuiz} disabled={quizLoading} className="flex-1 bg-gradient-to-r from-indigo-500 to-violet-600 text-white">
-                {quizLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Target className="h-4 w-4 mr-2" />}Quick Quiz
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Active Recall 3-Phase ── */}
-      {activeLesson && !studying && (
-        <Card className="border-0 shadow-xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-teal-500 to-emerald-600 text-white pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-teal-200 uppercase tracking-wider mb-1">Phase {studyPhase === 'preview' ? '1' : studyPhase === 'learn' ? '2' : studyPhase === 'recall' ? '3' : '✓'}/3</p>
-                <CardTitle className="text-lg font-extrabold">{activeLesson.topic} — {activeLesson.subject}</CardTitle>
-              </div>
-              <button onClick={() => { setActiveLesson(null); setStudyPhase('preview') }} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"><X className="h-4 w-4" /></button>
-            </div>
-            <div className="flex gap-1 mt-3">
-              {['preview','learn','recall'].map(p => (
-                <button key={p} onClick={() => setStudyPhase(p as any)}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${studyPhase === p ? 'bg-white text-teal-700' : 'bg-white/20 text-white/80 hover:bg-white/30'}`}>
-                  {p === 'preview' ? 'Preview' : p === 'learn' ? 'Learn' : 'Recall'}
+            <div className="flex items-center gap-2">
+              <Badge className="gap-1.5 border border-white/20 bg-white/15 px-3 py-1.5 text-white backdrop-blur">
+                <Flame className="h-4 w-4 text-amber-300" />
+                {gameState.streak}d streak
+              </Badge>
+              <Badge className="gap-1.5 border border-white/20 bg-white/15 px-3 py-1.5 text-white backdrop-blur">
+                <Zap className="h-4 w-4 text-yellow-300" />
+                Lv.{gameState.level}
+              </Badge>
+              {getMistakeCount().unreviewed > 0 && (
+                <button
+                  onClick={() => { setMistakeMode(true); setMistakeIdx(0) }}
+                  className="flex items-center gap-1.5 rounded-full border border-red-300/40 bg-red-500/25 px-3 py-1.5 text-sm font-semibold backdrop-blur transition-colors hover:bg-red-500/35"
+                >
+                  <AlertCircle className="h-4 w-4 text-red-200" />
+                  {getMistakeCount().unreviewed}
                 </button>
-              ))}
+              )}
             </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            {/* Phase 1: Preview */}
-            {studyPhase === 'preview' && (
-              <div className="space-y-5">
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                  <p className="text-sm text-amber-800">{activeLesson.preview.whatYoullLearn}</p>
-                </div>
-                <div className="space-y-2">
-                  {activeLesson.preview.concepts.map((c, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3">
-                      <span className="w-7 h-7 rounded-full bg-teal-500 flex items-center justify-center text-white text-xs font-bold">{i + 1}</span>
-                      <span className="text-sm text-slate-700">{c}</span>
-                    </div>
-                  ))}
-                </div>
-                <Button onClick={() => setStudyPhase('learn')} className="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold">Start Learning</Button>
-              </div>
-            )}
+          </div>
 
-            {/* Phase 2: Learn */}
-            {studyPhase === 'learn' && (
-              <div className="space-y-5">
-                <div className="max-h-[450px] overflow-y-auto"><MarkdownRenderer content={activeLesson.content} /></div>
-                <Button onClick={() => { setStudyPhase('recall'); setRecallAnswers(new Array(activeLesson.recall.length).fill(undefined)) }}
-                  className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold"><Brain className="w-4 h-4 mr-2" />I'm Ready — Test Me!</Button>
+          {/* XP Progress Bar */}
+          <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-amber-300" />
+                <span className="text-sm font-bold">{levelName}</span>
               </div>
-            )}
-
-            {/* Phase 3: Recall */}
-            {studyPhase === 'recall' && (
-              <div className="space-y-4">
-                {activeLesson.recall.map((q, i) => (
-                  <div key={i} className="border rounded-xl p-4 space-y-3">
-                    <p className="font-semibold text-slate-800 text-sm">{i + 1}. {q.question}</p>
-                    {q.type === 'mcq' && q.options ? (
-                      <div className="space-y-1.5">
-                        {q.options.map((opt, j) => {
-                          const sel = recallAnswers[i] === j; const correct = recallSubmitted && j === q.options!.findIndex(o => o === q.answer)
-                          const wrong = recallSubmitted && sel && !correct
-                          return (
-                            <button key={j} disabled={recallSubmitted} onClick={() => handleRecallChange(i, j)}
-                              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border text-left text-sm ${correct ? 'bg-green-100 border-green-400' : wrong ? 'bg-red-100 border-red-400' : sel ? 'bg-blue-100 border-blue-400' : 'border-slate-200 hover:border-blue-300'}`}>
-                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${correct ? 'bg-green-500 text-white' : wrong ? 'bg-red-500 text-white' : sel ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+j)}</span>
-                              {opt}{correct && <CheckCircle className="ml-auto h-4 w-4 text-green-600" />}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <input type="text" disabled={recallSubmitted} value={typeof recallAnswers[i] === 'string' ? recallAnswers[i] as string : ''}
-                        onChange={e => handleRecallChange(i, e.target.value)} placeholder="Type your answer..."
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50" />
-                    )}
-                    {recallSubmitted && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm">
-                        <span className="font-bold text-blue-800">Answer: </span><span className="text-blue-700">{q.answer}</span>
-                        <p className="text-blue-600 text-xs mt-1">{q.explanation}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {!recallSubmitted ? (
-                  <Button onClick={submitRecall} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold"><CheckCircle className="w-4 h-4 mr-2" />Submit Answers</Button>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-4 text-center">
-                      <p className="text-3xl font-extrabold text-indigo-700">{recallScore}%</p>
-                      <p className="text-sm text-indigo-600">{recallScore >= 80 ? 'Excellent! You\'ve mastered this.' : recallScore >= 50 ? 'Good progress! Review and try again.' : 'Keep going! Practice makes perfect.'}</p>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Button onClick={() => { setStudyPhase('learn'); setRecallSubmitted(false) }} variant="outline" className="flex-1">Review</Button>
-                      <Button onClick={startQuickQuiz} disabled={quizLoading} className="flex-1 bg-indigo-500 text-white">
-                        {quizLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Target className="h-4 w-4 mr-2" />}Quick Quiz
-                      </Button>
-                      <Button onClick={completeAndAdvance} className="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold"><ArrowRight className="h-4 w-4 mr-2" />Complete &amp; Continue</Button>
-                    </div>
-                  </div>
-                )}
+              <div className="flex items-center gap-2 text-sm font-bold text-amber-200">
+                <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
+                {gameState.xp} XP
               </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── Quick Quiz Overlay ── */}
-      {quickQuizOpen && quizQuestions.length > 0 && (
-        <Card className="border-0 shadow-xl overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white pb-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-indigo-200 uppercase tracking-wider">Quick Quiz — {studySubject}</p>
-                <CardTitle className="text-lg font-extrabold">{studyTopic}</CardTitle>
-              </div>
-              <button onClick={() => setQuickQuizOpen(false)} className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center"><X className="h-4 w-4" /></button>
             </div>
-          </CardHeader>
-          <CardContent className="p-6 space-y-4">
-            {!quizSubmitted ? (
-              <>
-                <div className="flex items-center justify-between text-sm text-slate-500">
-                  <span>Question {quizQIndex + 1} of {quizQuestions.length}</span>
-                </div>
-                {quizQuestions[quizQIndex] && (() => {
-                  const q = quizQuestions[quizQIndex]
-                  return (
+            <div className="h-2.5 overflow-hidden rounded-full bg-white/20">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400 transition-all duration-500"
+                style={{ width: `${xpProgress.progress}%` }}
+              />
+            </div>
+            <div className="mt-1.5 flex justify-between text-[11px] text-indigo-100/80">
+              <span>{levelName}</span>
+              <span>Next: {getLevelName(gameState.level + 1)}</span>
+            </div>
+          </div>
+
+          {/* XP Gain Toast */}
+          {showXpGain.visible && (
+            <div className="mt-3 inline-flex animate-bounce items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-sm font-bold shadow-lg">
+              <Zap className="h-4 w-4" />+{showXpGain.amount} XP!
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* ═══ BODY ═══ */}
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
+
+          {/* ── LEFT: Study Area ── */}
+          <div className="min-w-0 space-y-6">
+
+            {/* Focus Timer (during learn phase) */}
+            {activeLesson && studyPhase === 'learn' && <FocusTimer onComplete={(m) => addXp(10)} />}
+
+            {/* Loading */}
+            {studying && (
+              <Card className="overflow-hidden border-0 shadow-xl">
+                <CardContent className="space-y-3 p-10 text-center">
+                  <div className="relative mx-auto h-16 w-16">
+                    <div className="absolute inset-0 animate-ping rounded-full bg-indigo-100 opacity-60" />
+                    <Loader2 className="relative mx-auto h-16 w-16 animate-spin text-indigo-500" />
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700">Creating your personalized lesson...</p>
+                  <p className="text-xs text-slate-400">Our AI is building your {studySubject} lesson</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Active Recall 3-Phase ── */}
+            {activeLesson && !studying && (
+              <Card className="overflow-hidden border-0 shadow-xl">
+                <CardHeader className="bg-gradient-to-r from-teal-500 to-emerald-600 pb-4 text-white">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="mb-1 text-xs uppercase tracking-wider text-teal-200">Phase {studyPhase === 'preview' ? '1' : studyPhase === 'learn' ? '2' : studyPhase === 'recall' ? '3' : '✓'}/3</p>
+                      <CardTitle className="truncate text-lg font-extrabold">{activeLesson.topic} — {activeLesson.subject}</CardTitle>
+                    </div>
+                    <button onClick={() => { setActiveLesson(null); setStudyPhase('preview') }} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30"><X className="h-4 w-4" /></button>
+                  </div>
+                  <div className="mt-3 flex gap-1">
+                    {['preview','learn','recall'].map(p => (
+                      <button key={p} onClick={() => setStudyPhase(p as any)}
+                        className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition-all ${studyPhase === p ? 'bg-white text-teal-700' : 'bg-white/20 text-white/80 hover:bg-white/30'}`}>
+                        {p === 'preview' ? 'Preview' : p === 'learn' ? 'Learn' : 'Recall'}
+                      </button>
+                    ))}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-5 sm:p-6">
+                  {/* Phase 1: Preview */}
+                  {studyPhase === 'preview' && (
+                    <div className="space-y-5">
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <p className="text-sm text-amber-800">{activeLesson.preview.whatYoullLearn}</p>
+                      </div>
+                      <div className="space-y-2">
+                        {activeLesson.preview.concepts.map((c, i) => (
+                          <div key={i} className="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-500 text-xs font-bold text-white">{i + 1}</span>
+                            <span className="text-sm text-slate-700">{c}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <Button onClick={() => setStudyPhase('learn')} className="w-full bg-teal-500 font-semibold text-white hover:bg-teal-600">Start Learning</Button>
+                    </div>
+                  )}
+
+                  {/* Phase 2: Learn */}
+                  {studyPhase === 'learn' && (
+                    <div className="space-y-5">
+                      <div className="max-h-[450px] overflow-y-auto"><MarkdownRenderer content={activeLesson.content} /></div>
+                      <Button onClick={() => { setStudyPhase('recall'); setRecallAnswers(new Array(activeLesson.recall.length).fill(undefined)) }}
+                        className="w-full bg-indigo-500 font-semibold text-white hover:bg-indigo-600"><Brain className="mr-2 h-4 w-4" />I'm Ready — Test Me!</Button>
+                    </div>
+                  )}
+
+                  {/* Phase 3: Recall */}
+                  {studyPhase === 'recall' && (
                     <div className="space-y-4">
-                      <p className="font-semibold text-slate-800">{quizQIndex + 1}. {q.question}</p>
-                      {(q.type === 'multiple_choice' || q.type === 'true_false') && q.options && (
-                        <div className="space-y-2">
-                          {q.options.map((opt, j) => (
-                            <button key={j} onClick={() => setQuizAnswers(p => ({...p, [quizQIndex]: j}))}
-                              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left text-sm ${quizAnswers[quizQIndex] === j ? 'bg-blue-100 border-blue-400 text-blue-800' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
-                              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${quizAnswers[quizQIndex] === j ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65 + j)}</span>{opt}
-                            </button>
-                          ))}
+                      {activeLesson.recall.map((q, i) => (
+                        <div key={i} className="space-y-3 rounded-xl border p-4">
+                          <p className="text-sm font-semibold text-slate-800">{i + 1}. {q.question}</p>
+                          {q.type === 'mcq' && q.options ? (
+                            <div className="space-y-1.5">
+                              {q.options.map((opt, j) => {
+                                const sel = recallAnswers[i] === j; const correct = recallSubmitted && j === q.options!.findIndex(o => o === q.answer)
+                                const wrong = recallSubmitted && sel && !correct
+                                return (
+                                  <button key={j} disabled={recallSubmitted} onClick={() => handleRecallChange(i, j)}
+                                    className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm ${correct ? 'border-green-400 bg-green-100' : wrong ? 'border-red-400 bg-red-100' : sel ? 'border-blue-400 bg-blue-100' : 'border-slate-200 hover:border-blue-300'}`}>
+                                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${correct ? 'bg-green-500 text-white' : wrong ? 'bg-red-500 text-white' : sel ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65+j)}</span>
+                                    {opt}{correct && <CheckCircle className="ml-auto h-4 w-4 text-green-600" />}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <input type="text" disabled={recallSubmitted} value={typeof recallAnswers[i] === 'string' ? recallAnswers[i] as string : ''}
+                              onChange={e => handleRecallChange(i, e.target.value)} placeholder="Type your answer..."
+                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50" />
+                          )}
+                          {recallSubmitted && (
+                            <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">
+                              <span className="font-bold text-blue-800">Answer: </span><span className="text-blue-700">{q.answer}</span>
+                              <p className="mt-1 text-xs text-blue-600">{q.explanation}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+
+                      {!recallSubmitted ? (
+                        <Button onClick={submitRecall} className="w-full bg-indigo-500 font-semibold text-white hover:bg-indigo-600"><CheckCircle className="mr-2 h-4 w-4" />Submit Answers</Button>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="rounded-xl bg-gradient-to-r from-indigo-50 to-violet-50 p-4 text-center">
+                            <p className="text-3xl font-extrabold text-indigo-700">{recallScore}%</p>
+                            <p className="text-sm text-indigo-600">{recallScore >= 80 ? 'Excellent! You\'ve mastered this.' : recallScore >= 50 ? 'Good progress! Review and try again.' : 'Keep going! Practice makes perfect.'}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button onClick={() => { setStudyPhase('learn'); setRecallSubmitted(false) }} variant="outline" className="flex-1">Review</Button>
+                            <Button onClick={startQuickQuiz} disabled={quizLoading} className="flex-1 bg-indigo-500 text-white">
+                              {quizLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}Quick Quiz
+                            </Button>
+                            <Button onClick={completeAndAdvance} className="w-full bg-teal-500 font-semibold text-white hover:bg-teal-600"><ArrowRight className="mr-2 h-4 w-4" />Complete & Continue</Button>
+                          </div>
                         </div>
                       )}
                     </div>
-                  )
-                })()}
-                <div className="flex gap-2">
-                  <Button variant="outline" disabled={quizQIndex === 0} onClick={() => setQuizQIndex(i => i - 1)} className="flex-1">Previous</Button>
-                  {quizQIndex < quizQuestions.length - 1 ? (
-                    <Button onClick={() => setQuizQIndex(i => i + 1)} className="flex-1 bg-indigo-500 text-white">Next</Button>
-                  ) : (
-                    <Button onClick={submitQuiz} className="flex-1 bg-green-500 text-white"><CheckCircle className="h-4 w-4 mr-2" />Submit Quiz</Button>
                   )}
-                </div>
-                <Progress value={((quizQIndex + 1) / quizQuestions.length) * 100} className="h-1.5" />
-              </>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-4 text-center">
-                  <p className="text-3xl font-extrabold text-indigo-700">{quizScore}%</p>
-                  <p className="text-sm text-indigo-600">{quizScore >= 80 ? 'Great job!' : quizScore >= 50 ? 'Good effort!' : 'Keep practicing!'}</p>
-                </div>
-                <Button onClick={() => { setQuickQuizOpen(false); setQuizQuestions([]) }} className="w-full">Done</Button>
-              </div>
+                </CardContent>
+              </Card>
             )}
-          </CardContent>
-        </Card>
-      )}
 
-      {/* ── Empty State ── */}
-      {!studying && !activeLesson && !lessonMd && !quickQuizOpen && !pathLoading && (
-        <div className="text-center py-12 space-y-4">
-          <BookOpen className="h-16 w-16 text-slate-300 mx-auto" />
-          <p className="text-slate-500 font-semibold">Pick a topic above to start learning</p>
-          <p className="text-slate-400 text-sm">Your AI lesson will appear here with active recall questions</p>
-        </div>
-      )}
-
-      {/* ── Notes ── */}
-      <Card>
-        <CardHeader className="cursor-pointer select-none" onClick={() => setNotesOpen(!notesOpen)}>
-          <CardTitle className="text-base flex items-center justify-between">
-            <span className="flex items-center gap-2">📝 My Notes</span>
-            <span className="text-slate-400 text-sm">{notesOpen ? '▼' : '▶'}</span>
-          </CardTitle>
-        </CardHeader>
-        {notesOpen && (
-          <CardContent className="space-y-3">
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Type your notes here..." rows={4} className="resize-none" />
-            <Button onClick={saveNote} disabled={!notes.trim()} size="sm" className="bg-amber-500 hover:bg-amber-600">Save Note</Button>
-            {savedNotes.length > 0 && (
-              <div className="space-y-2 max-h-40 overflow-y-auto">
-                {savedNotes.map(n => (
-                  <div key={n.id} className="bg-slate-50 rounded-lg p-3">
-                    <p className="text-xs text-slate-400">{n.topic}</p>
-                    <p className="text-sm text-slate-700">{n.text}</p>
+            {/* ── Markdown Fallback Lesson ── */}
+            {!studying && lessonMd && !activeLesson && (
+              <Card className="overflow-hidden border-0 shadow-xl">
+                <CardHeader className="bg-gradient-to-r from-teal-500 to-emerald-600 pb-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="truncate text-lg font-extrabold">{studyTopic} — {studySubject}</CardTitle>
+                    <button onClick={() => setLessonMd('')} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30"><X className="h-4 w-4" /></button>
                   </div>
-                ))}
+                </CardHeader>
+                <CardContent className="p-5 sm:p-6">
+                  <div className="max-h-[500px] overflow-y-auto"><MarkdownRenderer content={lessonMd} /></div>
+                  <div className="mt-4 flex gap-2">
+                    <Button onClick={() => { setLessonMd(''); setActiveLesson(null) }} variant="outline" className="flex-1">Pick Another Topic</Button>
+                    <Button onClick={startQuickQuiz} disabled={quizLoading} className="flex-1 bg-gradient-to-r from-indigo-500 to-violet-600 text-white">
+                      {quizLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}Quick Quiz
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Quick Quiz ── */}
+            {quickQuizOpen && quizQuestions.length > 0 && (
+              <Card className="overflow-hidden border-0 shadow-xl">
+                <CardHeader className="bg-gradient-to-r from-indigo-500 to-violet-600 pb-4 text-white">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-wider text-indigo-200">Quick Quiz — {studySubject}</p>
+                      <CardTitle className="truncate text-lg font-extrabold">{studyTopic}</CardTitle>
+                    </div>
+                    <button onClick={() => setQuickQuizOpen(false)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 transition-colors hover:bg-white/30"><X className="h-4 w-4" /></button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4 p-5 sm:p-6">
+                  {!quizSubmitted ? (
+                    <>
+                      <div className="flex items-center justify-between text-sm text-slate-500">
+                        <span className="inline-flex items-center gap-1.5"><Clock className="h-4 w-4 text-indigo-400" />Question {quizQIndex + 1} of {quizQuestions.length}</span>
+                      </div>
+                      {quizQuestions[quizQIndex] && (() => {
+                        const q = quizQuestions[quizQIndex]
+                        return (
+                          <div className="space-y-4">
+                            <p className="font-semibold text-slate-800">{quizQIndex + 1}. {q.question}</p>
+                            {(q.type === 'multiple_choice' || q.type === 'true_false') && q.options && (
+                              <div className="space-y-2">
+                                {q.options.map((opt, j) => (
+                                  <button key={j} onClick={() => setQuizAnswers(p => ({...p, [quizQIndex]: j}))}
+                                    className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm ${quizAnswers[quizQIndex] === j ? 'border-blue-400 bg-blue-100 text-blue-800' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
+                                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${quizAnswers[quizQIndex] === j ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65 + j)}</span>{opt}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
+                      <div className="flex gap-2">
+                        <Button variant="outline" disabled={quizQIndex === 0} onClick={() => setQuizQIndex(i => i - 1)} className="flex-1">Previous</Button>
+                        {quizQIndex < quizQuestions.length - 1 ? (
+                          <Button onClick={() => setQuizQIndex(i => i + 1)} className="flex-1 bg-indigo-500 text-white">Next</Button>
+                        ) : (
+                          <Button onClick={submitQuiz} className="flex-1 bg-green-500 text-white"><CheckCircle className="mr-2 h-4 w-4" />Submit Quiz</Button>
+                        )}
+                      </div>
+                      <Progress value={((quizQIndex + 1) / quizQuestions.length) * 100} className="h-1.5" />
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="rounded-xl bg-gradient-to-r from-indigo-50 to-violet-50 p-4 text-center">
+                        <p className="text-3xl font-extrabold text-indigo-700">{quizScore}%</p>
+                        <p className="text-sm text-indigo-600">{quizScore >= 80 ? 'Great job!' : quizScore >= 50 ? 'Good effort!' : 'Keep practicing!'}</p>
+                      </div>
+                      <Button onClick={() => { setQuickQuizOpen(false); setQuizQuestions([]) }} className="w-full">Done</Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Curriculum Browser + Recommendations (idle) ── */}
+            {!activeLesson && !studying && !quickQuizOpen && (
+              <div className="space-y-6">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100">
+                    <Compass className="h-4 w-4 text-indigo-600" />
+                  </span>
+                  <h2 className="text-lg font-extrabold text-slate-900">Explore the Curriculum</h2>
+                </div>
+                <CurriculumBrowser onSelectTopic={handleExploreTopic} />
+                <Recommendations onStudy={handleExploreTopic} />
               </div>
             )}
-          </CardContent>
-        )}
-      </Card>
 
-      {/* AI Study Buddy — always visible at bottom */}
-      <AIStudyBuddy
-        currentSubject={studySubject}
-        currentTopic={studyTopic}
-        onStartStudy={(s, t) => { setStudySubject(s); setStudyTopic(t); generateLesson(s, t) }}
-      />
+            {/* ── Empty State ── */}
+            {!studying && !activeLesson && !lessonMd && !quickQuizOpen && !pathLoading && (
+              <div className="rounded-2xl border border-dashed border-indigo-200 bg-gradient-to-br from-indigo-50/60 to-violet-50/60 py-12 text-center">
+                <BookOpen className="mx-auto h-16 w-16 text-indigo-300" />
+                <p className="mt-3 font-semibold text-slate-600">Pick a topic above to start learning</p>
+                <p className="mt-1 text-sm text-slate-400">Your AI lesson will appear here with active recall questions</p>
+              </div>
+            )}
+          </div>
+
+          {/* ── RIGHT: Sidebar ── */}
+          <aside className="space-y-6 lg:sticky lg:top-4">
+
+            {/* Daily Challenge */}
+            {!dailyDone && dailyTopic && (
+              <button onClick={startDailyChallenge} className="group w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 shadow-md">
+                    <Trophy className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-amber-900">Daily Challenge</p>
+                    <p className="truncate text-xs text-amber-700">{dailySubject}: {dailyTopic}</p>
+                    <span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-600">+{XP_REWARDS.dailyChallenge} XP</span>
+                  </div>
+                </div>
+              </button>
+            )}
+
+            {/* Learning Path Progress */}
+            {pathData && (
+              <Card className="rounded-2xl border border-indigo-200 shadow-sm">
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100"><GitBranch className="h-4 w-4 text-indigo-600" /></span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold text-indigo-900">{studySubject} — {studyGrade}</p>
+                        <p className="text-[11px] text-indigo-500">{pathData.completedCount}/{pathData.totalCount} topics</p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-600">{Math.round(pathData.percentComplete || 0)}%</span>
+                  </div>
+                  <Progress value={pathData.percentComplete || 0} className="h-2" />
+                  {pathData.resumeTopic && pathData.resumeTopic.topicName !== studyTopic && (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-violet-50 p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-indigo-800">Continue: {pathData.resumeTopic.topicName}</p>
+                      </div>
+                      <Button size="sm" onClick={() => resumeTopicLesson(studySubject, pathData.resumeTopic.topicName)}
+                        className="shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 text-white"><Play className="mr-1 h-3.5 w-3.5" />Resume</Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Due Reviews */}
+            {dueReviews.length > 0 && (
+              <Card className="rounded-2xl border border-orange-200 shadow-sm">
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100"><Repeat className="h-4 w-4 text-orange-600" /></span>
+                    <div>
+                      <p className="text-sm font-bold text-orange-900">Spaced Repetition</p>
+                      <p className="text-[11px] text-orange-600">{dueReviews.length} topic{dueReviews.length > 1 ? 's' : ''} due today</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {dueReviews.slice(0, 3).map((r, i) => (
+                      <Button key={i} size="sm" variant="outline" onClick={() => resumeTopicLesson(r.subject, r.topic)}
+                        className="rounded-full border-orange-300 text-xs text-orange-700 hover:bg-orange-100">
+                        <Repeat className="mr-1 h-3 w-3" />{r.topic} ({r.score}%)
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Mistake Review */}
+            {mistakeMode && unreviewedMistakes.length > 0 && (
+              <Card className="rounded-2xl border-2 border-red-200 shadow-sm">
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100"><AlertCircle className="h-4 w-4 text-red-600" /></span>
+                      <p className="text-sm font-bold text-red-800">Mistake Review <span className="font-semibold text-red-500">({mistakeIdx + 1}/{unreviewedMistakes.length})</span></p>
+                    </div>
+                    <button onClick={() => setMistakeMode(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-500 transition-colors hover:bg-red-200"><X className="h-4 w-4" /></button>
+                  </div>
+                  {(() => {
+                    const m = unreviewedMistakes[mistakeIdx]
+                    if (!m) return null
+                    return (
+                      <div className="space-y-3 rounded-xl border border-red-100 bg-white p-3">
+                        <p className="text-sm font-semibold text-slate-800">{m.question}</p>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          <span className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-red-700">Your answer: {m.yourAnswer}</span>
+                          <span className="rounded-lg border border-green-100 bg-green-50 px-2.5 py-1 text-green-700">Correct: {m.correctAnswer}</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => { markMistakeReviewed(m.id); setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Got it</Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Skip</Button>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Notes */}
+            <Card className="rounded-2xl border border-slate-200 shadow-sm">
+              <CardHeader className="cursor-pointer select-none py-4" onClick={() => setNotesOpen(!notesOpen)}>
+                <CardTitle className="flex items-center justify-between text-base">
+                  <span className="flex items-center gap-2">📝 My Notes</span>
+                  <span className="text-sm text-slate-400">{notesOpen ? '▼' : '▶'}</span>
+                </CardTitle>
+              </CardHeader>
+              {notesOpen && (
+                <CardContent className="space-y-3">
+                  <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Type your notes here..." rows={4} className="resize-none" />
+                  <Button onClick={saveNote} disabled={!notes.trim()} size="sm" className="bg-amber-500 hover:bg-amber-600">Save Note</Button>
+                  {savedNotes.length > 0 && (
+                    <div className="max-h-40 space-y-2 overflow-y-auto">
+                      {savedNotes.map(n => (
+                        <div key={n.id} className="rounded-lg bg-slate-50 p-3">
+                          <p className="text-xs text-slate-400">{n.topic}</p>
+                          <p className="text-sm text-slate-700">{n.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              )}
+            </Card>
+          </aside>
+        </div>
+
+        {/* AI Study Buddy — always visible at bottom */}
+        <div className="mt-6">
+          <AIStudyBuddy
+            currentSubject={studySubject}
+            currentTopic={studyTopic}
+            onStartStudy={(s, t) => { setStudySubject(s); setStudyTopic(t); generateLesson(s, t) }}
+          />
+        </div>
+      </main>
     </div>
   )
 }
