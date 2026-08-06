@@ -4,26 +4,24 @@ import { useSchoolInfo } from "@/hooks/use-school-info"
 import { IndependentUserWelcome } from "@/components/onboarding/independent-user-welcome"
 import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
 import SmartRecommendations from "@/components/student/smart-recommendations"
-import AssignmentsList from "@/components/student/assignments-list"
-import UpcomingLessons from "@/components/student/upcoming-lessons"
 import { Sheet } from "@/components/ui/sheet"
 import ChatContainer from "@/components/chat/chat-container"
-import { CardSkeleton } from "@/components/ui/skeleton"
-import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus"
+import DashboardSkeleton from "@/components/dashboard-skeleton"
 import { useSession } from "next-auth/react"
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
+import useSWR from "swr"
 import {
-  Bell, Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
-  Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Loader2, X, Plus, MessageSquare,
-  Calculator, FlaskConical, Globe, Languages, Church, Atom, Palette, Dumbbell, Music, Leaf
+  Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
+  Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Plus, MessageSquare,
+  Calculator, FlaskConical, Globe, Languages, Church, Leaf
 } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
 import { getUnreviewedMistakes } from '@/lib/mistake-bank'
 import { OnboardingTourFab } from '@/components/onboarding-tour-fab'
+import { HopeAITutorDrawer } from '@/components/ai-tutor-drawer'
 
 interface DashboardData {
   student: { id: string; name: string; email: string; school: string; teacher: string; class: string }
@@ -64,13 +62,9 @@ export default function StudentDashboard() {
   const { schoolInfo, loading: schoolInfoLoading } = useSchoolInfo()
   const isIndependent = !schoolInfo?.school?.id && !session?.user?.schoolId
 
-  const [dashboardData, setDashboardData] = useState<DashboardData>(fallbackData)
-  const [loading, setLoading] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showAIChat, setShowAIChat] = useState(false)
   const [chatContext, setChatContext] = useState('')
-  const [displayName, setDisplayName] = useState("")
-  const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifs, setShowNotifs] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
 
@@ -80,8 +74,34 @@ export default function StudentDashboard() {
   const xpProgress = getXpToNextLevel(gameState.xp)
   const mistakes = getUnreviewedMistakes()
 
+  const fetcher = (url: string) => fetch(url).then(r => {
+    if (!r.ok) throw new Error(`Request failed: ${r.status}`)
+    return r.json()
+  })
+
+  // Dashboard data — cached in memory by SWR (staleTime 5min). Returning to this
+  // page renders the cached state instantly without the skeleton loader while
+  // revalidating in the background.
+  const { data: dashboardData, isLoading: loading } = useSWR<DashboardData>(
+    "/api/student/dashboard",
+    fetcher,
+  )
+
   // Learning path for Continue CTA
-  const [resumeTopic, setResumeTopic] = useState<{ subject: string; topic: string } | null>(null)
+  const { data: pathData } = useSWR<{ resumeTopic?: { subject: string; topicName: string } }>(
+    "/api/student/learning-path?limit=1",
+    fetcher,
+  )
+  const resumeTopic = pathData?.resumeTopic
+    ? { subject: pathData.resumeTopic.subject || 'Mathematics', topic: pathData.resumeTopic.topicName }
+    : null
+
+  // Display name from profile
+  const { data: profileData } = useSWR<{ firstName?: string; lastName?: string }>(
+    session?.user?.id ? `/api/user-profile?userId=${session.user.id}` : null,
+    fetcher,
+  )
+  const displayName = profileData ? `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim() : ""
 
   useEffect(() => {
     if (isIndependent && !schoolInfoLoading) {
@@ -90,22 +110,6 @@ export default function StudentDashboard() {
     }
   }, [isIndependent, schoolInfoLoading])
 
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      setLoading(true)
-      const response = await fetch("/api/student/dashboard")
-      if (!response.ok) {
-        setDashboardData({ ...fallbackData, student: { ...fallbackData.student, id: session?.user?.id || "", name: session?.user?.name || "Student" } })
-        return
-      }
-      setDashboardData(await response.json())
-    } catch {
-      setDashboardData({ ...fallbackData, student: { ...fallbackData.student, id: session?.user?.id || "", name: session?.user?.name || "Student" } })
-    } finally {
-      setLoading(false)
-    }
-  }, [session?.user?.id])
-
   const handleAIChat = async (message: string, _history: any[]) => {
     const res = await fetch('/api/student/ai-tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) })
     if (!res.ok) throw new Error('Failed')
@@ -113,39 +117,21 @@ export default function StudentDashboard() {
     return data.response || data.reply || "Sorry, I didn't catch that."
   }
 
-  useEffect(() => {
-    fetchDashboardData()
-    if (session?.user?.id) {
-      fetch(`/api/user-profile?userId=${session.user.id}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(p => { if (p) setDisplayName(`${p.firstName || ""} ${p.lastName || ""}`.trim()) })
-        .catch(() => {})
-    }
-    // Fetch resume topic from learning path
-    fetch('/api/student/learning-path?limit=1')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (d?.resumeTopic) setResumeTopic({ subject: d.resumeTopic.subject || 'Mathematics', topic: d.resumeTopic.topicName })
-      })
-      .catch(() => {})
-  }, [session?.user?.id])
-
-  useEffect(() => { if (showNotifs) fetch('/api/notifications?unreadOnly=true&limit=10').then(r => r.ok ? r.json() : []).then(setNotifications).catch(() => {}) }, [showNotifs])
   useEffect(() => { function h(e: MouseEvent) { if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifs(false) }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h) }, [])
 
-  const name = displayName || dashboardData.student?.name || session?.user?.name || "Student"
+  const name = displayName || dashboardData?.student?.name || session?.user?.name || "Student"
   const firstName = name.split(' ')[0]
 
   if (showOnboarding) return <IndependentUserWelcome userRole="STUDENT" userName={name} onComplete={() => { localStorage.setItem('independent_onboarded', '1'); setShowOnboarding(false) }} />
+  // Only show the skeleton when there is no cached data in the SWR in-memory
+  // cache — i.e. a fresh app load or hard refresh. On client navigation the
+  // cached dashboard state is already available, so isLoading is false and the
+  // dashboard UI renders optimistically while SWR revalidates in the background.
   if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
-        <CardSkeleton /><CardSkeleton /><CardSkeleton />
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
-  const d = dashboardData
+  const d = dashboardData ?? { ...fallbackData, student: { ...fallbackData.student, id: session?.user?.id || "", name: session?.user?.name || "Student" } }
   const hour = new Date().getHours()
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
   const todayStr = new Date().toISOString().split('T')[0]
@@ -372,23 +358,14 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* CHAT SHEET */}
-      <Sheet open={showAIChat} onOpenChange={setShowAIChat}>
-        <div className="h-full flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-          <div className="p-4 border-b border-white/10">
-            <h3 className="text-white font-bold text-lg flex items-center gap-2"><MessageSquare className="h-5 w-5 text-indigo-400" />AI Tutor</h3>
-            {chatContext && <p className="text-slate-400 text-xs mt-1">Context: {chatContext}</p>}
-          </div>
-          <div className="flex-1">
-            <ChatContainer
-              onSend={handleAIChat}
-              headerTitle=""
-              headerSubtitle=""
-              initialMessages={chatContext ? [{ id: 'ctx', role: 'ai' as const, content: `I see you're interested in ${chatContext}. What would you like to know?`, timestamp: new Date() }] : undefined}
-            />
-          </div>
-        </div>
-      </Sheet>
+      {/* HOPE AI TUTOR DRAWER */}
+      <HopeAITutorDrawer
+        open={showAIChat}
+        onClose={() => setShowAIChat(false)}
+        studentName={name}
+        currentSubject={resumeTopic?.subject || 'your studies'}
+        currentTopic={chatContext}
+      />
 
       <OnboardingTourFab role={session?.user?.role || 'STUDENT'} />
     </div>

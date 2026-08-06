@@ -8,14 +8,17 @@ import { route } from '@/lib/api-middleware'
 import { buildStudentContext, extractAndStoreMemory } from '@/lib/student-memory'
 
 export const POST = route({ auth: 'none' }, async (request) => {
-    const { message, context, lessonContext, schemeContext, assignmentsContext, autoTeach, lessonContent, subject, topic, messages } = await request.json()
+    const { message, context, lessonContext, schemeContext, assignmentsContext, autoTeach, lessonContent, subject, topic, messages, studentName, grade } = await request.json()
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
     }
 
-    // â”€â”€ Build system prompt based on context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    let systemPrompt = `You are Hope, an AI teaching assistant for ElimuNova AI. You help teachers and students with education in Kenya. Be helpful, practical, and encouraging. Respond in English unless asked about Kiswahili.`
+    const name = studentName || 'student'
+    const subj = subject || 'your studies'
+    const gradeStr = grade ? ` at ${grade} level` : ''
+
+    let systemPrompt = `You are Hope, an encouraging and patient AI learning assistant for ${name}. Always address ${name} naturally by name, encourage their progress, simplify complex concepts, and align explanations with${gradeStr} their learning level. You are warm, supportive, and make learning enjoyable. Use Kenyan examples where natural. Always respond in a helpful, concise way - keep explanations clear but not too long.`
     let studentId: string | null = null
 
     if (context === 'teacher_assistant') {
