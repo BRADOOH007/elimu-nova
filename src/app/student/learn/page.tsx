@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +23,8 @@ import { cleanAiJson } from '@/lib/ai-generation-utils'
 import { getGameState, updateStreak, awardXP, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
 import { addMistake, getMistakeCount, markMistakeReviewed, getUnreviewedMistakes } from '@/lib/mistake-bank'
 import { evaluateAnswer } from '@/lib/answer-evaluator'
+import { trackQuizSubmission, trackPracticeAttempt } from '@/lib/telemetry'
+import { useSession } from 'next-auth/react'
 
 // Types & constants (keep from original)
 interface QuizQ {
@@ -48,8 +50,9 @@ const SUBJECTS = [
   'Biology','History','Geography','Agriculture','Business Studies','Computer Studies'
 ]
 
-export default function LearnPage() {
+function LearnPageContent() {
   const { toast } = useToast()
+  const { data: session } = useSession()
   const { openAITutor } = useAITutor()
   const searchParams = useSearchParams()
 
@@ -216,6 +219,7 @@ export default function LearnPage() {
     setRecallChecked(prev => ({ ...prev, [i]: isCorrect }))
     if (isCorrect) addXp(5)
     else addMistake(q.question, String(userAns), q.answer, activeLesson.topic, activeLesson.subject)
+    trackPracticeAttempt({ userId: session?.user?.id || '', topicId: activeLesson.topic, subject: activeLesson.subject, isCorrect })
   }
 
   const submitRecall = () => {
@@ -295,6 +299,7 @@ export default function LearnPage() {
     const score = quizQuestions.length > 0 ? Math.round((correctCount / quizQuestions.length) * 100) : 0
     setQuizScore(score); setQuizSubmitted(true)
     addXp(XP_REWARDS.quizCorrect * Math.max(1, correctCount))
+    trackQuizSubmission({ userId: session?.user?.id || '', subject: studySubject, topic: studyTopic, scorePercent: score, correctCount, totalQuestions: quizQuestions.length })
   }
 
   // ── Spaced Repetition ─────────────────────────────────────
@@ -816,5 +821,21 @@ export default function LearnPage() {
         />
       </main>
     </div>
+  )
+}
+
+// ── Wrapper: Suspense because LearnPageContent uses useSearchParams() ──
+export default function LearnPage() {
+  return (
+    <Suspense fallback={<div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-5">
+      <div className="h-9 w-56 bg-slate-200 rounded animate-pulse" />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-20 bg-slate-200 rounded-2xl animate-pulse" />
+        ))}
+      </div>
+    </div>}>
+      <LearnPageContent />
+    </Suspense>
   )
 }

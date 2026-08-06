@@ -2167,3 +2167,32 @@ model DocumentLibrary {
   @@index([teacherId])
   @@map("document_library")
 }
+
+model QuizResult {
+  id             String   @id @default(cuid())
+  userId         String
+  subject        String
+  topic          String?
+  scorePercent   Int
+  correctCount   Int
+  totalQuestions Int
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("quiz_results")
+}
+
+model PracticeAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  topicId   String?
+  subject   String?
+  isCorrect Boolean
+  answer    String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("practice_attempts")
+}

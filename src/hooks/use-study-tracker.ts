@@ -2,52 +2,56 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-export function useStudyTracker(subject?: string, topic?: string) {
+export function useStudyTracker(userId?: string, subject?: string, topic?: string) {
   const [seconds, setSeconds] = useState(0)
   const [isActive, setIsActive] = useState(false)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const persistedRef = useRef(0)
+  const accumulatedRef = useRef(0)
 
   const start = () => {
     setIsActive(true)
-    // Log immediately
-    ping()
   }
 
   const stop = () => {
     setIsActive(false)
     if (intervalRef.current) clearInterval(intervalRef.current)
-  }
-
-  const ping = async () => {
-    try {
-      await fetch('/api/student/progress', {
+    if (accumulatedRef.current > 0 && userId) {
+      const s = accumulatedRef.current
+      accumulatedRef.current = 0
+      fetch('/api/student/track-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'STUDY_TIME', duration: 30, subject, topic }),
-      })
-    } catch { /* ignore */ }
+        body: JSON.stringify({ subject, topic, durationSeconds: s }),
+      }).catch(() => {})
+    }
+  }
+
+  const flush = async () => {
+    if (accumulatedRef.current < 30 || !userId) return
+    const s = accumulatedRef.current
+    accumulatedRef.current = 0
+    await fetch('/api/student/track-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subject, topic, durationSeconds: s }),
+    }).catch(() => {})
   }
 
   useEffect(() => {
-    if (isActive) {
-      intervalRef.current = setInterval(() => {
+    if (!isActive) return
+    intervalRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') {
         setSeconds(prev => prev + 30)
-        persistedRef.current += 30
-        ping()
-      }, 30000)
-    }
+        accumulatedRef.current += 30
+        if (accumulatedRef.current >= 30) flush()
+      }
+    }, 30000)
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
-  }, [isActive])
+  }, [isActive, userId])
 
   useEffect(() => {
-    const handleVisibility = () => {
-      if (document.hidden) { if (intervalRef.current) clearInterval(intervalRef.current) }
-      else if (isActive) { intervalRef.current = setInterval(() => { setSeconds(prev => prev + 30); ping() }, 30000) }
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [isActive])
+    return () => { stop() }
+  }, [])
 
   return { seconds, isActive, start, stop, minutes: Math.round(seconds / 60) }
 }
