@@ -1,517 +1,211 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import dynamic from "next/dynamic"
-import { useSearchParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { FormattedMessage } from "@/components/ai/formatted-message"
-import { PreviousLearningRecap } from "@/components/ui/previous-learning-recap"
 import { LessonCompletionCelebration } from "@/components/ui/lesson-completion-celebration"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import {
-  Brain,
-  Code2,
-  Compass,
-  Send,
-  Loader2,
-  AlertCircle,
-  CheckCircle,
-  Bot,
-  Sparkles,
-  Target,
-  Zap,
-  Trophy,
-  Flame,
-  Star,
-  BookOpen,
-  ArrowRight,
-  RefreshCw
+  Sparkles, Send, Loader2, AlertCircle, Target, Zap, Trophy, Flame, Star, BookOpen, RefreshCw, User, Copy, Check
 } from "lucide-react"
 
-const CodingTab = dynamic(() => import('@/app/student/coding/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
-const CareerTab = dynamic(() => import('@/app/student/career/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
-
 interface TutorTask {
-  subject: string
-  topic: string
-  mode: 'teach' | 'practice' | 'quiz' | 'revise'
-  objective: string
-  estimatedMinutes: number
-  difficulty: 'easy' | 'medium' | 'hard'
-  context?: any
+  subject: string; topic: string; mode: 'teach' | 'practice' | 'quiz' | 'revise'
+  objective: string; estimatedMinutes: number; difficulty: 'easy' | 'medium' | 'hard'; context?: any
 }
 
-interface Message {
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
-}
+interface Message { role: 'user' | 'assistant'; content: string; timestamp: Date }
 
-interface StudentStats {
-  xp: number
-  streak: number
-  masteryScore: number
-  totalQuestions: number
-  correctAnswers: number
-}
+interface StudentStats { xp: number; streak: number; masteryScore: number; totalQuestions: number; correctAnswers: number }
 
-export function AutonomousAITutorPage() {
+export default function AITutorPage() {
   const { data: session } = useSession()
-  const searchParams = useSearchParams()
-  const examRevisionParam = searchParams.get('examRevision')
   const [currentTask, setCurrentTask] = useState<TutorTask | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingTask, setIsLoadingTask] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [sessionId, setSessionId] = useState<string | null>(null)
-  const [stats, setStats] = useState<StudentStats>({
-    xp: 0,
-    streak: 0,
-    masteryScore: 0,
-    totalQuestions: 0,
-    correctAnswers: 0
-  })
+  const [stats, setStats] = useState<StudentStats>({ xp: 0, streak: 0, masteryScore: 0, totalQuestions: 0, correctAnswers: 0 })
   const [showCelebration, setShowCelebration] = useState(false)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  // Load current task on mount
-  useEffect(() => {
-    if (examRevisionParam) {
-      try {
-        const examContext = JSON.parse(decodeURIComponent(examRevisionParam))
-        setCurrentTask({
-          subject: examContext.subject || 'General',
-          topic: examContext.topic || 'Exam Revision',
-          mode: 'revise',
-          objective: `Review and learn from mistakes in ${examContext.subject || 'your'} exam`,
-          estimatedMinutes: 15,
-          difficulty: 'medium',
-          context: examContext
-        })
-        setMessages([{
-          role: 'assistant',
-          content: `I see you had some questions to review from your ${examContext.subject || ''} exam on "${examContext.topic}". I'll help you understand the concepts you found challenging. What specific topic would you like to go over?`,
-          timestamp: new Date()
-        }])
-      } catch {
-        loadCurrentTask()
-      }
-    } else {
-      loadCurrentTask()
-    }
-  }, [])
+  const name = session?.user?.name?.split(' ')[0] || 'Student'
+  const subject = currentTask?.subject || 'CBC'
 
   const loadCurrentTask = async () => {
     setIsLoadingTask(true)
-    setError(null)
-    
     try {
-      const response = await fetch('/api/student/tutor/next')
-      
-      if (!response.ok) {
-        throw new Error('Failed to load task')
+      const res = await fetch('/api/student/ai-tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: 'resume' }) })
+      if (res.ok) {
+        const data = await res.json()
+        setCurrentTask(data.task)
+        setStats(data.stats || { xp: 0, streak: 0, masteryScore: 0, totalQuestions: 0, correctAnswers: 0 })
+        if (data.messages) setMessages(data.messages)
       }
-
-      const data = await response.json()
-      if (!data.task) throw new Error('No task returned')
-      setCurrentTask(data.task)
-
-      // Add welcome message
-      setMessages([{
-        role: 'assistant',
-        content: data.message || `Ready to ${data.task.mode} ${data.task.topic}! Let's get started.`,
-        timestamp: new Date()
-      }])
-    } catch (err) {
-      console.error('Error loading task:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load task')
-    } finally {
-      setIsLoadingTask(false)
-    }
+    } catch { setError('Could not load tutor session') }
+    finally { setIsLoadingTask(false) }
   }
+
+  useEffect(() => {
+    loadCurrentTask()
+    const interval = setInterval(loadCurrentTask, 300000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !currentTask) return
-
-    const userMessage: Message = {
-      role: 'user',
-      content: inputMessage,
-      timestamp: new Date()
-    }
-
-    setMessages(prev => [...prev, userMessage])
+    if (!inputMessage.trim() || isLoading) return
+    const userMsg: Message = { role: 'user', content: inputMessage, timestamp: new Date() }
+    setMessages(p => [...p, userMsg])
     setInputMessage("")
     setIsLoading(true)
-    setError(null)
-
     try {
-      const response = await fetch('/api/student/tutor/message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: inputMessage,
-          sessionId: sessionId,
-          task: currentTask
-        })
+          message: userMsg.content,
+          history: messages.map(m => ({ role: m.role, content: m.content })),
+          context: 'student_tutor',
+          studentName: name,
+          subject,
+          topic: currentTask?.topic || '',
+          messages: messages.map(m => ({ role: m.role, content: m.content }))
+        }),
       })
-
-      if (!response.ok) {
-        throw new Error('Failed to get response')
-      }
-
-      const data = await response.json()
-      
-      // Update session ID if new
-      if (data.sessionId) {
-        setSessionId(data.sessionId)
-      }
-
-      // Add assistant message
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content: data.response,
-        timestamp: new Date()
-      }
-      setMessages(prev => [...prev, assistantMessage])
-
-      // Update stats if provided
-      if (data.xpEarned) {
-        setStats(prev => {
-          const newXp = prev.xp + data.xpEarned
-          if (newXp % 100 < data.xpEarned) {
-            setShowCelebration(true)
-          }
-          return { ...prev, xp: newXp }
-        })
-      }
-
-    } catch (err) {
-      console.error('Error sending message:', err)
-      setError(err instanceof Error ? err.message : 'Failed to send message')
-    } finally {
-      setIsLoading(false)
-    }
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      setMessages(p => [...p, { role: 'assistant', content: data.response || 'Sorry, I had trouble processing that.', timestamp: new Date() }])
+    } catch (e) {
+      setMessages(p => [...p, { role: 'assistant', content: 'Sorry, something went wrong. Try again?', timestamp: new Date() }])
+    } finally { setIsLoading(false) }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      sendMessage()
-    }
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() }
   }
 
-  const getModeColor = (mode: string) => {
-    switch (mode) {
-      case 'teach': return 'bg-blue-100 text-blue-700'
-      case 'practice': return 'bg-green-100 text-green-700'
-      case 'quiz': return 'bg-purple-100 text-purple-700'
-      case 'revise': return 'bg-orange-100 text-orange-700'
-      default: return 'bg-gray-100 text-gray-700'
-    }
+  const copyMessage = async (content: string, idx: number) => {
+    await navigator.clipboard.writeText(content)
+    setCopiedId(idx); setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const getModeIcon = (mode: string) => {
-    switch (mode) {
-      case 'teach': return <BookOpen className="w-4 h-4" />
-      case 'practice': return <Target className="w-4 h-4" />
-      case 'quiz': return <Trophy className="w-4 h-4" />
-      case 'revise': return <RefreshCw className="w-4 h-4" />
-      default: return <Brain className="w-4 h-4" />
-    }
-  }
-
-  if (isLoadingTask) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto mb-4" />
-          <p className="text-gray-600">Loading your personalized lesson...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (error && !currentTask) {
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <Card className="p-8 text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Unable to Load Tutor</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={loadCurrentTask}>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Try Again
-          </Button>
-        </Card>
-      </div>
-    )
-  }
+  if (isLoadingTask) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-10 h-10 animate-spin text-purple-500" /></div>
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-4">
+      {showCelebration && (
+        <LessonCompletionCelebration show={showCelebration} lessonTitle={currentTask ? `${currentTask.subject}: ${currentTask.topic}` : undefined} xpEarned={stats.xp} onClose={() => setShowCelebration(false)} onNext={() => { setShowCelebration(false); loadCurrentTask() }} />
+      )}
 
-      {/* Celebration overlay */}
-      <LessonCompletionCelebration
-        show={showCelebration}
-        lessonTitle={currentTask ? `${currentTask.subject}: ${currentTask.topic}` : undefined}
-        xpEarned={stats.xp}
-        onClose={() => setShowCelebration(false)}
-        onNext={() => { setShowCelebration(false); loadCurrentTask() }}
-      />
-
-      {/* Previous learning recap */}
-      <PreviousLearningRecap onStart={loadCurrentTask} />
-      {/* Header with Stats */}
-      <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-cyan-50 rounded-3xl p-6 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mr-4 shadow-lg">
-              <Bot className="w-8 h-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">AI Learning Companion</h1>
-              <p className="text-gray-600">Personalized tutoring powered by AI</p>
-            </div>
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 rounded-2xl p-5 text-white shadow-lg">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h1 className="text-xl font-extrabold flex items-center gap-2"><Sparkles className="h-5 w-5" />Hope AI Workspace</h1>
+            <p className="text-purple-200 text-sm">Personalized CBC Tutoring for {name}{currentTask ? ` · ${currentTask.subject}: ${currentTask.topic}` : ''}</p>
           </div>
-
-          {/* Stats */}
-          <div className="flex gap-4">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-yellow-500" />
-                <div>
-                  <p className="text-xs text-gray-600">XP</p>
-                  <p className="text-lg font-bold text-gray-900">{stats.xp}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-orange-500" />
-                <div>
-                  <p className="text-xs text-gray-600">Streak</p>
-                  <p className="text-lg font-bold text-gray-900">{stats.streak}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl px-4 py-2 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Star className="w-5 h-5 text-purple-500" />
-                <div>
-                  <p className="text-xs text-gray-600">Mastery</p>
-                  <p className="text-lg font-bold text-gray-900">{stats.masteryScore}%</p>
-                </div>
-              </div>
-            </div>
+          <div className="flex gap-2">
+            <div className="bg-white/10 rounded-xl px-3 py-1.5 text-sm"><Zap className="h-4 w-4 inline mr-1 text-amber-300" />{stats.xp} XP</div>
+            <div className="bg-white/10 rounded-xl px-3 py-1.5 text-sm"><Flame className="h-4 w-4 inline mr-1 text-orange-300" />{stats.streak}</div>
+            <div className="bg-white/10 rounded-xl px-3 py-1.5 text-sm"><Star className="h-4 w-4 inline mr-1 text-yellow-300" />{stats.masteryScore}%</div>
           </div>
         </div>
       </div>
 
-      {/* Current Task Info */}
+      {/* Active task + progress */}
       {currentTask && (
-        <div className="p-6 bg-gradient-to-r from-white to-blue-50 rounded-3xl shadow-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Badge className={`${getModeColor(currentTask.mode)} px-4 py-2 text-sm font-semibold`}>
-                <span className="mr-2">{getModeIcon(currentTask.mode)}</span>
-                {currentTask.mode.toUpperCase()}
-              </Badge>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{currentTask.subject}: {currentTask.topic}</h2>
-                <p className="text-sm text-gray-600">{currentTask.objective}</p>
-              </div>
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-purple-100 text-purple-700 border-0 px-3 py-1">{currentTask.mode.toUpperCase()}</Badge>
+              <span className="font-bold text-slate-800">{currentTask.subject}: {currentTask.topic}</span>
             </div>
-            <div className="text-right">
-              <Badge variant="outline" className="mb-2">
-                {currentTask.difficulty}
-              </Badge>
-              <p className="text-xs text-gray-500">~{currentTask.estimatedMinutes} min</p>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="border-slate-200">{currentTask.difficulty}</Badge>
+              <span className="text-xs text-slate-400">~{currentTask.estimatedMinutes}m</span>
             </div>
           </div>
-
-          {/* Progress Bar */}
           {stats.totalQuestions > 0 && (
-            <div className="mt-4">
-              <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Progress</span>
-                <span>{stats.correctAnswers}/{stats.totalQuestions} correct</span>
-              </div>
-              <Progress 
-                value={(stats.correctAnswers / stats.totalQuestions) * 100} 
-                className="h-2"
-              />
+            <div>
+              <div className="flex justify-between text-xs text-slate-500 mb-1"><span>Progress</span><span>{stats.correctAnswers}/{stats.totalQuestions}</span></div>
+              <Progress value={(stats.correctAnswers / Math.max(1, stats.totalQuestions)) * 100} className="h-2" />
             </div>
           )}
         </div>
       )}
 
-      {/* Chat Interface */}
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="h-[calc(100vh-200px)] min-h-[400px] flex flex-col bg-white rounded-3xl shadow-lg overflow-hidden">
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/50 min-h-0">
-              {messages.map((message, index) => (
-                <FormattedMessage
-                  key={index}
-                  content={message.content}
-                  role={message.role}
-                  timestamp={message.timestamp}
-                />
-              ))}
-              {isLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                    <Loader2 className="w-5 h-5 animate-spin text-gray-600" />
+      {/* Chat window */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[600px]">
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/30">
+          {messages.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.role === 'assistant' ? (
+                <div className="flex gap-2.5 max-w-[85%]">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 mt-1 ring-2 ring-purple-100">
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl rounded-tl-none text-slate-800 text-sm shadow-xs">
+                      <div className="prose prose-sm max-w-none prose-p:my-1 prose-li:my-0.5 prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded prose-pre:bg-slate-800 prose-pre:text-slate-100">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-200/60">
+                        <button onClick={() => copyMessage(msg.content, idx)} className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors">
+                          {copiedId === idx ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Input */}
-            <div className="border-t p-4">
-              {error && (
-                <div className="mb-3 p-3 bg-red-50 rounded-lg flex items-center gap-2 text-red-700 text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
+              ) : (
+                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 rounded-2xl rounded-tr-none text-sm max-w-lg">
+                  <p className="whitespace-pre-wrap">{msg.content}</p>
                 </div>
               )}
-              <div className="flex gap-2">
-                <Textarea
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Type your message or answer here..."
-                  className="resize-none"
-                  rows={2}
-                  disabled={isLoading}
-                />
-                <Button
-                  onClick={sendMessage}
-                  disabled={isLoading || !inputMessage.trim()}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-5 h-5" />
-                  )}
-                </Button>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0"><Sparkles className="h-4 w-4 text-purple-500" /></div>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl rounded-tl-none p-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" /><div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} /><div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
               </div>
             </div>
-          </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-4">
-          {/* Quick Actions */}
-          <div className="p-4 bg-white rounded-3xl shadow-lg">
-            <h3 className="font-bold text-gray-900 mb-3">Quick Actions</h3>
-            <div className="space-y-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setInputMessage("Can you explain this topic in simple terms?")}
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                Explain Topic
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setInputMessage("Can you give me an example?")}
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Show Example
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setInputMessage("Can you give me a practice question?")}
-              >
-                <Target className="w-4 h-4 mr-2" />
-                Practice Question
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => setInputMessage("I need help with this")}
-              >
-                <AlertCircle className="w-4 h-4 mr-2" />
-                Get Help
-              </Button>
-            </div>
-          </div>
+        {/* Quick chips */}
+        <div className="px-4 pt-2 pb-0 flex gap-2 overflow-x-auto border-t border-slate-100">
+          {['Explain this in simple terms', 'Give me a practice question', 'Show a real-world example', 'Break it down step by step'].map(chip => (
+            <button key={chip} onClick={() => { setInputMessage(chip); sendMessage() }}
+              className="shrink-0 text-xs font-medium bg-purple-50 text-purple-700 hover:bg-purple-100 rounded-full px-3 py-1.5 transition-colors">{chip}</button>
+          ))}
+        </div>
 
-          {/* Learning Tips */}
-          <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl shadow-lg">
-            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-purple-600" />
-              Learning Tips
-            </h3>
-            <ul className="space-y-2 text-sm text-gray-700">
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <span>Ask questions if you don't understand</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <span>Practice regularly to build mastery</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <span>Take your time to think through answers</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                <span>Earn XP by answering correctly</span>
-              </li>
-            </ul>
+        {/* Input */}
+        <div className="border-t border-slate-200 p-4">
+          {error && <div className="mb-3 p-3 bg-red-50 rounded-xl flex items-center gap-2 text-red-700 text-sm"><AlertCircle className="w-4 h-4" />{error}</div>}
+          <div className="flex gap-2">
+            <textarea value={inputMessage} onChange={e => setInputMessage(e.target.value)} onKeyDown={handleKeyDown}
+              placeholder={`Ask Hope about ${currentTask?.topic || 'anything'}...`} rows={1}
+              className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[42px] max-h-32"
+              disabled={isLoading} />
+            <Button onClick={sendMessage} disabled={isLoading || !inputMessage.trim()} className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl px-4">
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+            </Button>
           </div>
-
-          {/* New Lesson Button */}
-          <Button
-            onClick={loadCurrentTask}
-            variant="outline"
-            className="w-full"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Start New Lesson
-          </Button>
         </div>
       </div>
     </div>
-  )
-}
-
-// ── Tab wrapper — "AI & Growth" hub ────────────────────────────────────────
-export default function AIGrowthPage() {
-  return (
-    <Tabs defaultValue="tutor" className="space-y-4 p-4">
-      <TabsList className="w-full overflow-x-auto flex gap-1.5 px-2">
-        <TabsTrigger value="tutor" className="shrink-0 whitespace-nowrap"><Brain className="w-4 h-4 mr-2"/>AI Tutor</TabsTrigger>
-        <TabsTrigger value="coding" className="shrink-0 whitespace-nowrap"><Code2 className="w-4 h-4 mr-2"/>Coding Studio</TabsTrigger>
-        <TabsTrigger value="career" className="shrink-0 whitespace-nowrap"><Compass className="w-4 h-4 mr-2"/>Career Pathways</TabsTrigger>
-      </TabsList>
-      <TabsContent value="tutor"><AutonomousAITutorPage /></TabsContent>
-      <TabsContent value="coding"><CodingTab /></TabsContent>
-      <TabsContent value="career"><CareerTab /></TabsContent>
-    </Tabs>
   )
 }
