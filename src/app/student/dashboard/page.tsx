@@ -283,9 +283,7 @@ export default function StudentDashboard() {
           </div>
 
           {/* Study Recommendations */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <SmartRecommendations />
-          </div>
+          <SmartRecommendations />
         </div>
 
         {/* RIGHT COLUMN: Upcoming + Recent Activity */}
