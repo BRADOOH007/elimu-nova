@@ -41,80 +41,48 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
     return NextResponse.json({ error: 'Failed to create student profile' }, { status: 500 })
   }
 
-  // Get assignments data (for independent students, this might be empty)
-  const assignments = await prisma.assignment.findMany({
-    where: {
-      students: {
-        some: {
-          id: student.id
-        }
-      }
-    },
-    include: {
-      teacher: {
-        include: {
-          user: true
-        }
-      },
-      submissions: {
-        where: {
-          studentId: student.id
-        }
-      },
-      lessonPlan: {
-        select: {
-          subject: true
-        }
-      }
-    },
-    orderBy: {
-      dueDate: 'asc'
-    }
-  })
-
-  // Get study sessions for the current week
+  // Get all dashboard data in parallel for faster loading
   const startOfWeek = new Date()
   startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
   startOfWeek.setHours(0, 0, 0, 0)
-
   const endOfWeek = new Date(startOfWeek)
   endOfWeek.setDate(endOfWeek.getDate() + 7)
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  tomorrow.setHours(23, 59, 59, 999)
+  const s = student as any
 
-  // Get study sessions for the current week (might be empty for new independent students)
-  let studySessions: any[] = []
-  let aiTutorSessions: any[] = []
+  const [assignments, studySessionsResult, aiTutorResult, upcomingLessonsResult] = await Promise.all([
+    prisma.assignment.findMany({
+      where: { students: { some: { id: student.id } } },
+      include: {
+        teacher: { include: { user: true } },
+        submissions: { where: { studentId: student.id } },
+        lessonPlan: { select: { subject: true } },
+      },
+      orderBy: { dueDate: 'asc' },
+    }).catch(() => []),
+    prisma.studySession.findMany({
+      where: { studentId: student.id, startTime: { gte: startOfWeek, lt: endOfWeek } },
+      orderBy: { startTime: 'desc' },
+    }).catch(() => []),
+    prisma.aITutorSession.findMany({
+      where: { studentId: student.id },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+    }).catch(() => []),
+    s.schoolId ? prisma.schedule.findMany({
+      where: { schoolId: s.schoolId, startTime: { gte: today, lte: tomorrow }, type: 'CLASS' },
+      include: { teacher: { include: { user: true } }, class: true },
+      orderBy: { startTime: 'asc' },
+    }).catch(() => []) : Promise.resolve([]),
+  ])
 
-  try {
-    studySessions = await prisma.studySession.findMany({
-      where: {
-        studentId: student.id,
-        startTime: {
-          gte: startOfWeek,
-          lt: endOfWeek
-        }
-      },
-      orderBy: {
-        startTime: 'desc'
-      }
-    })
-  } catch (error) {
-    console.log('Study sessions table might not exist, skipping...')
-  }
-
-  // Get recent AI tutor sessions (might be empty for new independent students)
-  try {
-    aiTutorSessions = await prisma.aITutorSession.findMany({
-      where: {
-        studentId: student.id
-      },
-      orderBy: {
-        createdAt: 'desc'
-      },
-      take: 5
-    })
-  } catch (error) {
-    console.log('AI tutor sessions table might not exist, skipping...')
-  }
+  const assignmentsList = assignments as any[]
+  const studySessions = studySessionsResult as any[]
+  const aiTutorSessions = aiTutorResult as any[]
+  const upcomingLessons = upcomingLessonsResult as any[]
 
   // Calculate analytics
   const totalStudyTime = studySessions.reduce((total, session) => total + session.duration, 0)
@@ -142,37 +110,7 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
     ? gradedSubmissions.reduce((sum, submission) => sum + (submission.grade || 0), 0) / gradedSubmissions.length
     : null
 
-  // Get upcoming lessons (from schedules)
-  const today = new Date()
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  tomorrow.setHours(23, 59, 59, 999)
-
-  const s = student as any
-
-  // Get upcoming lessons (only if student has school association)
-  const upcomingLessons = s.schoolId ? await prisma.schedule.findMany({
-    where: {
-      schoolId: s.schoolId,
-      startTime: {
-        gte: today,
-        lte: tomorrow
-      },
-      type: 'CLASS'
-    },
-    include: {
-      teacher: {
-        include: {
-          user: true
-        }
-      },
-      class: true
-    },
-    orderBy: {
-      startTime: 'asc'
-    }
-  }) : []
-
+  // Get upcoming lessons already fetched in Promise.all above
   const analyticsData = {
     totalStudyTime: s.analytics?.totalStudyTime || 0,
     averageGrade: averageGrade,
