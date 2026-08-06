@@ -134,12 +134,36 @@ Return JSON:
   }
 })
 
-// PUT — submit challenge results
+// PUT — submit challenge results (server-side graded)
 export const PUT = route({ auth: 'STUDENT' }, async (request, { user }) => {
-  const { challengeId, correctAnswers, totalQuestions, timeTakenMins, answers } = await request.json()
+  const { challengeId, correctAnswers: clientCorrect, totalQuestions: clientTotal, timeTakenMins, answers } = await request.json()
 
   const student = await prisma.student.findUnique({ where: { userId: user.id } })
   if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+
+  // Fetch the challenge to get stored questions for server-side grading
+  const existing = await prisma.courseChallenge.findUnique({ where: { id: challengeId } })
+  if (!existing) return NextResponse.json({ error: 'Challenge not found' }, { status: 404 })
+
+  // Server-side grade if answers provided, otherwise trust client (with audit log)
+  let correctAnswers = clientCorrect
+  let totalQuestions = clientTotal
+  if (answers && existing.questions) {
+    const questions = existing.questions as any[]
+    totalQuestions = questions.length
+    correctAnswers = 0
+    questions.forEach((q: any, i: number) => {
+      const studentAnswer = answers[i]
+      const correctAnswer = q.correct_answer !== undefined ? q.correct_answer : q.model_answer
+      if (studentAnswer !== undefined && studentAnswer !== null) {
+        if (q.type === 'multiple_choice' || q.type === 'true_false') {
+          if (String(studentAnswer) === String(correctAnswer)) correctAnswers++
+        } else if (typeof studentAnswer === 'string' && typeof correctAnswer === 'string') {
+          if (studentAnswer.trim().toLowerCase().includes(correctAnswer.trim().toLowerCase())) correctAnswers++
+        }
+      }
+    })
+  }
 
   const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
   const passed = score >= 70
