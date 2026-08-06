@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -9,13 +10,16 @@ import { Progress } from '@/components/ui/progress'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   BookOpen, Brain, CheckCircle, Loader2, Play, Target, X,
-  Compass, Repeat, GitBranch, ArrowRight, Sparkles, Trophy, Flame, Clock, Star, Zap, AlertCircle
+  Compass, Repeat, GitBranch, ArrowRight, Sparkles, Trophy, Flame, Clock, Star, Zap, AlertCircle, MessageSquare
 } from 'lucide-react'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { CurriculumBrowser } from '@/components/student/curriculum-browser'
 import { Recommendations } from '@/components/student/recommendations'
 import { FocusTimer } from '@/components/student/focus-timer'
 import { AIStudyBuddy } from '@/components/student/ai-study-buddy'
+import { HopeAITutorDrawer } from '@/components/ai-tutor-drawer'
+import { useAITutor } from '@/components/ai-tutor-provider'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 import { getGameState, updateStreak, awardXP, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
 import { addMistake, getMistakeCount, markMistakeReviewed, getUnreviewedMistakes } from '@/lib/mistake-bank'
 
@@ -45,6 +49,7 @@ const SUBJECTS = [
 
 export default function LearnPage() {
   const { toast } = useToast()
+  const { openAITutor } = useAITutor()
 
   // Core study state
   const [studySubject, setStudySubject] = useState('Mathematics')
@@ -99,6 +104,19 @@ export default function LearnPage() {
     setShowXpGain({ amount, visible: true })
     setTimeout(() => setShowXpGain({ amount: 0, visible: false }), 2000)
   }
+
+  // Read URL params for subject/grade pre-selection
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    const subj = searchParams.get('subject')
+    const grd = searchParams.get('grade')
+    if (subj) setStudySubject(subj)
+    if (grd) setStudyGrade(grd)
+  }, [searchParams])
+
+  // Hope AI drawer state
+  const [showHopeDrawer, setShowHopeDrawer] = useState(false)
+  const [hopeContext, setHopeContext] = useState('')
 
   const addXp = (amount: number) => {
     setGameState(prev => { const gs = awardXP(prev, amount); persistGameState(gs); return gs })
@@ -303,6 +321,13 @@ export default function LearnPage() {
                   {getMistakeCount().unreviewed}
                 </button>
               )}
+              <button
+                onClick={() => openAITutor(undefined, studySubject, studyTopic || undefined)}
+                className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-sm font-semibold backdrop-blur transition-colors hover:bg-white/25"
+              >
+                <MessageSquare className="h-4 w-4 text-white" />
+                Ask Hope
+              </button>
             </div>
           </div>
 
@@ -453,6 +478,12 @@ export default function LearnPage() {
                             <p className="text-3xl font-extrabold text-indigo-700">{recallScore}%</p>
                             <p className="text-sm text-indigo-600">{recallScore >= 80 ? 'Excellent! You\'ve mastered this.' : recallScore >= 50 ? 'Good progress! Review and try again.' : 'Keep going! Practice makes perfect.'}</p>
                           </div>
+                          {recallScore < 80 && (
+                            <Button onClick={() => { setShowHopeDrawer(true); setHopeContext(`I scored ${recallScore}% on ${studyTopic}. Can you help me understand where I went wrong?`) }}
+                              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 font-semibold text-white hover:from-purple-700 hover:to-indigo-700">
+                              <Sparkles className="mr-2 h-4 w-4" />Ask Hope AI Tutor
+                            </Button>
+                          )}
                           <div className="flex flex-wrap gap-2">
                             <Button onClick={() => { setStudyPhase('learn'); setRecallSubmitted(false) }} variant="outline" className="flex-1">Review</Button>
                             <Button onClick={startQuickQuiz} disabled={quizLoading} className="flex-1 bg-indigo-500 text-white">
@@ -481,8 +512,11 @@ export default function LearnPage() {
                   <div className="max-h-[500px] overflow-y-auto"><MarkdownRenderer content={lessonMd} /></div>
                   <div className="mt-4 flex gap-2">
                     <Button onClick={() => { setLessonMd(''); setActiveLesson(null) }} variant="outline" className="flex-1">Pick Another Topic</Button>
+                    <Button onClick={() => { setShowHopeDrawer(true); setHopeContext(`I'm studying ${studyTopic} in ${studySubject}. Help me understand this better.`) }} className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+                      <Sparkles className="mr-2 h-4 w-4" />Ask Hope
+                    </Button>
                     <Button onClick={startQuickQuiz} disabled={quizLoading} className="flex-1 bg-gradient-to-r from-indigo-500 to-violet-600 text-white">
-                      {quizLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}Quick Quiz
+                      {quizLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}Quiz
                     </Button>
                   </div>
                 </CardContent>
@@ -541,6 +575,12 @@ export default function LearnPage() {
                         <p className="text-3xl font-extrabold text-indigo-700">{quizScore}%</p>
                         <p className="text-sm text-indigo-600">{quizScore >= 80 ? 'Great job!' : quizScore >= 50 ? 'Good effort!' : 'Keep practicing!'}</p>
                       </div>
+                      {quizScore < 80 && (
+                        <Button onClick={() => openAITutor('Can you help me understand where I went wrong on this topic?', studySubject, studyTopic)}
+                          className="w-full bg-indigo-500 font-semibold text-white hover:bg-indigo-600">
+                          <MessageSquare className="mr-2 h-4 w-4" />Chat with AI Tutor
+                        </Button>
+                      )}
                       <Button onClick={() => { setQuickQuizOpen(false); setQuizQuestions([]) }} className="w-full">Done</Button>
                     </div>
                   )}
@@ -710,6 +750,15 @@ export default function LearnPage() {
             onStartStudy={(s, t) => { setStudySubject(s); setStudyTopic(t); generateLesson(s, t) }}
           />
         </div>
+
+        {/* Hope AI Tutor Drawer */}
+        <HopeAITutorDrawer
+          open={showHopeDrawer}
+          onClose={() => setShowHopeDrawer(false)}
+          studentName={""}
+          currentSubject={studySubject}
+          currentTopic={studyTopic}
+        />
       </main>
     </div>
   )
