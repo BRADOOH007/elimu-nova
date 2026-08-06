@@ -51,11 +51,18 @@ const SUBJECTS = [
 export default function LearnPage() {
   const { toast } = useToast()
   const { openAITutor } = useAITutor()
+  const searchParams = useSearchParams()
 
-  // Core study state
-  const [studySubject, setStudySubject] = useState('Mathematics')
+  // Core study state — initialized from URL params if present
+  const [studySubject, setStudySubject] = useState(() => {
+    const s = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('subject') : null
+    return s || 'Mathematics'
+  })
   const [studyTopic,   setStudyTopic]   = useState('')
-  const [studyGrade,   setStudyGrade]   = useState('Grade 4')
+  const [studyGrade,   setStudyGrade]   = useState(() => {
+    const g = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('grade') : null
+    return g || 'Grade 4'
+  })
   const [studying,     setStudying]     = useState(false)
   const [lessonMd,     setLessonMd]     = useState('')
   const [studyStrands, setStudyStrands] = useState<{id:string;name:string}[]>([])
@@ -108,8 +115,7 @@ export default function LearnPage() {
     setTimeout(() => setShowXpGain({ amount: 0, visible: false }), 2000)
   }
 
-  // Read URL params for subject/grade pre-selection
-  const searchParams = useSearchParams()
+  // Sync state when URL params change (e.g., clicking subject cards in dashboard)
   useEffect(() => {
     const subj = searchParams.get('subject')
     const grd = searchParams.get('grade')
