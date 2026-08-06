@@ -18,7 +18,8 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
   Bell, Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
-  Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Loader2, X
+  Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Loader2, X, Plus,
+  Calculator, FlaskConical, Globe, Languages, Church, Atom, Palette, Dumbbell, Music, Leaf
 } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
 import { getUnreviewedMistakes } from '@/lib/mistake-bank'
@@ -39,6 +40,18 @@ const fallbackData: DashboardData = {
   assignments: [], upcomingLessons: [], studySessions: [],
   analytics: { totalStudyTime: 0, averageGrade: null, completedAssignments: 0, pendingAssignments: 0, overdueAssignments: 0, lastActiveDate: null, streakDays: 0, longestStreak: 0, weeklyGoal: 300, monthlyGoal: 1200 },
 }
+
+// Subject config for My Learning Areas
+const CURRICULUM_SUBJECTS = [
+  { name: 'Mathematics', icon: Calculator, color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
+  { name: 'English', icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
+  { name: 'Kiswahili', icon: Languages, color: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
+  { name: 'Science', icon: FlaskConical, color: 'text-cyan-600', bg: 'bg-cyan-50', bar: 'bg-cyan-500' },
+  { name: 'Social Studies', icon: Globe, color: 'text-orange-600', bg: 'bg-orange-50', bar: 'bg-orange-500' },
+  { name: 'CRE', icon: Church, color: 'text-purple-600', bg: 'bg-purple-50', bar: 'bg-purple-500' },
+  { name: 'Computer Studies', icon: Brain, color: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-500' },
+  { name: 'Agriculture', icon: Leaf, color: 'text-green-600', bg: 'bg-green-50', bar: 'bg-green-500' },
+]
 
 function fmtTime(totalMinutes: number): string {
   if (totalMinutes < 60) return `${totalMinutes}min`
@@ -232,18 +245,41 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
 
-          {/* SMART RECOMMENDATION + CURRICULUM */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <SmartRecommendations />
-            <Link href="/student/curriculum" className="block">
-              <Card className="border-0 shadow-sm hover:shadow-md transition-shadow h-full">
-                <CardContent className="p-5 flex flex-col justify-between h-full">
-                  <div><h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-1"><GraduationCap className="h-5 w-5 text-teal-600" />My Learning Areas</h2><p className="text-xs text-slate-500">Browse your CBC curriculum by subject, strand, and topic</p></div>
-                  <div className="flex items-center gap-1 text-teal-600 text-sm font-semibold mt-3">View Curriculum <ArrowRight className="h-4 w-4" /></div>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
+          {/* MY LEARNING AREAS — interactive subject chips */}
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 via-white to-teal-50">
+            <CardContent className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><GraduationCap className="h-5 w-5 text-teal-600" />My Learning Areas</h2>
+                <Link href="/student/curriculum" className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">View all <ArrowRight className="h-3 w-3" /></Link>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {CURRICULUM_SUBJECTS.map((subject) => (
+                  <Link key={subject.name} href={`/student/learn?subject=${encodeURIComponent(subject.name)}`}
+                    className={`${subject.bg} rounded-xl p-3 border border-slate-100 hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm`}>
+                        <subject.icon className={`h-4 w-4 ${subject.color}`} />
+                      </div>
+                      <span className="text-xs font-semibold text-slate-700 truncate">{subject.name}</span>
+                    </div>
+                    <div className="bg-white/60 rounded-full h-1.5 overflow-hidden">
+                      <div className={`h-full ${subject.bar} rounded-full transition-all duration-500`} style={{ width: `${Math.min(100, Math.round((d.analytics.completedAssignments / Math.max(1, d.analytics.completedAssignments + d.analytics.pendingAssignments)) * 100))}%` }} />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">Tap to study →</p>
+                  </Link>
+                ))}
+                <Link href="/student/curriculum" className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center justify-center gap-1.5 hover:border-teal-300 hover:bg-teal-50/50 transition-all cursor-pointer group">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
+                    <Plus className="h-4 w-4 text-slate-400 group-hover:text-teal-600" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-400 group-hover:text-teal-600">Explore All</span>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SMART RECOMMENDATION */}
+          <SmartRecommendations />
         </div>
 
         {/* SIDEBAR: Activity Feed */}
