@@ -24,10 +24,10 @@ interface HopeDrawerProps {
 }
 
 const QUICK_CHIPS = [
-  { label: 'Explain simply', icon: '💡' },
-  { label: 'Quiz me on this', icon: '📝' },
-  { label: 'Real-world example', icon: '🎯' },
-  { label: 'Step-by-step breakdown', icon: '🚀' },
+  { label: 'Explain simply', icon: 'ðŸ’¡' },
+  { label: 'Quiz me on this', icon: 'ðŸ“' },
+  { label: 'Real-world example', icon: 'ðŸŽ¯' },
+  { label: 'Step-by-step breakdown', icon: 'ðŸš€' },
 ]
 
 export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, currentTopic, currentGrade, initialPrompt }: HopeDrawerProps) {
@@ -67,9 +67,9 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
   useEffect(() => {
     if (!open) return
     // Load chat history from DB
-    fetch('/api/ai/chat/history?limit=20').then(r => r.ok ? r.json() : []).then((data: any[]) => {
-      if (data?.messages?.length > 0) {
-        const history = data.messages.map((m: any) => ({ id: m.id || Date.now().toString(), role: m.role, content: m.content }))
+    fetch('/api/ai/chat/history?limit=20').then(r => r.ok ? r.json() : []).then((data: { messages?: Array<{ id: string; role: string; content: string }> }) => {
+      const history: Message[] = (data?.messages || []).map((m) => ({ id: m.id || Date.now().toString(), role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
+      if (history.length > 0) {
         setMessages(history)
         messagesRef.current = history
         return
@@ -200,7 +200,7 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
                 <h2 className="font-bold text-sm truncate">Hope AI Assistant</h2>
                 {subject && (
                   <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur-sm inline-block mt-0.5 max-w-full truncate">
-                    {subject}{topic ? ` · ${topic}` : ''}
+                    {subject}{topic ? ` Â· ${topic}` : ''}
                   </span>
                 )}
               </div>

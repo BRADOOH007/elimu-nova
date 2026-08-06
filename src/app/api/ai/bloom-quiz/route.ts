@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const POST = route({}, async (request, { user }) => {
     const { subject, grade, strand, subStrand, topic, concepts = [], numQuestions = 6 } = await request.json()
@@ -65,15 +66,15 @@ Rules:
       { role: 'user', content: prompt },
     ], { maxTokens: Math.min(4000, 2000 + numQ * 200), temperature: 0.6 })
 
-    const start = raw.indexOf('['); const end = raw.lastIndexOf(']')
-    if (start === -1 || end <= start) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
+    const json = cleanAiJson(raw)
+    if (!json) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
 
-    // Strip markdown code fences before parsing
-    let jsonStr = raw.slice(start, end + 1).trim()
-    if (jsonStr.startsWith('```')) jsonStr = jsonStr.replace(/```(?:json)?\n?/g, '').trim()
-    if (jsonStr.endsWith('```')) jsonStr = jsonStr.slice(0, -3).trim()
-
-    const questions = JSON.parse(jsonStr)
+    let questions: any[]
+    try {
+      questions = JSON.parse(json)
+    } catch {
+      return NextResponse.json({ error: 'Failed to parse quiz. Please try again.' }, { status: 500 })
+    }
 
     // Strip LaTeX from all string fields only after parsing
     const { stripLatex } = await import('@/lib/clean-ai-text')
