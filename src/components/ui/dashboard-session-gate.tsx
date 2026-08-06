@@ -15,7 +15,7 @@ import { DashboardLoading } from '@/components/ui/dashboard-loading'
  *
  * Every branch terminates in either the real dashboard or a redirect.
  */
-const MAX_LOADING_MS = 5000
+const MAX_LOADING_MS = 2000
 
 export function DashboardSessionGate({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()

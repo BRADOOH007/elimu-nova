@@ -138,31 +138,34 @@ export default function StudentDashboard() {
   }
   const allLearningAreas: LearningArea[] = dbCurriculum || [...learningAreas, codingLearningArea]
 
-  // Fetch curriculum from DB on mount — falls back to hardcoded data
+  // Fetch curriculum from DB after dashboard loads — non-blocking, deferred
   useEffect(() => {
     if (!studentGrade || studentGrade === 'Grade 10' || studentGrade === 'Grade 11' || studentGrade === 'Grade 12') return
     const subjects = ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'CRE']
-    Promise.all(subjects.map(subject =>
-      fetch('/api/curriculum/auto-populate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ grade: studentGrade, subject, term: currentTerm }),
-      }).then(r => r.ok ? r.json() : null).catch(() => null)
-    )).then(results => {
-      const areas: LearningArea[] = []
-      results.forEach((data, i) => {
-        if (data?.topics?.length > 0) {
-          areas.push({
-            name: subjects[i],
-            strands: data.topics.map((t: any) => ({
-              name: t.strandName,
-              subStrands: t.substrands?.map((s: any) => ({ name: s.name, learningOutcomes: s.learningOutcomes, activities: s.activities })) || [],
-            })),
-          })
-        }
-      })
-      if (areas.length > 0) setDbCurriculum([...areas, codingLearningArea as any])
-    }).catch(() => {})
+    const timer = setTimeout(() => {
+      Promise.all(subjects.map(subject =>
+        fetch('/api/curriculum/auto-populate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ grade: studentGrade, subject, term: currentTerm }),
+        }).then(r => r.ok ? r.json() : null).catch(() => null)
+      )).then(results => {
+        const areas: LearningArea[] = []
+        results.forEach((data, i) => {
+          if (data?.topics?.length > 0) {
+            areas.push({
+              name: subjects[i],
+              strands: data.topics.map((t: any) => ({
+                name: t.strandName,
+                subStrands: t.substrands?.map((s: any) => ({ name: s.name, learningOutcomes: s.learningOutcomes, activities: s.activities })) || [],
+              })),
+            })
+          }
+        })
+        if (areas.length > 0) setDbCurriculum([...areas, codingLearningArea as any])
+      }).catch(() => {})
+    }, 1500)
+    return () => clearTimeout(timer)
   }, [studentGrade, currentTerm])
 
   useEffect(() => {
