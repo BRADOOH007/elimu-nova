@@ -211,132 +211,116 @@ export default function StudentDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* TODAY'S FOCUS */}
+        {/* LEFT COLUMN: Today's Focus + My Learning Areas + Recommendations */}
         <div className="lg:col-span-2 space-y-5">
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-5">
-              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4"><Target className="h-5 w-5 text-indigo-600" />Today&apos;s Focus</h2>
-              <div className="space-y-3">
-                {/* Daily Challenge */}
-                {!dailyDone && resumeTopic && (
-                  <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-200 hover:shadow-md transition-shadow">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0"><Trophy className="h-5 w-5 text-white" /></div>
-                    <div className="flex-1 min-w-0"><p className="text-sm font-bold text-amber-900">Daily Challenge</p><p className="text-xs text-amber-700 truncate">{resumeTopic.subject}: {resumeTopic.topic}</p></div>
-                    <ArrowRight className="h-5 w-5 text-amber-500 shrink-0" />
-                  </Link>
-                )}
-                {/* Due Reviews */}
-                {dueReviews.length > 0 && (
-                  <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-3 border border-orange-200 hover:shadow-md transition-shadow">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0"><Repeat className="h-5 w-5 text-white" /></div>
-                    <div className="flex-1 min-w-0"><p className="text-sm font-bold text-orange-900">{dueReviews.length} topic{dueReviews.length !== 1 ? 's' : ''} due for review</p><p className="text-xs text-orange-700 truncate">{dueReviews.slice(0, 2).map(r => r.topic).join(', ')}</p></div>
-                    <ArrowRight className="h-5 w-5 text-orange-500 shrink-0" />
-                  </Link>
-                )}
-                {/* Study Now */}
-                {!resumeTopic && !dueReviews.length && (
-                  <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-3 border border-indigo-200 hover:shadow-md transition-shadow">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-white" /></div>
-                    <div className="flex-1"><p className="text-sm font-bold text-indigo-900">Start a new study session</p><p className="text-xs text-indigo-700">Pick a topic from your curriculum</p></div>
-                    <ArrowRight className="h-5 w-5 text-indigo-500 shrink-0" />
-                  </Link>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* MY LEARNING AREAS — interactive subject chips */}
-          <Card className="border-0 shadow-sm bg-gradient-to-br from-slate-50 via-white to-teal-50">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><GraduationCap className="h-5 w-5 text-teal-600" />My Learning Areas</h2>
-                <Link href="/student/curriculum" className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">View all <ArrowRight className="h-3 w-3" /></Link>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {CURRICULUM_SUBJECTS.map((subject) => (
-                  <Link key={subject.name} href={`/student/learn?subject=${encodeURIComponent(subject.name)}`}
-                    className={`${subject.bg} rounded-xl p-3 border border-slate-100 hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group`}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm`}>
-                        <subject.icon className={`h-4 w-4 ${subject.color}`} />
-                      </div>
-                      <span className="text-xs font-semibold text-slate-700 truncate">{subject.name}</span>
-                    </div>
-                    <div className="bg-white/60 rounded-full h-1.5 overflow-hidden">
-                      <div className={`h-full ${subject.bar} rounded-full transition-all duration-500`} style={{ width: `${Math.min(100, Math.round((d.analytics.completedAssignments / Math.max(1, d.analytics.completedAssignments + d.analytics.pendingAssignments)) * 100))}%` }} />
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">Tap to study →</p>
-                  </Link>
-                ))}
-                <Link href="/student/curriculum" className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center justify-center gap-1.5 hover:border-teal-300 hover:bg-teal-50/50 transition-all cursor-pointer group">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
-                    <Plus className="h-4 w-4 text-slate-400 group-hover:text-teal-600" />
-                  </div>
-                  <span className="text-[10px] font-semibold text-slate-400 group-hover:text-teal-600">Explore All</span>
+          {/* Today's Focus */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4"><Target className="h-5 w-5 text-indigo-600" />Today&apos;s Focus</h2>
+            <div className="space-y-3">
+              {!dailyDone && resumeTopic && (
+                <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-200 hover:shadow-md transition-shadow">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0"><Trophy className="h-5 w-5 text-white" /></div>
+                  <div className="flex-1 min-w-0"><p className="text-sm font-bold text-amber-900">Daily Challenge</p><p className="text-xs text-amber-700 truncate">{resumeTopic.subject}: {resumeTopic.topic}</p></div>
+                  <ArrowRight className="h-5 w-5 text-amber-500 shrink-0" />
                 </Link>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+              {dueReviews.length > 0 && (
+                <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-3 border border-orange-200 hover:shadow-md transition-shadow">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0"><Repeat className="h-5 w-5 text-white" /></div>
+                  <div className="flex-1 min-w-0"><p className="text-sm font-bold text-orange-900">{dueReviews.length} topic{dueReviews.length !== 1 ? 's' : ''} due for review</p><p className="text-xs text-orange-700 truncate">{dueReviews.slice(0, 2).map(r => r.topic).join(', ')}</p></div>
+                  <ArrowRight className="h-5 w-5 text-orange-500 shrink-0" />
+                </Link>
+              )}
+              {!resumeTopic && !dueReviews.length && (
+                <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-3 border border-indigo-200 hover:shadow-md transition-shadow">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-white" /></div>
+                  <div className="flex-1"><p className="text-sm font-bold text-indigo-900">Start a new study session</p><p className="text-xs text-indigo-700">Pick a topic from your curriculum</p></div>
+                  <ArrowRight className="h-5 w-5 text-indigo-500 shrink-0" />
+                </Link>
+              )}
+            </div>
+          </div>
 
-          {/* SMART RECOMMENDATION */}
-          <SmartRecommendations />
+          {/* My Learning Areas */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><GraduationCap className="h-5 w-5 text-teal-600" />My Learning Areas</h2>
+              <Link href="/student/curriculum" className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">View all <ArrowRight className="h-3 w-3" /></Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {CURRICULUM_SUBJECTS.map((subject) => (
+                <Link key={subject.name} href={`/student/learn?subject=${encodeURIComponent(subject.name)}`}
+                  className={`${subject.bg} rounded-xl p-3 border border-slate-100 hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm"><subject.icon className={`h-4 w-4 ${subject.color}`} /></div>
+                    <span className="text-xs font-semibold text-slate-700 truncate">{subject.name}</span>
+                  </div>
+                  <div className="bg-white/60 rounded-full h-1.5 overflow-hidden"><div className={`h-full ${subject.bar} rounded-full transition-all duration-500`} style={{ width: `${Math.min(100, Math.round((d.analytics.completedAssignments / Math.max(1, d.analytics.completedAssignments + d.analytics.pendingAssignments)) * 100))}%` }} /></div>
+                  <p className="text-[10px] text-slate-400 mt-1">Tap to study →</p>
+                </Link>
+              ))}
+              <Link href="/student/curriculum" className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center justify-center gap-1.5 hover:border-teal-300 hover:bg-teal-50/50 transition-all cursor-pointer group">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-teal-100 transition-colors"><Plus className="h-4 w-4 text-slate-400 group-hover:text-teal-600" /></div>
+                <span className="text-[10px] font-semibold text-slate-400 group-hover:text-teal-600">Explore All</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Study Recommendations */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <SmartRecommendations />
+          </div>
         </div>
 
-        {/* SIDEBAR: Activity Feed */}
+        {/* RIGHT COLUMN: Upcoming + Recent Activity */}
         <div className="space-y-5">
-          {/* Upcoming Lessons */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-5">
-              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><Clock className="h-5 w-5 text-cyan-600" />Upcoming</h2>
-              {d.upcomingLessons.length > 0 ? (
-                <div className="space-y-2">
-                  {d.upcomingLessons.slice(0, 3).map((l, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm">
-                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
-                      <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{l.title}</p><p className="text-xs text-slate-400">{l.time} {l.location && `· ${l.location}`}</p></div>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-xs text-slate-400">No upcoming lessons</p>}
-            </CardContent>
-          </Card>
+          {/* Upcoming */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><Clock className="h-5 w-5 text-cyan-600" />Upcoming</h2>
+            {d.upcomingLessons.length > 0 ? (
+              <div className="space-y-2.5">
+                {d.upcomingLessons.slice(0, 3).map((l, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
+                    <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{l.title}</p><p className="text-xs text-slate-400">{l.time}{l.location ? ` · ${l.location}` : ''}</p></div>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-xs text-slate-400">No upcoming lessons</p>}
+          </div>
 
           {/* Recent Activity */}
-          <Card className="border-0 shadow-sm">
-            <CardContent className="p-5">
-              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><TrendingUp className="h-5 w-5 text-emerald-600" />Recent Activity</h2>
-              {d.studySessions.length > 0 ? (
-                <div className="space-y-2">
-                  {d.studySessions.slice(0, 4).map((s, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm">
-                      <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{s.topic || s.subject}</p><p className="text-xs text-slate-400">{new Date(s.startTime).toLocaleDateString()}</p></div>
-                      <span className="text-xs font-semibold text-emerald-600 shrink-0 ml-2">{fmtTime(s.duration)}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : <p className="text-xs text-slate-400">Start studying to see activity here</p>}
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><TrendingUp className="h-5 w-5 text-emerald-600" />Recent Activity</h2>
+            {d.studySessions.length > 0 ? (
+              <div className="space-y-2.5">
+                {d.studySessions.slice(0, 4).map((s, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{s.topic || s.subject}</p><p className="text-xs text-slate-400">{new Date(s.startTime).toLocaleDateString()}</p></div>
+                    <span className="text-xs font-semibold text-emerald-600 shrink-0 ml-2">{fmtTime(s.duration)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-xs text-slate-400">Start studying to see activity</p>}
+          </div>
 
           {/* Quick Links */}
           <div className="grid grid-cols-2 gap-2">
-            <Link href="/student/assignments" className="bg-white rounded-xl border border-slate-200 p-3 text-center text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:shadow-sm transition-all">Assignments</Link>
-            <Link href="/student/learn" className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl p-3 text-center text-sm font-semibold hover:shadow-md transition-all">Study Now</Link>
+            <Link href="/student/assignments" className="bg-white rounded-2xl border border-slate-100 p-3 text-center text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:shadow-sm transition-all">Assignments</Link>
+            <Link href="/student/learn" className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-2xl p-3 text-center text-sm font-semibold hover:shadow-md transition-all">Study Now</Link>
           </div>
         </div>
       </div>
 
       {/* ASSIGNMENTS */}
       {d.assignments.length > 0 && (
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-rose-600" />Pending Assignments</h2>
-              <Link href="/student/assignments" className="text-xs text-indigo-600 font-semibold hover:underline">View all</Link>
-            </div>
-            <AssignmentsList assignments={d.assignments.filter(a => !d.studySessions.some(s => s.id === a.id)).slice(0, 3)} />
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-rose-600" />Pending Assignments</h2>
+            <Link href="/student/assignments" className="text-xs text-indigo-600 font-semibold hover:underline">View all</Link>
+          </div>
+          <AssignmentsList assignments={d.assignments.filter(a => !d.studySessions.some(s => s.id === a.id)).slice(0, 3)} />
+        </div>
       )}
 
       {/* AI CHAT MODAL */}
