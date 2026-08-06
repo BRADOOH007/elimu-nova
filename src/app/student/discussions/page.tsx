@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useSession } from 'next-auth/react'
-import { Send, Loader2, CheckCircle, Users, Shield, Smile } from 'lucide-react'
+import { Send, Loader2, CheckCircle, Users, Shield, Smile, ShieldAlert } from 'lucide-react'
+import { containsProfanity } from '@/lib/profanity-filter'
 
 interface Discussion {
   id: string; topic: string; message: string
@@ -22,6 +23,7 @@ export default function StudentDiscussions() {
   const [posting, setPosting] = useState(false)
   const [showEmoji, setShowEmoji] = useState(false)
   const [flagged, setFlagged] = useState(false)
+  const [profanityWarning, setProfanityWarning] = useState(false)
   const [onlineCount, setOnlineCount] = useState(8)
   const bottomRef = useRef<HTMLDivElement>(null)
   const feedRef = useRef<HTMLDivElement>(null)
@@ -48,6 +50,14 @@ export default function StudentDiscussions() {
 
   const send = async () => {
     if (!message.trim() || posting) return
+    setProfanityWarning(false)
+
+    if (containsProfanity(message)) {
+      setProfanityWarning(true)
+      setTimeout(() => setProfanityWarning(false), 5000)
+      return
+    }
+
     const text = `${topic}: ${message}`
     setPosting(true); setFlagged(false)
     try {
@@ -117,10 +127,23 @@ export default function StudentDiscussions() {
         </div>
       </div>
 
+      {/* Moderation banner */}
+      <div className="shrink-0 mx-4 sm:mx-6 mb-2 flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-xl px-4 py-2.5">
+        <Shield className="h-4 w-4 text-purple-500 shrink-0" />
+        <p className="text-xs text-purple-700">Monitored Room — Messages are filtered in real-time to keep Elimu Nova AI a safe learning space for everyone.</p>
+      </div>
+
       {flagged && (
         <div className="shrink-0 mx-4 sm:mx-6 mb-2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
           <Shield className="h-4 w-4 text-amber-500 shrink-0" />
           <p className="text-xs text-amber-700">Message filtered. Keep it respectful.</p>
+        </div>
+      )}
+
+      {profanityWarning && (
+        <div className="shrink-0 mx-4 sm:mx-6 mb-2 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5 animate-in fade-in">
+          <ShieldAlert className="h-4 w-4 text-red-500 shrink-0" />
+          <p className="text-xs text-red-700">Message contains restricted words and was flagged for review.</p>
         </div>
       )}
 
