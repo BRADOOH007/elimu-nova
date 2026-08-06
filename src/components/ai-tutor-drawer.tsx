@@ -5,6 +5,7 @@ import { X, Sparkles, Send, Mic, Volume2, Copy, RefreshCw, Check, Loader2 } from
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { useToast } from '@/hooks/use-toast'
+import { useSession } from 'next-auth/react'
 
 interface Message {
   id: string
@@ -18,6 +19,8 @@ interface HopeDrawerProps {
   studentName?: string
   currentSubject?: string
   currentTopic?: string
+  currentGrade?: string
+  initialPrompt?: string
 }
 
 const QUICK_CHIPS = [
@@ -27,7 +30,8 @@ const QUICK_CHIPS = [
   { label: 'Step-by-step breakdown', icon: '🚀' },
 ]
 
-export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, currentTopic }: HopeDrawerProps) {
+export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, currentTopic, currentGrade, initialPrompt }: HopeDrawerProps) {
+  const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
@@ -36,23 +40,74 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const synthRef = useRef<SpeechSynthesis | null>(null)
+  const messagesRef = useRef<Message[]>([])
+  const pendingPromptRef = useRef<string | null>(null)
   const { toast } = useToast()
 
-  const name = studentName?.split(' ')[0] || 'Student'
+  const name = (studentName || session?.user?.name || 'Student').split(' ')[0]
   const subject = currentSubject || 'your studies'
   const topic = currentTopic || ''
 
+  // Lock body scroll while the drawer is open (mobile full-screen sheet).
   useEffect(() => {
-    if (open && messages.length === 0) {
+    if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prevOverflow }
+  }, [open])
+
+  // Close on Escape.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+
+  useEffect(() => {
+    if (!open) return
+    // Load chat history from DB
+    fetch('/api/ai/chat/history?limit=20').then(r => r.ok ? r.json() : []).then((data: any[]) => {
+      if (data?.messages?.length > 0) {
+        const history = data.messages.map((m: any) => ({ id: m.id || Date.now().toString(), role: m.role, content: m.content }))
+        setMessages(history)
+        messagesRef.current = history
+        return
+      }
+      // Fallback to greeting
       setMessages([{
         id: 'greeting',
         role: 'assistant',
         content: `Hi ${name}! I'm Hope, your personal AI tutor. ${topic ? `Ready to tackle **${topic}** in ${subject}?` : `Ready to help you with ${subject} today?`} What would you like to focus on?`
       }])
-    }
+    }).catch(() => {
+      if (messages.length === 0) {
+        setMessages([{
+          id: 'greeting',
+          role: 'assistant',
+          content: `Hi ${name}! I'm Hope, your personal AI tutor. ${topic ? `Ready to tackle **${topic}** in ${subject}?` : `Ready to help you with ${subject} today?`} What would you like to focus on?`
+        }])
+      }
+    })
+
     if (open) inputRef.current?.focus()
     synthRef.current = typeof window !== 'undefined' ? window.speechSynthesis : null
-  }, [open, messages.length])
+    pendingPromptRef.current = initialPrompt?.trim() || null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  // Send a deep-linked initial prompt exactly once, after the greeting exists.
+  useEffect(() => {
+    if (!open || !pendingPromptRef.current) return
+    if (messages.length === 1) {
+      const p = pendingPromptRef.current
+      pendingPromptRef.current = null
+      sendMessage(p)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages])
+
+  useEffect(() => { messagesRef.current = messages }, [messages])
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
@@ -70,10 +125,12 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: text,
-          history: messages.map(m => ({ role: m.role, content: m.content })),
+          history: messagesRef.current.map(m => ({ role: m.role, content: m.content })),
+          context: 'student_tutor',
           studentName: name,
           subject,
           topic,
+          grade: currentGrade || '',
         }),
       })
       if (!res.ok) throw new Error('Failed')
@@ -122,28 +179,44 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
 
   return (
     <div className="fixed inset-0 z-[60] pointer-events-none">
+      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
-      <div className="absolute right-0 top-0 bottom-0 w-full sm:max-w-md bg-white border-l border-slate-200 shadow-2xl flex flex-col pointer-events-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white p-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <Sparkles className="h-4 w-4" />
+
+      {/* Sheet: full-screen on mobile, right-aligned side panel on sm+ */}
+      <div className="absolute inset-0 bg-white flex flex-col pointer-events-auto sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[400px] sm:max-w-md sm:border-l sm:border-slate-200 sm:shadow-2xl rounded-none">
+        {/* Pull-down drag handle (mobile only) */}
+        <div className="flex justify-center pt-2 shrink-0 sm:hidden">
+          <div className="h-1.5 w-12 rounded-full bg-slate-300" />
+        </div>
+
+        {/* Header (below safe area on mobile) */}
+        <div className="pt-safe bg-gradient-to-r from-purple-600 to-indigo-600 text-white shrink-0">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                <Sparkles className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="font-bold text-sm truncate">Hope AI Assistant</h2>
+                {subject && (
+                  <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur-sm inline-block mt-0.5 max-w-full truncate">
+                    {subject}{topic ? ` · ${topic}` : ''}
+                  </span>
+                )}
+              </div>
             </div>
-            <div>
-              <h2 className="font-bold text-sm">Hope AI Assistant</h2>
-              {subject && (
-                <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur-sm inline-block mt-0.5">{subject}{topic ? ` · ${topic}` : ''}</span>
-              )}
-            </div>
+            <button
+              onClick={onClose}
+              aria-label="Close AI Tutor"
+              className="w-11 h-11 sm:w-10 sm:h-10 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors shrink-0"
+            >
+              <X className="h-5 w-5 sm:h-4 sm:w-4" />
+            </button>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
-            <X className="h-4 w-4" />
-          </button>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-4">
           {messages.map(msg => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] ${msg.role === 'user'
@@ -156,15 +229,15 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     </div>
                     {msg.id !== 'greeting' && (
-                      <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-200/60">
-                        <button onClick={() => copyMessage(msg.content, msg.id)} className="p-1 rounded hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600" title="Copy">
-                          {copiedId === msg.id ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-200/60">
+                        <button onClick={() => copyMessage(msg.content, msg.id)} className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600" title="Copy" aria-label="Copy message">
+                          {copiedId === msg.id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                         </button>
-                        <button onClick={() => speakMessage(msg.content)} className="p-1 rounded hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600" title="Read aloud">
-                          <Volume2 className="h-3.5 w-3.5" />
+                        <button onClick={() => speakMessage(msg.content)} className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600" title="Read aloud" aria-label="Read message aloud">
+                          <Volume2 className="h-4 w-4" />
                         </button>
-                        <button onClick={() => regenerate(msg.id)} className="p-1 rounded hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600 ml-auto" title="Regenerate">
-                          <RefreshCw className="h-3.5 w-3.5" />
+                        <button onClick={() => regenerate(msg.id)} className="flex h-11 w-11 sm:h-9 sm:w-9 items-center justify-center rounded hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600 ml-auto" title="Regenerate" aria-label="Regenerate response">
+                          <RefreshCw className="h-4 w-4" />
                         </button>
                       </div>
                     )}
@@ -193,31 +266,33 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
         <div className="px-4 pt-2 pb-0 flex gap-2 overflow-x-auto shrink-0">
           {QUICK_CHIPS.map(chip => (
             <button key={chip.label} onClick={() => sendMessage(`${chip.icon} ${chip.label}`)}
-              className="shrink-0 text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full px-3 py-1.5 transition-colors">
+              className="shrink-0 h-11 inline-flex items-center text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full px-4 transition-colors">
               {chip.icon} {chip.label}
             </button>
           ))}
         </div>
 
-        {/* Input Bar */}
-        <div className="p-4 border-t border-slate-200 shrink-0">
-          <div className="flex items-end gap-2">
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask Hope anything..."
-              rows={1}
-              className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[40px] max-h-32"
-            />
-            <button onClick={() => {}} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 transition-colors shrink-0" title="Voice input">
-              <Mic className="h-5 w-5" />
-            </button>
-            <button onClick={() => sendMessage(input)} disabled={!input.trim() || sending}
-              className="p-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors shrink-0 disabled:opacity-40">
-              <Send className="h-5 w-5" />
-            </button>
+        {/* Input Bar (sticky bottom + safe area for keyboard/home indicator) */}
+        <div className="pb-safe bg-white shrink-0">
+          <div className="sticky bottom-0 bg-white p-3 border-t border-slate-200">
+            <div className="flex items-end gap-2">
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask Hope anything..."
+                rows={1}
+                className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[44px] max-h-32"
+              />
+              <button onClick={() => { toast({ title: 'Voice input is coming soon' }) }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 transition-colors" title="Voice input" aria-label="Voice input">
+                <Mic className="h-5 w-5" />
+              </button>
+              <button onClick={() => sendMessage(input)} disabled={!input.trim() || sending}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-colors disabled:opacity-40" aria-label="Send message">
+                <Send className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

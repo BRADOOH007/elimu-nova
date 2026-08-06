@@ -1,8 +1,12 @@
 {
-  "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "prisma generate && next build",
-  "framework": "nextjs",
-  "env": {
-    "PRISMA_GENERATE_SKIP_AUTOINSTALL": "true"
-  }
+  "crons": [
+    {
+      "path": "/api/cron/adaptive-learning",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/parent-digest",
+      "schedule": "0 6 * * *"
+    }
+  ]
 }

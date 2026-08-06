@@ -112,6 +112,20 @@ Teaching rules:
         .catch(() => {})
     }
 
+    // Persist session for Hope AI chat history
+    if (context === 'student_tutor') {
+      prisma.aITutorSession.create({
+        data: {
+          studentId: studentId || user.id,
+          sessionType: 'hope',
+          question: message,
+          response: detailed.content,
+          subject: subject || '',
+          topic: topic || '',
+        } as any,
+        }).catch(() => {})
+    }
+
     return NextResponse.json({
       response: stripLatex(detailed.content),
       provider: detailed.provider,
