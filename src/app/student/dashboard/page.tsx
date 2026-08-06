@@ -16,9 +16,10 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Sheet } from "@/components/ui/sheet"
 import {
   Bell, Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
-  Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Loader2, X, Plus,
+  Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Loader2, X, Plus, MessageSquare,
   Calculator, FlaskConical, Globe, Languages, Church, Atom, Palette, Dumbbell, Music, Leaf
 } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
@@ -68,6 +69,7 @@ export default function StudentDashboard() {
   const [loading, setLoading] = useState(true)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showAIChat, setShowAIChat] = useState(false)
+  const [chatContext, setChatContext] = useState('')
   const [displayName, setDisplayName] = useState("")
   const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifs, setShowNotifs] = useState(false)
@@ -185,6 +187,9 @@ export default function StudentDashboard() {
               <Button size="sm" className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold border-0" onClick={() => window.location.href = '/student/learn'}>
                 {resumeTopic ? <><Play className="h-4 w-4 mr-1.5" />Continue Learning</> : <><BookOpen className="h-4 w-4 mr-1.5" />Start Learning</>}
               </Button>
+              <button onClick={() => { setShowAIChat(true); setChatContext('') }} className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
+                <MessageSquare className="h-4 w-4 text-white" />
+              </button>
             </div>
             <div className="hidden sm:block w-48">
               <div className="flex justify-between text-xs text-violet-200 mb-1"><span>{levelName}</span><span>{getLevelName(gameState.level + 1)}</span></div>
@@ -223,7 +228,11 @@ export default function StudentDashboard() {
         <div className="lg:col-span-2 space-y-5">
           {/* Today's Focus */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4"><Target className="h-5 w-5 text-indigo-600" />Today&apos;s Focus</h2>
+            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4"><Target className="h-5 w-5 text-indigo-600" />Today&apos;s Focus
+              <button onClick={() => { setShowAIChat(true); setChatContext(resumeTopic?.topic || '') }} className="ml-auto text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1">
+                <MessageSquare className="h-3.5 w-3.5" />Chat with AI
+              </button>
+            </h2>
             <div className="space-y-3">
               {!dailyDone && resumeTopic && (
                 <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-200 hover:shadow-md transition-shadow">
@@ -343,13 +352,23 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* AI CHAT MODAL */}
-      <Dialog open={showAIChat} onOpenChange={setShowAIChat}>
-        <DialogContent className="max-w-2xl h-[80vh] p-0 border-0 shadow-2xl rounded-2xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-          <div className="absolute top-4 right-4 z-10"><button onClick={() => setShowAIChat(false)} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white"><X className="h-4 w-4" /></button></div>
-          <ChatContainer onSend={handleAIChat} headerTitle="AI Teacher" headerSubtitle="Ask me anything about your studies" />
-        </DialogContent>
-      </Dialog>
+      {/* CHAT SHEET */}
+      <Sheet open={showAIChat} onOpenChange={setShowAIChat}>
+        <div className="h-full flex flex-col bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+          <div className="p-4 border-b border-white/10">
+            <h3 className="text-white font-bold text-lg flex items-center gap-2"><MessageSquare className="h-5 w-5 text-indigo-400" />AI Tutor</h3>
+            {chatContext && <p className="text-slate-400 text-xs mt-1">Context: {chatContext}</p>}
+          </div>
+          <div className="flex-1">
+            <ChatContainer
+              onSend={handleAIChat}
+              headerTitle=""
+              headerSubtitle=""
+              initialMessages={chatContext ? [{ id: 'ctx', role: 'ai' as const, content: `I see you're interested in ${chatContext}. What would you like to know?`, timestamp: new Date() }] : undefined}
+            />
+          </div>
+        </div>
+      </Sheet>
 
       <OnboardingTourFab role={session?.user?.role || 'STUDENT'} />
     </div>
