@@ -6,7 +6,7 @@ import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
 import SmartRecommendations from "@/components/student/smart-recommendations"
 import AssignmentsList from "@/components/student/assignments-list"
 import UpcomingLessons from "@/components/student/upcoming-lessons"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Sheet } from "@/components/ui/sheet"
 import ChatContainer from "@/components/chat/chat-container"
 import { CardSkeleton } from "@/components/ui/skeleton"
 import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus"
@@ -16,7 +16,6 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Sheet } from "@/components/ui/sheet"
 import {
   Bell, Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
   Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Loader2, X, Plus, MessageSquare,
@@ -344,11 +343,34 @@ export default function StudentDashboard() {
       {/* ASSIGNMENTS */}
       {d.assignments.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-rose-600" />Pending Assignments</h2>
             <Link href="/student/assignments" className="text-xs text-indigo-600 font-semibold hover:underline">View all</Link>
           </div>
-          <AssignmentsList assignments={d.assignments.filter(a => !d.studySessions.some(s => s.id === a.id)).slice(0, 3)} />
+          <div className="divide-y divide-slate-100">
+            {d.assignments.filter(a => !d.studySessions.some(s => s.id === a.id)).slice(0, 4).map(a => (
+              <div key={a.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0 group">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                  a.status === 'Overdue' ? 'bg-red-100' : a.status === 'Submitted' ? 'bg-blue-100' : a.status === 'Completed' ? 'bg-green-100' : 'bg-amber-100'
+                }`}>
+                  {a.status === 'Completed' ? <CheckCircle className="w-4 h-4 text-green-600" /> :
+                   a.status === 'Overdue' ? <AlertCircle className="w-4 h-4 text-red-500" /> :
+                   a.status === 'Submitted' ? <CheckCircle className="w-4 h-4 text-blue-600" /> :
+                   <Clock className="w-4 h-4 text-amber-600" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{a.title}</p>
+                  <p className="text-xs text-slate-400">{a.subject} · {new Date(a.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                </div>
+                <span className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${
+                  a.status === 'Submitted' ? 'bg-blue-50 text-blue-700' :
+                  a.status === 'Completed' ? 'bg-green-50 text-green-700' :
+                  a.status === 'Overdue' ? 'bg-red-50 text-red-700' :
+                  'bg-amber-50 text-amber-700'
+                }`}>{a.status === 'Submitted' ? 'Submitted' : a.status}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

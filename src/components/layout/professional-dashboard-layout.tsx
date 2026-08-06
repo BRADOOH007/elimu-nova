@@ -30,7 +30,6 @@ import { TourProvider } from '@/components/tour/TourProvider'
 import { TourOverlay } from '@/components/tour/TourOverlay'
 import { TourTooltip } from '@/components/tour/TourTooltip'
 import { TourLauncher } from '@/components/tour/TourLauncher'
-import { TourHelpButton } from '@/components/tour/TourHelpButton'
 import { useTour } from '@/components/tour/TourProvider'
 import { useTourState } from '@/components/tour/useTourState'
 
@@ -236,7 +235,6 @@ export function ProfessionalDashboardLayout({
       <TourOverlay />
       <TourTooltip role={userRole} />
       <TourLauncher />
-      <TourHelpButton />
 
       {/* ── SPLASH SCREEN ── */}
       <DashboardSplash
