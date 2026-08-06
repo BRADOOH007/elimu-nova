@@ -66,6 +66,8 @@ export default function LearnPage() {
   const [recallAnswers, setRecallAnswers] = useState<(string | number)[]>([])
   const [recallSubmitted, setRecallSubmitted] = useState(false)
   const [recallScore, setRecallScore] = useState(0)
+  const [recallChecked, setRecallChecked] = useState<Record<number, boolean | null>>({})
+  const [recallHints, setRecallHints] = useState<Record<number, boolean>>({})
 
   // Learning path
   const [pathData, setPathData] = useState<{ topics: any[]; resumeTopic: any; completedCount: number; totalCount: number; percentComplete: number } | null>(null)
@@ -148,7 +150,7 @@ export default function LearnPage() {
     const topic = topicArg || studyTopic
     if (!topic.trim()) { toast({ variant:'destructive', title:'Enter a topic first' }); return }
     setStudying(true); setActiveLesson(null); setStudyPhase('preview')
-    setRecallAnswers([]); setRecallSubmitted(false); setRecallScore(0)
+    setRecallAnswers([]); setRecallSubmitted(false); setRecallScore(0); setRecallChecked({}); setRecallHints({})
     try {
       const r = await fetch('/api/ai/generate-active-lesson', {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -190,6 +192,24 @@ export default function LearnPage() {
   // ── Active Recall Handlers ────────────────────────────────
   const handleRecallChange = (i: number, val: string | number) => {
     setRecallAnswers(prev => { const next = [...prev]; next[i] = val; return next })
+    setRecallChecked(prev => ({ ...prev, [i]: null }))
+  }
+
+  const checkSingleAnswer = (i: number) => {
+    if (!activeLesson) return
+    const q = activeLesson.recall[i]
+    const userAns = recallAnswers[i]
+    if (userAns === undefined) return
+    let isCorrect = false
+    if (q.type === 'mcq' && typeof userAns === 'number') {
+      const correctIdx = q.options?.findIndex(o => o === q.answer) ?? -1
+      isCorrect = userAns === correctIdx
+    } else {
+      isCorrect = evaluateAnswer(userAns, q.answer, q.type)
+    }
+    setRecallChecked(prev => ({ ...prev, [i]: isCorrect }))
+    if (isCorrect) addXp(5)
+    else addMistake(q.question, String(userAns), q.answer, activeLesson.topic, activeLesson.subject)
   }
 
   const submitRecall = () => {
@@ -463,9 +483,32 @@ export default function LearnPage() {
                               })}
                             </div>
                           ) : (
-                            <input type="text" disabled={recallSubmitted} value={typeof recallAnswers[i] === 'string' ? recallAnswers[i] as string : ''}
-                              onChange={e => handleRecallChange(i, e.target.value)} placeholder="Type your answer..."
-                              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50" />
+                            <div className="space-y-2">
+                              <div className="flex gap-2">
+                                <input type="text"
+                                  disabled={recallSubmitted || recallChecked[i] === true}
+                                  value={typeof recallAnswers[i] === 'string' ? recallAnswers[i] as string : ''}
+                                  onChange={e => handleRecallChange(i, e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') checkSingleAnswer(i) }}
+                                  placeholder="Type your answer..."
+                                  className={`flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+                                    recallChecked[i] === true ? 'border-emerald-500 bg-emerald-50 text-emerald-900 font-semibold' :
+                                    recallChecked[i] === false ? 'border-rose-500 bg-rose-50 text-rose-900' :
+                                    'border-slate-200 focus:ring-blue-500'}`} />
+                                <Button size="sm" onClick={() => checkSingleAnswer(i)} disabled={recallChecked[i] === true || recallSubmitted}
+                                  className="shrink-0 bg-indigo-500 text-xs text-white hover:bg-indigo-600">Check</Button>
+                              </div>
+                              {recallChecked[i] === true && <p className="text-xs font-semibold text-emerald-600">✓ Correct! +5 XP</p>}
+                              {recallChecked[i] === false && (
+                                <div className="space-y-1">
+                                  <p className="text-xs font-semibold text-rose-600">✗ Try again</p>
+                                  <button onClick={() => setRecallHints(prev => ({ ...prev, [i]: !prev[i] }))} className="text-xs text-amber-600 hover:underline">
+                                    💡 {recallHints[i] ? 'Hide hint' : 'View hint'}
+                                  </button>
+                                  {recallHints[i] && <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-700">{q.explanation}</p>}
+                                </div>
+                              )}
+                            </div>
                           )}
                           {recallSubmitted && (
                             <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm">
