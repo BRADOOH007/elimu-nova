@@ -20,6 +20,8 @@ interface Substrand {
 
 interface CurriculumBrowserProps {
   onSelectTopic: (subject: string, topic: string, learningOutcomes?: string[]) => void
+  defaultSubject?: string
+  defaultGrade?: string
 }
 
 const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
@@ -31,9 +33,9 @@ const STATUS_STYLE: Record<string, string> = {
   NOT_STARTED: 'bg-slate-100 text-slate-500 border-slate-200',
 }
 
-export function CurriculumBrowser({ onSelectTopic }: CurriculumBrowserProps) {
-  const [grade, setGrade] = useState('Grade 4')
-  const [subject, setSubject] = useState('Mathematics')
+export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade }: CurriculumBrowserProps) {
+  const [grade, setGrade] = useState(defaultGrade || 'Grade 4')
+  const [subject, setSubject] = useState(defaultSubject || 'Mathematics')
   const [strands, setStrands] = useState<Strand[]>([])
   const [expandedStrand, setExpandedStrand] = useState<string | null>(null)
   const [substrands, setSubstrands] = useState<Record<string, Substrand[]>>({})
