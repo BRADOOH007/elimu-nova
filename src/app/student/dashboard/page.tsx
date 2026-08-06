@@ -23,6 +23,7 @@ import {
 } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
 import { getUnreviewedMistakes } from '@/lib/mistake-bank'
+import { OnboardingTourFab } from '@/components/onboarding-tour-fab'
 
 interface DashboardData {
   student: { id: string; name: string; email: string; school: string; teacher: string; class: string }
@@ -349,6 +350,8 @@ export default function StudentDashboard() {
           <ChatContainer onSend={handleAIChat} headerTitle="AI Teacher" headerSubtitle="Ask me anything about your studies" />
         </DialogContent>
       </Dialog>
+
+      <OnboardingTourFab role={session?.user?.role || 'STUDENT'} />
     </div>
   )
 }
