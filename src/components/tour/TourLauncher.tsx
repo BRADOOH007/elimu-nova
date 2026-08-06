@@ -35,13 +35,11 @@ export function TourLauncher() {
       } catch { /* ignore */ }
     }
 
-    const firstStep = config.steps[0]
-    if (firstStep?.navigateTo && pathname !== firstStep.navigateTo) return
-
-    launchedRef.current = true
-    delayRef.current = setTimeout(() => {
-      startTour(config.id, config.steps)
-    }, 800)
+    // Auto-start disabled — tour only starts when user clicks the Tour button manually
+    // To re-enable: const firstStep = config.steps[0]
+    // if (firstStep?.navigateTo && pathname !== firstStep.navigateTo) return
+    // delayRef.current = setTimeout(() => { startTour(config.id, config.steps) }, 800)
+    return
 
     return () => { if (delayRef.current) clearTimeout(delayRef.current) }
   }, [session?.user?.role, pathname, isActive, startTour, isCompleted, markCompleted])
