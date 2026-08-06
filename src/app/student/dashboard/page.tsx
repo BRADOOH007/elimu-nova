@@ -195,19 +195,26 @@ export default function StudentDashboard() {
 
       {/* QUICK STATS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { icon: Clock, label: 'Study Time', value: fmtTime(d.analytics.totalStudyTime || d.stats.studyTime), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', from: 'from-blue-50', to: 'to-indigo-50' },
-          { icon: ClipboardList, label: 'Assignments', value: `${d.stats.completedAssignments}/${(d.stats.completedAssignments + d.stats.activeAssignments) || 0} done`, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', from: 'from-emerald-50', to: 'to-teal-50' },
-          { icon: Star, label: 'Avg Grade', value: d.stats.averageGrade ? `${Math.round(d.stats.averageGrade)}%` : '--', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', from: 'from-amber-50', to: 'to-orange-50' },
-          { icon: Trophy, label: 'Topics', value: `${d.analytics.completedAssignments || 0} mastered`, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50' },
-        ].map((stat, i) => (
-          <Card key={i} className={`border-0 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br ${stat.from} ${stat.to} ${stat.border}`}>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center shadow-sm`}><stat.icon className={`h-5 w-5 ${stat.color}`} /></div>
-              <div><p className="text-xs text-slate-500">{stat.label}</p><p className="font-bold text-slate-800 text-lg leading-tight">{stat.value}</p></div>
-            </CardContent>
-          </Card>
-        ))}
+          {[
+            { icon: Clock, label: 'Study Time', value: fmtTime(d.analytics.totalStudyTime || d.stats.studyTime), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', from: 'from-blue-50', to: 'to-indigo-50', empty: true, emptyLabel: 'Start a 5-min lesson →', emptyHref: '/student/learn' },
+            { icon: ClipboardList, label: 'Assignments', value: (d.stats.completedAssignments + d.stats.activeAssignments) > 0 ? `${d.stats.completedAssignments}/${d.stats.completedAssignments + d.stats.activeAssignments} done` : '0', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', from: 'from-emerald-50', to: 'to-teal-50', empty: (d.stats.completedAssignments + d.stats.activeAssignments) === 0, emptyLabel: 'View assignments →', emptyHref: '/student/assignments' },
+            { icon: Star, label: 'Avg Grade', value: d.stats.averageGrade ? `${Math.round(d.stats.averageGrade)}%` : '--', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', from: 'from-amber-50', to: 'to-orange-50', empty: !d.stats.averageGrade, emptyLabel: 'Take a quick quiz →', emptyHref: '/student/learn' },
+            { icon: Trophy, label: 'Topics', value: d.analytics.completedAssignments > 0 ? `${d.analytics.completedAssignments} mastered` : '0', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50', empty: d.analytics.completedAssignments === 0, emptyLabel: 'Study a topic →', emptyHref: '/student/learn' },
+          ].map((stat, i) => (
+            <Card key={i} className={`border-0 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br ${stat.from} ${stat.to} ${stat.border}`}>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center shadow-sm`}><stat.icon className={`h-5 w-5 ${stat.color}`} /></div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-slate-500">{stat.label}</p>
+                  {stat.empty ? (
+                    <Link href={stat.emptyHref} className="text-xs font-semibold text-indigo-500 hover:text-indigo-700 flex items-center gap-1 group mt-0.5">{stat.emptyLabel} <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" /></Link>
+                  ) : (
+                    <p className="font-bold text-slate-800 text-lg leading-tight">{stat.value}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -286,7 +293,13 @@ export default function StudentDashboard() {
                   </div>
                 ))}
               </div>
-            ) : <p className="text-xs text-slate-400">No upcoming lessons</p>}
+            ) : <Link href="/student/curriculum" className="flex items-center gap-3 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-3 border border-cyan-200 hover:shadow-md transition-all group">
+              <div className="w-9 h-9 rounded-full bg-cyan-100 flex items-center justify-center shrink-0 group-hover:bg-cyan-200 transition-colors">
+                <Target className="h-4 w-4 text-cyan-600" />
+              </div>
+              <div className="flex-1"><p className="text-sm font-semibold text-cyan-800">Select a CBC Strand to focus on</p><p className="text-xs text-cyan-600">Browse curriculum topics</p></div>
+              <ArrowRight className="h-4 w-4 text-cyan-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </Link>}
           </div>
 
           {/* Recent Activity */}
@@ -301,7 +314,13 @@ export default function StudentDashboard() {
                   </div>
                 ))}
               </div>
-            ) : <p className="text-xs text-slate-400">Start studying to see activity</p>}
+            ) : <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-3 border border-emerald-200 hover:shadow-md transition-all group">
+              <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
+                <Zap className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="flex-1"><p className="text-sm font-semibold text-emerald-800">Start your first 5-min micro-lesson</p><p className="text-xs text-emerald-600">Open Learning Hub to begin</p></div>
+              <ArrowRight className="h-4 w-4 text-emerald-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+            </Link>}
           </div>
 
           {/* Quick Links */}
