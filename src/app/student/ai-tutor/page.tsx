@@ -11,7 +11,7 @@ import { LessonCompletionCelebration } from "@/components/ui/lesson-completion-c
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import {
-  Sparkles, Send, Loader2, AlertCircle, Mic, Zap, Trophy, Flame, Star, BookOpen, Copy, Check, Lightbulb, Target, HelpCircle, Brain, Code2, Compass
+  Sparkles, Send, Loader2, AlertCircle, Mic, Zap, Trophy, Flame, Star, BookOpen, Copy, Check, Lightbulb, Target, HelpCircle, Brain, Code2, Compass, Volume2
 } from "lucide-react"
 
 const CodingTab = dynamic(() => import('@/app/student/coding/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500" /></div> })
@@ -40,6 +40,8 @@ export default function AITutorPage() {
   const [stats, setStats] = useState<StudentStats>({ xp: 0, streak: 0, masteryScore: 0, totalQuestions: 0, correctAnswers: 0 })
   const [showCelebration, setShowCelebration] = useState(false)
   const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [isListening, setIsListening] = useState(false)
+  const recognitionRef = useRef<any>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -78,6 +80,39 @@ export default function AITutorPage() {
 
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }
   const copyMessage = async (content: string, idx: number) => { await navigator.clipboard.writeText(content); setCopiedId(idx); setTimeout(() => setCopiedId(null), 2000) }
+
+  const startVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return
+    if (recognitionRef.current) { recognitionRef.current.stop(); return }
+    const recognition = new SpeechRecognition()
+    recognition.lang = 'en-US'
+    recognition.continuous = false
+    recognition.interimResults = true
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join('')
+      setInputMessage(transcript)
+      if (event.results[0]?.isFinal) { recognition.stop(); setIsListening(false); setTimeout(() => sendMessage(transcript), 500) }
+    }
+    recognition.onerror = () => { setIsListening(false); recognitionRef.current = null }
+    recognition.onend = () => { setIsListening(false); recognitionRef.current = null }
+    recognitionRef.current = recognition
+    recognition.start()
+    setIsListening(true)
+  }
+
+  const speakMessage = (content: string) => {
+    const synth = window.speechSynthesis
+    if (!synth) return
+    synth.cancel()
+    const plain = content.replace(/[#*`\[\]>|~_-]/g, ' ').trim()
+    const utterance = new SpeechSynthesisUtterance(plain)
+    const voices = synth.getVoices()
+    const female = voices.find(v => v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha'))
+    if (female) utterance.voice = female
+    utterance.rate = 0.95
+    synth.speak(utterance)
+  }
 
   const topic = currentTask?.topic || 'this topic'
 
@@ -125,6 +160,7 @@ export default function AITutorPage() {
                         <div className="prose prose-sm max-w-none prose-p:my-1 prose-li:my-0.5 prose-code:bg-slate-200 prose-code:px-1 prose-code:rounded prose-pre:bg-slate-800 prose-pre:text-slate-100"><ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown></div>
                         <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-slate-200/60">
                           <button onClick={() => copyMessage(msg.content, idx)} className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors">{copiedId === idx ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}</button>
+                          <button onClick={() => speakMessage(msg.content)} className="p-1 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-colors" title="Read aloud"><Volume2 className="h-3 w-3" /></button>
                         </div>
                       </div>
                     </div>
@@ -158,7 +194,10 @@ export default function AITutorPage() {
                 placeholder={`Ask Hope about ${topic}...`} rows={1}
                 className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[42px] max-h-32"
                 disabled={isLoading} />
-              <button className="p-2.5 rounded-xl text-slate-400 hover:text-slate-600 transition-colors shrink-0" title="Voice input"><Mic className="h-5 w-5" /></button>
+              <button onClick={startVoiceInput}
+                className={`p-2.5 rounded-xl transition-colors shrink-0 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-slate-400 hover:text-slate-600'}`} title="Voice input">
+                <Mic className="h-5 w-5" />
+              </button>
               <button onClick={() => sendMessage()} disabled={isLoading || !inputMessage.trim()}
                 className="bg-purple-600 text-white p-2.5 rounded-xl hover:bg-purple-700 transition-colors flex items-center justify-center shrink-0 disabled:opacity-40">
                 {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
