@@ -3,56 +3,32 @@
 import { useSchoolInfo } from "@/hooks/use-school-info"
 import { IndependentUserWelcome } from "@/components/onboarding/independent-user-welcome"
 import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
-import LiveStudyPulse from "@/components/student/live-study-pulse"
-import PerformanceTrends from "@/components/student/performance-trends"
-import StudyGoalTracker from "@/components/student/study-goal-tracker"
 import SmartRecommendations from "@/components/student/smart-recommendations"
 import AssignmentsList from "@/components/student/assignments-list"
 import UpcomingLessons from "@/components/student/upcoming-lessons"
-import StudyStreak from "@/components/student/study-streak"
-import AIInsightsCards from "@/components/student/ai-insights-cards"
-import XpBadge from "@/components/student/xp-badge"
-import SkillMasteryWidget from "@/components/student/skill-mastery-widget"
-import CommonMistakes from "@/components/student/common-mistakes"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import ChatContainer from "@/components/chat/chat-container"
-import RecentStudySessions from "@/components/student/recent-study-sessions"
-import AITutorHistory from "@/components/student/ai-tutor-history"
-import { AIUsageCard } from "@/components/ai-usage-card"
-import StudentGreeting from "@/components/student/greeting"
-import StudentSummaryStats from "@/components/student/summary-stats"
-import CurriculumAccordion from "@/components/student/curriculum-accordion"
-import LearningStats from "@/components/student/learning-stats"
-import { CardSkeleton, StatsCardSkeleton } from "@/components/ui/skeleton"
+import { CardSkeleton } from "@/components/ui/skeleton"
 import { useRefreshOnFocus } from "@/hooks/use-refresh-on-focus"
 import { useSession } from "next-auth/react"
 import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
-import { Bell, Code2, ChevronRight, GraduationCap, Brain, ClipboardList } from "lucide-react"
-import { grades1to9CurriculumByTerm, type GradeLevel, type LearningAreaData } from "@/data/grades1-9CurriculumByTerm"
-
-interface SubStrand { name: string; learningOutcomes?: string[]; activities?: string[] }
-interface Strand { name: string; subStrands: SubStrand[] }
-interface LearningArea { name: string; strands: Strand[] }
-
-interface SkillMasteryItem {
-  skillName: string; skillCategory: string; masteryScore: number; timesCorrect: number; timesTested: number
-}
-
-interface ProgressData {
-  xp: number; streak: number; consecutiveCorrect: number; masteryScore: number
-  preferredDifficulty: string; commonMistakes: any; totalQuestions: number; correctAnswers: number
-  skillMastery: SkillMasteryItem[]
-}
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import {
+  Bell, Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
+  Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Loader2, X
+} from "lucide-react"
+import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
+import { getUnreviewedMistakes } from '@/lib/mistake-bank'
 
 interface DashboardData {
   student: { id: string; name: string; email: string; school: string; teacher: string; class: string }
   stats: { activeAssignments: number; completedAssignments: number; averageGrade: number | null; studyTime: number; overdueAssignments: number }
-  progress: ProgressData | null
   assignments: Array<{ id: string; title: string; description: string; dueDate: string; status: string; grade: number | null; teacher: string; subject: string }>
   upcomingLessons: Array<{ id: string; title: string; subject: string; time: string; teacher: string; location?: string }>
   studySessions: Array<{ id: string; subject: string; topic: string; duration: number; startTime: string; endTime?: string; notes?: string }>
-  aiTutorSessions: Array<{ id: string; sessionType?: string; subject: string; topic?: string; question: string; response: string; rating: number | null; isHelpful?: boolean | null; createdAt: string }>
   analytics: { totalStudyTime: number; averageGrade: number | null; completedAssignments: number; pendingAssignments: number; overdueAssignments: number; lastActiveDate: string | null; streakDays: number; longestStreak: number; weeklyGoal: number; monthlyGoal: number }
   unreadNotificationCount?: number
 }
@@ -60,154 +36,42 @@ interface DashboardData {
 const fallbackData: DashboardData = {
   student: { id: "", name: "Student", email: "", school: "ElimuNova", teacher: "AI Teacher", class: "Independent Study" },
   stats: { activeAssignments: 0, completedAssignments: 0, averageGrade: null, studyTime: 0, overdueAssignments: 0 },
-  progress: null,
-  assignments: [], upcomingLessons: [], studySessions: [], aiTutorSessions: [],
+  assignments: [], upcomingLessons: [], studySessions: [],
   analytics: { totalStudyTime: 0, averageGrade: null, completedAssignments: 0, pendingAssignments: 0, overdueAssignments: 0, lastActiveDate: null, streakDays: 0, longestStreak: 0, weeklyGoal: 300, monthlyGoal: 1200 },
 }
 
-function getCurrentTerm() {
-  const month = new Date().getMonth() + 1
-  if (month >= 1 && month <= 4) return 1
-  if (month >= 5 && month <= 8) return 2
-  return 3
+function fmtTime(totalMinutes: number): string {
+  if (totalMinutes < 60) return `${totalMinutes}min`
+  return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
 }
 
 export default function StudentDashboard() {
   const { data: session } = useSession()
-  const { schoolInfo, isIndependent, loading: schoolInfoLoading } = useSchoolInfo()
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const { schoolInfo, loading: schoolInfoLoading } = useSchoolInfo()
+  const isIndependent = !schoolInfo?.school?.id && !session?.user?.schoolId
+
+  const [dashboardData, setDashboardData] = useState<DashboardData>(fallbackData)
   const [loading, setLoading] = useState(true)
-  const [displayName, setDisplayName] = useState("")
-  const [showAIChat, setShowAIChat] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showAIChat, setShowAIChat] = useState(false)
+  const [displayName, setDisplayName] = useState("")
+  const [notifications, setNotifications] = useState<any[]>([])
   const [showNotifs, setShowNotifs] = useState(false)
-  const [notifications, setNotifications] = useState<Array<{id:string;title:string;message:string;type:string;createdAt:string;isRead:boolean}>>([])
   const notifRef = useRef<HTMLDivElement>(null)
 
-  const currentTerm = useState(getCurrentTerm())[0]
-  const rawGrade = dashboardData?.student.class
-  const knownGrades: GradeLevel[] = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12','PP1','PP2']
-  const studentGrade: GradeLevel = rawGrade && knownGrades.includes(rawGrade as GradeLevel) ? (rawGrade as GradeLevel) : 'Grade 1'
-  const termCurriculum = grades1to9CurriculumByTerm.find(t => t.term === currentTerm && t.grade === studentGrade)
-  const learningAreas: LearningAreaData[] = termCurriculum?.learningAreas || []
+  // Gamification
+  const [gameState, setGameState] = useState(() => updateStreak(getGameState()))
+  const levelName = getLevelName(gameState.level)
+  const xpProgress = getXpToNextLevel(gameState.xp)
+  const mistakes = getUnreviewedMistakes()
 
-  // DB curriculum state — fetched from API, falls back to hardcoded
-  const [dbCurriculum, setDbCurriculum] = useState<LearningArea[] | null>(null)
-
-  // Inject "Coding & Programming" as a learning area available to all grades
-  const codingLearningArea: LearningAreaData = {
-    name: "Coding & Programming",
-    strands: [
-      {
-        name: "COMPUTATIONAL THINKING",
-        subStrands: [
-          { name: "Algorithms & Flowcharts" },
-          { name: "Pattern Recognition" },
-          { name: "Decomposition" },
-          { name: "Debugging Strategies" },
-        ]
-      },
-      {
-        name: "PROGRAMMING FUNDAMENTALS",
-        subStrands: [
-          { name: "Variables & Data Types" },
-          { name: "Conditionals & Logic" },
-          { name: "Loops & Iteration" },
-          { name: "Functions & Reusability" },
-        ]
-      },
-      {
-        name: "WEB DEVELOPMENT",
-        subStrands: [
-          { name: "HTML Structure & Semantics" },
-          { name: "CSS Styling & Layouts" },
-          { name: "JavaScript Interactivity" },
-          { name: "Responsive Design" },
-        ]
-      },
-      {
-        name: "ADVANCED TOPICS",
-        subStrands: [
-          { name: "Python Programming" },
-          { name: "Data Structures & Algorithms" },
-          { name: "APIs & Databases" },
-          { name: "AI & Machine Learning Basics" },
-        ]
-      },
-    ]
-  }
-  const allLearningAreas: LearningArea[] = dbCurriculum || [...learningAreas, codingLearningArea]
-
-  // Fetch curriculum from DB after dashboard loads — non-blocking, deferred
-  useEffect(() => {
-    if (!studentGrade || studentGrade === 'Grade 10' || studentGrade === 'Grade 11' || studentGrade === 'Grade 12') return
-    const subjects = ['Mathematics', 'English', 'Kiswahili', 'Science', 'Social Studies', 'CRE']
-    const timer = setTimeout(() => {
-      Promise.all(subjects.map(subject =>
-        fetch('/api/curriculum/auto-populate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ grade: studentGrade, subject, term: currentTerm }),
-        }).then(r => r.ok ? r.json() : null).catch(() => null)
-      )).then(results => {
-        const areas: LearningArea[] = []
-        results.forEach((data, i) => {
-          if (data?.topics?.length > 0) {
-            areas.push({
-              name: subjects[i],
-              strands: data.topics.map((t: any) => ({
-                name: t.strandName,
-                subStrands: t.substrands?.map((s: any) => ({ name: s.name, learningOutcomes: s.learningOutcomes, activities: s.activities })) || [],
-              })),
-            })
-          }
-        })
-        if (areas.length > 0) setDbCurriculum([...areas, codingLearningArea as any])
-      }).catch(() => {})
-    }, 1500)
-    return () => clearTimeout(timer)
-  }, [studentGrade, currentTerm])
+  // Learning path for Continue CTA
+  const [resumeTopic, setResumeTopic] = useState<{ subject: string; topic: string } | null>(null)
 
   useEffect(() => {
-    fetchDashboardData()
-    if (session?.user?.id) {
-      fetch(`/api/user-profile?userId=${session.user.id}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(p => { if (p) setDisplayName(`${p.firstName || ""} ${p.lastName || ""}`.trim()) })
-        .catch(e => console.error('Failed to fetch profile:', e))
-    }
-  }, [session?.user?.id])
-
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const r = await fetch('/api/notifications?unreadOnly=true&limit=10')
-      if (r.ok) setNotifications(await r.json())
-    } catch (e) { console.error('Failed to fetch notifications:', e) }
-  }, [])
-
-  useEffect(() => {
-    if (showNotifs) fetchNotifications()
-  }, [showNotifs, fetchNotifications])
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifs(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [])
-
-  const markAllRead = async () => {
-    try {
-      await fetch('/api/notifications/mark-all-read', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: session?.user?.id }) })
-      setNotifications([])
-      setDashboardData(prev => prev ? { ...prev, unreadNotificationCount: 0 } : prev)
-    } catch (e) { console.error('Failed to mark all as read:', e) }
-  }
-
-  useEffect(() => {
-    if (!schoolInfoLoading && isIndependent && !localStorage.getItem("independent-student-onboarded")) {
-      setShowOnboarding(true)
+    if (isIndependent && !schoolInfoLoading) {
+      const onboarded = localStorage.getItem('independent_onboarded')
+      if (!onboarded) setShowOnboarding(true)
     }
   }, [isIndependent, schoolInfoLoading])
 
@@ -227,173 +91,225 @@ export default function StudentDashboard() {
     }
   }, [session?.user?.id])
 
-  useRefreshOnFocus(fetchDashboardData, !loading)
-
-  const handleAIChat = async (message: string, history: any[]) => {
-    const res = await fetch("/api/student/ai-tutor", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: message, sessionType: "lesson", messages: history }),
-    })
-    if (!res.ok) throw new Error('API error')
+  const handleAIChat = async (message: string, _history: any[]) => {
+    const res = await fetch('/api/student/ai-tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) })
+    if (!res.ok) throw new Error('Failed')
     const data = await res.json()
-    return data.response || "I'm here to help!"
+    return data.response || data.reply || "Sorry, I didn't catch that."
   }
 
-  if (showOnboarding && session?.user) {
-    return <IndependentUserWelcome userRole="STUDENT" userName={displayName || session.user.name || "Student"} onComplete={() => { localStorage.setItem("independent-student-onboarded", "true"); setShowOnboarding(false) }} />
+  useEffect(() => {
+    fetchDashboardData()
+    if (session?.user?.id) {
+      fetch(`/api/user-profile?userId=${session.user.id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(p => { if (p) setDisplayName(`${p.firstName || ""} ${p.lastName || ""}`.trim()) })
+        .catch(() => {})
+    }
+    // Fetch resume topic from learning path
+    fetch('/api/student/learning-path?limit=1')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.resumeTopic) setResumeTopic({ subject: d.resumeTopic.subject || 'Mathematics', topic: d.resumeTopic.topicName })
+      })
+      .catch(() => {})
+  }, [session?.user?.id])
+
+  useEffect(() => { if (showNotifs) fetch('/api/notifications?unreadOnly=true&limit=10').then(r => r.ok ? r.json() : []).then(setNotifications).catch(() => {}) }, [showNotifs])
+  useEffect(() => { function h(e: MouseEvent) { if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifs(false) }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h) }, [])
+
+  const name = displayName || dashboardData.student?.name || session?.user?.name || "Student"
+  const firstName = name.split(' ')[0]
+
+  if (showOnboarding) return <IndependentUserWelcome userRole="STUDENT" userName={name} onComplete={() => { localStorage.setItem('independent_onboarded', '1'); setShowOnboarding(false) }} />
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4">
+        <CardSkeleton /><CardSkeleton /><CardSkeleton />
+      </div>
+    )
   }
+
+  const d = dashboardData
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
+  const todayStr = new Date().toISOString().split('T')[0]
+  const dailyDone = !!localStorage.getItem(`daily_done_${todayStr}`)
+  const unread = d.unreadNotificationCount || 0
+
+  const dueReviews = (() => {
+    try {
+      const raw = localStorage.getItem('elimunova_reviews')
+      if (!raw) return []
+      return (JSON.parse(raw) as any[]).filter((r: any) => new Date(r.nextReview) <= new Date())
+    } catch { return [] }
+  })()
 
   return (
-    <>
-      <div className="max-w-full overflow-x-auto">
-        <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6 md:space-y-8">
-          <SubscriptionAlert />
-          {loading ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => <StatsCardSkeleton key={i} />)}
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <CardSkeleton />
-                <CardSkeleton />
-              </div>
+    <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-5 md:space-y-6">
+      <SubscriptionAlert />
+
+      {/* HERO: Greeting + Gamification + Continue CTA */}
+      <Card className="border-0 bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white shadow-xl overflow-hidden relative">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIj48Y2lyY2xlIGN4PSIxNSIgY3k9IjE1IiByPSIxLjUiIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuMDgiLz48Y2lyY2xlIGN4PSI0NSIgY3k9IjMwIiByPSIyIiBmaWxsPSIjZmZmIiBvcGFjaXR5PSIwLjA2Ii8+PGNpcmNsZSBjeD0iMzAiIGN5PSI0NSIgcj0iMSIgZmlsbD0iI2ZmZiIgb3BhY2l0eT0iMC4xIi8+PC9nPjwvc3ZnPg==')] opacity-50" />
+        <CardContent className="relative p-5 md:p-7 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="h-4 w-4 text-violet-200" />
+              <span className="text-xs font-medium text-violet-200 uppercase tracking-wider">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
             </div>
-          ) : (
-            <>
-              <div className="relative">
-                <StudentGreeting
-                  displayName={displayName || dashboardData?.student.name || session?.user?.name || "Student"}
-                  onChatClick={() => setShowAIChat(true)}
-                  onRefreshInsights={fetchDashboardData}
-                />
-                <div ref={notifRef} className="absolute top-3 right-3">
-                  <button onClick={() => setShowNotifs(v => !v)}
-                    className="relative p-2 rounded-full bg-white hover:bg-slate-50 transition-colors shadow-sm">
-                    <Bell className="h-5 w-5 text-slate-600" />
-                    {(dashboardData?.unreadNotificationCount || 0) > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 h-4.5 min-w-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1 leading-none shadow">
-                        {dashboardData!.unreadNotificationCount! > 99 ? '99+' : dashboardData!.unreadNotificationCount}
-                      </span>
-                    )}
-                  </button>
-                  {showNotifs && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 max-h-96 overflow-y-auto">
-                      <div className="flex items-center justify-between p-3 border-b border-slate-100">
-                        <span className="text-sm font-semibold text-slate-700">Notifications</span>
-                        {notifications.length > 0 && (
-                          <button onClick={markAllRead} className="text-xs text-blue-600 hover:underline">Mark all read</button>
-                        )}
-                      </div>
-                      {notifications.length === 0 ? (
-                        <p className="p-6 text-center text-sm text-slate-400">All caught up!</p>
-                      ) : (
-                        notifications.map(n => (
-                          <div key={n.id} className="p-3 border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                            <p className="text-sm font-semibold text-slate-800">{n.title}</p>
-                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{n.message}</p>
-                            <p className="text-[10px] text-slate-400 mt-1">
-                              {new Date(n.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        ))
-                      )}
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{greeting}, {firstName}</h1>
+            <div className="flex items-center gap-4 mt-2 text-sm">
+              <div className="flex items-center gap-1"><Zap className="h-4 w-4 text-amber-300" /><span className="font-bold">{gameState.xp} XP</span></div>
+              <div className="flex items-center gap-1"><Flame className="h-4 w-4 text-orange-300" /><span className="font-bold">{gameState.streak}d streak</span></div>
+              {mistakes.length > 0 && <Link href="/student/learn" className="flex items-center gap-1 text-red-200 hover:text-red-100"><AlertCircle className="h-4 w-4" />{mistakes.length} to review</Link>}
+            </div>
+          </div>
+          <div className="flex flex-col sm:items-end gap-3">
+            <div className="flex items-center gap-2">
+              <div className="bg-white/10 rounded-full px-3 py-1.5 text-sm font-bold">{levelName}</div>
+              <Button size="sm" className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold border-0" onClick={() => window.location.href = '/student/learn'}>
+                {resumeTopic ? <><Play className="h-4 w-4 mr-1.5" />Continue Learning</> : <><BookOpen className="h-4 w-4 mr-1.5" />Start Learning</>}
+              </Button>
+            </div>
+            <div className="hidden sm:block w-48">
+              <div className="flex justify-between text-xs text-violet-200 mb-1"><span>{levelName}</span><span>{getLevelName(gameState.level + 1)}</span></div>
+              <div className="bg-white/20 rounded-full h-1.5 overflow-hidden"><div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${xpProgress.progress}%` }} /></div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* QUICK STATS */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { icon: Clock, label: 'Study Time', value: fmtTime(d.analytics.totalStudyTime || d.stats.studyTime), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', from: 'from-blue-50', to: 'to-indigo-50' },
+          { icon: ClipboardList, label: 'Assignments', value: `${d.stats.completedAssignments}/${(d.stats.completedAssignments + d.stats.activeAssignments) || 0} done`, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', from: 'from-emerald-50', to: 'to-teal-50' },
+          { icon: Star, label: 'Avg Grade', value: d.stats.averageGrade ? `${Math.round(d.stats.averageGrade)}%` : '--', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', from: 'from-amber-50', to: 'to-orange-50' },
+          { icon: Trophy, label: 'Topics', value: `${d.analytics.completedAssignments || 0} mastered`, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50' },
+        ].map((stat, i) => (
+          <Card key={i} className={`border-0 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br ${stat.from} ${stat.to} ${stat.border}`}>
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center shadow-sm`}><stat.icon className={`h-5 w-5 ${stat.color}`} /></div>
+              <div><p className="text-xs text-slate-500">{stat.label}</p><p className="font-bold text-slate-800 text-lg leading-tight">{stat.value}</p></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* TODAY'S FOCUS */}
+        <div className="lg:col-span-2 space-y-5">
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-5">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4"><Target className="h-5 w-5 text-indigo-600" />Today&apos;s Focus</h2>
+              <div className="space-y-3">
+                {/* Daily Challenge */}
+                {!dailyDone && resumeTopic && (
+                  <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-200 hover:shadow-md transition-shadow">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shrink-0"><Trophy className="h-5 w-5 text-white" /></div>
+                    <div className="flex-1 min-w-0"><p className="text-sm font-bold text-amber-900">Daily Challenge</p><p className="text-xs text-amber-700 truncate">{resumeTopic.subject}: {resumeTopic.topic}</p></div>
+                    <ArrowRight className="h-5 w-5 text-amber-500 shrink-0" />
+                  </Link>
+                )}
+                {/* Due Reviews */}
+                {dueReviews.length > 0 && (
+                  <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-3 border border-orange-200 hover:shadow-md transition-shadow">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0"><Repeat className="h-5 w-5 text-white" /></div>
+                    <div className="flex-1 min-w-0"><p className="text-sm font-bold text-orange-900">{dueReviews.length} topic{dueReviews.length !== 1 ? 's' : ''} due for review</p><p className="text-xs text-orange-700 truncate">{dueReviews.slice(0, 2).map(r => r.topic).join(', ')}</p></div>
+                    <ArrowRight className="h-5 w-5 text-orange-500 shrink-0" />
+                  </Link>
+                )}
+                {/* Study Now */}
+                {!resumeTopic && !dueReviews.length && (
+                  <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl p-3 border border-indigo-200 hover:shadow-md transition-shadow">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0"><BookOpen className="h-5 w-5 text-white" /></div>
+                    <div className="flex-1"><p className="text-sm font-bold text-indigo-900">Start a new study session</p><p className="text-xs text-indigo-700">Pick a topic from your curriculum</p></div>
+                    <ArrowRight className="h-5 w-5 text-indigo-500 shrink-0" />
+                  </Link>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* SMART RECOMMENDATION + CURRICULUM */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <SmartRecommendations />
+            <Link href="/student/curriculum" className="block">
+              <Card className="border-0 shadow-sm hover:shadow-md transition-shadow h-full">
+                <CardContent className="p-5 flex flex-col justify-between h-full">
+                  <div><h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-1"><GraduationCap className="h-5 w-5 text-teal-600" />My Learning Areas</h2><p className="text-xs text-slate-500">Browse your CBC curriculum by subject, strand, and topic</p></div>
+                  <div className="flex items-center gap-1 text-teal-600 text-sm font-semibold mt-3">View Curriculum <ArrowRight className="h-4 w-4" /></div>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </div>
+
+        {/* SIDEBAR: Activity Feed */}
+        <div className="space-y-5">
+          {/* Upcoming Lessons */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-5">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><Clock className="h-5 w-5 text-cyan-600" />Upcoming</h2>
+              {d.upcomingLessons.length > 0 ? (
+                <div className="space-y-2">
+                  {d.upcomingLessons.slice(0, 3).map((l, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm">
+                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
+                      <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{l.title}</p><p className="text-xs text-slate-400">{l.time} {l.location && `· ${l.location}`}</p></div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <Link href="/student/learn?tab=quiz"
-                  className="flex items-center gap-3 p-3 bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl text-white hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                  <Brain className="h-5 w-5 shrink-0" />
-                  <div><p className="text-sm font-bold">Take Quiz</p><p className="text-[10px] text-purple-200">Bloom's & Checkpoint</p></div>
-                </Link>
-                <Link href="/student/learn?tab=study"
-                  className="flex items-center gap-3 p-3 bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl text-white hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                  <GraduationCap className="h-5 w-5 shrink-0" />
-                  <div><p className="text-sm font-bold">Study Topic</p><p className="text-[10px] text-blue-200">AI-powered lessons</p></div>
-                </Link>
-                <Link href="/student/assignments"
-                  className="flex items-center gap-3 p-3 bg-gradient-to-br from-amber-500 to-amber-700 rounded-xl text-white hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                  <ClipboardList className="h-5 w-5 shrink-0" />
-                  <div><p className="text-sm font-bold">Assignments</p><p className="text-[10px] text-amber-200">View & submit</p></div>
-                </Link>
-                <Link href="/student/learn?tab=tutor"
-                  className="flex items-center gap-3 p-3 bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl text-white hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                  <Brain className="h-5 w-5 shrink-0" />
-                  <div><p className="text-sm font-bold">AI Tutor</p><p className="text-[10px] text-emerald-200">Ask anything</p></div>
-                </Link>
-              </div>
-              {dashboardData?.progress && <XpBadge progress={dashboardData.progress} />}
-              <LiveStudyPulse />
-              <PerformanceTrends />
-              <StudentSummaryStats learningAreasCount={allLearningAreas.length} currentTerm={currentTerm} gradeLevel={dashboardData?.student.class || "Not Set"} />
-              <CurriculumAccordion learningAreas={allLearningAreas} currentTerm={currentTerm} />
-              <Link
-                href="/student/coding"
-                className="block group bg-gradient-to-r from-cyan-600 via-teal-500 to-emerald-500 rounded-2xl p-5 hover:shadow-xl transition-all hover:-translate-y-0.5"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur">
-                      <Code2 className="h-6 w-6 text-white" />
+              ) : <p className="text-xs text-slate-400">No upcoming lessons</p>}
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-5">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><TrendingUp className="h-5 w-5 text-emerald-600" />Recent Activity</h2>
+              {d.studySessions.length > 0 ? (
+                <div className="space-y-2">
+                  {d.studySessions.slice(0, 4).map((s, i) => (
+                    <div key={i} className="flex items-center justify-between text-sm">
+                      <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{s.topic || s.subject}</p><p className="text-xs text-slate-400">{new Date(s.startTime).toLocaleDateString()}</p></div>
+                      <span className="text-xs font-semibold text-emerald-600 shrink-0 ml-2">{fmtTime(s.duration)}</span>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-white text-lg">AI Coding Studio</h3>
-                      <p className="text-white/80 text-sm">Learn Scratch, Web Dev, Python, AI & more</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-white/80 group-hover:text-white group-hover:translate-x-1 transition-all">
-                    <span className="text-sm font-semibold">Start Coding</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </div>
+                  ))}
                 </div>
-              </Link>
-              <LearningStats
-                studyTime={dashboardData?.stats.studyTime || 0}
-                completedAssignments={dashboardData?.stats.completedAssignments || 0}
-                averageGrade={dashboardData?.stats.averageGrade ?? null}
-                activeAssignments={dashboardData?.stats.activeAssignments || 0}
-              />
-              <StudyGoalTracker />
-              <AIUsageCard />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <AssignmentsList assignments={dashboardData?.assignments || []} />
-                <UpcomingLessons lessons={dashboardData?.upcomingLessons || []} />
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <RecentStudySessions sessions={dashboardData?.studySessions || []} />
-                <SmartRecommendations />
-              </div>
-              {dashboardData?.analytics && (
-                <StudyStreak analytics={dashboardData.analytics} studyTimeThisWeek={dashboardData.stats.studyTime} />
-              )}
-              {dashboardData?.progress?.skillMastery && dashboardData.progress.skillMastery.length > 0 && (
-                <SkillMasteryWidget skills={dashboardData.progress.skillMastery} />
-              )}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <AITutorHistory sessions={dashboardData?.aiTutorSessions || []} />
-                <CommonMistakes
-                  mistakes={dashboardData?.progress?.commonMistakes ?? null}
-                  preferredDifficulty={dashboardData?.progress?.preferredDifficulty ?? "medium"}
-                />
-              </div>
-            </>
-          )}
+              ) : <p className="text-xs text-slate-400">Start studying to see activity here</p>}
+            </CardContent>
+          </Card>
+
+          {/* Quick Links */}
+          <div className="grid grid-cols-2 gap-2">
+            <Link href="/student/assignments" className="bg-white rounded-xl border border-slate-200 p-3 text-center text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:shadow-sm transition-all">Assignments</Link>
+            <Link href="/student/learn" className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-xl p-3 text-center text-sm font-semibold hover:shadow-md transition-all">Study Now</Link>
+          </div>
         </div>
       </div>
 
+      {/* ASSIGNMENTS */}
+      {d.assignments.length > 0 && (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-rose-600" />Pending Assignments</h2>
+              <Link href="/student/assignments" className="text-xs text-indigo-600 font-semibold hover:underline">View all</Link>
+            </div>
+            <AssignmentsList assignments={d.assignments.filter(a => !d.studySessions.some(s => s.id === a.id)).slice(0, 3)} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI CHAT MODAL */}
       <Dialog open={showAIChat} onOpenChange={setShowAIChat}>
-        <DialogContent className="max-w-2xl w-full h-[85vh] p-0 gap-0 flex flex-col overflow-hidden rounded-2xl shadow-2xl">
-          <ChatContainer
-            onSend={handleAIChat}
-            headerTitle="AI Teacher"
-            headerSubtitle="Personalised learning assistant"
-            quickPrompts={['Explain this lesson', 'Give me practice questions', 'What should I study next?', 'Quiz me!']}
-            placeholder="Ask me anything about your lessons…"
-          />
+        <DialogContent className="max-w-2xl h-[80vh] p-0 border-0 shadow-2xl rounded-2xl overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+          <div className="absolute top-4 right-4 z-10"><button onClick={() => setShowAIChat(false)} className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white/70 hover:text-white"><X className="h-4 w-4" /></button></div>
+          <ChatContainer onSend={handleAIChat} headerTitle="AI Teacher" headerSubtitle="Ask me anything about your studies" />
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
