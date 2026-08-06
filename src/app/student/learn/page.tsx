@@ -22,6 +22,7 @@ import { useAITutor } from '@/components/ai-tutor-provider'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
 import { getGameState, updateStreak, awardXP, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
 import { addMistake, getMistakeCount, markMistakeReviewed, getUnreviewedMistakes } from '@/lib/mistake-bank'
+import { evaluateAnswer } from '@/lib/answer-evaluator'
 
 // Types & constants (keep from original)
 interface QuizQ {
@@ -193,22 +194,25 @@ export default function LearnPage() {
 
   const submitRecall = () => {
     if (!activeLesson) return
-    let correct = 0
-    activeLesson.recall.forEach((q, i) => {
+    const correctCount = activeLesson.recall.filter((q, i) => {
       const userAns = recallAnswers[i]
       if (q.type === 'mcq' && userAns !== undefined) {
         const idx = typeof userAns === 'number' ? userAns : parseInt(userAns as string)
-        if (idx === (q.options?.findIndex(o => o === q.answer) ?? -1)) correct++
-        else addMistake(q.question, q.options?.[idx] || String(userAns), q.answer, activeLesson.topic, activeLesson.subject)
-      } else if (typeof userAns === 'string') {
-        if (userAns.trim().toLowerCase().includes(q.answer.trim().toLowerCase())) correct++
-        else addMistake(q.question, userAns, q.answer, activeLesson.topic, activeLesson.subject)
+        const correctOptIdx = q.options?.findIndex(o => o === q.answer) ?? -1
+        if (idx !== correctOptIdx) { addMistake(q.question, q.options?.[idx] || String(userAns), q.answer, activeLesson.topic, activeLesson.subject); return false }
+        return true
       }
-    })
-    const score = activeLesson.recall.length > 0 ? Math.round((correct / activeLesson.recall.length) * 100) : 0
+      if (typeof userAns === 'string') {
+        const isCorrect = evaluateAnswer(userAns, q.answer, q.type)
+        if (!isCorrect) addMistake(q.question, userAns, q.answer, activeLesson.topic, activeLesson.subject)
+        return isCorrect
+      }
+      return false
+    }).length
+    const score = activeLesson.recall.length > 0 ? Math.round((correctCount / activeLesson.recall.length) * 100) : 0
     setRecallScore(score); setRecallSubmitted(true)
     scheduleReview(activeLesson, score)
-    addXp(XP_REWARDS.lessonComplete + (correct * 5))
+    addXp(XP_REWARDS.lessonComplete + (correctCount * 5))
   }
 
   const scheduleReview = (lesson: ActiveLessonData, score: number) => {
@@ -252,17 +256,19 @@ export default function LearnPage() {
   }
 
   const submitQuiz = () => {
-    let correct = 0
-    quizQuestions.forEach((q, i) => {
+    const correctCount = quizQuestions.filter((q, i) => {
       const ans = quizAnswers[i]
-      if (q.type === 'multiple_choice' || q.type === 'true_false') {
-        if (ans !== undefined && Number(ans) === q.correct_answer) correct++
-        else if (q.options) addMistake(q.question, q.options[Number(ans)] || String(ans), q.options[q.correct_answer!] || '', studyTopic, studySubject)
+      const correctAns = q.correct_answer
+      if (ans === undefined || ans === null) return false
+      const isCorrect = evaluateAnswer(ans, correctAns, q.type)
+      if (!isCorrect && q.options && correctAns !== undefined) {
+        addMistake(q.question, q.options[Number(ans)] || String(ans), q.options[correctAns] || String(correctAns), studyTopic, studySubject)
       }
-    })
-    const score = quizQuestions.length > 0 ? Math.round((correct / quizQuestions.length) * 100) : 0
+      return isCorrect
+    }).length
+    const score = quizQuestions.length > 0 ? Math.round((correctCount / quizQuestions.length) * 100) : 0
     setQuizScore(score); setQuizSubmitted(true)
-    addXp(XP_REWARDS.quizCorrect * Math.max(1, correct))
+    addXp(XP_REWARDS.quizCorrect * Math.max(1, correctCount))
   }
 
   // ── Spaced Repetition ─────────────────────────────────────
