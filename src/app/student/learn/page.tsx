@@ -657,7 +657,7 @@ function LearnPageContent() {
                   </span>
                   <h2 className="text-lg font-extrabold text-slate-900">Explore the Curriculum</h2>
                 </div>
-                <CurriculumBrowser onSelectTopic={handleExploreTopic} />
+                <CurriculumBrowser onSelectTopic={handleExploreTopic} defaultSubject={studySubject} defaultGrade={studyGrade} />
                 <Recommendations onStudy={handleExploreTopic} />
               </div>
             )}
