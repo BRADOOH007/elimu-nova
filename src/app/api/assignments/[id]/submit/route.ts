@@ -142,9 +142,17 @@ ${subjective.map(({ q, studentAnswer }, i) =>
 
   if (total === 0) return null
   const grade = Math.round((earned / total) * 100)
+  const opener = grade >= 80 ? 'Outstanding work!'
+    : grade >= 60 ? 'Great job!'
+    : grade >= 40 ? 'Good effort!'
+    : 'Nice try!'
+  const closer = grade >= 80 ? " Keep it up — you're on fire!"
+    : grade >= 60 ? " You're making excellent progress — keep pushing!"
+    : grade >= 40 ? ' Review the questions you missed and you will ace them next time. You have got this!'
+    : ' Do not be discouraged — go back through the questions you missed and try again. You are capable of amazing things!'
   return {
     grade,
-    feedback: `Auto-graded: ${earned} of ${total} marks (${grade}%).`,
+    feedback: `${opener} You scored ${earned} of ${total} marks (${grade}%).${closer}`,
     confidence: 1,
     questionScores,
     needsRevision: false,
@@ -302,7 +310,7 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user, params }) => 
       // File-only / placeholder submissions can't be read accurately — flag it.
       if (isPlaceholderContent(content)) {
         grading.confidence = Math.min(grading.confidence ?? 1, 0.35)
-        grading.feedback = `${grading.feedback || 'Auto-graded.'} This submission contained an attached file the system could not read, so the grade is low-confidence.`
+        grading.feedback = `${grading.feedback || 'Auto-graded.'} This submission contained an attached file the system could not read, so the grade is low-confidence. Keep up the great effort!`
       }
     }
 

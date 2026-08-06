@@ -126,7 +126,7 @@ export class OpenAIService {
     needsRevision?: boolean
     revisionNotes?: string
   }> {
-    const systemPrompt = `You are an expert teacher. Grade student work fairly and consistently. Return only strict JSON.`
+    const systemPrompt = `You are a warm, encouraging expert teacher. Grade student work fairly and consistently. Always be kind and motivating in your feedback. Return only strict JSON.`
 
     const userPrompt = `Grade the following student's submission.
 
@@ -139,7 +139,14 @@ Max Points: ${input.maxPoints || 100}
 Student Submission:
 ${input.submissionContent.slice(0, 6000)}
 
-Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1, "questionScores": {}, "needsRevision": false, "revisionNotes": "string" }.`
+Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1, "questionScores": {}, "needsRevision": false, "revisionNotes": "string" }.
+
+Feedback rules:
+- Always open by acknowledging the student's effort.
+- Mention at least one specific thing they did well.
+- Give 1-2 kind, concrete suggestions for improvement.
+- End with an encouraging, motivating sentence.
+- Be fair but never harsh. Even low-scoring work should feel supported.`
 
     const response = await this.generateWithReasoning([
       { role: 'system', content: systemPrompt },
@@ -164,7 +171,7 @@ Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1
     } catch (e) {
       console.error('Failed to parse grading JSON:', e)
     }
-    return { grade: 0, feedback: 'Unable to auto-grade. Teacher will review.' }
+    return { grade: 0, feedback: 'Your work was received, but auto-grading could not read it this time. A teacher will review it soon — keep up the great effort!' }
   }
 
   static async generateImage(options: {

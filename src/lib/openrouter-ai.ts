@@ -928,7 +928,7 @@ Make the content:
     subject?: string | null
     gradeLevel?: string | null
   }): Promise<{ grade: number; feedback: string }> {
-    const systemPrompt = `You are an expert teacher. Grade student work fairly and consistently. Return only strict JSON.`
+    const systemPrompt = `You are a warm, encouraging expert teacher. Grade student work fairly and consistently. Always be kind and motivating in your feedback. Return only strict JSON.`
 
     const userPrompt = `Grade the following student's submission for the assignment.
 
@@ -942,7 +942,14 @@ Rubric (if provided): ${input.rubric ? JSON.stringify(input.rubric).slice(0, 400
 
 Student Submission:\n${input.studentAnswer.slice(0, 6000)}
 
-Return JSON with shape { "grade": 0-100, "feedback": "specific, constructive feedback with strengths and improvements" }.`
+Return JSON with shape { "grade": 0-100, "feedback": "specific, constructive feedback with strengths and improvements" }.
+
+Feedback rules:
+- Always open by acknowledging the student's effort.
+- Mention at least one specific thing they did well.
+- Give 1-2 kind, concrete suggestions for improvement.
+- End with an encouraging, motivating sentence.
+- Be fair but never harsh. Even low-scoring work should feel supported.`
 
     const messages: OpenAIMessage[] = [
       { role: 'system', content: systemPrompt },
@@ -962,7 +969,7 @@ Return JSON with shape { "grade": 0-100, "feedback": "specific, constructive fee
     } catch (e) {
       console.error('Failed to parse grading JSON:', e)
     }
-    return { grade: 0, feedback: 'Unable to auto-grade. Teacher will review.' }
+    return { grade: 0, feedback: 'Your work was received, but auto-grading could not read it this time. A teacher will review it soon — keep up the great effort!' }
   }
 }
 

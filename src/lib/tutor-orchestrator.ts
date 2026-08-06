@@ -668,7 +668,7 @@ Respond in JSON format:
       // Fallback grading
       return {
         isCorrect: false,
-        feedback: 'Unable to grade answer. Please try again.',
+        feedback: 'Your answer was received, but I could not grade it automatically this time. Try again — you have got this!',
         hint: 'Make sure your answer is clear and complete.'
       }
     }

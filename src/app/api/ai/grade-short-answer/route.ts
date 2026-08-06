@@ -39,13 +39,23 @@ Rules:
       results = questions.map((q: any) => ({
         questionId: q.id,
         isCorrect: q.studentAnswer?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim(),
-        feedback: 'Auto-graded by comparison.',
+        feedback: 'Nice effort — keep practising!',
+      }));
+    }
+
+    if (results.length === 0 && questions.length > 0) {
+      results = questions.map((q: any) => ({
+        questionId: q.id,
+        isCorrect: q.studentAnswer?.toLowerCase().trim() === q.correctAnswer?.toLowerCase().trim(),
+        feedback: 'Nice effort — keep practising!',
       }));
     }
 
     const totalScore = results.filter(r => r.isCorrect).length;
     const totalQuestions = results.length;
-    const feedback = `AI graded ${totalQuestions} short-answer questions. Correct: ${totalScore}/${totalQuestions} (${Math.round((totalScore / totalQuestions) * 100)}%).`;
+    const feedback = totalQuestions > 0
+      ? `Your answers were reviewed! You got ${totalScore} of ${totalQuestions} correct (${Math.round((totalScore / totalQuestions) * 100)}%). ${totalScore === totalQuestions ? 'Perfect score — brilliant work!' : 'Keep going — you are improving every day!'}`
+      : 'Your answers were received. Keep up the great effort!';
 
     return NextResponse.json({ results, feedback });
 })
