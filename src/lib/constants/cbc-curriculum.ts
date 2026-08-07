@@ -49,21 +49,30 @@ export function getCBCLevel(grade: string): CBCLevel {
   if (n >= 4 && n <= 6) return 'UPPER_PRIMARY'
   if (n >= 7 && n <= 9) return 'JUNIOR_SCHOOL'
   if (n >= 10 && n <= 12) return 'SENIOR_SCHOOL'
+  if (isNaN(n)) return 'UPPER_PRIMARY'
   return 'UPPER_PRIMARY'
 }
 
+export const ALL_GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12']
+
+const VALID_PATHWAYS: SeniorPathway[] = ['STEM', 'SOCIAL_SCIENCES', 'ARTS_AND_SPORTS']
+
 export function getSubjectsForStudent(
-  grade: string,
-  selectedPathway?: SeniorPathway,
-  chosenElectives: string[] = []
+  grade?: string | null,
+  selectedPathway?: SeniorPathway | string | null,
+  chosenElectives?: string[] | null
 ): string[] {
-  const level = getCBCLevel(grade)
+  const safeGrade = grade || 'Grade 4'
+  const level = getCBCLevel(safeGrade)
   const config = CBC_RATIONALIZED_CURRICULUM[level]
+  const safeElectives = Array.isArray(chosenElectives) ? chosenElectives : []
 
   if (level === 'SENIOR_SCHOOL') {
-    const pathwayKey = selectedPathway || 'STEM'
+    const pathwayKey: SeniorPathway = VALID_PATHWAYS.includes(selectedPathway as SeniorPathway)
+      ? (selectedPathway as SeniorPathway)
+      : 'STEM'
     const validElectives = config.availableElectives?.[pathwayKey] || []
-    const activeElectives = chosenElectives.length === 3 ? chosenElectives : validElectives.slice(0, 3)
+    const activeElectives = safeElectives.length === 3 ? safeElectives : validElectives.slice(0, 3)
     return [...config.coreSubjects, ...activeElectives]
   }
 
