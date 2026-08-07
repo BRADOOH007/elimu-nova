@@ -3,6 +3,7 @@ export function evaluateAnswer(userAnswer: any, correctAnswer: any, type?: strin
   if (correctAnswer === undefined || correctAnswer === null) return false
 
   if (type === 'mcq' || type === 'multiple_choice' || type === 'true_false') {
+    // Compare as strings after trimming — handles '0', 0, 'A', etc.
     return String(userAnswer).trim() === String(correctAnswer).trim()
   }
 
