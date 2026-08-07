@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { BookOpen, ChevronRight, ChevronDown, ExternalLink, Loader2, Play, CheckCircle2, RefreshCw } from 'lucide-react'
 import { getKECWorkbook, getKECCategoryUrl } from '@/data/kec-workbooks'
-import { getSubjectsForStudent, getAllCBCSubjects } from '@/lib/constants/cbc-curriculum'
+import { getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
 
 interface Strand {
   id: string
@@ -25,29 +25,43 @@ interface CurriculumBrowserProps {
   defaultGrade?: string
 }
 
-const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
+const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12']
 
 function getSubjectsForGrade(grade: string): string[] {
   return getSubjectsForStudent(grade)
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  COMPLETED: 'bg-green-100 text-green-700 border-green-200',
-  IN_PROGRESS: 'bg-amber-100 text-amber-700 border-amber-200',
-  NOT_STARTED: 'bg-slate-100 text-slate-500 border-slate-200',
+const getFallbackTopics = (subj: string): string[] => {
+  const map: Record<string, string[]> = {
+    Mathematics: ['Whole Numbers','Fractions','Decimals','Measurement','Geometry','Algebra','Data Handling'],
+    English: ['Reading Comprehension','Grammar','Writing','Vocabulary','Poetry'],
+    Kiswahili: ['Sarufi','Msamiati','Ufahamu','Insha','Fasihi'],
+    Science: ['Living Things','Environment','Matter','Force & Energy','Earth & Space'],
+    'Social Studies': ['Our Country','Environment','Resources','Transport','Government'],
+    Physics: ['Forces','Motion','Energy','Waves','Light','Electricity','Magnetism'],
+    Chemistry: ['States of Matter','Mixtures','Chemical Reactions','Acids & Bases'],
+    Biology: ['Cells','Classification','Nutrition','Respiration','Reproduction','Ecology'],
+    History: ['Early Man','Trade','Colonial Administration','Independence'],
+    Geography: ['Map Work','Weather & Climate','Vegetation','Population'],
+    Agriculture: ['Conserving Agricultural Environment','Crop Production','Animal Production','Agriculture & Technology'],
+    'Business Studies': ['Business Environment','Entrepreneurship','Money & Banking'],
+    'Computer Studies': ['Computer Basics','Programming','Internet','Data Security'],
+    CRE: ['Creation','The Bible','Jesus Christ','Christian Values'],
+  }
+  return map[subj] || ['General']
 }
 
 export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade }: CurriculumBrowserProps) {
   const [grade, setGrade] = useState(defaultGrade || 'Grade 4')
   const [subject, setSubject] = useState(defaultSubject || 'Mathematics')
-  const currentSubjects = getSubjectsForGrade(grade)
+  const currentSubjects = useMemo(() => getSubjectsForGrade(grade), [grade])
 
   // Auto-reset subject when grade changes to an incompatible subject
   useEffect(() => {
     if (!currentSubjects.includes(subject)) {
       setSubject(currentSubjects[0] || 'Mathematics')
     }
-  }, [grade])
+  }, [grade, subject, currentSubjects])
   const [strands, setStrands] = useState<Strand[]>([])
   const [expandedStrand, setExpandedStrand] = useState<string | null>(null)
   const [substrands, setSubstrands] = useState<Record<string, Substrand[]>>({})
@@ -65,28 +79,19 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
     if (defaultGrade) setGrade(defaultGrade)
   }, [defaultGrade])
 
-  // Re-fetch strands + statuses whenever BOTH the grade and subject change
-  // (either from the in-component dropdowns or the parent's selectedSubject/selectedGrade).
-  useEffect(() => {
-    if (grade && subject) {
-      fetchStrands()
-      fetchStatuses()
-    }
-  }, [grade, subject])
-
-  const fetchStatuses = async () => {
+  const fetchStatuses = useCallback(async () => {
     try {
       const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`)
       if (res.ok) {
         const data = await res.json()
         const map: Record<string, { status: string; lastContent: string | null }> = {}
-        ;(data.topics || []).forEach((t: any) => {
+        ;(data.topics || []).forEach((t: { topicName: string; status: string; lastContent: string | null }) => {
           map[t.topicName] = { status: t.status, lastContent: t.lastContent || null }
         })
         setStatusMap(map)
       }
     } catch { /* ignore */ }
-  }
+  }, [grade, subject])
 
   const statusBadge = (name: string) => {
     const s = statusMap[name]?.status
@@ -103,7 +108,7 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
     )
   }
 
-  const fetchStrands = async () => {
+  const fetchStrands = useCallback(async () => {
     setLoading(true)
     setExpandedStrand(null)
     setSubstrands({})
@@ -127,29 +132,18 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
       setStrands(fallback.map((t, i) => ({ id: `fb-${i}`, name: t, order: i })))
     }
     setLoading(false)
-  }
+  }, [getFallbackTopics, subject])
 
-  const getFallbackTopics = (subj: string): string[] => {
-    const map: Record<string, string[]> = {
-      Mathematics: ['Whole Numbers','Fractions','Decimals','Measurement','Geometry','Algebra','Data Handling'],
-      English: ['Reading Comprehension','Grammar','Writing','Vocabulary','Poetry'],
-      Kiswahili: ['Sarufi','Msamiati','Ufahamu','Insha','Fasihi'],
-      Science: ['Living Things','Environment','Matter','Force & Energy','Earth & Space'],
-      'Social Studies': ['Our Country','Environment','Resources','Transport','Government'],
-      Physics: ['Forces','Motion','Energy','Waves','Light','Electricity','Magnetism'],
-      Chemistry: ['States of Matter','Mixtures','Chemical Reactions','Acids & Bases'],
-      Biology: ['Cells','Classification','Nutrition','Respiration','Reproduction','Ecology'],
-      History: ['Early Man','Trade','Colonial Administration','Independence'],
-      Geography: ['Map Work','Weather & Climate','Vegetation','Population'],
-      Agriculture: ['Conserving Agricultural Environment','Crop Production','Animal Production','Agriculture & Technology'],
-      'Business Studies': ['Business Environment','Entrepreneurship','Money & Banking'],
-      'Computer Studies': ['Computer Basics','Programming','Internet','Data Security'],
-      CRE: ['Creation','The Bible','Jesus Christ','Christian Values'],
+  // Re-fetch strands + statuses whenever BOTH the grade and subject change
+  // (either from the in-component dropdowns or the parent's selectedSubject/selectedGrade).
+  useEffect(() => {
+    if (grade && subject) {
+      fetchStrands()
+      fetchStatuses()
     }
-    return map[subj] || ['General']
-  }
+  }, [grade, subject, fetchStrands, fetchStatuses])
 
-  const toggleStrand = async (strandId: string, strandName: string) => {
+  const toggleStrand = async (strandId: string) => {
     if (expandedStrand === strandId) {
       setExpandedStrand(null)
       return
@@ -247,8 +241,8 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
           {strands.map(strand => (
             <div key={strand.id} className="border border-slate-200 rounded-xl overflow-hidden">
               <div
-                onClick={() => toggleStrand(strand.id, strand.name)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStrand(strand.id, strand.name) } }}
+                onClick={() => toggleStrand(strand.id)}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleStrand(strand.id) } }}
                 role="button" tabIndex={0}
                 className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left cursor-pointer"
               >
