@@ -141,7 +141,11 @@ function AITutorPanel({ language, lessonTitle }: { language: string; lessonTitle
       onSend={handleCodingChat}
       headerTitle="AI Coding Tutor"
       headerSubtitle={`Helping with ${lessonTitle}`}
-      quickPrompts={['Explain this simply', 'Give me an example', 'Give me a challenge']}
+      quickPrompts={[
+        `How do I make the sprite move right?`,
+        `How do I make it loop forever?`,
+        `Explain the 'when flag clicked' block`,
+      ]}
       placeholder="Ask your coding question..."
       icon="brain"
     />
