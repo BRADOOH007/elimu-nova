@@ -1,11 +1,45 @@
 export type CBCLevel = 'LOWER_PRIMARY' | 'UPPER_PRIMARY' | 'JUNIOR_SCHOOL' | 'SENIOR_SCHOOL'
-export type SeniorPathway = 'STEM' | 'SOCIAL_SCIENCES' | 'ARTS_AND_SPORTS'
+export type SeniorPathway = 'STEM' | 'TVET' | 'SOCIAL_SCIENCES' | 'ARTS_AND_SPORTS'
 
 export interface SubjectConfig {
   coreSubjects: string[]
   maxTotalSubjects: number
-  availableElectives?: Record<SeniorPathway, string[]>
+  availableElectives?: Record<string, string[]>
 }
+
+export interface TVETSpecialization {
+  id: string
+  name: string
+  coreModules: string[]
+}
+
+export const TVET_SPECIALIZATIONS: TVETSpecialization[] = [
+  {
+    id: 'electrical_electronics',
+    name: 'Electrical & Electronics Crafts',
+    coreModules: ['Electrical Wiring & Safety', 'Circuit Analysis', 'Solar Installation', 'Digital Electronics'],
+  },
+  {
+    id: 'building_construction',
+    name: 'Building & Construction Technology',
+    coreModules: ['Technical Drawing & CAD', 'Carpentry & Joinery', 'Masonry & Concrete Work', 'Plumbing'],
+  },
+  {
+    id: 'agri_tech',
+    name: 'Agribusiness & Farm Machinery',
+    coreModules: ['Soil Management', 'Crop Production Tech', 'Farm Machinery Operations', 'Livestock Husbandry'],
+  },
+  {
+    id: 'ict_support',
+    name: 'ICT Support & Networking',
+    coreModules: ['Computer Hardware Maintenance', 'Network Fundamentals', 'Web Operations', 'Cyber Safety'],
+  },
+  {
+    id: 'culinary_hospitality',
+    name: 'Culinary Arts & Hospitality',
+    coreModules: ['Food Safety & Hygiene', 'Commercial Cookery', 'Catering Management', 'Bakery Arts'],
+  },
+]
 
 export const CBC_RATIONALIZED_CURRICULUM: Record<CBCLevel, SubjectConfig> = {
   LOWER_PRIMARY: {
@@ -55,7 +89,7 @@ export function getCBCLevel(grade: string): CBCLevel {
 
 export const ALL_GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12']
 
-const VALID_PATHWAYS: SeniorPathway[] = ['STEM', 'SOCIAL_SCIENCES', 'ARTS_AND_SPORTS']
+const VALID_PATHWAYS: SeniorPathway[] = ['STEM', 'TVET', 'SOCIAL_SCIENCES', 'ARTS_AND_SPORTS']
 
 export function getSubjectsForStudent(
   grade?: string | null,
@@ -67,16 +101,28 @@ export function getSubjectsForStudent(
   const config = CBC_RATIONALIZED_CURRICULUM[level]
   const safeElectives = Array.isArray(chosenElectives) ? chosenElectives : []
 
-  if (level === 'SENIOR_SCHOOL') {
-    const pathwayKey: SeniorPathway = VALID_PATHWAYS.includes(selectedPathway as SeniorPathway)
-      ? (selectedPathway as SeniorPathway)
-      : 'STEM'
-    const validElectives = config.availableElectives?.[pathwayKey] || []
-    const activeElectives = safeElectives.length === 3 ? safeElectives : validElectives.slice(0, 3)
-    return [...config.coreSubjects, ...activeElectives]
+  if (level !== 'SENIOR_SCHOOL') return config.coreSubjects
+
+  const pathwayKey: SeniorPathway = VALID_PATHWAYS.includes(selectedPathway as SeniorPathway)
+    ? (selectedPathway as SeniorPathway)
+    : 'STEM'
+
+  if (pathwayKey === 'TVET') {
+    // TVET: 4 core subjects + 4 modules from selected TVET specialization
+    const tvetModules = safeElectives.length > 0
+      ? safeElectives
+      : TVET_SPECIALIZATIONS[0].coreModules
+    return [...config.coreSubjects, ...tvetModules]
   }
 
-  return config.coreSubjects
+  const validElectives = config.availableElectives?.[pathwayKey] || []
+  const activeElectives = safeElectives.length === 3 ? safeElectives : validElectives.slice(0, 3)
+  return [...config.coreSubjects, ...activeElectives]
+}
+
+export function getTVETModules(specializationId: string): string[] {
+  const spec = TVET_SPECIALIZATIONS.find(s => s.id === specializationId)
+  return spec?.coreModules || TVET_SPECIALIZATIONS[0].coreModules
 }
 
 export function getAllCBCSubjects(): string[] {
@@ -88,6 +134,9 @@ export function getAllCBCSubjects(): string[] {
         electives.forEach(s => all.add(s))
       }
     }
+  }
+  for (const spec of TVET_SPECIALIZATIONS) {
+    spec.coreModules.forEach(s => all.add(s))
   }
   return [...all]
 }
