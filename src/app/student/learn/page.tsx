@@ -309,8 +309,9 @@ function LearnPageContent() {
       // Handle multiple API field names: correct_answer, correct, answer
       const correctAns = q.correct_answer ?? (q as any).correct ?? (q as any).answer
       const isCorrect = evaluateAnswer(ans, correctAns, q.type ?? (q as any).type)
-      if (!isCorrect && q.options && correctAns !== undefined) {
-        addMistake(q.question, q.options[Number(ans)] || String(ans), q.options[Number(correctAns)] || String(correctAns), studyTopic, studySubject)
+      if (!isCorrect && correctAns !== undefined) {
+        if (q.options) { addMistake(q.question, q.options[Number(ans)] || String(ans), q.options[Number(correctAns)] || String(correctAns), studyTopic, studySubject) }
+        else { addMistake(q.question, String(ans), String(correctAns), studyTopic, studySubject) }
       }
       return isCorrect
     }).length
@@ -632,6 +633,17 @@ function LearnPageContent() {
                                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${quizAnswers[quizQIndex] === j ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65 + j)}</span>{opt}
                                   </button>
                                 ))}
+                              </div>
+                            )}
+                            {(q.type !== 'multiple_choice' && q.type !== 'true_false') && (
+                              <div className="space-y-2">
+                                <textarea
+                                  value={typeof quizAnswers[quizQIndex] === 'string' ? quizAnswers[quizQIndex] as string : ''}
+                                  onChange={e => { const next = { ...quizAnswersRef.current, [quizQIndex]: e.target.value }; quizAnswersRef.current = next; setQuizAnswers(next) }}
+                                  placeholder="Type your answer..."
+                                  rows={3}
+                                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                                />
                               </div>
                             )}
                           </div>
