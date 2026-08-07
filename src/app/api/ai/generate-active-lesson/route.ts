@@ -110,6 +110,21 @@ RULES:
     lesson.grade = gradeStr
     lesson.generatedAt = new Date().toISOString()
 
+    // Generate illustration and embed in content
+    try {
+      const image = await OpenAIService.generateImage({
+        prompt: `A clean, colorful educational illustration about "${topic}" for ${gradeStr} ${subject} students. Textbook quality, simple, clear, age-appropriate. White or light background. No text or words in the image.`,
+        style: 'natural',
+        size: '1024x1024',
+        quality: 'standard',
+      })
+      if (image?.url) {
+        lesson.content = `![${topic} illustration](${image.url})\n\n${lesson.content}`
+      }
+    } catch (e) {
+      console.warn('[ActiveLesson] Image generation failed:', e)
+    }
+
     return NextResponse.json(lesson)
 
   } catch (error: any) {
