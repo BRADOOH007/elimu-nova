@@ -300,11 +300,12 @@ function LearnPageContent() {
   const submitQuiz = () => {
     const correctCount = quizQuestions.filter((q, i) => {
       const ans = quizAnswers[i]
-      const correctAns = q.correct_answer
       if (ans === undefined || ans === null) return false
-      const isCorrect = evaluateAnswer(ans, correctAns, q.type)
+      // Handle multiple API field names: correct_answer, correct, answer
+      const correctAns = q.correct_answer ?? (q as any).correct ?? (q as any).answer
+      const isCorrect = evaluateAnswer(ans, correctAns, q.type ?? (q as any).type)
       if (!isCorrect && q.options && correctAns !== undefined) {
-        addMistake(q.question, q.options[Number(ans)] || String(ans), q.options[correctAns] || String(correctAns), studyTopic, studySubject)
+        addMistake(q.question, q.options[Number(ans)] || String(ans), q.options[Number(correctAns)] || String(correctAns), studyTopic, studySubject)
       }
       return isCorrect
     }).length
