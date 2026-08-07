@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { BookOpen, ChevronRight, ChevronDown, ExternalLink, Loader2, Play, CheckCircle2, RefreshCw } from 'lucide-react'
 import { getKECWorkbook, getKECCategoryUrl } from '@/data/kec-workbooks'
+import { getSubjectsForStudent, getAllCBCSubjects } from '@/lib/constants/cbc-curriculum'
 
 interface Strand {
   id: string
@@ -25,7 +26,10 @@ interface CurriculumBrowserProps {
 }
 
 const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4']
-const SUBJECTS = ['Mathematics','English','Kiswahili','Science','Social Studies','CRE','Physics','Chemistry','Biology','History','Geography','Agriculture','Business Studies','Computer Studies']
+
+function getSubjectsForGrade(grade: string): string[] {
+  return getSubjectsForStudent(grade)
+}
 
 const STATUS_STYLE: Record<string, string> = {
   COMPLETED: 'bg-green-100 text-green-700 border-green-200',
@@ -53,12 +57,13 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
     if (defaultGrade) setGrade(defaultGrade)
   }, [defaultGrade])
 
+  // Re-fetch strands + statuses whenever BOTH the grade and subject change
+  // (either from the in-component dropdowns or the parent's selectedSubject/selectedGrade).
   useEffect(() => {
-    fetchStrands()
-  }, [grade, subject])
-
-  useEffect(() => {
-    fetchStatuses()
+    if (grade && subject) {
+      fetchStrands()
+      fetchStatuses()
+    }
   }, [grade, subject])
 
   const fetchStatuses = async () => {
@@ -121,14 +126,14 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
       Mathematics: ['Whole Numbers','Fractions','Decimals','Measurement','Geometry','Algebra','Data Handling'],
       English: ['Reading Comprehension','Grammar','Writing','Vocabulary','Poetry'],
       Kiswahili: ['Sarufi','Msamiati','Ufahamu','Insha','Fasihi'],
-      Science: ['Living Things','Energy','Light','Sound','Forces','Materials','Weather'],
+      Science: ['Living Things','Environment','Matter','Force & Energy','Earth & Space'],
       'Social Studies': ['Our Country','Environment','Resources','Transport','Government'],
       Physics: ['Forces','Motion','Energy','Waves','Light','Electricity','Magnetism'],
       Chemistry: ['States of Matter','Mixtures','Chemical Reactions','Acids & Bases'],
       Biology: ['Cells','Classification','Nutrition','Respiration','Reproduction','Ecology'],
       History: ['Early Man','Trade','Colonial Administration','Independence'],
       Geography: ['Map Work','Weather & Climate','Vegetation','Population'],
-      Agriculture: ['Crop Farming','Animal Keeping','Soil Preparation'],
+      Agriculture: ['Conserving Agricultural Environment','Crop Production','Animal Production','Agriculture & Technology'],
       'Business Studies': ['Business Environment','Entrepreneurship','Money & Banking'],
       'Computer Studies': ['Computer Basics','Programming','Internet','Data Security'],
       CRE: ['Creation','The Bible','Jesus Christ','Christian Values'],
@@ -183,7 +188,7 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
           <label className="text-xs font-semibold text-slate-600 mb-1 block">Subject</label>
           <select value={subject} onChange={e => setSubject(e.target.value)}
             className="w-full h-9 px-3 border border-slate-200 rounded-2xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-500">
-            {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+            {getSubjectsForGrade(grade).map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
       </div>

@@ -45,10 +45,9 @@ interface ReviewEntry {
 }
 interface ChatMsg { role: 'user' | 'ai'; content: string }
 
-const SUBJECTS = [
-  'Mathematics','English','Kiswahili','Science','Social Studies','CRE','Physics','Chemistry',
-  'Biology','History','Geography','Agriculture','Business Studies','Computer Studies'
-]
+import { getAllCBCSubjects, getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
+
+const ALL_SUBJECTS = getAllCBCSubjects()
 
 function LearnPageContent() {
   const { toast } = useToast()
