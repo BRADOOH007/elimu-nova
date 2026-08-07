@@ -43,6 +43,16 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
   const [loadingSubstrands, setLoadingSubstrands] = useState<string | null>(null)
   const [statusMap, setStatusMap] = useState<Record<string, { status: string; lastContent: string | null }>>({})
 
+  // Keep internal grade/subject in sync when the parent updates the defaults
+  // (e.g. clicking a Learning Area on the dashboard soft-navigates to /student/learn?subject=X)
+  useEffect(() => {
+    if (defaultSubject) setSubject(defaultSubject)
+  }, [defaultSubject])
+
+  useEffect(() => {
+    if (defaultGrade) setGrade(defaultGrade)
+  }, [defaultGrade])
+
   useEffect(() => {
     fetchStrands()
   }, [grade, subject])
@@ -68,11 +78,14 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
   const statusBadge = (name: string) => {
     const s = statusMap[name]?.status
     if (!s || s === 'NOT_STARTED') return null
-    const label = s === 'COMPLETED' ? 'Done' : 'In progress'
+    if (s === 'COMPLETED') return (
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold border border-green-300 bg-green-50 text-green-700 rounded-full px-1.5 py-0.5">
+        <CheckCircle2 className="h-2.5 w-2.5" /> Mastered
+      </span>
+    )
     return (
-      <span className={`inline-flex items-center gap-0.5 text-[10px] font-semibold border rounded-full px-1.5 py-0.5 ${STATUS_STYLE[s] || ''}`}>
-        {s === 'COMPLETED' ? <CheckCircle2 className="h-2.5 w-2.5" /> : <RefreshCw className="h-2.5 w-2.5" />}
-        {label}
+      <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold border rounded-full px-1.5 py-0.5 bg-amber-50 text-amber-700 border-amber-200">
+        <RefreshCw className="h-2.5 w-2.5" /> In progress
       </span>
     )
   }
@@ -149,10 +162,12 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
 
   const studyLabel = (name: string) => {
     const s = statusMap[name]?.status
-    if (s === 'COMPLETED') return <><RefreshCw className="h-3 w-3" /> Review</>
+    if (s === 'COMPLETED') return <><CheckCircle2 className="h-3 w-3" /> Mastered</>
     if (s === 'IN_PROGRESS') return <><RefreshCw className="h-3 w-3" /> Continue</>
     return <><Play className="h-3 w-3" /> Study</>
   }
+
+  const isMastered = (name: string) => statusMap[name]?.status === 'COMPLETED'
 
   return (
     <div className="space-y-4">
@@ -231,8 +246,13 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={e => { e.stopPropagation(); handleStudy(strand.name) }}
-                    className="text-xs font-semibold text-teal-600 hover:text-white bg-teal-50 hover:bg-teal-500 px-2.5 py-1 rounded-full transition-all flex items-center gap-1 hover:shadow-md"
+                    onClick={isMastered(strand.name) ? undefined : (e => { e.stopPropagation(); handleStudy(strand.name) })}
+                    disabled={isMastered(strand.name)}
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-all flex items-center gap-1 ${
+                      isMastered(strand.name)
+                        ? 'text-green-600 bg-green-50 cursor-default'
+                        : 'text-teal-600 hover:text-white bg-teal-50 hover:bg-teal-500 hover:shadow-md'
+                    }`}
                   >
                     {studyLabel(strand.name)}
                   </button>
