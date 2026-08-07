@@ -16,6 +16,7 @@ import {
   BookMarked, AlertCircle, Video, Link2
 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { formatTeacherName, formatDuration } from '@/lib/utils/formatters'
 
 const LiveClassTab = dynamic(() => import('@/app/student/live-class/page'),  { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 const DiscussTab   = dynamic(() => import('@/app/student/discussions/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
@@ -374,15 +375,16 @@ export function StudentSchedulePage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      {event.status === 'IN_PROGRESS' && event.type === 'CLASS' ? (
-                        <Button
-                          size="sm"
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                          onClick={() => router.push(`/student/live-class?code=${event.metadata?.sessionCode || ''}`)}
-                        >
-                          <Video className="w-4 h-4 mr-1" />
-                          Join Live
-                        </Button>
+                      {event.type === 'CLASS' && (
+                        event.status === 'IN_PROGRESS' ? (
+                          <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                            onClick={() => router.push(`/student/live-class?code=${event.metadata?.sessionCode || ''}`)}>
+                            <Video className="w-4 h-4 mr-1" />Join Live
+                          </Button>
+                        ) : event.status === 'COMPLETED' ? (
+                          <span className="text-xs font-semibold bg-slate-100 text-slate-500 rounded-full px-3 py-1.5">Class Ended</span>
+                        ) : null
+                      )}
                       ) : event.type === 'MEETING' ? (
                         <Button
                           size="sm"
