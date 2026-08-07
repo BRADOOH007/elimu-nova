@@ -81,7 +81,7 @@ export default function StudentDashboard() {
     return r.json()
   })
 
-  // Dashboard data ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cached in memory by SWR (staleTime 5min). Returning to this
+  // Dashboard data cached in memory by SWR (staleTime 5min). Returning to this
   // page renders the cached state instantly without the skeleton loader while
   // revalidating in the background.
   const { data: dashboardData, isLoading: loading } = useSWR<DashboardData>(
@@ -119,7 +119,7 @@ export default function StudentDashboard() {
 
   if (showOnboarding) return <IndependentUserWelcome userRole="STUDENT" userName={name} onComplete={() => { localStorage.setItem('independent_onboarded', '1'); setShowOnboarding(false) }} />
   // Only show the skeleton when there is no cached data in the SWR in-memory
-  // cache ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â i.e. a fresh app load or hard refresh. On client navigation the
+  // cache -- i.e. a fresh app load or hard refresh. On client navigation the
   // cached dashboard state is already available, so isLoading is false and the
   // dashboard UI renders optimistically while SWR revalidates in the background.
   if (loading) {
@@ -197,10 +197,10 @@ export default function StudentDashboard() {
       {/* QUICK STATS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { icon: Clock, label: 'Study Time', value: fmtTime(d.analytics.totalStudyTime || d.stats.studyTime), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', from: 'from-blue-50', to: 'to-indigo-50', empty: true, emptyLabel: 'Start a 5-min lesson ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', emptyHref: '/student/learn' },
-            { icon: ClipboardList, label: 'Assignments', value: (d.stats.completedAssignments + d.stats.activeAssignments) > 0 ? `${d.stats.completedAssignments}/${d.stats.completedAssignments + d.stats.activeAssignments} done` : '0', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', from: 'from-emerald-50', to: 'to-teal-50', empty: (d.stats.completedAssignments + d.stats.activeAssignments) === 0, emptyLabel: 'View assignments ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', emptyHref: '/student/assignments' },
-            { icon: Star, label: 'Avg Grade', value: d.stats.averageGrade ? `${Math.round(d.stats.averageGrade)}%` : '--', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', from: 'from-amber-50', to: 'to-orange-50', empty: !d.stats.averageGrade, emptyLabel: 'Take a quick quiz ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', emptyHref: '/student/learn' },
-            { icon: Trophy, label: 'Topics', value: d.analytics.completedAssignments > 0 ? `${d.analytics.completedAssignments} mastered` : '0', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50', empty: d.analytics.completedAssignments === 0, emptyLabel: 'Study a topic ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', emptyHref: '/student/learn' },
+            { icon: Clock, label: 'Study Time', value: fmtTime(d.analytics.totalStudyTime || d.stats.studyTime), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', from: 'from-blue-50', to: 'to-indigo-50', empty: true, emptyLabel: 'Start a 5-min lesson', emptyHref: '/student/learn' },
+            { icon: ClipboardList, label: 'Assignments', value: (d.stats.completedAssignments + d.stats.activeAssignments) > 0 ? `${d.stats.completedAssignments}/${d.stats.completedAssignments + d.stats.activeAssignments} done` : '0', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', from: 'from-emerald-50', to: 'to-teal-50', empty: (d.stats.completedAssignments + d.stats.activeAssignments) === 0, emptyLabel: 'View assignments', emptyHref: '/student/assignments' },
+            { icon: Star, label: 'Avg Grade', value: d.stats.averageGrade ? `${Math.round(d.stats.averageGrade)}%` : '--', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', from: 'from-amber-50', to: 'to-orange-50', empty: !d.stats.averageGrade, emptyLabel: 'Take a quick quiz', emptyHref: '/student/learn' },
+            { icon: Trophy, label: 'Topics', value: d.analytics.completedAssignments > 0 ? `${d.analytics.completedAssignments} mastered` : '0', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50', empty: d.analytics.completedAssignments === 0, emptyLabel: 'Study a topic', emptyHref: '/student/learn' },
           ].map((stat, i) => (
             <Card key={i} className={`border-0 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br ${stat.from} ${stat.to} ${stat.border}`}>
               <CardContent className="p-4 flex items-center gap-3">
@@ -268,7 +268,7 @@ export default function StudentDashboard() {
                     <span className="text-xs font-semibold text-slate-700 truncate">{subject.name}</span>
                   </div>
                   <div className="bg-white/60 rounded-full h-1.5 overflow-hidden"><div className={`h-full ${subject.bar} rounded-full transition-all duration-500`} style={{ width: `${Math.min(100, Math.round((d.analytics.completedAssignments / Math.max(1, d.analytics.completedAssignments + d.analytics.pendingAssignments)) * 100))}%` }} /></div>
-                  <p className="text-[10px] text-slate-400 mt-1">Tap to study ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Tap to study ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢</p>
                 </Link>
               ))}
               <Link href="/student/learn" className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center justify-center gap-1.5 hover:border-teal-300 hover:bg-teal-50/50 transition-all cursor-pointer group">
@@ -293,10 +293,10 @@ export default function StudentDashboard() {
                   <div key={i} className="flex items-start gap-2.5 text-sm">
                     <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: event.type === 'exam' ? '#ef4444' : event.type === 'live' ? '#f59e0b' : '#3b82f6' }} />
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{event.type === 'live' ? '🔴 Live' : event.type === 'assignment' ? '📋 Assignment' : '📝 Class'}</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{event.type === 'live' ? 'ðŸ”´ Live' : event.type === 'assignment' ? 'ðŸ“‹ Assignment' : 'ðŸ“ Class'}</p>
                       <p className="font-medium text-slate-700 truncate text-xs">{event.title}</p>
                       <p className="text-[10px] text-slate-400">
-                        {event.teacherName ? `${formatTeacherName(event.teacherName)} · ` : ''}
+                        {event.teacherName ? `${formatTeacherName(event.teacherName)} Â· ` : ''}
                         {event.dueDate ? `Due ${formatDate(event.dueDate)}` : `${formatTime(event.startTime)}`}
                       </p>
                     </div>
@@ -335,7 +335,7 @@ export default function StudentDashboard() {
             )}
           </div>
 
-          {/* Quick Actions ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â integrated into the sidebar stack */}
+          {/* Quick Actions ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â integrated into the sidebar stack */}
           <div className="flex items-center justify-between px-1 pt-1">
             <Link href="/student/assignments" className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors">
               <ClipboardList className="h-3.5 w-3.5" /> Assignments
@@ -368,7 +368,7 @@ export default function StudentDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{a.title}</p>
-                  <p className="text-xs text-slate-400">{a.subject} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {new Date(a.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                  <p className="text-xs text-slate-400">{a.subject} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {new Date(a.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
                 </div>
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${
                   a.status === 'Submitted' ? 'bg-blue-50 text-blue-700' :
@@ -382,7 +382,7 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* HOPE AI TUTOR DRAWER ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mounted globally via AITutorProvider */}
+      {/* HOPE AI TUTOR DRAWER ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â mounted globally via AITutorProvider */}
       <OnboardingTourFab role={session?.user?.role || 'STUDENT'} />
     </div>
   )
