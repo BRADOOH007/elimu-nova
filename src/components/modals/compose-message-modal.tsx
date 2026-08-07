@@ -16,18 +16,16 @@ interface ComposeMessageModalProps {
   studentRecipients?: Array<{ id: string; name: string; email?: string }>
   parentRecipients?: Array<{ id: string; name: string; email?: string }>
   showRecipientTypeSelector?: boolean
+  isSchoolStudent?: boolean
+  assignedTeacher?: { id: string; name: string } | null
 }
 
 export default function ComposeMessageModal({
-  isOpen,
-  onClose,
-  onSend,
-  recipientType,
-  recipients = [],
-  defaultRecipient,
-  studentRecipients = [],
-  parentRecipients = [],
-  showRecipientTypeSelector = false
+  isOpen, onClose, onSend, recipientType,
+  recipients = [], defaultRecipient,
+  studentRecipients = [], parentRecipients = [],
+  showRecipientTypeSelector = false,
+  isSchoolStudent = false, assignedTeacher = null
 }: ComposeMessageModalProps) {
   const [selectedRecipientType, setSelectedRecipientType] = useState<'TEACHER' | 'STUDENT' | 'PARENT'>(recipientType)
   const [recipientId, setRecipientId] = useState(defaultRecipient || '')
@@ -144,27 +142,63 @@ export default function ComposeMessageModal({
           )}
 
           {/* Recipient Selection */}
-          {currentRecipients.length > 0 && (
+          {isSchoolStudent && recipients.length > 0 && (
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <User className="w-4 h-4 text-blue-600" />
-                Recipient
+                <User className="w-4 h-4 text-purple-600" />Recipient
               </label>
               <select
                 value={recipientId}
                 onChange={(e) => setRecipientId(e.target.value)}
                 disabled={sending}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all"
               >
-                <option value="">Select a {selectedRecipientType.toLowerCase()}...</option>
-                {currentRecipients.map((recipient) => (
-                  <option key={recipient.id} value={recipient.id}>
-                    {recipient.name} {recipient.email && `(${recipient.email})`}
-                  </option>
+                <option value="">Select a teacher...</option>
+                {recipients.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}{r.email ? ` (${r.email})` : ''}</option>
                 ))}
               </select>
             </div>
           )}
+
+          {!isSchoolStudent && assignedTeacher && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <User className="w-4 h-4 text-purple-600" />Recipient
+              </label>
+              <div className="flex items-center gap-2 px-4 py-3 bg-purple-50 border-2 border-purple-200 rounded-xl">
+                <span className="text-sm font-semibold text-purple-700">{assignedTeacher.name}</span>
+                <span className="text-[10px] bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full">Assigned Teacher</span>
+              </div>
+            </div>
+          )}
+
+          {!isSchoolStudent && !assignedTeacher && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+              <p className="text-sm text-amber-800 flex items-center gap-1.5">
+                <span>💡</span> You don&apos;t have an assigned teacher. Would you like to chat with Hope AI Tutor or contact Elimu Nova Support?
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => { window.location.href = '/student/ai-tutor'; handleClose() }}
+                  variant="outline"
+                  size="sm"
+                  className="border-purple-300 text-purple-700 hover:bg-purple-50 text-xs"
+                >
+                  Chat with Hope AI
+                </Button>
+                <Button
+                  onClick={() => { onSend({ subject: 'Support Request', content: 'I need help from support.', recipientType: 'TEACHER' }); handleClose() }}
+                  size="sm"
+                  className="bg-amber-600 hover:bg-amber-700 text-white text-xs"
+                >
+                  Message Support
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* OLD Recipient Selection (teacher messages page) */}
 
           {/* Subject */}
           <div className="space-y-2">
