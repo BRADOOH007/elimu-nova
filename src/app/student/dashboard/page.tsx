@@ -4,6 +4,7 @@ import { useSchoolInfo } from "@/hooks/use-school-info"
 import { IndependentUserWelcome } from "@/components/onboarding/independent-user-welcome"
 import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
 import SmartRecommendations from "@/components/student/smart-recommendations"
+import WhatToLearnNext from "@/components/student/what-to-learn-next"
 import DashboardSkeleton from "@/components/dashboard-skeleton"
 import { useSession } from "next-auth/react"
 import { useState, useEffect, useRef } from "react"
@@ -15,7 +16,7 @@ import { useAITutor } from "@/components/ai-tutor-provider"
 import {
   Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
   Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Plus, MessageSquare,
-  Calculator, FlaskConical, Globe, Languages, Church, Leaf
+  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette, TrendingUp
 } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
 import { getUnreviewedMistakes } from '@/lib/mistake-bank'
@@ -38,7 +39,15 @@ const fallbackData: DashboardData = {
   analytics: { totalStudyTime: 0, averageGrade: null, completedAssignments: 0, pendingAssignments: 0, overdueAssignments: 0, lastActiveDate: null, streakDays: 0, longestStreak: 0, weeklyGoal: 300, monthlyGoal: 1200 },
 }
 
-// Subject config for My Learning Areas
+import { getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
+
+// Subject config for My Learning Areas — CBC rationalized
+const CURRICULUM_SUBJECTS = getSubjectsForStudent('Grade 4').slice(0, 8).map(name => {
+  const icons: Record<string, any> = { Mathematics: Calculator, English: BookOpen, Kiswahili: Languages, 'Kiswahili / KSL': Languages, 'Science & Technology': FlaskConical, 'Integrated Science': FlaskConical, 'Social Studies': Globe, 'Religious Education': Church, 'Creative Arts': Palette, 'Creative Arts & Sports': Palette, 'Agriculture & Nutrition': Leaf, 'Pre-Technical Studies': Brain, 'Agriculture': Leaf, 'Business Studies': TrendingUp, 'Computer Studies': Brain }
+  const colors: Record<string, string[]> = { Mathematics: ['text-blue-600','bg-blue-50','bg-blue-500'], English: ['text-emerald-600','bg-emerald-50','bg-emerald-500'], Kiswahili: ['text-amber-600','bg-amber-50','bg-amber-500'], 'Kiswahili / KSL': ['text-amber-600','bg-amber-50','bg-amber-500'], 'Science & Technology': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Integrated Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Social Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Religious Education': ['text-purple-600','bg-purple-50','bg-purple-500'], 'Creative Arts': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Creative Arts & Sports': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Agriculture & Nutrition': ['text-green-600','bg-green-50','bg-green-500'], 'Agriculture': ['text-green-600','bg-green-50','bg-green-500'], 'Pre-Technical Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Business Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Computer Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'] }
+  const c = colors[name] || ['text-slate-600','bg-slate-50','bg-slate-500']
+  return { name, icon: icons[name] || Brain, color: c[0], bg: c[1], bar: c[2] }
+})
 const CURRICULUM_SUBJECTS = [
   { name: 'Mathematics', icon: Calculator, color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
   { name: 'English', icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
@@ -136,6 +145,10 @@ export default function StudentDashboard() {
   const dailyDone = !!localStorage.getItem(`daily_done_${todayStr}`)
   const unread = d.unreadNotificationCount || 0
 
+  // Grade + recent subjects for the "What to learn next?" sidebar widget
+  const studentGrade = /Grade|Form/i.test(d.student.class) ? d.student.class : 'Grade 4'
+  const recentSubjects = Array.from(new Set((d.studySessions || []).map(s => s.subject).filter(Boolean)))
+
   const dueReviews = (() => {
     try {
       const raw = localStorage.getItem('elimunova_reviews')
@@ -206,7 +219,7 @@ export default function StudentDashboard() {
           ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* LEFT COLUMN: Today's Focus + My Learning Areas + Recommendations */}
         <div className="lg:col-span-2 space-y-5">
           {/* Today's Focus */}
@@ -293,6 +306,9 @@ export default function StudentDashboard() {
             </Link>}
           </div>
 
+          {/* What do you want to learn next? */}
+          <WhatToLearnNext grade={studentGrade} recentSubjects={recentSubjects} dueReviews={dueReviews} />
+
           {/* Recent Activity */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><TrendingUp className="h-5 w-5 text-emerald-600" />Recent Activity</h2>
@@ -314,10 +330,15 @@ export default function StudentDashboard() {
             </Link>}
           </div>
 
-          {/* Quick Links */}
-          <div className="grid grid-cols-2 gap-2">
-            <Link href="/student/assignments" className="bg-white rounded-2xl border border-slate-100 p-3 text-center text-sm font-semibold text-slate-700 hover:border-indigo-300 hover:shadow-sm transition-all">Assignments</Link>
-            <Link href="/student/learn" className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white rounded-2xl p-3 text-center text-sm font-semibold hover:shadow-md transition-all">Study Now</Link>
+          {/* Quick Actions — integrated into the sidebar stack */}
+          <div className="flex items-center justify-between px-1 pt-1">
+            <Link href="/student/assignments" className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors">
+              <ClipboardList className="h-3.5 w-3.5" /> Assignments
+              {d.assignments.length > 0 && <span className="bg-rose-50 text-rose-600 rounded-full px-1.5 py-0.5 text-[10px] font-bold">{d.assignments.length}</span>}
+            </Link>
+            <Link href="/student/learn" className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors">
+              Study Now <ArrowRight className="h-3 w-3" />
+            </Link>
           </div>
         </div>
       </div>
