@@ -88,6 +88,7 @@ function LearnPageContent() {
   const [quizQuestions, setQuizQuestions] = useState<QuizQ[]>([])
   const [quizQIndex, setQuizQIndex] = useState(0)
   const [quizAnswers, setQuizAnswers] = useState<Record<number,string|number>>({})
+  const quizAnswersRef = useRef<Record<number,string|number>>({})
   const [quizSubmitted, setQuizSubmitted] = useState(false)
   const [quizScore, setQuizScore] = useState(0)
   const [quizShowAns, setQuizShowAns] = useState<Record<number,boolean>>({})
@@ -285,7 +286,7 @@ function LearnPageContent() {
 
   // ── Quick Quiz ────────────────────────────────────────────
   const startQuickQuiz = async () => {
-    setQuizLoading(true); setQuizQuestions([]); setQuizQIndex(0); setQuizAnswers({}); setQuizSubmitted(false); setQuizScore(0)
+    setQuizLoading(true); setQuizQuestions([]); setQuizQIndex(0); setQuizAnswers({}); quizAnswersRef.current = {}; setQuizSubmitted(false); setQuizScore(0)
     try {
       const res = await fetch('/api/ai/checkpoint-quiz', {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -297,9 +298,13 @@ function LearnPageContent() {
     finally { setQuizLoading(false) }
   }
 
-  const submitQuiz = () => {
+  const submitQuiz = (finalAnswer?: { index: number; value: string | number }) => {
+    // Merge final answer if provided (handles race condition with state update)
+    const answers = finalAnswer
+      ? { ...quizAnswersRef.current, [finalAnswer.index]: finalAnswer.value }
+      : quizAnswersRef.current
     const correctCount = quizQuestions.filter((q, i) => {
-      const ans = quizAnswers[i]
+      const ans = answers[i]
       if (ans === undefined || ans === null) return false
       // Handle multiple API field names: correct_answer, correct, answer
       const correctAns = q.correct_answer ?? (q as any).correct ?? (q as any).answer
@@ -622,7 +627,7 @@ function LearnPageContent() {
                             {(q.type === 'multiple_choice' || q.type === 'true_false') && q.options && (
                               <div className="space-y-2">
                                 {q.options.map((opt, j) => (
-                                  <button key={j} onClick={() => setQuizAnswers(p => ({...p, [quizQIndex]: j}))}
+                                  <button key={j} onClick={() => { const next = { ...quizAnswersRef.current, [quizQIndex]: j }; quizAnswersRef.current = next; setQuizAnswers(next) }}
                                     className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm ${quizAnswers[quizQIndex] === j ? 'border-blue-400 bg-blue-100 text-blue-800' : 'border-slate-200 hover:border-blue-300 hover:bg-blue-50'}`}>
                                     <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold ${quizAnswers[quizQIndex] === j ? 'bg-blue-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{String.fromCharCode(65 + j)}</span>{opt}
                                   </button>
@@ -637,7 +642,7 @@ function LearnPageContent() {
                         {quizQIndex < quizQuestions.length - 1 ? (
                           <Button onClick={() => setQuizQIndex(i => i + 1)} className="flex-1 bg-indigo-500 text-white">Next</Button>
                         ) : (
-                          <Button onClick={submitQuiz} className="flex-1 bg-green-500 text-white"><CheckCircle className="mr-2 h-4 w-4" />Submit Quiz</Button>
+                          <Button onClick={() => submitQuiz()} className="flex-1 bg-green-500 text-white"><CheckCircle className="mr-2 h-4 w-4" />Submit Quiz</Button>
                         )}
                       </div>
                       <Progress value={((quizQIndex + 1) / quizQuestions.length) * 100} className="h-1.5" />
