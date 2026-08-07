@@ -12,10 +12,10 @@ export function ScratchEmbed({ projectId, title }: ScratchEmbedProps) {
   const [loading, setLoading] = useState(true)
   const embedUrl = projectId
     ? `https://scratch.mit.edu/projects/${projectId}/embed`
-    : 'https://scratch.mit.edu/projects/editor/'
+    : 'https://turbowarp.org/editor?embed&addons=pause-button,gamepad'
 
   return (
-    <div className="rounded-xl overflow-hidden border border-zinc-700/50 bg-zinc-900/50">
+    <div className="relative w-full h-[550px] rounded-xl overflow-hidden border border-slate-200 shadow-inner bg-slate-900">
       <div className="flex items-center justify-between px-4 py-3 bg-zinc-900 border-b border-zinc-700/50">
         <div className="flex items-center gap-2">
           <span className="text-sm font-semibold text-zinc-200">
@@ -28,13 +28,13 @@ export function ScratchEmbed({ projectId, title }: ScratchEmbedProps) {
           )}
         </div>
         <a
-          href={projectId ? `https://scratch.mit.edu/projects/${projectId}` : 'https://scratch.mit.edu'}
+          href={projectId ? `https://scratch.mit.edu/projects/${projectId}` : 'https://turbowarp.org'}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 text-xs text-zinc-400 hover:text-white transition-colors"
         >
           <ExternalLink className="h-3 w-3" />
-          Open in Scratch
+          Open TurboWarp
         </a>
       </div>
       <div className="relative">
