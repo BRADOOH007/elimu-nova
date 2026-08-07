@@ -4,8 +4,6 @@ import { useSchoolInfo } from "@/hooks/use-school-info"
 import { IndependentUserWelcome } from "@/components/onboarding/independent-user-welcome"
 import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
 import SmartRecommendations from "@/components/student/smart-recommendations"
-import { Sheet } from "@/components/ui/sheet"
-import ChatContainer from "@/components/chat/chat-container"
 import DashboardSkeleton from "@/components/dashboard-skeleton"
 import { useSession } from "next-auth/react"
 import { useState, useEffect, useRef } from "react"
@@ -13,6 +11,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import useSWR from "swr"
+import { useAITutor } from "@/components/ai-tutor-provider"
 import {
   Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
   Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Plus, MessageSquare,
@@ -21,7 +20,6 @@ import {
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
 import { getUnreviewedMistakes } from '@/lib/mistake-bank'
 import { OnboardingTourFab } from '@/components/onboarding-tour-fab'
-import { HopeAITutorDrawer } from '@/components/ai-tutor-drawer'
 
 interface DashboardData {
   student: { id: string; name: string; email: string; school: string; teacher: string; class: string }
@@ -63,10 +61,10 @@ export default function StudentDashboard() {
   const isIndependent = !schoolInfo?.school?.id && !session?.user?.schoolId
 
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [showAIChat, setShowAIChat] = useState(false)
-  const [chatContext, setChatContext] = useState('')
   const [showNotifs, setShowNotifs] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
+
+  const { openAITutor } = useAITutor()
 
   // Gamification
   const [gameState, setGameState] = useState(() => updateStreak(getGameState()))
@@ -172,7 +170,7 @@ export default function StudentDashboard() {
               <Button size="sm" className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold border-0" onClick={() => window.location.href = '/student/learn'}>
                 {resumeTopic ? <><Play className="h-4 w-4 mr-1.5" />Continue Learning</> : <><BookOpen className="h-4 w-4 mr-1.5" />Start Learning</>}
               </Button>
-              <button onClick={() => { setShowAIChat(true); setChatContext('') }} className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors">
+              <button onClick={() => openAITutor(undefined, resumeTopic?.subject || '')} className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors" aria-label="Chat with AI Tutor">
                 <MessageSquare className="h-4 w-4 text-white" />
               </button>
             </div>
@@ -214,7 +212,7 @@ export default function StudentDashboard() {
           {/* Today's Focus */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-4"><Target className="h-5 w-5 text-indigo-600" />Today&apos;s Focus
-              <button onClick={() => { setShowAIChat(true); setChatContext(resumeTopic?.topic || '') }} className="ml-auto text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1">
+              <button onClick={() => openAITutor(undefined, resumeTopic?.subject || 'your studies', resumeTopic?.topic || '')} className="ml-auto text-xs text-indigo-500 hover:text-indigo-700 font-medium flex items-center gap-1">
                 <MessageSquare className="h-3.5 w-3.5" />Chat with AI
               </button>
             </h2>
@@ -247,7 +245,7 @@ export default function StudentDashboard() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-slate-800 flex items-center gap-2"><GraduationCap className="h-5 w-5 text-teal-600" />My Learning Areas</h2>
-              <Link href="/student/curriculum" className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">View all <ArrowRight className="h-3 w-3" /></Link>
+              <Link href="/student/learn" className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">View all <ArrowRight className="h-3 w-3" /></Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {CURRICULUM_SUBJECTS.map((subject) => (
@@ -261,7 +259,7 @@ export default function StudentDashboard() {
                   <p className="text-[10px] text-slate-400 mt-1">Tap to study →</p>
                 </Link>
               ))}
-              <Link href="/student/curriculum" className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center justify-center gap-1.5 hover:border-teal-300 hover:bg-teal-50/50 transition-all cursor-pointer group">
+              <Link href="/student/learn" className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center justify-center gap-1.5 hover:border-teal-300 hover:bg-teal-50/50 transition-all cursor-pointer group">
                 <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-teal-100 transition-colors"><Plus className="h-4 w-4 text-slate-400 group-hover:text-teal-600" /></div>
                 <span className="text-[10px] font-semibold text-slate-400 group-hover:text-teal-600">Explore All</span>
               </Link>
@@ -286,7 +284,7 @@ export default function StudentDashboard() {
                   </div>
                 ))}
               </div>
-            ) : <Link href="/student/curriculum" className="flex items-center gap-3 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-3 border border-cyan-200 hover:shadow-md transition-all group">
+            ) : <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-3 border border-cyan-200 hover:shadow-md transition-all group">
               <div className="w-9 h-9 rounded-full bg-cyan-100 flex items-center justify-center shrink-0 group-hover:bg-cyan-200 transition-colors">
                 <Target className="h-4 w-4 text-cyan-600" />
               </div>
@@ -358,15 +356,7 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* HOPE AI TUTOR DRAWER */}
-      <HopeAITutorDrawer
-        open={showAIChat}
-        onClose={() => setShowAIChat(false)}
-        studentName={name}
-        currentSubject={resumeTopic?.subject || 'your studies'}
-        currentTopic={chatContext}
-      />
-
+      {/* HOPE AI TUTOR DRAWER — mounted globally via AITutorProvider */}
       <OnboardingTourFab role={session?.user?.role || 'STUDENT'} />
     </div>
   )
