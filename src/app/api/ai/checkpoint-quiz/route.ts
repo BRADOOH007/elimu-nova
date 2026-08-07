@@ -7,14 +7,14 @@ export const POST = route({}, async (request, { user }) => {
     const { lessonTitle, subject, grade, learningOutcomes, content, topic, subStrand } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
-    const prompt = `Generate 5 quick checkpoint quiz questions for end of lesson.
+    const prompt = `Generate 10 quick checkpoint quiz questions for end of lesson.
 
 Lesson: ${lessonTitle || topic || subject}
 Subject: ${subject} | Grade: ${grade}
 Topic: ${subStrand || topic || lessonTitle || subject}
 Learning Outcomes: ${learningOutcomes || content?.slice(0, 300) || 'Key concepts'}
 
-Return ONLY a JSON array of 5 objects:
+Return ONLY a JSON array of 10 objects:
 [
   {
     "question": "Short, clear question",
@@ -36,7 +36,7 @@ Keep language simple and appropriate for ${grade}.`
     const raw = await OpenAIService.generateText([
       { role: 'system', content: 'You are a quiz creator. Return ONLY valid JSON array. No LaTeX, no TeX commands.' },
       { role: 'user', content: prompt },
-    ], { maxTokens: 1200, temperature: 0.6 })
+    ], { maxTokens: 2000, temperature: 0.6 })
 
     const json = cleanAiJson(raw)
     if (!json) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })

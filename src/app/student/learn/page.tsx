@@ -289,7 +289,7 @@ function LearnPageContent() {
     try {
       const res = await fetch('/api/ai/checkpoint-quiz', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ subject: studySubject, topic: studyTopic, grade: studyGrade, count: 6 })
+        body: JSON.stringify({ subject: studySubject, topic: studyTopic, grade: studyGrade, count: 10 })
       })
       if (res.ok) { const data = await res.json(); setQuizQuestions(data.questions || data); setQuickQuizOpen(true) }
       else toast({ variant:'destructive', title:'Could not load quiz' })
@@ -559,7 +559,7 @@ function LearnPageContent() {
                           <div className="flex flex-wrap gap-2">
                             <Button onClick={() => { setStudyPhase('learn'); setRecallSubmitted(false) }} variant="outline" className="flex-1">Review</Button>
                             <Button onClick={startQuickQuiz} disabled={quizLoading} className="flex-1 bg-indigo-500 text-white">
-                              {quizLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}Quiz (6 Qs)
+                              {quizLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}Quiz (10 Qs)
                             </Button>
                             <Button onClick={completeAndAdvance} className="w-full bg-teal-500 font-semibold text-white hover:bg-teal-600"><ArrowRight className="mr-2 h-4 w-4" />Complete & Continue</Button>
                           </div>
