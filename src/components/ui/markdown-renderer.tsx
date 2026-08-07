@@ -150,7 +150,7 @@ export function MarkdownRenderer({ content, className = '' }: Props) {
           img: ({ src, alt, ...props }: any) => {
             if (!src || !src.trim()) {
               return alt
-                ? <p className="text-center text-xs text-slate-400 italic my-3">{alt}</p>
+                ? <span className="block text-center text-xs text-slate-400 italic my-3">{alt}</span>
                 : null
             }
             return (
@@ -162,7 +162,7 @@ export function MarkdownRenderer({ content, className = '' }: Props) {
                   loading="lazy"
                   {...props}
                 />
-                {alt && <p className="text-center text-xs text-slate-400 py-2 px-3 bg-slate-50 border-t border-slate-100 italic">{alt}</p>}
+                {alt && <span className="block text-center text-xs text-slate-400 py-2 px-3 bg-slate-50 border-t border-slate-100 italic">{alt}</span>}
               </div>
             )
           },
