@@ -10,6 +10,13 @@ export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) 
     const { searchParams } = new URL(req.url)
     const sessionId = searchParams.get('sessionId')
     const role = user.role
+    const now = new Date()
+
+    // Auto-expire stale IN_PROGRESS sessions past endTime
+    await prisma.schedule.updateMany({
+      where: { status: 'IN_PROGRESS', endTime: { lt: now } },
+      data: { status: 'COMPLETED' },
+    })
 
     if (sessionId) {
       // Get a specific session
