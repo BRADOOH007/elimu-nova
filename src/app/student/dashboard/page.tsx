@@ -42,6 +42,7 @@ const fallbackData: DashboardData = {
 }
 
 import { getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
+import { formatTeacherName, formatDate, formatDuration, formatTime } from '@/lib/utils/formatters'
 
 function getSubjectCards(grade: string) {
   const subjects = getSubjectsForStudent(grade)
@@ -80,7 +81,7 @@ export default function StudentDashboard() {
     return r.json()
   })
 
-  // Dashboard data — cached in memory by SWR (staleTime 5min). Returning to this
+  // Dashboard data ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cached in memory by SWR (staleTime 5min). Returning to this
   // page renders the cached state instantly without the skeleton loader while
   // revalidating in the background.
   const { data: dashboardData, isLoading: loading } = useSWR<DashboardData>(
@@ -118,7 +119,7 @@ export default function StudentDashboard() {
 
   if (showOnboarding) return <IndependentUserWelcome userRole="STUDENT" userName={name} onComplete={() => { localStorage.setItem('independent_onboarded', '1'); setShowOnboarding(false) }} />
   // Only show the skeleton when there is no cached data in the SWR in-memory
-  // cache — i.e. a fresh app load or hard refresh. On client navigation the
+  // cache ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â i.e. a fresh app load or hard refresh. On client navigation the
   // cached dashboard state is already available, so isLoading is false and the
   // dashboard UI renders optimistically while SWR revalidates in the background.
   if (loading) {
@@ -134,6 +135,17 @@ export default function StudentDashboard() {
   // Grade + recent subjects for the "What to learn next?" sidebar widget
   const studentGrade = /Grade|Form/i.test(d.student.class) ? d.student.class : 'Grade 4'
   const recentSubjects = Array.from(new Set((d.studySessions || []).map(s => s.subject).filter(Boolean)))
+
+  // Dynamic upcoming events from Schedule + Assignments
+  const { data: upcomingEvents } = useSWR<Array<{ id: string; type: string; title: string; subject: string; teacherName: string; startTime: string; endTime: string; dueDate: string }>>(
+    '/api/student/upcoming',
+    fetcher,
+  )
+
+  const { data: recentActivity } = useSWR<Array<{ id: string; type: 'quiz' | 'class' | 'lesson' | 'streak'; label: string; time: string; icon: string }>>(
+    '/api/student/recent-activity',
+    fetcher,
+  )
 
   const dueReviews = (() => {
     try {
@@ -185,10 +197,10 @@ export default function StudentDashboard() {
       {/* QUICK STATS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { icon: Clock, label: 'Study Time', value: fmtTime(d.analytics.totalStudyTime || d.stats.studyTime), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', from: 'from-blue-50', to: 'to-indigo-50', empty: true, emptyLabel: 'Start a 5-min lesson →', emptyHref: '/student/learn' },
-            { icon: ClipboardList, label: 'Assignments', value: (d.stats.completedAssignments + d.stats.activeAssignments) > 0 ? `${d.stats.completedAssignments}/${d.stats.completedAssignments + d.stats.activeAssignments} done` : '0', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', from: 'from-emerald-50', to: 'to-teal-50', empty: (d.stats.completedAssignments + d.stats.activeAssignments) === 0, emptyLabel: 'View assignments →', emptyHref: '/student/assignments' },
-            { icon: Star, label: 'Avg Grade', value: d.stats.averageGrade ? `${Math.round(d.stats.averageGrade)}%` : '--', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', from: 'from-amber-50', to: 'to-orange-50', empty: !d.stats.averageGrade, emptyLabel: 'Take a quick quiz →', emptyHref: '/student/learn' },
-            { icon: Trophy, label: 'Topics', value: d.analytics.completedAssignments > 0 ? `${d.analytics.completedAssignments} mastered` : '0', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50', empty: d.analytics.completedAssignments === 0, emptyLabel: 'Study a topic →', emptyHref: '/student/learn' },
+            { icon: Clock, label: 'Study Time', value: fmtTime(d.analytics.totalStudyTime || d.stats.studyTime), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', from: 'from-blue-50', to: 'to-indigo-50', empty: true, emptyLabel: 'Start a 5-min lesson ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', emptyHref: '/student/learn' },
+            { icon: ClipboardList, label: 'Assignments', value: (d.stats.completedAssignments + d.stats.activeAssignments) > 0 ? `${d.stats.completedAssignments}/${d.stats.completedAssignments + d.stats.activeAssignments} done` : '0', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', from: 'from-emerald-50', to: 'to-teal-50', empty: (d.stats.completedAssignments + d.stats.activeAssignments) === 0, emptyLabel: 'View assignments ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', emptyHref: '/student/assignments' },
+            { icon: Star, label: 'Avg Grade', value: d.stats.averageGrade ? `${Math.round(d.stats.averageGrade)}%` : '--', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', from: 'from-amber-50', to: 'to-orange-50', empty: !d.stats.averageGrade, emptyLabel: 'Take a quick quiz ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', emptyHref: '/student/learn' },
+            { icon: Trophy, label: 'Topics', value: d.analytics.completedAssignments > 0 ? `${d.analytics.completedAssignments} mastered` : '0', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50', empty: d.analytics.completedAssignments === 0, emptyLabel: 'Study a topic ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢', emptyHref: '/student/learn' },
           ].map((stat, i) => (
             <Card key={i} className={`border-0 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br ${stat.from} ${stat.to} ${stat.border}`}>
               <CardContent className="p-4 flex items-center gap-3">
@@ -256,7 +268,7 @@ export default function StudentDashboard() {
                     <span className="text-xs font-semibold text-slate-700 truncate">{subject.name}</span>
                   </div>
                   <div className="bg-white/60 rounded-full h-1.5 overflow-hidden"><div className={`h-full ${subject.bar} rounded-full transition-all duration-500`} style={{ width: `${Math.min(100, Math.round((d.analytics.completedAssignments / Math.max(1, d.analytics.completedAssignments + d.analytics.pendingAssignments)) * 100))}%` }} /></div>
-                  <p className="text-[10px] text-slate-400 mt-1">Tap to study →</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Tap to study ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢</p>
                 </Link>
               ))}
               <Link href="/student/learn" className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center justify-center gap-1.5 hover:border-teal-300 hover:bg-teal-50/50 transition-all cursor-pointer group">
@@ -275,12 +287,12 @@ export default function StudentDashboard() {
           {/* Upcoming */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><Clock className="h-5 w-5 text-cyan-600" />Upcoming</h2>
-            {d.upcomingLessons.length > 0 ? (
+            {(upcomingEvents && upcomingEvents.length) > 0 ? (
               <div className="space-y-2.5">
-                {d.upcomingLessons.slice(0, 3).map((l, i) => (
+                {upcomingEvents.slice(0, 4).map((l, i) => (
                   <div key={i} className="flex items-start gap-2 text-sm">
                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
-                    <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{l.title}</p><p className="text-xs text-slate-400">{l.time}{l.location ? ` · ${l.location}` : ''}</p></div>
+                    <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{l.title}</p><p className="text-xs text-slate-400">{l.time}{l.location ? ` ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${l.location}` : ''}</p></div>
                   </div>
                 ))}
               </div>
@@ -299,9 +311,9 @@ export default function StudentDashboard() {
           {/* Recent Activity */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><TrendingUp className="h-5 w-5 text-emerald-600" />Recent Activity</h2>
-            {d.studySessions.length > 0 ? (
+            {(recentActivity && recentActivity.length) > 0 ? (
               <div className="space-y-2.5">
-                {d.studySessions.slice(0, 4).map((s, i) => (
+                {recentActivity.slice(0, 5).map((s, i) => (
                   <div key={i} className="flex items-center justify-between text-sm">
                     <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{s.topic || s.subject}</p><p className="text-xs text-slate-400">{new Date(s.startTime).toLocaleDateString()}</p></div>
                     <span className="text-xs font-semibold text-emerald-600 shrink-0 ml-2">{fmtTime(s.duration)}</span>
@@ -317,7 +329,7 @@ export default function StudentDashboard() {
             </Link>}
           </div>
 
-          {/* Quick Actions — integrated into the sidebar stack */}
+          {/* Quick Actions ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â integrated into the sidebar stack */}
           <div className="flex items-center justify-between px-1 pt-1">
             <Link href="/student/assignments" className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 transition-colors">
               <ClipboardList className="h-3.5 w-3.5" /> Assignments
@@ -350,7 +362,7 @@ export default function StudentDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{a.title}</p>
-                  <p className="text-xs text-slate-400">{a.subject} · {new Date(a.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                  <p className="text-xs text-slate-400">{a.subject} ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {new Date(a.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
                 </div>
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${
                   a.status === 'Submitted' ? 'bg-blue-50 text-blue-700' :
@@ -364,7 +376,7 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* HOPE AI TUTOR DRAWER — mounted globally via AITutorProvider */}
+      {/* HOPE AI TUTOR DRAWER ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mounted globally via AITutorProvider */}
       <OnboardingTourFab role={session?.user?.role || 'STUDENT'} />
     </div>
   )
