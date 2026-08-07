@@ -21,7 +21,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const sidebarItems = [
     { icon: BarChart3,     label: 'Dashboard',  href: '/student/dashboard',    tourId: 'student-dashboard'    },
     { icon: GraduationCap, label: 'Learn',      href: '/student/learn',        tourId: 'student-learn'        },
-    { icon: BookMarked,    label: 'Curriculum', href: '/student/curriculum',   tourId: 'student-curriculum'   },
     { icon: BookOpen,      label: 'Lessons',    href: '/student/lesson-plans', tourId: 'student-schedule'     },
     { icon: ClipboardList, label: 'Assignments',href: '/student/assignments',  tourId: 'student-assignments' },
     { icon: Calendar,      label: 'Classes',    href: '/student/schedule',     tourId: 'student-classes'     },
