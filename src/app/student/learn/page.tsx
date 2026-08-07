@@ -188,6 +188,18 @@ function LearnPageContent() {
     setStudySubject(subject); setStudyTopic(topic); generateLesson(subject, topic)
   }
 
+  // Deep-link from dashboard "What to learn next?" pills:
+  // /student/learn?subject=X&topic=Y selects + starts that topic immediately.
+  useEffect(() => {
+    const tpc = searchParams.get('topic')
+    if (tpc) {
+      const subj = searchParams.get('subject') || studySubject
+      setStudyTopic(tpc)
+      generateLesson(subj, tpc)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
   const startDailyChallenge = () => {
     if (!dailyTopic) return
     setStudySubject(dailySubject)
@@ -277,7 +289,7 @@ function LearnPageContent() {
     try {
       const res = await fetch('/api/ai/checkpoint-quiz', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ subject: studySubject, topic: studyTopic, grade: studyGrade, count: 4 })
+        body: JSON.stringify({ subject: studySubject, topic: studyTopic, grade: studyGrade, count: 6 })
       })
       if (res.ok) { const data = await res.json(); setQuizQuestions(data.questions || data); setQuickQuizOpen(true) }
       else toast({ variant:'destructive', title:'Could not load quiz' })
@@ -469,7 +481,7 @@ function LearnPageContent() {
                     <div className="space-y-5">
                       <div className="max-h-[450px] overflow-y-auto"><MarkdownRenderer content={activeLesson.content} /></div>
                       <Button onClick={() => { setStudyPhase('recall'); setRecallAnswers(new Array(activeLesson.recall.length).fill(undefined)) }}
-                        className="w-full bg-indigo-500 font-semibold text-white hover:bg-indigo-600"><Brain className="mr-2 h-4 w-4" />I'm Ready — Test Me!</Button>
+                        className="w-full bg-indigo-500 font-semibold text-white hover:bg-indigo-600"><Brain className="mr-2 h-4 w-4" />I'm Ready — {activeLesson.recall.length} Questions</Button>
                     </div>
                   )}
 
@@ -547,7 +559,7 @@ function LearnPageContent() {
                           <div className="flex flex-wrap gap-2">
                             <Button onClick={() => { setStudyPhase('learn'); setRecallSubmitted(false) }} variant="outline" className="flex-1">Review</Button>
                             <Button onClick={startQuickQuiz} disabled={quizLoading} className="flex-1 bg-indigo-500 text-white">
-                              {quizLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}Quick Quiz
+                              {quizLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Target className="mr-2 h-4 w-4" />}Quiz (6 Qs)
                             </Button>
                             <Button onClick={completeAndAdvance} className="w-full bg-teal-500 font-semibold text-white hover:bg-teal-600"><ArrowRight className="mr-2 h-4 w-4" />Complete & Continue</Button>
                           </div>
