@@ -37,20 +37,23 @@ export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) 
 
     // For students: get their class's active session (plus open sessions)
     if (role === 'STUDENT') {
-      const student = await prisma.student.findUnique({ where: { userId: user.id } })
+      const student = await prisma.student.findUnique({
+        where: { userId: user.id },
+        select: { id: true, classId: true, teacherId: true, schoolId: true }
+      })
       if (!student) return NextResponse.json({ sessions: [] })
 
       const sessions = await prisma.schedule.findMany({
         where: {
-          status: 'IN_PROGRESS',
           type: 'CLASS',
+          status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
           OR: [
-            ...(student.classId ? [{ classId: student.classId }] : []),
-            { classId: null },              // open session — teacher didn't pick a class
-            ...(student.teacherId ? [{ teacherId: student.teacherId }] : []),
+            ...(student.classId ? [{ classId: student.classId, schoolId: student.schoolId || undefined }] : []),
+            { classId: null, schoolId: student.schoolId || undefined },
+            ...(student.teacherId ? [{ teacherId: student.teacherId, schoolId: student.schoolId || undefined }] : []),
           ],
         },
-        include: { teacher: { include: { user: true } } },
+        include: { teacher: { include: { user: true } }, class: true },
         orderBy: { startTime: 'desc' },
         take: 20,
       })
@@ -120,15 +123,11 @@ export const PATCH = route({ skipSubscriptionCheck: true }, async (req, { user }
     const meta = (existing.metadata as any) || {}
 
     if (action === 'end') {
-      const updated = await prisma.schedule.update({
+      await prisma.schedule.update({
         where: { id: sessionId },
-        data: { status: 'COMPLETED', endTime: new Date() },
+        data: { status: 'COMPLETED', endTime: new Date(), metadata: { ...meta, endedAt: new Date().toISOString() } },
       })
-      return NextResponse.json({ session: updated })
-    }
-
-    if (action === 'updateBoard') {
-      meta.boardContent = data.boardContent
+      return NextResponse.json({ session: { status: 'COMPLETED' } })
     }
 
     if (action === 'addChat') {
@@ -140,22 +139,24 @@ export const PATCH = route({ skipSubscriptionCheck: true }, async (req, { user }
     if (action === 'join') {
       if (!meta.participants) meta.participants = []
       const already = meta.participants.find((p: any) => p.userId === data.userId)
-      if (!already) meta.participants.push({ userId: data.userId, name: data.name, joinedAt: new Date().toISOString(), handRaised: false })
+      if (!already) meta.participants.push({ userId: data.userId, name: data.name, joinedAt: new Date().toISOString() })
     }
 
     if (action === 'raiseHand') {
       if (!meta.participants) meta.participants = []
-      const existing = meta.participants.find((p: any) => p.userId === data.userId)
-      if (existing) existing.handRaised = true
+      const p = meta.participants.find((p: any) => p.userId === data.userId)
+      if (p) p.handRaised = true
       else meta.participants.push({ userId: data.userId, name: data.name, joinedAt: new Date().toISOString(), handRaised: true })
     }
 
     if (action === 'lowerHand') {
       if (meta.participants) {
-        const existing = meta.participants.find((p: any) => p.userId === data.userId)
-        if (existing) existing.handRaised = false
+        const p = meta.participants.find((p: any) => p.userId === data.userId)
+        if (p) p.handRaised = false
       }
     }
+
+    // Board strokes are ephemeral — never persisted to DB
 
     const updated = await prisma.schedule.update({
       where: { id: sessionId },
