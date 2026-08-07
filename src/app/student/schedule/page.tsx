@@ -385,16 +385,6 @@ export function StudentSchedulePage() {
                           <span className="text-xs font-semibold bg-slate-100 text-slate-500 rounded-full px-3 py-1.5">Class Ended</span>
                         ) : null
                       )}
-                      ) : event.type === 'MEETING' ? (
-                        <Button
-                          size="sm"
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                          onClick={() => router.push(`/student/meetings/${event.id}`)}
-                        >
-                          <Video className="w-4 h-4 mr-1" />
-                          Join Class
-                        </Button>
-                      ) : null}
                       {event.location && event.location.startsWith('http') && (
                         <a 
                           href={event.location} 
