@@ -41,23 +41,15 @@ const fallbackData: DashboardData = {
 
 import { getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
 
-// Subject config for My Learning Areas — CBC rationalized
-const CURRICULUM_SUBJECTS = getSubjectsForStudent('Grade 4').slice(0, 8).map(name => {
-  const icons: Record<string, any> = { Mathematics: Calculator, English: BookOpen, Kiswahili: Languages, 'Kiswahili / KSL': Languages, 'Science & Technology': FlaskConical, 'Integrated Science': FlaskConical, 'Social Studies': Globe, 'Religious Education': Church, 'Creative Arts': Palette, 'Creative Arts & Sports': Palette, 'Agriculture & Nutrition': Leaf, 'Pre-Technical Studies': Brain, 'Agriculture': Leaf, 'Business Studies': TrendingUp, 'Computer Studies': Brain }
-  const colors: Record<string, string[]> = { Mathematics: ['text-blue-600','bg-blue-50','bg-blue-500'], English: ['text-emerald-600','bg-emerald-50','bg-emerald-500'], Kiswahili: ['text-amber-600','bg-amber-50','bg-amber-500'], 'Kiswahili / KSL': ['text-amber-600','bg-amber-50','bg-amber-500'], 'Science & Technology': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Integrated Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Social Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Religious Education': ['text-purple-600','bg-purple-50','bg-purple-500'], 'Creative Arts': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Creative Arts & Sports': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Agriculture & Nutrition': ['text-green-600','bg-green-50','bg-green-500'], 'Agriculture': ['text-green-600','bg-green-50','bg-green-500'], 'Pre-Technical Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Business Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Computer Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'] }
-  const c = colors[name] || ['text-slate-600','bg-slate-50','bg-slate-500']
-  return { name, icon: icons[name] || Brain, color: c[0], bg: c[1], bar: c[2] }
-})
-const CURRICULUM_SUBJECTS = [
-  { name: 'Mathematics', icon: Calculator, color: 'text-blue-600', bg: 'bg-blue-50', bar: 'bg-blue-500' },
-  { name: 'English', icon: BookOpen, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
-  { name: 'Kiswahili', icon: Languages, color: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
-  { name: 'Science', icon: FlaskConical, color: 'text-cyan-600', bg: 'bg-cyan-50', bar: 'bg-cyan-500' },
-  { name: 'Social Studies', icon: Globe, color: 'text-orange-600', bg: 'bg-orange-50', bar: 'bg-orange-500' },
-  { name: 'CRE', icon: Church, color: 'text-purple-600', bg: 'bg-purple-50', bar: 'bg-purple-500' },
-  { name: 'Computer Studies', icon: Brain, color: 'text-indigo-600', bg: 'bg-indigo-50', bar: 'bg-indigo-500' },
-  { name: 'Agriculture', icon: Leaf, color: 'text-green-600', bg: 'bg-green-50', bar: 'bg-green-500' },
-]
+function getSubjectCards(grade: string) {
+  const subjects = getSubjectsForStudent(grade)
+  return subjects.slice(0, 8).map(name => {
+    const iconMap: Record<string, any> = { Mathematics: Calculator, English: BookOpen, Kiswahili: Languages, 'Kiswahili / KSL': Languages, 'Science & Technology': FlaskConical, 'Integrated Science': FlaskConical, 'Social Studies': Globe, 'Religious Education': Church, 'Creative Arts': Palette, 'Creative Arts & Sports': Palette, 'Agriculture & Nutrition': Leaf, 'Pre-Technical Studies': Brain, 'Agriculture': Leaf, 'Business Studies': TrendingUp, 'Computer Studies': Brain }
+    const colorMap: Record<string, string[]> = { Mathematics: ['text-blue-600','bg-blue-50','bg-blue-500'], English: ['text-emerald-600','bg-emerald-50','bg-emerald-500'], Kiswahili: ['text-amber-600','bg-amber-50','bg-amber-500'], 'Kiswahili / KSL': ['text-amber-600','bg-amber-50','bg-amber-500'], 'Science & Technology': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Integrated Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Social Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Religious Education': ['text-purple-600','bg-purple-50','bg-purple-500'], 'Creative Arts': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Creative Arts & Sports': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Agriculture & Nutrition': ['text-green-600','bg-green-50','bg-green-500'], 'Agriculture': ['text-green-600','bg-green-50','bg-green-500'], 'Pre-Technical Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Business Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Computer Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'] }
+    const c = colorMap[name] || ['text-slate-600','bg-slate-50','bg-slate-500']
+    return { name, icon: iconMap[name] || Brain, color: c[0], bg: c[1], bar: c[2] }
+  })
+}
 
 function fmtTime(totalMinutes: number): string {
   if (totalMinutes < 60) return `${totalMinutes}min`
@@ -261,7 +253,7 @@ export default function StudentDashboard() {
               <Link href="/student/learn" className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">View all <ArrowRight className="h-3 w-3" /></Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {CURRICULUM_SUBJECTS.map((subject) => (
+              {getSubjectCards(d.student.class || 'Grade 4').map((subject) => (
                 <Link key={subject.name} href={`/student/learn?subject=${encodeURIComponent(subject.name)}`}
                   className={`${subject.bg} rounded-xl p-3 border border-slate-100 hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group`}>
                   <div className="flex items-center gap-2 mb-2">
