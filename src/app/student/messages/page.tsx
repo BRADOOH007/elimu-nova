@@ -31,8 +31,16 @@ export default function StudentMessagesPage() {
   const [search, setSearch] = useState('')
   const [showCompose, setShowCompose] = useState(false)
   const [avatarError, setAvatarError] = useState(false)
+  const [teachers, setTeachers] = useState<Array<{ id: string; name: string; subject: string }>>([])
+  const [isSchoolStudent, setIsSchoolStudent] = useState(false)
+  const [assignedTeacher, setAssignedTeacher] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => { setAvatarError(false) }, [selected?.id])
+  useEffect(() => {
+    fetch('/api/student/messages/recipients').then(r => r.ok ? r.json() : null).then(d => {
+      if (d) { setTeachers(d.teachers || []); setIsSchoolStudent(d.isSchoolStudent); setAssignedTeacher(d.assignedTeacher || null) }
+    }).catch(() => {})
+  }, [])
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const [page, setPage] = useState(1)
@@ -93,7 +101,7 @@ export default function StudentMessagesPage() {
     const r = await fetch('/api/student/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recipientId: 'teacher', ...data }),
+      body: JSON.stringify({ ...data }),
     })
     if (!r.ok) throw new Error('Failed to send')
     await fetchMessages()
@@ -284,6 +292,9 @@ export default function StudentMessagesPage() {
         onClose={() => setShowCompose(false)}
         onSend={handleNewMessage}
         recipientType="TEACHER"
+        recipients={teachers}
+        isSchoolStudent={isSchoolStudent}
+        assignedTeacher={assignedTeacher}
       />
     </>
   )
