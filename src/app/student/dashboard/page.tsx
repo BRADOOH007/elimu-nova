@@ -289,20 +289,23 @@ export default function StudentDashboard() {
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><Clock className="h-5 w-5 text-cyan-600" />Upcoming</h2>
             {(upcomingEvents && upcomingEvents.length) > 0 ? (
               <div className="space-y-2.5">
-                {upcomingEvents.slice(0, 4).map((l, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
-                    <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{l.title}</p><p className="text-xs text-slate-400">{l.time}{l.location ? ` ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ${l.location}` : ''}</p></div>
+                {upcomingEvents.slice(0, 4).map((event, i) => (
+                  <div key={i} className="flex items-start gap-2.5 text-sm">
+                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: event.type === 'exam' ? '#ef4444' : event.type === 'live' ? '#f59e0b' : '#3b82f6' }} />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{event.type === 'live' ? '🔴 Live' : event.type === 'assignment' ? '📋 Assignment' : '📝 Class'}</p>
+                      <p className="font-medium text-slate-700 truncate text-xs">{event.title}</p>
+                      <p className="text-[10px] text-slate-400">
+                        {event.teacherName ? `${formatTeacherName(event.teacherName)} · ` : ''}
+                        {event.dueDate ? `Due ${formatDate(event.dueDate)}` : `${formatTime(event.startTime)}`}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-3 border border-cyan-200 hover:shadow-md transition-all group">
-              <div className="w-9 h-9 rounded-full bg-cyan-100 flex items-center justify-center shrink-0 group-hover:bg-cyan-200 transition-colors">
-                <Target className="h-4 w-4 text-cyan-600" />
-              </div>
-              <div className="flex-1"><p className="text-sm font-semibold text-cyan-800">Select a CBC Strand to focus on</p><p className="text-xs text-cyan-600">Browse curriculum topics</p></div>
-              <ArrowRight className="h-4 w-4 text-cyan-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </Link>}
+            ) : (
+              <p className="text-xs text-slate-400 text-center py-3">No upcoming exams or live classes</p>
+            )}
           </div>
 
           {/* What do you want to learn next? */}
@@ -313,20 +316,23 @@ export default function StudentDashboard() {
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><TrendingUp className="h-5 w-5 text-emerald-600" />Recent Activity</h2>
             {(recentActivity && recentActivity.length) > 0 ? (
               <div className="space-y-2.5">
-                {recentActivity.slice(0, 5).map((s, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
-                    <div className="min-w-0"><p className="font-medium text-slate-700 truncate">{s.topic || s.subject}</p><p className="text-xs text-slate-400">{new Date(s.startTime).toLocaleDateString()}</p></div>
-                    <span className="text-xs font-semibold text-emerald-600 shrink-0 ml-2">{fmtTime(s.duration)}</span>
+                {recentActivity.slice(0, 5).map((item, i) => (
+                  <div key={i} className="flex items-center gap-2.5 text-sm">
+                    <span className="text-xs">{item.icon}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-slate-600">{item.label}</p>
+                      <p className="text-[10px] text-slate-400">{item.time}</p>
+                    </div>
                   </div>
                 ))}
               </div>
-            ) : <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-3 border border-emerald-200 hover:shadow-md transition-all group">
-              <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 group-hover:bg-emerald-200 transition-colors">
-                <Zap className="h-4 w-4 text-emerald-600" />
-              </div>
-              <div className="flex-1"><p className="text-sm font-semibold text-emerald-800">Start your first 5-min micro-lesson</p><p className="text-xs text-emerald-600">Open Learning Hub to begin</p></div>
-              <ArrowRight className="h-4 w-4 text-emerald-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-            </Link>}
+            ) : (
+              <Link href="/student/learn" className="flex items-center gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-3 border border-emerald-200 hover:shadow-md transition-all group">
+                <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center shrink-0"><Zap className="h-4 w-4 text-emerald-600" /></div>
+                <div className="flex-1"><p className="text-sm font-semibold text-emerald-800">Start your first micro-lesson</p><p className="text-xs text-emerald-600">Open Learning Hub to begin</p></div>
+                <ArrowRight className="h-4 w-4 text-emerald-500 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </Link>
+            )}
           </div>
 
           {/* Quick Actions ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â integrated into the sidebar stack */}
