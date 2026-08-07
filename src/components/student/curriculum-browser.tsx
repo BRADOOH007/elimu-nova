@@ -40,6 +40,14 @@ const STATUS_STYLE: Record<string, string> = {
 export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade }: CurriculumBrowserProps) {
   const [grade, setGrade] = useState(defaultGrade || 'Grade 4')
   const [subject, setSubject] = useState(defaultSubject || 'Mathematics')
+  const currentSubjects = getSubjectsForGrade(grade)
+
+  // Auto-reset subject when grade changes to an incompatible subject
+  useEffect(() => {
+    if (!currentSubjects.includes(subject)) {
+      setSubject(currentSubjects[0] || 'Mathematics')
+    }
+  }, [grade])
   const [strands, setStrands] = useState<Strand[]>([])
   const [expandedStrand, setExpandedStrand] = useState<string | null>(null)
   const [substrands, setSubstrands] = useState<Record<string, Substrand[]>>({})
