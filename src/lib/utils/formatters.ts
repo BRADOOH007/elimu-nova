@@ -26,3 +26,17 @@ export function formatDuration(start: string, end: string): string {
   if (mins < 60) return `${mins} min`
   return `${Math.floor(mins / 60)}h ${mins % 60}m`
 }
+
+export function sanitizeText(text?: string | null): string {
+  if (!text) return ''
+  return text
+    .replace(/ÃƒÆ'Ã†â€™Ãƒâ€šÃ‚Â¢/g, '')
+    .replace(/ÃƒÆ'Ã¢â‚¬Â¡/g, '')
+    .replace(/ÃƒÆ'Ã†â€™/g, "'")
+    .replace(/Ãƒâ€šÃ‚Â/g, '')
+    .replace(/Ã¢â‚¬â€/g, '-')
+    .replace(/Ã¢â‚¬Â/g, '"')
+    .replace(/Ã‚Â·/g, '·')
+    .replace(/Â/g, '')
+    .trim()
+}
