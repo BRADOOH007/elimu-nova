@@ -16,11 +16,13 @@ import { useAITutor } from "@/components/ai-tutor-provider"
 import {
   Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
   Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Plus, MessageSquare,
-  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette, TrendingUp
+  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
 import { getUnreviewedMistakes } from '@/lib/mistake-bank'
 import { OnboardingTourFab } from '@/components/onboarding-tour-fab'
+import { ActiveLiveClassBanner } from '@/components/notifications/active-live-class-banner'
 
 interface DashboardData {
   student: { id: string; name: string; email: string; school: string; teacher: string; class: string }
@@ -44,7 +46,7 @@ import { getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
 function getSubjectCards(grade: string) {
   const subjects = getSubjectsForStudent(grade)
   return subjects.slice(0, 8).map(name => {
-    const iconMap: Record<string, any> = { Mathematics: Calculator, English: BookOpen, Kiswahili: Languages, 'Kiswahili / KSL': Languages, 'Science & Technology': FlaskConical, 'Integrated Science': FlaskConical, 'Social Studies': Globe, 'Religious Education': Church, 'Creative Arts': Palette, 'Creative Arts & Sports': Palette, 'Agriculture & Nutrition': Leaf, 'Pre-Technical Studies': Brain, 'Agriculture': Leaf, 'Business Studies': TrendingUp, 'Computer Studies': Brain }
+    const iconMap: Record<string, LucideIcon> = { Mathematics: Calculator, English: BookOpen, Kiswahili: Languages, 'Kiswahili / KSL': Languages, 'Science & Technology': FlaskConical, 'Integrated Science': FlaskConical, 'Social Studies': Globe, 'Religious Education': Church, 'Creative Arts': Palette, 'Creative Arts & Sports': Palette, 'Agriculture & Nutrition': Leaf, 'Pre-Technical Studies': Brain, 'Agriculture': Leaf, 'Business Studies': TrendingUp, 'Computer Studies': Brain }
     const colorMap: Record<string, string[]> = { Mathematics: ['text-blue-600','bg-blue-50','bg-blue-500'], English: ['text-emerald-600','bg-emerald-50','bg-emerald-500'], Kiswahili: ['text-amber-600','bg-amber-50','bg-amber-500'], 'Kiswahili / KSL': ['text-amber-600','bg-amber-50','bg-amber-500'], 'Science & Technology': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Integrated Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Social Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Religious Education': ['text-purple-600','bg-purple-50','bg-purple-500'], 'Creative Arts': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Creative Arts & Sports': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Agriculture & Nutrition': ['text-green-600','bg-green-50','bg-green-500'], 'Agriculture': ['text-green-600','bg-green-50','bg-green-500'], 'Pre-Technical Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Business Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Computer Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'] }
     const c = colorMap[name] || ['text-slate-600','bg-slate-50','bg-slate-500']
     return { name, icon: iconMap[name] || Brain, color: c[0], bg: c[1], bar: c[2] }
@@ -62,13 +64,13 @@ export default function StudentDashboard() {
   const isIndependent = !schoolInfo?.school?.id && !session?.user?.schoolId
 
   const [showOnboarding, setShowOnboarding] = useState(false)
-  const [showNotifs, setShowNotifs] = useState(false)
+  const [, setShowNotifs] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
 
   const { openAITutor } = useAITutor()
 
   // Gamification
-  const [gameState, setGameState] = useState(() => updateStreak(getGameState()))
+  const [gameState] = useState(() => updateStreak(getGameState()))
   const levelName = getLevelName(gameState.level)
   const xpProgress = getXpToNextLevel(gameState.xp)
   const mistakes = getUnreviewedMistakes()
@@ -109,13 +111,6 @@ export default function StudentDashboard() {
     }
   }, [isIndependent, schoolInfoLoading])
 
-  const handleAIChat = async (message: string, _history: any[]) => {
-    const res = await fetch('/api/student/ai-tutor', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) })
-    if (!res.ok) throw new Error('Failed')
-    const data = await res.json()
-    return data.response || data.reply || "Sorry, I didn't catch that."
-  }
-
   useEffect(() => { function h(e: MouseEvent) { if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifs(false) }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h) }, [])
 
   const name = displayName || dashboardData?.student?.name || session?.user?.name || "Student"
@@ -135,7 +130,6 @@ export default function StudentDashboard() {
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
   const todayStr = new Date().toISOString().split('T')[0]
   const dailyDone = !!localStorage.getItem(`daily_done_${todayStr}`)
-  const unread = d.unreadNotificationCount || 0
 
   // Grade + recent subjects for the "What to learn next?" sidebar widget
   const studentGrade = /Grade|Form/i.test(d.student.class) ? d.student.class : 'Grade 4'
@@ -145,13 +139,14 @@ export default function StudentDashboard() {
     try {
       const raw = localStorage.getItem('elimunova_reviews')
       if (!raw) return []
-      return (JSON.parse(raw) as any[]).filter((r: any) => new Date(r.nextReview) <= new Date())
+      return (JSON.parse(raw) as Array<{ subject?: string; topic: string; nextReview: string }>).filter((r) => new Date(r.nextReview) <= new Date())
     } catch { return [] }
   })()
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-5 md:space-y-6">
       <SubscriptionAlert />
+      <ActiveLiveClassBanner />
 
       {/* HERO: Greeting + Gamification + Continue CTA */}
       <Card className="border-0 bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white shadow-xl overflow-hidden relative">
