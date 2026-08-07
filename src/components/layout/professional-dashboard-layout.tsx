@@ -346,7 +346,7 @@ export function ProfessionalDashboardLayout({
 
       {/* ── SIDEBAR ── */}
       <aside
-        className={`fixed top-14 sm:top-16 left-0 bottom-0 z-40 flex flex-col bg-[#0f172a] border-r border-white/5 transition-all duration-200 ease-in-out ${
+        className={`fixed top-14 sm:top-16 left-0 bottom-0 z-40 flex flex-col bg-[#0f172a] border-r border-white/5 transition-all duration-200 ease-in-out overflow-y-auto ${
           sidebarCollapsed ? 'w-16' : 'w-64'
         } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >

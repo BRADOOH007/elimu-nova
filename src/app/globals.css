@@ -78,25 +78,44 @@ html {
   font-size: 16px;
 }
 
-/* Thin scrollbar styling (accessible) */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
-}
-*::-webkit-scrollbar {
+/* ─────────────────────────────────────
+   GLOBAL MODERN CUSTOM SCROLLBARS
+   ───────────────────────────────────── */
+
+/* Webkit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-*::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-*::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-  border-radius: 3px;
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3); /* Muted slate-400 */
+  border-radius: 9999px;
+  transition: background 0.2s ease;
 }
-*::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6); /* Slate-500 on hover */
 }
+
+/* Dark mode overrides */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+}
+
+/* ── Utility classes ── */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 /* Mobile optimization */
 @media (max-width: 640px) {
@@ -446,7 +465,6 @@ button, a {
   100% { background-position: 200% 0; }
 }
 .animate-shimmer {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -521,4 +539,18 @@ button, a {
 }
 [data-tour-tooltip] {
   pointer-events: auto !important;
+}
+
+/* ── Safe-area helpers (notch / home indicator / mobile keyboard) ── */
+@utility pt-safe {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+@utility pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+@utility pl-safe {
+  padding-left: max(env(safe-area-inset-left), 0px);
+}
+@utility pr-safe {
+  padding-right: max(env(safe-area-inset-right), 0px);
 }
