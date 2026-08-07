@@ -311,6 +311,11 @@ model Student {
   // Learning areas / subjects assigned to this student (multi-subject support)
   subjects String[] @default([])
 
+  // Senior School pathway selection (Grade 10-12)
+  pathway             String?   // STEM | TVET | SOCIAL_SCIENCES | ARTS_AND_SPORTS
+  tvetSpecialization  String?   // e.g. "electrical_electronics"
+  stemTrack           String?   // e.g. "TECHNICAL_ENGINEERING"
+
   // Relationships
   assignments       Assignment[]
   studentProgress   StudentProgress[]
