@@ -1,24 +1,14 @@
 "use client"
 
 import React, { useState, useEffect } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { COUNTRIES, getCurriculaByCountry } from '@/lib/curricula'
-import { 
-  Settings, 
-  X, 
-  Save, 
-  User, 
-  Bell, 
-  Palette, 
-  Globe,
-  Shield,
-  Key
-} from "lucide-react"
+import { Settings, Save, User, Bell, Palette, Globe, Shield, Key } from "lucide-react"
 
 interface UserPreferences {
   id?: string
@@ -99,60 +89,45 @@ export function SettingsModal({ isOpen, onClose, userId, userName, userEmail }: 
     setPreferences(prev => ({ ...prev, [key]: value }))
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
-          <div className="flex items-center space-x-3">
-            <Settings className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-x-hidden">
+        <DialogHeader className="pb-4 border-b border-slate-100 dark:border-slate-800/80 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/50 dark:to-purple-950/50">
+          <DialogTitle className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Settings className="w-5 h-5" />
+            </div>
+            Settings
+          </DialogTitle>
+          <DialogDescription>Manage your account preferences</DialogDescription>
+        </DialogHeader>
 
-        <div className="overflow-y-auto max-h-96 p-6 space-y-6">
+        <DialogBody className="space-y-5">
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-2 text-gray-500">Loading settings...</p>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto" />
+              <p className="mt-2 text-slate-500">Loading settings...</p>
             </div>
           ) : (
             <>
-              {/* Profile Settings */}
-              <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <User className="w-5 h-5 text-blue-600" />
-                    <span>Profile Information</span>
-                  </CardTitle>
-                  <CardDescription>Manage your account details</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <div className="bg-slate-50/60 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60 rounded-xl p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 flex items-center justify-center">
+                    <User className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">Profile Information</h3>
+                </div>
+                <div className="space-y-3">
                   <div>
                     <Label htmlFor="userName">Full Name</Label>
-                    <Input
-                      id="userName"
-                      value={userName}
-                      disabled
-                      className="mt-1"
-                    />
+                    <Input id="userName" value={userName} disabled className="mt-1" />
                   </div>
                   <div>
                     <Label htmlFor="userEmail">Email Address</Label>
-                    <Input
-                      id="userEmail"
-                      value={userEmail}
-                      disabled
-                      className="mt-1"
-                    />
+                    <Input id="userEmail" value={userEmail} disabled className="mt-1" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               {/* Appearance Settings */}
               <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
@@ -323,32 +298,15 @@ export function SettingsModal({ isOpen, onClose, userId, userName, userEmail }: 
               </Card>
             </>
           )}
-        </div>
+        </DialogBody>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={savePreferences} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm shadow-indigo-500/20 rounded-lg px-4 py-2 text-sm transition-all">
+            {saving ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save Changes</>}
           </Button>
-          <Button 
-            onClick={savePreferences} 
-            disabled={saving}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            {saving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
