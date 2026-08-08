@@ -3,23 +3,24 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AdminFormField, adminInputClass } from '@/components/ui/admin-modal'
-import { MessageSquare, Send, Megaphone, Users, GraduationCap, School, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { MessageSquare, Send, Megaphone, Users, GraduationCap, School, UserRound, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
 
 interface Message {
   id: string; title: string; message: string; type: string; targetRole: string; createdAt: string; sender: string
 }
 
 const TARGET_OPTIONS = [
-  { value: 'ALL', label: 'All Staff & Students', icon: School },
+  { value: 'ALL', label: 'All Staff, Students & Parents', icon: School },
   { value: 'TEACHERS', label: 'All Teachers', icon: Users },
   { value: 'STUDENTS', label: 'All Students', icon: GraduationCap },
+  { value: 'PARENTS', label: 'All Parents', icon: UserRound },
 ]
 
 const GRADE_OPTIONS = ['', 'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12']
 
 export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([])
-  const [form, setForm] = useState({ title: '', message: '', targetRole: 'ALL', targetGrade: '' })
+  const [form, setForm] = useState({ title: '', message: '', targetRole: 'ALL', targetGrade: '', priority: 'INFO' })
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -73,8 +74,8 @@ export default function MessagesPage() {
                   value={form.message} onChange={e => setForm(prev => ({ ...prev, message: e.target.value }))}
                   className={`${adminInputClass} resize-none`} rows={4} required />
               </AdminFormField>
-              <AdminFormField label="Send To" htmlFor="msg-target">
-                <div className="grid grid-cols-3 gap-2">
+          <AdminFormField label="Send To" htmlFor="msg-target">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {TARGET_OPTIONS.map(opt => (
                     <button key={opt.value} type="button"
                       onClick={() => setForm(prev => ({ ...prev, targetRole: opt.value, targetGrade: '' }))}
@@ -84,7 +85,7 @@ export default function MessagesPage() {
                   ))}
                 </div>
               </AdminFormField>
-              {(form.targetRole === 'TEACHERS' || form.targetRole === 'STUDENTS') && (
+              {(form.targetRole !== 'ALL') && (
                 <AdminFormField label="Filter by Grade (optional)" htmlFor="msg-grade">
                   <select id="msg-grade" value={form.targetGrade} onChange={e => setForm(prev => ({ ...prev, targetGrade: e.target.value }))} className={adminInputClass}>
                     <option value="">All Grades</option>
@@ -92,6 +93,18 @@ export default function MessagesPage() {
                   </select>
                 </AdminFormField>
               )}
+              <AdminFormField label="Priority Level" htmlFor="msg-priority">
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setForm(prev => ({ ...prev, priority: 'INFO' }))}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${form.priority === 'INFO' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                    Info
+                  </button>
+                  <button type="button" onClick={() => setForm(prev => ({ ...prev, priority: 'URGENT' }))}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition ${form.priority === 'URGENT' ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+                    <AlertCircle className="w-3.5 h-3.5" />Urgent
+                  </button>
+                </div>
+              </AdminFormField>
               {error && <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg"><AlertCircle className="w-4 h-4" />{error}</div>}
               {sent && <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 p-3 rounded-lg"><CheckCircle className="w-4 h-4" />Broadcast sent successfully!</div>}
               <button type="submit" disabled={sending}

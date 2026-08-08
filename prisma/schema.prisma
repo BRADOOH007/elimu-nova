@@ -1167,6 +1167,11 @@ model Meeting {
   meetingType String   @default("IN_PERSON") // IN_PERSON or VIRTUAL
   videoLink   String?  // Google Meet / Jitsi / Zoom / WebRTC room link
 
+  // Targeting — control who sees this meeting
+  targetRoles   String[] @default([]) // TEACHER, STUDENT, PARENT — empty = everyone
+  targetGrades  String[] @default([]) // e.g. ["Grade 4", "Grade 5"] — empty = all grades
+  targetUserIds String[] @default([]) // Specific user IDs to invite — empty = based on roles/grades
+
   status      MeetingStatus @default(SCHEDULED)
   attendees   Json? // Store attendee information as JSON
   createdAt   DateTime      @default(now())
