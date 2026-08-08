@@ -27,7 +27,9 @@ async function enrollStudent(
   firstName: string, lastName: string, email: string,
   phone: string | null, address: string | null, classId: string | null,
   teacher: { id: string; schoolId: string | null },
-  providedPassword?: string
+  providedPassword?: string,
+  subjects?: string[],
+  parentInfo?: { firstName: string; lastName: string; email: string; phone?: string },
 ) {
   const plainPassword = providedPassword || genPwd()
   const hashedPassword = await bcrypt.hash(plainPassword, 10)
@@ -35,12 +37,19 @@ async function enrollStudent(
   const addressWithPassword = address ? `${encryptedPassword}\n---\n${address}` : encryptedPassword
   const username = await generateUniqueUsername(firstName, lastName)
 
+  // Derive grade from class
+  let grade: string | null = null
+  if (classId) {
+    const cls = await prisma.class.findUnique({ where: { id: classId }, select: { grade: true } })
+    grade = cls?.grade || null
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: { username, firstName, lastName, email, password: hashedPassword, role: 'STUDENT', isActive: true, phone: phone || null, address: addressWithPassword }
     })
     const student = await tx.student.create({
-      data: { userId: user.id, schoolId: teacher.schoolId, teacherId: teacher.id, classId: classId || null }
+      data: { userId: user.id, schoolId: teacher.schoolId, teacherId: teacher.id, classId: classId || null, subjects: subjects?.length ? subjects : [] }
     })
     const studentWithRelations = await tx.student.findUnique({
       where: { id: student.id },
@@ -49,10 +58,40 @@ async function enrollStudent(
     return { user, student: studentWithRelations }
   })
 
+  // Handle parent linking
+  let parentCredentials: any = null
+  if (parentInfo?.email && parentInfo.firstName && parentInfo.lastName) {
+    try {
+      let parentUser = await prisma.user.findUnique({ where: { email: parentInfo.email } })
+      if (!parentUser) {
+        const parentPwd = genPwd()
+        parentUser = await prisma.user.create({
+          data: {
+            username: await generateUniqueUsername(parentInfo.firstName, parentInfo.lastName),
+            firstName: parentInfo.firstName, lastName: parentInfo.lastName,
+            email: parentInfo.email, password: await bcrypt.hash(parentPwd, 10),
+            role: 'PARENT', isActive: true,
+            phone: parentInfo.phone || null,
+          },
+        })
+        parentCredentials = { email: parentInfo.email, password: parentPwd }
+      }
+      const parent = await (prisma as any).parent.upsert({
+        where: { userId: parentUser.id },
+        update: { schoolId: teacher.schoolId },
+        create: { userId: parentUser.id, schoolId: teacher.schoolId },
+      })
+      await (prisma as any).parentStudent.create({
+        data: { parentId: parent.id, studentId: result.student!.id },
+      })
+    } catch (e) { console.warn('Parent linking failed:', e) }
+  }
+
   return NextResponse.json({
     success: true, message: 'Student enrolled successfully',
-    student: { id: result.student!.id, name: `${result.student!.user.firstName} ${result.student!.user.lastName}`, email: result.student!.user.email, grade: result.student!.class?.grade || 'Not assigned', className: result.student!.class?.name || 'No class' },
-    credentials: { username: result.user.username, email: result.user.email, password: plainPassword }
+    student: { id: result.student!.id, name: `${result.student!.user.firstName} ${result.student!.user.lastName}`, email: result.student!.user.email, grade: result.student!.class?.grade || grade || 'Not assigned', className: result.student!.class?.name || 'No class' },
+    credentials: { username: result.user.username, email: result.user.email, password: plainPassword },
+    parentCredentials,
   })
 }
 
@@ -118,8 +157,12 @@ export const POST = route({ auth: 'TEACHER', schema: CreateStudentSchema }, asyn
   const teacher = await withRetry(() => prisma.teacher.findUnique({ where: { userId: user.id } }))
   if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
-  const { firstName, lastName, email, phone, address, classId, password } = body!
+  const { firstName, lastName, email, phone, address, classId, password, subjects, parentFirstName, parentLastName, parentEmail, parentPhone } = body!
   const loginEmail = email?.trim() ? email.trim().toLowerCase() : generateStudentEmail(firstName, lastName)
+
+  const parentInfo = (parentFirstName || parentLastName || parentEmail)
+    ? { firstName: parentFirstName || '', lastName: parentLastName || '', email: parentEmail || '', phone: parentPhone }
+    : undefined
 
   const existingUser = await prisma.user.findUnique({ where: { email: loginEmail } })
   if (existingUser) {
@@ -133,10 +176,10 @@ export const POST = route({ auth: 'TEACHER', schema: CreateStudentSchema }, asyn
         suffix++
       } while (existingWithSuffix && suffix < 1000)
       if (existingWithSuffix) return NextResponse.json({ error: 'A student with this name already exists. Please provide an email to differentiate.' }, { status: 400 })
-      return enrollStudent(firstName, lastName, emailWithSuffix, phone || null, address || null, classId || null, teacher, password)
+      return enrollStudent(firstName, lastName, emailWithSuffix, phone || null, address || null, classId || null, teacher, password, subjects, parentInfo)
     }
     return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 })
   }
 
-  return enrollStudent(firstName, lastName, loginEmail, phone || null, address || null, classId || null, teacher, password)
+  return enrollStudent(firstName, lastName, loginEmail, phone || null, address || null, classId || null, teacher, password, subjects, parentInfo)
 })
