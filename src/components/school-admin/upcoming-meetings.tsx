@@ -1,7 +1,8 @@
 "use client"
 
-import { Calendar, Clock, MapPin, Video, ExternalLink, Eye } from "lucide-react"
+import { Calendar, Clock, MapPin, Video, ExternalLink, Eye, Plus } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 interface Meeting {
@@ -30,11 +31,14 @@ export default function UpcomingMeetings({ meetings }: UpcomingMeetingsProps) {
       </CardHeader>
       <CardContent>
         {meetings.length === 0 ? (
-          <div className="text-center py-8">
-            <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-            <p className="text-sm text-slate-500">No upcoming meetings</p>
-            <p className="text-xs text-slate-400 mt-0.5">Schedule a meeting to see it here</p>
-          </div>
+            <div className="text-center py-8">
+              <Calendar className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+              <p className="text-sm text-slate-500">No upcoming meetings</p>
+              <p className="text-xs text-slate-400 mt-0.5">Schedule a meeting to see it here</p>
+              <Button variant="outline" size="sm" className="mt-3 text-xs gap-1.5" asChild>
+                <Link href="/school-admin/meetings"><Plus className="w-3.5 h-3.5" />Schedule Meeting</Link>
+              </Button>
+            </div>
         ) : (
           <ul className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
             {meetings.slice(0, 5).map((m) => {
