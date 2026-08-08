@@ -2201,3 +2201,17 @@ model PracticeAttempt {
   @@index([userId, createdAt])
   @@map("practice_attempts")
 }
+
+model CurriculumIngestionLog {
+  id           String   @id @default(cuid())
+  url          String   @unique
+  title        String
+  grade        String?
+  subject      String?
+  status       String   @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  errorMessage String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@map("curriculum_ingestion_logs")
+}
