@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, UserPlus, Mail } from "lucide-react"
+import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock } from "lucide-react"
 import Link from "next/link"
 import ParentGreeting from "@/components/parent/greeting"
 import { ParentStatCard } from "@/components/parent/stats-cards"
@@ -13,6 +13,7 @@ import SkillComparison from "@/components/parent/skill-comparison"
 import ParentAIInsightsPanel from "@/components/parent/ai-insights-panel"
 import EnrollChildModal from "@/components/parent/enroll-child-modal"
 import PaymentModal from "@/components/billing/PaymentModal"
+import { useSubscription } from "@/hooks/use-subscription"
 
 interface SkillSummary {
   skillName: string; skillCategory: string; masteryScore: number; timesCorrect: number; timesTested: number
@@ -41,6 +42,7 @@ function gradeColor(g: number | null) {
 
 export default function ParentDashboard() {
   const { data: session } = useSession()
+  const { subscription, loading: subLoading } = useSubscription()
   const [children, setChildren] = useState<Child[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
@@ -110,11 +112,23 @@ export default function ParentDashboard() {
       <div className="flex items-start justify-between">
         <ParentGreeting displayName={displayName} />
         <div className="flex items-center gap-2">
-          <Link href="/parent/billing">
-            <div className="px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center gap-1.5">
-              <span>{fmt(0)}</span> · {currency === "KES" ? "KES" : "USD"}
+          {subscription && !subLoading && (
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm ${
+              subscription.isExpired ? 'bg-red-50 text-red-700 border-red-200' :
+              subscription.isTrial ? 'bg-amber-50 text-amber-700 border-amber-200' :
+              'bg-emerald-50 text-emerald-700 border-emerald-200'
+            }`}>
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{subscription.packageName || subscription.status || 'Freemium Plan'}</span>
+              {subscription.daysRemaining > 0 ? (
+                <span className="flex items-center gap-1"><CalendarClock className="w-3 h-3" />{subscription.daysRemaining} days left</span>
+              ) : subscription.isExpired ? (
+                <span>Expired</span>
+              ) : (
+                <span>Active</span>
+              )}
             </div>
-          </Link>
+          )}
           <button onClick={() => setShowEnrollChild(true)}
             className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm flex items-center gap-1.5">
             <Plus className="w-4 h-4" /> Add Child
@@ -164,7 +178,11 @@ export default function ParentDashboard() {
               <div>
                 <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">Billing & Subscription</h3>
                 <p className="text-2xl font-bold text-slate-900">{fmt(0)}</p>
-                <p className="text-xs text-slate-500 mt-1">14-day free trial · {currency === "KES" ? "KES" : "USD"} billing</p>
+                {subscription ? (
+                  <p className="text-xs text-slate-500 mt-1">{subscription.isTrial ? `${subscription.daysRemaining}-day free trial` : subscription.isActive ? 'Active subscription' : 'Subscription needed'} · {currency === "KES" ? "KES" : "USD"} billing</p>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">14-day free trial · {currency === "KES" ? "KES" : "USD"} billing</p>
+                )}
               </div>
               <button onClick={() => setShowPayment(true)}
                 className="mt-4 w-full rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition">
