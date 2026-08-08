@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody } from "@/components/ui/dialog"
 import {
   Bell,
   X,
@@ -226,134 +227,62 @@ export function NotificationsModal({ isOpen, onClose, userId, role, onUnreadChan
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden border-0">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl bg-white border-0 shadow-2xl p-0">
+        <DialogHeader className="border-b border-gray-100 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
               <Bell className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <DialogTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Notifications & Messages
-              </h2>
+              </DialogTitle>
               {unreadCount > 0 && (
-                <Badge variant="destructive" className="mt-1">
-                  {unreadCount} unread
-                </Badge>
+                <DialogDescription className="mt-1">
+                  <Badge variant="destructive">
+                    {unreadCount} unread
+                  </Badge>
+                </DialogDescription>
               )}
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-white/50">
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+        </DialogHeader>
 
-        {/* Filters */}
-        <div className="p-4 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white">
-          <div className="flex items-center space-x-4">
-            <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('all')}
-              className={filter === 'all' ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-md' : 'bg-white border-gray-200'}
-            >
-              All ({activities.length})
-            </Button>
-            <Button
-              variant={filter === 'unread' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('unread')}
-              className={filter === 'unread' ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-md' : 'bg-white border-gray-200'}
-            >
-              Unread ({unreadCount})
-            </Button>
-            {unreadCount > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={markAllAsRead}
-                className="ml-auto bg-white border-gray-200 hover:bg-gray-50"
-              >
-                <CheckCheck className="w-4 h-4 mr-2" />
-                Mark All Read
-              </Button>
-            )}
+        <DialogBody className="mt-0 p-0">
+          <div className="p-4 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white">
+            <div className="flex items-center space-x-4">
+              <Button variant={filter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('all')} className={filter === 'all' ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-md' : 'bg-white border-gray-200'}>All ({activities.length})</Button>
+              <Button variant={filter === 'unread' ? 'default' : 'outline'} size="sm" onClick={() => setFilter('unread')} className={filter === 'unread' ? 'bg-gradient-to-r from-blue-600 to-purple-600 shadow-md' : 'bg-white border-gray-200'}>Unread ({unreadCount})</Button>
+              {unreadCount > 0 && <Button variant="outline" size="sm" onClick={markAllAsRead} className="ml-auto bg-white border-gray-200 hover:bg-gray-50"><CheckCheck className="w-4 h-4 mr-2" />Mark All Read</Button>}
+            </div>
           </div>
-        </div>
 
-        {/* Activity List */}
-        <div className="overflow-y-auto max-h-[50vh]">
           {loading ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="mt-4 text-gray-600 font-medium">Loading activity...</p>
-            </div>
+            <div className="p-12 text-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto" /><p className="mt-4 text-gray-600 font-medium">Loading activity...</p></div>
           ) : filteredActivities.length === 0 ? (
-            <div className="p-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto mb-4">
-                <Bell className="w-8 h-8 text-gray-400" />
-              </div>
-              <p className="text-gray-600 font-medium">No activity found</p>
-              <p className="text-sm text-gray-400 mt-1">You&apos;re all caught up!</p>
-            </div>
+            <div className="p-12 text-center"><div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto mb-4"><Bell className="w-8 h-8 text-gray-400" /></div><p className="text-gray-600 font-medium">No activity found</p><p className="text-sm text-gray-400 mt-1">You're all caught up!</p></div>
           ) : (
             <div className="divide-y divide-gray-100">
               {filteredActivities.map((item) => (
-                <div
-                  key={`${item.type}-${item.id}`}
-                  className={`p-5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 ${
-                    !item.isRead ? 'bg-gradient-to-r from-blue-50/50 to-purple-50/50 border-l-4 border-blue-500' : ''
-                  }`}
-                >
+                <div key={`${item.type}-${item.id}`} className={`p-5 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 transition-all duration-200 ${!item.isRead ? 'bg-gradient-to-r from-blue-50/50 to-purple-50/50 border-l-4 border-blue-500' : ''}`}>
                   <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {getItemIcon(item)}
-                    </div>
+                    <div className="flex-shrink-0 mt-1">{getItemIcon(item)}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <h3 className={`text-sm font-medium ${
-                            !item.isRead ? 'text-gray-900' : 'text-gray-700'
-                          }`}>
-                            {item.title}
-                          </h3>
+                          <h3 className={`text-sm font-medium ${!item.isRead ? 'text-gray-900' : 'text-gray-700'}`}>{item.title}</h3>
                           {getTypeBadge(item)}
-                          {!item.isRead && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          )}
+                          {!item.isRead && <div className="w-2 h-2 bg-blue-500 rounded-full" />}
                         </div>
                         <div className="flex items-center space-x-2">
-                          <span className="text-xs text-gray-500">
-                            {new Date(item.timestamp).toLocaleDateString()}
-                          </span>
-                          {item.type === 'notification' && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteNotification(item)}
-                              className="text-gray-400 hover:text-red-500"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          )}
+                          <span className="text-xs text-gray-500">{new Date(item.timestamp).toLocaleDateString()}</span>
+                          {item.senderName && <span className="text-xs text-gray-400">from {item.senderName}</span>}
                         </div>
                       </div>
-                      {item.senderName && (
-                        <p className="text-xs text-purple-600 mt-1 font-medium">From: {item.senderName}</p>
-                      )}
                       <p className="text-sm text-gray-600 mt-1 line-clamp-2">{item.description}</p>
                       {!item.isRead && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => markAsRead(item)}
-                          className="mt-3 bg-white border-gray-200 hover:bg-gray-50"
-                        >
-                          <Check className="w-4 h-4 mr-2" />
-                          Mark as Read
-                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => markAsRead(item)} className="mt-3 bg-white border-gray-200 hover:bg-gray-50"><Check className="w-4 h-4 mr-2" />Mark as Read</Button>
                       )}
                     </div>
                   </div>
@@ -361,8 +290,8 @@ export function NotificationsModal({ isOpen, onClose, userId, role, onUnreadChan
               ))}
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   )
 }
