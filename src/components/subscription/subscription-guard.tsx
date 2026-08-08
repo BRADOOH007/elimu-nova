@@ -4,6 +4,7 @@ import { useSubscription } from '@/hooks/use-subscription'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import CustomLoader from '@/components/ui/custom-loader'
 import {
   Crown,
   Clock,
@@ -29,12 +30,7 @@ export function SubscriptionGuard({
   const { subscription, loading, hasAccess, error } = useSubscription()
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">Loading subscription status...</span>
-      </div>
-    )
+    return <CustomLoader text="Loading subscription status..." />
   }
 
   // If subscription check failed (error), allow access rather than blocking
