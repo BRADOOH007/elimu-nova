@@ -381,9 +381,9 @@ export default function PeoplePage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">
-              <span className="edugenius-text-gradient">People Management</span>
+              <span className="edugenius-text-gradient">Staff Management</span>
             </h1>
-            <p className="text-gray-600">Manage teachers and students in your school</p>
+            <p className="text-gray-600">Manage teachers and staff assignments in your school</p>
           </div>
         </div>
       </div>
