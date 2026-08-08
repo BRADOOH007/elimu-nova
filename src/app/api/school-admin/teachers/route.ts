@@ -1,8 +1,20 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import { route } from '@/lib/api-middleware'
 import { generateUsername } from '@/lib/bulk-import'
+import { emailService } from '@/lib/email-service'
+
+function generateSecurePassword(length = 12): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%&*'
+  let password = ''
+  const bytes = crypto.randomBytes(length)
+  for (let i = 0; i < length; i++) {
+    password += chars[bytes[i] % chars.length]
+  }
+  return password
+}
 
 async function generateUniqueUsername(firstName: string, lastName: string): Promise<string> {
   let username = generateUsername(firstName, lastName)
@@ -100,10 +112,15 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
           },
           classes: {
             select: {
+              id: true,
               name: true,
-              subject: true
-            }
-          }
+              subject: true,
+              grade: true,
+            },
+          },
+          teacherSubjectAssignments: {
+            select: { id: true, classId: true, subject: true },
+          },
         }
       }),
       prisma.teacher.count({ where })
@@ -119,7 +136,13 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
       joinDate: teacher.user.createdAt.toISOString().split('T')[0],
       phone: teacher.user.phone,
       address: teacher.user.address,
-      subjects: teacher.classes.map(cls => cls.subject).filter(Boolean)
+      subjects: teacher.classes.map(cls => cls.subject).filter(Boolean),
+      gradeLevels: teacher.gradeLevels,
+      teachingSubjects: teacher.subjects,
+      departmentHod: teacher.departmentHod || null,
+      subjectAssignments: teacher.teacherSubjectAssignments?.map(a => ({
+        id: a.id, classId: a.classId, subject: a.subject,
+      })) || [],
     }))
 
     return NextResponse.json({
@@ -145,11 +168,36 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
 
     const schoolId = schoolAdmin.schoolId
     const body = await req.json()
-    const { firstName, lastName, email, password } = body
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      sendInviteEmail,
+      gradeLevels,
+      subjects,
+      departmentHod,
+      subjectAssignments,
+    } = body
 
-    if (!firstName || !lastName || !email || !password) {
+    if (!firstName || !lastName || !email) {
       return NextResponse.json(
         { error: 'All fields are required' },
+        { status: 400 }
+      )
+    }
+
+    // When sending an invitation email we auto-generate a secure password;
+    // otherwise the admin-provided (or client-generated) password is used.
+    const inviteRequested = sendInviteEmail === true
+    const resolvedPassword = inviteRequested
+      ? generateSecurePassword()
+      : password
+
+    if (!resolvedPassword) {
+      return NextResponse.json(
+        { error: 'A password is required unless sending an invitation email' },
         { status: 400 }
       )
     }
@@ -167,7 +215,7 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
+    const hashedPassword = await bcrypt.hash(resolvedPassword, 12)
 
     // Generate username
     const username = await generateUniqueUsername(firstName, lastName)
@@ -179,6 +227,7 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
         firstName,
         lastName,
         email,
+        phone: phone || null,
         password: hashedPassword,
         role: 'TEACHER',
         isActive: true
@@ -189,7 +238,10 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
     const teacher = await prisma.teacher.create({
       data: {
         userId: newUser.id,
-        schoolId: schoolId
+        schoolId: schoolId,
+        gradeLevels: Array.isArray(gradeLevels) ? gradeLevels : [],
+        subjects: Array.isArray(subjects) ? subjects : [],
+        departmentHod: departmentHod || null,
       },
       include: {
         user: {
@@ -197,6 +249,7 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
             firstName: true,
             lastName: true,
             email: true,
+            phone: true,
             createdAt: true,
             isActive: true
           }
@@ -204,16 +257,46 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
       }
     })
 
+    // Create multi-subject class assignments if provided
+    const assignmentRows: Array<{ classId: string; subject: string }> = Array.isArray(subjectAssignments) ? subjectAssignments : []
+    for (const row of assignmentRows) {
+      if (row.classId && row.subject) {
+        await (prisma as any).teacherSubjectAssignment.create({
+          data: { teacherId: teacher.id, classId: row.classId, subject: row.subject },
+        })
+      }
+    }
+
+    // Send invitation email with setup details when requested.
+    let inviteSent = false
+    if (inviteRequested) {
+      inviteSent = await emailService.sendCredentialsEmail(
+        email,
+        firstName,
+        username,
+        resolvedPassword
+      )
+    }
+
     return NextResponse.json({
-      message: 'Teacher enrolled successfully',
+      message: inviteRequested
+        ? inviteSent
+          ? 'Teacher enrolled successfully. Invitation email sent.'
+          : 'Teacher enrolled successfully. Could not send email (SMTP not configured).'
+        : 'Teacher enrolled successfully',
       teacher: {
         id: teacher.id,
         name: `${teacher.user.firstName} ${teacher.user.lastName}`,
         email: teacher.user.email,
+        phone: teacher.user.phone,
         username: newUser.username,
-        password,
+        password: inviteRequested ? null : resolvedPassword,
         status: teacher.user.isActive ? 'Active' : 'Inactive',
-        joinDate: teacher.user.createdAt.toISOString().split('T')[0]
-      }
+        joinDate: teacher.user.createdAt.toISOString().split('T')[0],
+        gradeLevels: teacher.gradeLevels,
+        subjects: teacher.subjects,
+        departmentHod: teacher.departmentHod || null,
+      },
+      inviteSent,
     })
 })

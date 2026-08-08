@@ -11,15 +11,22 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   const { searchParams } = new URL(req.url)
   const pg = parsePagination(searchParams)
 
+  const classWhere: any = {
+    OR: [
+      { teacherId: teacher.id },
+      { teacherSubjectAssignments: { some: { teacherId: teacher.id } } },
+    ],
+  }
+
   const [classes, total] = await Promise.all([
     prisma.class.findMany({
-      where: { teacherId: teacher.id },
+      where: classWhere,
       include: { _count: { select: { students: true } } },
       orderBy: { createdAt: 'desc' },
       skip: (pg.page - 1) * pg.pageSize,
       take: pg.pageSize,
     }),
-    prisma.class.count({ where: { teacherId: teacher.id } }),
+    prisma.class.count({ where: classWhere }),
   ])
 
   const result = paginate(

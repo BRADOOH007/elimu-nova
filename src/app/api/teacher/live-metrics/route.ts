@@ -31,7 +31,13 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
       activeStudents30d,
     ] = await Promise.all([
       prisma.student.count({
-        where: { class: { teacherId: teacher.id } }
+        where: {
+          OR: [
+            { teacherId: teacher.id },
+            { class: { teacherId: teacher.id } },
+            { class: { teacherSubjectAssignments: { some: { teacherId: teacher.id } } } },
+          ],
+        }
       }),
       prisma.submission.count({
         where: {
@@ -61,7 +67,11 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
       }),
       prisma.student.count({
         where: {
-          class: { teacherId: teacher.id },
+          OR: [
+            { teacherId: teacher.id },
+            { class: { teacherId: teacher.id } },
+            { class: { teacherSubjectAssignments: { some: { teacherId: teacher.id } } } },
+          ],
           submissions: {
             some: {
               submittedAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) }
