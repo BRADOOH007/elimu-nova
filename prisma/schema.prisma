@@ -251,9 +251,38 @@ model Teacher {
   // Document Library for curriculum intelligence
   documentLibrary DocumentLibrary[]
 
+  // CBC teaching assignment fields
+  gradeLevels String[] @default([])
+  subjects    String[] @default([])
+
+  // Department / HOD assignment
+  departmentHod String?
+
+  // Multi-subject teaching assignments (junction table)
+  teacherSubjectAssignments TeacherSubjectAssignment[]
+
   deletedAt DateTime?
 
   @@map("teachers")
+}
+
+// ── TeacherSubjectAssignment ────────────────────────────────────
+// Junction table linking Teacher → Class → Subject.
+// A teacher can teach Math in Grade 4 & 5, Science only in Grade 6.
+// The teacher's dashboard filters students through this mapping:
+//   TeacherSubjectAssignment → Class → Students
+
+model TeacherSubjectAssignment {
+  id        String  @id @default(cuid())
+  teacherId String
+  classId   String
+  subject   String  // e.g. "Mathematics", "Integrated Science"
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, classId, subject])
+  @@map("teacher_subject_assignments")
 }
 
 // ── Class ────────────────────────────────────────────────────────
@@ -279,6 +308,7 @@ model Class {
   assignments     Assignment[]
   sharedAIContent SharedAIContentWithClass[]
   schedules       Schedule[]
+  teacherSubjectAssignments TeacherSubjectAssignment[]
 
   // AI Generated Images
   generatedImages AIGeneratedImage[]

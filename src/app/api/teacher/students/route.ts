@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma, withRetry } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 import { encryptPassword, stripPasswordFromAddress } from '@/lib/password-encryption'
 import { route } from '@/lib/api-middleware'
@@ -64,7 +65,16 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
   const classId = searchParams.get('classId')
   const search = searchParams.get('search')?.trim()
 
-  const where: any = { teacherId: teacher.id, deletedAt: null }
+  const where: Prisma.StudentWhereInput = {
+    deletedAt: null,
+    // Match students directly linked to this teacher OR students in a class
+    // that this teacher teaches (covers legacy rows with null teacherId).
+    OR: [
+      { teacherId: teacher.id },
+      { class: { teacherId: teacher.id } },
+      { class: { teacherSubjectAssignments: { some: { teacherId: teacher.id } } } },
+    ],
+  }
   if (classId) where.classId = classId
   if (search) {
     where.user = {
@@ -116,7 +126,7 @@ export const POST = route({ auth: 'TEACHER', schema: CreateStudentSchema }, asyn
     if (!email?.trim()) {
       let suffix = 1
       let emailWithSuffix: string
-      let existingWithSuffix: any
+      let existingWithSuffix: { id: string } | null
       do {
         emailWithSuffix = generateStudentEmail(firstName, lastName, String(suffix))
         existingWithSuffix = await prisma.user.findUnique({ where: { email: emailWithSuffix } })

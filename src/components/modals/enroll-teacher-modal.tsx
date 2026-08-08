@@ -1,31 +1,21 @@
 "use client"
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { cn } from "@/lib/utils"
 import {
-  AdminModal,
-  AdminModalFooter,
-  AdminFormField,
-  adminInputClass,
+  AdminModal, AdminModalFooter, AdminFormField, adminInputClass,
 } from "@/components/ui/admin-modal"
 import {
   UserPlus, Eye, EyeOff, CheckCircle, Copy, KeyRound,
   Sparkles, GraduationCap, BookOpen, RefreshCw, Check, Mail,
+  Plus, Trash2, Building2, ClipboardList,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface Credentials {
-  username: string
-  password: string | null
-  email: string
-  name: string
+  username: string; password: string | null; email: string; name: string
 }
-
-interface EnrollTeacherModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onSuccess: () => void
-}
+interface EnrollTeacherModalProps { isOpen: boolean; onClose: () => void; onSuccess: () => void }
 
 const GRADE_BANDS: Array<{ label: string; grades: string[] }> = [
   { label: 'Pre-Primary',   grades: ['PP1', 'PP2'] },
@@ -33,6 +23,15 @@ const GRADE_BANDS: Array<{ label: string; grades: string[] }> = [
   { label: 'Upper Primary', grades: ['Grade 4', 'Grade 5', 'Grade 6'] },
   { label: 'Junior School', grades: ['Grade 7', 'Grade 8', 'Grade 9'] },
   { label: 'Senior School', grades: ['Grade 10', 'Grade 11', 'Grade 12', 'Form 1', 'Form 2', 'Form 3', 'Form 4'] },
+]
+
+const HOD_OPTIONS = [
+  { value: '', label: 'None (Classroom Teacher)' },
+  { value: 'MATHEMATICS', label: 'Mathematics & Logic' },
+  { value: 'LANGUAGES', label: 'Languages (English / Kiswahili)' },
+  { value: 'SCIENCE_STEM', label: 'Science & STEM' },
+  { value: 'HUMANITIES', label: 'Humanities & Social Studies' },
+  { value: 'CREATIVE_ARTS', label: 'Creative & Performing Arts' },
 ]
 
 const SUBJECT_OPTIONS = [
@@ -94,6 +93,8 @@ interface Draft {
   selectedGrades: string[]
   manualSubjects: string[]
   removedAutoSubjects: string[]
+  departmentHod: string
+  subjectAssignments: Array<{ classId: string; subject: string }>
 }
 
 function loadDraft(): Draft | null {
@@ -102,8 +103,7 @@ function loadDraft(): Draft | null {
     const raw = localStorage.getItem(DRAFT_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as Draft
-    if (!parsed?.formData) return null
-    return parsed
+    return parsed?.formData ? parsed : null
   } catch { return null }
 }
 function saveDraft(draft: Draft) { if (typeof window !== 'undefined') try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)) } catch {} }
@@ -112,8 +112,7 @@ function clearDraft() { if (typeof window !== 'undefined') try { localStorage.re
 function previewUsername(first: string, last: string): string {
   const f = first.trim().toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
   const l = last.trim().toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
-  if (f && l) return `${f}.${l}`
-  return f || l
+  return f && l ? `${f}.${l}` : f || l
 }
 function generatePassword(): string {
   const adjs = ['Blue','Green','Happy','Brave','Swift','Bright','Calm','Bold','Clever','Golden']
@@ -142,13 +141,27 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
   const [selectedGrades, setSelectedGrades] = useState<string[]>(draft?.selectedGrades || [])
   const [manualSubjects, setManualSubjects] = useState<string[]>(draft?.manualSubjects || [])
   const [removedAutoSubjects, setRemovedAutoSubjects] = useState<string[]>(draft?.removedAutoSubjects || [])
+  const [departmentHod, setDepartmentHod] = useState(draft?.departmentHod || '')
+  const [subjectAssignments, setSubjectAssignments] = useState<Array<{ classId: string; subject: string }>>(
+    draft?.subjectAssignments || [{ classId: '', subject: '' }]
+  )
+  const [availableClasses, setAvailableClasses] = useState<Array<{ id: string; name: string; grade: string }>>([])
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [credentials, setCredentials] = useState<Credentials | null>(null)
   const { toast } = useToast()
 
   useEffect(() => { if (isOpen && !generatedPassword) setGeneratedPassword(generatePassword()) }, [isOpen])
-  useEffect(() => { if (isOpen && !credentials) saveDraft({ formData, generatedPassword, selectedGrades, manualSubjects, removedAutoSubjects }) }, [formData, generatedPassword, selectedGrades, manualSubjects, removedAutoSubjects, isOpen, credentials])
+  useEffect(() => {
+    if (isOpen && !credentials) saveDraft({ formData, generatedPassword, selectedGrades, manualSubjects, removedAutoSubjects, departmentHod, subjectAssignments })
+  }, [formData, generatedPassword, selectedGrades, manualSubjects, removedAutoSubjects, departmentHod, subjectAssignments, isOpen, credentials])
+
+  useEffect(() => {
+    if (!isOpen) return
+    fetch('/api/school-admin/classes?limit=200').then(r => r.json().catch(() => ({ classes: [] }))).then(d => {
+      setAvailableClasses(d.classes || [])
+    }).catch(() => {})
+  }, [isOpen])
 
   const previewUser = useMemo(() => previewUsername(formData.firstName, formData.lastName), [formData.firstName, formData.lastName])
 
@@ -181,12 +194,33 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
   const clearSubjects = () => { setManualSubjects([]); setRemovedAutoSubjects([...autoAssignedSubjects]) }
   const copyPassword = () => { if (generatedPassword) { navigator.clipboard.writeText(generatedPassword); toast({ title: "Copied", description: "Password copied to clipboard" }) } }
 
+  const addAssignmentRow = () => setSubjectAssignments(prev => [...prev, { classId: '', subject: '' }])
+  const removeAssignmentRow = (index: number) => setSubjectAssignments(prev => prev.filter((_, i) => i !== index))
+  const updateAssignmentRow = (index: number, field: 'classId' | 'subject', value: string) => {
+    setSubjectAssignments(prev => prev.map((row, i) => i === index ? { ...row, [field]: value } : row))
+  }
+
+  const getSubjectsForClass = useCallback((classId: string): string[] => {
+    const cls = availableClasses.find(c => c.id === classId)
+    if (!cls) return ALL_SUBJECTS
+    return GRADE_SUBJECT_MAP[cls.grade] || ALL_SUBJECTS
+  }, [availableClasses])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.firstName || !formData.lastName || !formData.email) { toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" }); return }
     setIsLoading(true)
     try {
-      const res = await fetch('/api/school-admin/teachers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ firstName: formData.firstName, lastName: formData.lastName, email: formData.email, phone: formData.phone, password: generatedPassword, gradeLevels: selectedGrades, subjects: effectiveSubjects }) })
+      const res = await fetch('/api/school-admin/teachers', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName, lastName: formData.lastName, email: formData.email,
+          phone: formData.phone, password: generatedPassword,
+          gradeLevels: selectedGrades, subjects: effectiveSubjects,
+          departmentHod: departmentHod || undefined,
+          subjectAssignments: subjectAssignments.filter(r => r.classId && r.subject),
+        })
+      })
       if (res.ok) { const data = JSON.parse(await res.text()); clearDraft(); setCredentials({ username: data.teacher?.username || previewUser, password: data.teacher?.password || generatedPassword, email: formData.email, name: `${formData.firstName} ${formData.lastName}` }); onSuccess() }
       else { const t = await res.text(); let msg = "Failed to enroll teacher"; try { msg = JSON.parse(t).error || msg } catch {}; toast({ title: "Error", description: msg, variant: "destructive" }) }
     } catch { toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" }) }
@@ -194,13 +228,13 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
   }
 
   const handleClose = () => { setCredentials(null); setShowPassword(false); onClose() }
-  const handleDone = () => { setFormData({ firstName: '', lastName: '', email: '', phone: '' }); setGeneratedPassword(''); setSelectedGrades([]); setManualSubjects([]); setRemovedAutoSubjects([]); setCredentials(null); setShowPassword(false); onClose() }
+  const handleDone = () => { setFormData({ firstName: '', lastName: '', email: '', phone: '' }); setGeneratedPassword(''); setSelectedGrades([]); setManualSubjects([]); setRemovedAutoSubjects([]); setDepartmentHod(''); setSubjectAssignments([{ classId: '', subject: '' }]); setCredentials(null); setShowPassword(false); onClose() }
   const copyCredentials = () => { if (credentials) { navigator.clipboard.writeText(`Name: ${credentials.name}\nEmail: ${credentials.email}\nUsername: ${credentials.username}\nPassword: ${credentials.password}`); toast({ title: "Copied", description: "Credentials copied to clipboard" }) } }
 
   return (
     <AdminModal open={isOpen} onClose={handleClose} title="Enroll New Teacher"
       subtitle="Add a new teacher to your school roster and assign their teaching areas."
-      icon={<UserPlus />} size="xl"
+      icon={<UserPlus />} size="2xl"
       footer={credentials ? (
         <div className="flex gap-2 w-full justify-end">
           <button onClick={copyCredentials} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5"><Copy className="h-4 w-4" />Copy All</button>
@@ -212,11 +246,7 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
     >
       {credentials ? (
         <div className="space-y-4">
-          <div className="text-center">
-            <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-2" />
-            <h3 className="text-lg font-bold text-slate-900">Teacher Enrolled</h3>
-            <p className="text-sm text-slate-500 mt-1">Share these credentials with the teacher securely.</p>
-          </div>
+          <div className="text-center"><CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-2" /><h3 className="text-lg font-bold text-slate-900">Teacher Enrolled</h3><p className="text-sm text-slate-500 mt-1">Share these credentials with the teacher securely.</p></div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
             <div><p className="text-xs text-slate-500">Name</p><p className="font-semibold">{credentials.name}</p></div>
             <div><p className="text-xs text-slate-500">Email</p><p className="font-semibold">{credentials.email}</p></div>
@@ -230,54 +260,52 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
         <form id="enroll-teacher-form" onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <AdminFormField label="First Name" htmlFor="et-first" required>
-              <input id="et-first" type="text" autoComplete="off" placeholder="Enter first name"
-                value={formData.firstName} onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                className={adminInputClass} required />
+              <input id="et-first" type="text" autoComplete="off" placeholder="Enter first name" value={formData.firstName} onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))} className={adminInputClass} required />
             </AdminFormField>
             <AdminFormField label="Last Name" htmlFor="et-last" required>
-              <input id="et-last" type="text" autoComplete="off" placeholder="Enter last name"
-                value={formData.lastName} onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                className={adminInputClass} required />
+              <input id="et-last" type="text" autoComplete="off" placeholder="Enter last name" value={formData.lastName} onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))} className={adminInputClass} required />
             </AdminFormField>
           </div>
           {(formData.firstName || formData.lastName) && (
             <div className="bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 rounded-xl p-3 space-y-1.5">
               <p className="text-xs font-semibold text-indigo-700 flex items-center gap-1"><Sparkles className="w-3 h-3" /> Auto-generated Credentials</p>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-500 w-20 shrink-0">Username:</span>
-                <code className="font-mono bg-white px-2 py-0.5 rounded text-slate-800">{previewUser || '\u2026'}</code>
-              </div>
+              <div className="flex items-center gap-2 text-xs"><span className="text-slate-500 w-20 shrink-0">Username:</span><code className="font-mono bg-white px-2 py-0.5 rounded text-slate-800">{previewUser || '\u2026'}</code></div>
               <div className="flex items-center gap-2 text-xs">
                 <span className="text-slate-500 w-20 shrink-0">Password:</span>
                 <code className="font-mono bg-white px-2 py-0.5 rounded text-slate-800">{showPassword ? generatedPassword : '\u2022'.repeat(generatedPassword.length)}</code>
                 <button type="button" onClick={() => setShowPassword(v => !v)} className="text-slate-400 hover:text-slate-600">{showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}</button>
-                <button type="button" onClick={copyPassword} className="text-slate-400 hover:text-slate-600" title="Copy"><Copy className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={copyPassword} className="text-slate-400 hover:text-slate-600"><Copy className="h-3.5 w-3.5" /></button>
                 <button type="button" onClick={() => setGeneratedPassword(generatePassword())} className="text-slate-400 hover:text-indigo-600 ml-auto inline-flex items-center gap-1"><RefreshCw className="h-3 w-3" /> Regenerate</button>
               </div>
             </div>
           )}
           <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-indigo-500" /><span className="text-sm font-medium text-slate-700">Contact Information</span></div>
           <AdminFormField label="Email Address" htmlFor="et-email" required>
-            <input id="et-email" type="email" autoComplete="off" placeholder="Enter email address"
-              value={formData.email} onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-              className={adminInputClass} required />
+            <input id="et-email" type="email" autoComplete="off" placeholder="Enter email address" value={formData.email} onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))} className={adminInputClass} required />
           </AdminFormField>
           <AdminFormField label="Phone Number" htmlFor="et-phone">
-            <input id="et-phone" type="tel" autoComplete="off" placeholder="Enter phone number"
-              value={formData.phone} onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              className={adminInputClass} />
+            <input id="et-phone" type="tel" autoComplete="off" placeholder="Enter phone number" value={formData.phone} onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))} className={adminInputClass} />
           </AdminFormField>
+
+          {/* HOD Assignment */}
+          <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-indigo-500" /><span className="text-sm font-medium text-slate-700">Department Leadership</span></div>
+          <AdminFormField label="Head of Department (Optional)" htmlFor="et-hod">
+            <select id="et-hod" value={departmentHod} onChange={e => setDepartmentHod(e.target.value)} className={adminInputClass}>
+              {HOD_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            </select>
+          </AdminFormField>
+
+          {/* Grade Levels */}
           <div className="space-y-3">
             <div className="flex items-center gap-2"><GraduationCap className="h-4 w-4 text-indigo-500" /><span className="text-sm font-medium text-slate-700">Grade Levels</span></div>
             <div className="space-y-3">
               {GRADE_BANDS.map(band => (
-                <div key={band.label}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{band.label}</p>
-                  <div className="flex flex-wrap gap-2">{band.grades.map(g => <Pill key={g} active={selectedGrades.includes(g)} onClick={() => toggleGrade(g)}>{g}</Pill>)}</div>
-                </div>
+                <div key={band.label}><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{band.label}</p><div className="flex flex-wrap gap-2">{band.grades.map(g => <Pill key={g} active={selectedGrades.includes(g)} onClick={() => toggleGrade(g)}>{g}</Pill>)}</div></div>
               ))}
             </div>
           </div>
+
+          {/* Learning Areas / Subjects */}
           <div className="space-y-3">
             <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-indigo-500" /><span className="text-sm font-medium text-slate-700">Learning Areas / Subjects</span></div>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -286,17 +314,37 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
               <button type="button" onClick={clearSubjects} className="text-[11px] font-medium text-rose-500 bg-rose-50 border border-rose-100 hover:bg-rose-100 rounded-full px-2.5 py-1 transition-colors">Clear</button>
               <span className="ml-auto text-[11px] text-slate-400">{effectiveSubjects.length} selected</span>
             </div>
-            {selectedGrades.length > 0 && <p className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">Core subjects for the selected grades are pre-selected. Tap any pill to adjust.</p>}
-            {autoAssignedSubjects.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Core</p>
-                <div className="flex flex-wrap gap-2">{autoAssignedSubjects.map(s => <Pill key={s} active={effectiveSubjects.includes(s)} onClick={() => toggleSubject(s)} badge="Core">{s}</Pill>)}</div>
-              </div>)}
-            {optionalSubjects.length > 0 && (
-              <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Optional</p>
-                <div className="flex flex-wrap gap-2">{optionalSubjects.map(s => <Pill key={s} active={effectiveSubjects.includes(s)} onClick={() => toggleSubject(s)}>{s}</Pill>)}</div>
-              </div>)}
+            {selectedGrades.length > 0 && <p className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">Core subjects for the selected grades are pre-selected.</p>}
+            {autoAssignedSubjects.length > 0 && <div className="space-y-1.5"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Core</p><div className="flex flex-wrap gap-2">{autoAssignedSubjects.map(s => <Pill key={s} active={effectiveSubjects.includes(s)} onClick={() => toggleSubject(s)} badge="Core">{s}</Pill>)}</div></div>}
+            {optionalSubjects.length > 0 && <div className="space-y-1.5"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Optional</p><div className="flex flex-wrap gap-2">{optionalSubjects.map(s => <Pill key={s} active={effectiveSubjects.includes(s)} onClick={() => toggleSubject(s)}>{s}</Pill>)}</div></div>}
+          </div>
+
+          {/* Dynamic Class & Subject Mapping Grid */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-indigo-500" /><span className="text-sm font-medium text-slate-700">Class & Subject Assignments</span></div>
+            <p className="text-xs text-slate-500">Assign specific subjects to specific classes. E.g. teach Math in Grade 4, Science in Grade 6.</p>
+            <div className="space-y-2">
+              {subjectAssignments.map((row, idx) => (
+                <div key={idx} className="flex items-start gap-2">
+                  <div className="flex-1 grid grid-cols-2 gap-2">
+                    <AdminFormField label={idx === 0 ? "Class" : ""} htmlFor={`sa-class-${idx}`}>
+                      <select id={`sa-class-${idx}`} value={row.classId} onChange={e => { updateAssignmentRow(idx, 'classId', e.target.value); if (!row.subject) { const cls = availableClasses.find(c => c.id === e.target.value); if (cls) { const subjects = GRADE_SUBJECT_MAP[cls.grade] || ALL_SUBJECTS; if (subjects.length === 1) updateAssignmentRow(idx, 'subject', subjects[0]) } } }} className={adminInputClass}>
+                        <option value="">Select class...</option>
+                        {availableClasses.map(c => <option key={c.id} value={c.id}>{c.name} ({c.grade})</option>)}
+                      </select>
+                    </AdminFormField>
+                    <AdminFormField label={idx === 0 ? "Subject" : ""} htmlFor={`sa-subject-${idx}`}>
+                      <select id={`sa-subject-${idx}`} value={row.subject} onChange={e => updateAssignmentRow(idx, 'subject', e.target.value)} className={adminInputClass}>
+                        <option value="">Select subject...</option>
+                        {(row.classId ? getSubjectsForClass(row.classId) : ALL_SUBJECTS).map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </AdminFormField>
+                  </div>
+                  <button type="button" onClick={() => removeAssignmentRow(idx)} className="mt-6 p-2 text-slate-400 hover:text-red-500 transition-colors" title="Remove"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              ))}
+              <button type="button" onClick={addAssignmentRow} className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"><Plus className="h-3.5 w-3.5" /> Add Another Class Assignment</button>
+            </div>
           </div>
         </form>
       )}
