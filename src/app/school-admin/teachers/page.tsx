@@ -391,14 +391,10 @@ export default function PeoplePage() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-          <TabsList className="grid w-full sm:w-auto grid-cols-2">
+          <TabsList className="grid w-full sm:w-auto grid-cols-1">
             <TabsTrigger value="teachers">
               <GraduationCap className="w-4 h-4 mr-2" />
               Teachers
-            </TabsTrigger>
-            <TabsTrigger value="students">
-              <User className="w-4 h-4 mr-2" />
-              Students
             </TabsTrigger>
           </TabsList>
 
@@ -568,150 +564,6 @@ export default function PeoplePage() {
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Enroll First Teacher
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* STUDENTS TAB */}
-        <TabsContent value="students" className="space-y-4">
-          <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="edugenius-text-gradient-blue">Students List</CardTitle>
-              <CardDescription>
-                {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} found
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {filteredStudents.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-none">
-                        <TableHead className="border-none">Student</TableHead>
-                        <TableHead className="border-none">Email</TableHead>
-                        <TableHead className="border-none">Teacher</TableHead>
-                        <TableHead className="border-none">Class</TableHead>
-                        <TableHead className="border-none">Status</TableHead>
-                        <TableHead className="border-none">Join Date</TableHead>
-                        <TableHead className="border-none">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredStudents.map((student) => (
-                        <TableRow key={student.id} className="border-none hover:bg-blue-50/50">
-                          <TableCell className="border-none">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                                <User className="w-5 h-5 text-white" />
-                              </div>
-                              <div>
-                                <p className="font-semibold text-gray-900">{student.name}</p>
-                                {student.phone && (
-                                  <p className="text-sm text-gray-500">{student.phone}</p>
-                                )}
-                                {student.grade && (
-                                  <p className="text-xs text-blue-600 font-medium">Grade {student.grade}</p>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="border-none">
-                            <div className="flex items-center space-x-2">
-                              <Mail className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm">{student.email}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="border-none">
-                            <div className="flex items-center space-x-2">
-                              <GraduationCap className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm">{student.teacher}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="border-none">
-                            {student.class ? (
-                              <span className="text-sm font-medium text-blue-600">{student.class}</span>
-                            ) : (
-                              <span className="text-sm text-gray-400">No class</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="border-none">
-                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                              student.status === 'Active' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {student.status}
-                            </span>
-                          </TableCell>
-                          <TableCell className="border-none">
-                            <div className="flex items-center space-x-2">
-                              <Calendar className="w-4 h-4 text-gray-400" />
-                              <span className="text-sm">{formatDate(student.joinDate)}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="border-none">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditStudent(student)}>
-                                  <Edit className="w-4 h-4 mr-2" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => handleToggleStudentStatus(student.id, student.status)}
-                                >
-                                  {student.status === 'Active' ? (
-                                    <>
-                                      <UserX className="w-4 h-4 mr-2" />
-                                      Deactivate
-                                    </>
-                                  ) : (
-                                    <>
-                                      <UserCheck className="w-4 h-4 mr-2" />
-                                      Activate
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteStudent(student.id)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2 className="w-4 h-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No students found</h3>
-                  <p className="text-gray-500 mb-4">
-                    {searchTerm || statusFilter !== 'all' 
-                      ? 'Try adjusting your search or filter criteria'
-                      : 'Get started by enrolling your first student'
-                    }
-                  </p>
-                  {(!searchTerm && statusFilter === 'all') && (
-                    <Button 
-                      onClick={() => setIsEnrollStudentModalOpen(true)}
-                      className="edugenius-button"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Enroll First Student
                     </Button>
                   )}
                 </div>

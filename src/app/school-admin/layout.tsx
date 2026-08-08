@@ -6,7 +6,7 @@ import { useSchoolInfo } from '@/hooks/use-school-info'
 import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
 import {
   BarChart3, Users, School, Settings,
-  CreditCard, FileText, Calendar, BookOpen, ClipboardList, Activity, MessageSquare, TrendingUp
+  CreditCard, FileText, Calendar, BookOpen, ClipboardList, MessageSquare, TrendingUp, Video
 } from 'lucide-react'
 import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
@@ -23,7 +23,7 @@ export default function SchoolAdminLayout({ children }: { children: React.ReactN
     { icon: Calendar,      label: 'Timetable',   href: '/school-admin/timetable',        tourId: 'admin-timetable'   },
     { icon: MessageSquare, label: 'Messages',    href: '/school-admin/messages',         tourId: 'admin-messages'    },
     { icon: TrendingUp,    label: 'Analytics',   href: '/school-admin/analytics',        tourId: 'admin-analytics'   },
-    { icon: Activity,      label: 'Activities',  href: '/school-admin/activities',       tourId: 'admin-activities'  },
+    { icon: Video,         label: 'Meetings',    href: '/school-admin/meetings',         tourId: 'admin-meetings'    },
     { icon: FileText,      label: 'Reports',     href: '/school-admin/reports',          tourId: 'admin-reports'     },
     { icon: CreditCard,    label: 'Billing',     href: '/school-admin/billing',          tourId: 'admin-billing'     },
     { icon: Settings,      label: 'Settings',    href: '/school-admin/settings',         tourId: 'admin-settings'    },
