@@ -1,7 +1,7 @@
 'use client'
 
 import { Skeleton } from '@/components/ui/skeleton'
-import { BrandLoader } from '@/components/ui/brand-loader'
+import CustomLoader from '@/components/ui/custom-loader'
 
 interface DashboardSkeletonProps {
   variant?: 'student' | 'admin'
@@ -12,22 +12,13 @@ export default function DashboardSkeleton({
   variant = 'student',
   loadingLabel,
 }: DashboardSkeletonProps = {}) {
-  const label = loadingLabel ?? (variant === 'admin' ? 'Loading dashboard statistics...' : 'Loading your dashboard...')
+  const label = loadingLabel ?? (variant === 'admin' ? 'Loading dashboard...' : 'Loading your dashboard...')
   if (variant === 'admin') return <AdminSkeleton loadingLabel={label} />
   return <StudentSkeleton loadingLabel={label} />
 }
 
 function SpinnerHeader({ loadingLabel }: { loadingLabel: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[70vh] w-full mx-auto">
-      <div className="relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm w-full max-w-lg">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/80 via-violet-50/60 to-purple-50/40 pointer-events-none" />
-        <div className="relative">
-          <BrandLoader label={loadingLabel} />
-        </div>
-      </div>
-    </div>
-  )
+  return <CustomLoader text={loadingLabel} />
 }
 
 function StudentSkeleton({ loadingLabel }: { loadingLabel: string }) {
