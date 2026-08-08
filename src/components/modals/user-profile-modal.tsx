@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { 
   User, 
   X, 
@@ -275,10 +276,9 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden border-0">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl [&>button]:hidden">
+        <DialogHeader className="flex flex-row items-center justify-between p-6 pb-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
               <User className="w-5 h-5 text-white" />
@@ -292,9 +292,9 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
           <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-white/50">
             <X className="w-5 h-5" />
           </Button>
-        </div>
+        </DialogHeader>
 
-        <div className="overflow-y-auto max-h-[calc(85vh-180px)] p-6">
+        <DialogBody className="mt-1">
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
@@ -487,22 +487,22 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
               </Button>
             </div>
           )}
-        </div>
+        </DialogBody>
 
         {/* Footer */}
         {editing && (
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-100 bg-gradient-to-br from-gray-50 to-white">
+          <DialogFooter className="border-t border-gray-100 bg-gradient-to-br from-gray-50 to-white">
             <Button 
               variant="outline" 
               onClick={handleCancelEdit}
-              className="bg-white border-gray-200 hover:bg-gray-50"
+              className="bg-white border-gray-200 hover:bg-gray-50 px-5 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>
             <Button 
               onClick={saveProfile} 
               disabled={saving}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg px-5 py-2.5 text-sm font-medium"
             >
               {saving ? (
                 <>
@@ -516,9 +516,9 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
