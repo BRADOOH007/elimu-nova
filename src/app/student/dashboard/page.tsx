@@ -77,7 +77,7 @@ export default function StudentDashboard() {
   const mistakes = getUnreviewedMistakes()
 
   const fetcher = (url: string) => fetch(url).then(r => {
-    if (!r.ok) throw new Error(`Request failed: ${r.status}`)
+    if (!r.ok) return null
     return r.json()
   })
 
@@ -104,6 +104,14 @@ export default function StudentDashboard() {
     fetcher,
   )
   const displayName = profileData ? `${profileData.firstName || ""} ${profileData.lastName || ""}`.trim() : ""
+
+  // Dynamic upcoming events from Schedule + Assignments
+  const { data: upcomingEvents } = useSWR<Array<{ id: string; type: string; title: string; subject: string; teacherName: string; startTime: string; endTime: string; dueDate: string }>>(
+    '/api/student/upcoming', fetcher,
+  )
+  const { data: recentActivity } = useSWR<Array<{ id: string; type: 'quiz' | 'class' | 'lesson' | 'streak'; label: string; time: string; icon: string }>>(
+    '/api/student/recent-activity', fetcher,
+  )
 
   useEffect(() => {
     if (isIndependent && !schoolInfoLoading) {
@@ -135,17 +143,6 @@ export default function StudentDashboard() {
   // Grade + recent subjects for the "What to learn next?" sidebar widget
   const studentGrade = /Grade|Form/i.test(d.student.class) ? d.student.class : 'Grade 4'
   const recentSubjects = Array.from(new Set((d.studySessions || []).map(s => s.subject).filter(Boolean)))
-
-  // Dynamic upcoming events from Schedule + Assignments
-  const { data: upcomingEvents } = useSWR<Array<{ id: string; type: string; title: string; subject: string; teacherName: string; startTime: string; endTime: string; dueDate: string }>>(
-    '/api/student/upcoming',
-    fetcher,
-  )
-
-  const { data: recentActivity } = useSWR<Array<{ id: string; type: 'quiz' | 'class' | 'lesson' | 'streak'; label: string; time: string; icon: string }>>(
-    '/api/student/recent-activity',
-    fetcher,
-  )
 
   const dueReviews = (() => {
     try {
