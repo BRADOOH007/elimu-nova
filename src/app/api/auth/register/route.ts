@@ -28,6 +28,9 @@ export const POST = route({ auth: 'none' }, async (req) => {
     schoolName,
     schoolAddress,
     schoolPhone,
+    country,
+    curriculum,
+    grade,
   } = body
 
   if (!PUBLIC_SIGNUP_ROLES.includes(role)) {
@@ -100,6 +103,22 @@ export const POST = route({ auth: 'none' }, async (req) => {
         role,
       }
     })
+
+    // Store learning preferences for independent users
+    if (country || curriculum || grade) {
+      await (prisma as any).userPreference.upsert({
+        where: { userId: user.id },
+        update: { country: country || '', curriculum: curriculum || '', language: 'en' },
+        create: { userId: user.id, country: country || '', curriculum: curriculum || '', language: 'en' },
+      })
+    }
+
+    // Create role-specific profile if needed (e.g., Teacher for TEACHER, Parent for PARENT)
+    if (role === 'TEACHER') {
+      await (prisma as any).teacher.upsert({ where: { userId: user.id }, update: {}, create: { userId: user.id } })
+    } else if (role === 'PARENT') {
+      await (prisma as any).parent.upsert({ where: { userId: user.id }, update: {}, create: { userId: user.id } })
+    }
 
     await autoCreateTrial(user.id, undefined)
 
