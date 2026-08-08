@@ -4,430 +4,197 @@ import { useState, useEffect } from 'react'
 import { useToast } from "@/hooks/use-toast"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import Link from 'next/link'
-
-import { 
-  CreditCard, 
-  Calendar, 
-  Crown, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle,
-  Download,
-  RefreshCw,
-  DollarSign,
-  Users,
-  BookOpen,
-  Loader2,
-  School,
-  GraduationCap,
-  TrendingUp,
-  FileText,
-  Building,
-  ArrowRight,
-  Mail
+import {
+  CreditCard, Calendar, Crown, Clock, CheckCircle, AlertTriangle,
+  Download, RefreshCw, DollarSign, Users, GraduationCap,
+  TrendingUp, FileText, Building, ArrowRight, Mail, Sparkles, Zap,
+  Loader2, Phone,
 } from 'lucide-react'
 
+function ProgressBar({ value, max, color }: { value: number; max: number; color: string }) {
+  const pct = max > 0 ? Math.min(Math.round((value / max) * 100), 100) : 0
+  return (
+    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+      <div className={`h-full rounded-full transition-all duration-500 ${color}`} style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
 export default function SchoolAdminBilling() {
-  const [billingData, setBillingData] = useState<any>(null)
+  const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const fetchBilling = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await fetch('/api/school-admin/billing-data')
-      if (response.ok) {
-        const data = await response.json()
-        setBillingData(data)
-      } else if (response.status === 403) {
-        setError('You do not have permission to view billing information.')
-      } else {
-        setError('Failed to load billing information.')
-      }
-    } catch (err) {
-      setError('Failed to load billing information.')
-    } finally {
-      setLoading(false)
-    }
+  const fetchData = async () => {
+    try { setLoading(true); setError(null); const r = await fetch('/api/school-admin/billing-data'); if (r.ok) setData(await r.json()); else setError(r.status === 403 ? 'Permission denied' : 'Failed to load') } catch { setError('Network error') } finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchBilling() }, [])
+  useEffect(() => { fetchData() }, [])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800'
-      case 'TRIAL': return 'bg-blue-100 text-blue-800'
-      case 'TRIAL_EXPIRED': return 'bg-red-100 text-red-800'
-      case 'EXPIRED': return 'bg-red-100 text-red-800'
-      case 'CANCELLED': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
+  if (loading) return <div className="flex items-center justify-center min-h-[70vh]"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>
+
+  const sub = data?.currentSubscription || data?.subscription || null
+  const usage = data?.usage || {}
+  const invoices = data?.invoices || []
+  const teacherCount = data?.teachers?.length || usage?.teachers || 0
+  const studentCount = data?.students?.length || usage?.students || 0
+  const planMaxTeachers = sub?.package?.maxTeachers || usage?.teacherLimit || 15
+  const planMaxStudents = sub?.package?.maxStudents || usage?.studentLimit || 500
+  const aiCredits = usage?.aiGenerations || 0
+  const aiCreditLimit = 10000
+
+  const formatCurrency = (amt: number) => Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 2 }).format(amt)
+  const getStatusBadge = (s: string) => {
+    switch(s) { case 'ACTIVE': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-700"><CheckCircle className="w-3 h-3" />Active</span>; case 'TRIAL': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-700"><Clock className="w-3 h-3" />Trial</span>; case 'EXPIRED': return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700"><AlertTriangle className="w-3 h-3" />Expired</span>; default: return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-700"><Clock className="w-3 h-3" />{s || 'Unknown'}</span> }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'ACTIVE': return <CheckCircle className="w-4 h-4" />
-      case 'TRIAL': return <Crown className="w-4 h-4" />
-      case 'TRIAL_EXPIRED': return <AlertTriangle className="w-4 h-4" />
-      case 'EXPIRED': return <AlertTriangle className="w-4 h-4" />
-      case 'CANCELLED': return <AlertTriangle className="w-4 h-4" />
-      default: return <Clock className="w-4 h-4" />
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Billing</h1>
-          <p className="text-gray-600 mt-1">View your school's subscription and billing information.</p>
-        </div>
-        <Card className="bg-white shadow-lg border-0">
-          <CardContent className="text-center py-12">
-            <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Unable to Load Billing</h3>
-            <p className="text-gray-500 mb-4">{error}</p>
-            <Button onClick={fetchBilling} variant="outline">
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  const subscription = billingData?.currentSubscription || billingData?.subscription
-  const usage = billingData?.usage || {}
-  const invoices = billingData?.invoices || []
+  const daysLeft = sub?.endDate ? Math.max(0, Math.ceil((new Date(sub.endDate).getTime() - Date.now()) / 86400000)) : 0
+  const status = sub?.status || 'NONE'
+  const planName = sub?.package?.name || sub?.packageName || 'Free Trial'
+  const planPrice = sub?.amount || sub?.package?.price || 0
+  const renewDate = sub?.endDate ? new Date(sub.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Billing</h1>
-          <p className="text-gray-600 mt-1">
-            View your school's subscription and usage details.
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">Billing & Subscription</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage your school's plan, payments, and usage</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" onClick={fetchBilling} className="bg-white">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
+        <Button variant="outline" onClick={fetchData} className="bg-white"><RefreshCw className="w-4 h-4 mr-2" />Refresh</Button>
       </div>
 
-      {/* Current Subscription Status (read-only) */}
-      <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="w-5 h-5 text-purple-600" />
-            School Subscription
-          </CardTitle>
-          <CardDescription>
-            Your school's current subscription status — contact the platform administrator for changes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {subscription ? (
-            <>
-              <div className="flex items-center justify-between p-4 bg-white/70 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
-                    {getStatusIcon(subscription.status)}
+      {error && (
+        <Card className="border-red-100 bg-red-50/50"><CardContent className="text-center py-12"><AlertTriangle className="w-12 h-12 text-red-400 mx-auto mb-3" /><p className="text-slate-700 font-semibold">{error}</p><Button variant="outline" onClick={fetchData} className="mt-4">Retry</Button></CardContent></Card>
+      )}
+
+      {!error && (
+        <>
+          {/* Subscription Card */}
+          <Card className={`overflow-hidden border-0 shadow-lg ${status === 'ACTIVE' ? 'bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50' : status === 'TRIAL' ? 'bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50' : 'bg-gradient-to-br from-slate-50 to-slate-100'}`}>
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div className="flex items-start gap-4">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 ${status === 'ACTIVE' ? 'bg-gradient-to-br from-indigo-500 to-violet-500' : status === 'TRIAL' ? 'bg-gradient-to-br from-amber-500 to-orange-500' : 'bg-gradient-to-br from-slate-400 to-slate-500'}`}>
+                    <Crown className="w-7 h-7 text-white" />
                   </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h2 className="text-lg font-bold text-slate-900">{planName}</h2>
+                      {getStatusBadge(status)}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
+                      <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" />{formatCurrency(planPrice)} / Term</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />Renews: {renewDate}</span>
+                      {daysLeft > 0 && status === 'TRIAL' && <span className="flex items-center gap-1 font-semibold text-amber-600"><Clock className="w-4 h-4" />{daysLeft} Days Left</span>}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" className="bg-white border-slate-200 hover:bg-slate-50" onClick={() => toast({ title: 'Upgrade', description: 'Pricing modal coming soon' })}>
+                    <Crown className="w-4 h-4 mr-1.5" />Upgrade Plan
+                  </Button>
+                  <Button className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700"
+                    onClick={() => toast({ title: 'Pay', description: 'M-Pesa payment integration in progress' })}>
+                    <Phone className="w-4 h-4 mr-1.5" />Pay via M-Pesa
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Usage Meters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center"><Users className="w-5 h-5 text-indigo-600" /></div>
+                  <div className="min-w-0"><p className="text-xs text-slate-500">Active Teachers</p><p className="text-lg font-bold text-slate-900">{teacherCount}<span className="text-sm font-normal text-slate-400">/{planMaxTeachers}</span></p></div>
+                </div>
+                <ProgressBar value={teacherCount} max={planMaxTeachers} color="bg-indigo-500" />
+                <p className="text-[10px] text-slate-400 mt-1.5">{Math.round((teacherCount / planMaxTeachers) * 100)}% of allocated seats</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center"><GraduationCap className="w-5 h-5 text-emerald-600" /></div>
+                  <div className="min-w-0"><p className="text-xs text-slate-500">Active Students</p><p className="text-lg font-bold text-slate-900">{studentCount}<span className="text-sm font-normal text-slate-400">/{planMaxStudents}</span></p></div>
+                </div>
+                <ProgressBar value={studentCount} max={planMaxStudents} color="bg-emerald-500" />
+                <p className="text-[10px] text-slate-400 mt-1.5">{Math.round((studentCount / planMaxStudents) * 100)}% of capacity</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center"><Sparkles className="w-5 h-5 text-amber-600" /></div>
+                  <div className="min-w-0"><p className="text-xs text-slate-500">AI Credits Used</p><p className="text-lg font-bold text-slate-900">{aiCredits.toLocaleString()}<span className="text-sm font-normal text-slate-400">/{aiCreditLimit.toLocaleString()}</span></p></div>
+                </div>
+                <ProgressBar value={aiCredits} max={aiCreditLimit} color="bg-amber-500" />
+                <p className="text-[10px] text-slate-400 mt-1.5">{Math.round((aiCredits / aiCreditLimit) * 100)}% of monthly allowance</p>
+              </CardContent>
+            </Card>
+            <Card className="border border-slate-100 shadow-sm">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center"><CreditCard className="w-5 h-5 text-violet-600" /></div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {subscription.packageName || subscription.package?.name || 'School Plan'}
-                    </h3>
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
-                      <School className="w-3 h-3" />
-                      School-wide Subscription
-                    </p>
+                    <p className="text-xs text-slate-500">Payment Method</p>
+                    <p className="text-sm font-bold text-slate-900">M-Pesa Express</p>
+                    <p className="text-[10px] text-slate-400">Paybill 247247</p>
                   </div>
                 </div>
-                <Badge className={getStatusColor(subscription.status)}>
-                  {getStatusIcon(subscription.status)}
-                  <span className="ml-1">{subscription.status?.replace('_', ' ') || 'ACTIVE'}</span>
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="p-4 bg-white/70 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Calendar className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium text-gray-700">
-                      {subscription.isTrial ? 'Trial Ends' : 'Renewal Date'}
-                    </span>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {subscription.endDate
-                      ? new Date(subscription.endDate).toLocaleDateString()
-                      : subscription.trialEndsAt
-                      ? new Date(subscription.trialEndsAt).toLocaleDateString()
-                      : 'N/A'}
-                  </p>
-                </div>
-                <div className="p-4 bg-white/70 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="w-4 h-4 text-orange-600" />
-                    <span className="text-sm font-medium text-gray-700">Days Remaining</span>
-                  </div>
-                  <p className={`text-lg font-semibold ${
-                    subscription.daysRemaining <= 3 ? 'text-red-600' :
-                    subscription.daysRemaining <= 7 ? 'text-orange-600' :
-                    'text-green-600'
-                  }`}>
-                    {subscription.daysRemaining ?? 'N/A'} days
-                  </p>
-                </div>
-                <div className="p-4 bg-white/70 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium text-gray-700">Plan Type</span>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {subscription.isTrial ? 'Free Trial' : subscription.packageName || subscription.package?.name || 'Premium'}
-                  </p>
-                </div>
-                <div className="p-4 bg-white/70 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="w-4 h-4 text-purple-600" />
-                    <span className="text-sm font-medium text-gray-700">Status</span>
-                  </div>
-                  <p className={`text-lg font-semibold ${
-                    subscription.isActive ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {subscription.isActive ? 'Active' : 'Inactive'}
-                  </p>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                No Active Subscription
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Your school does not have an active subscription. Please contact the platform administrator to set one up.
-              </p>
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                <Mail className="w-4 h-4" />
-                <span>Contact your administrator for assistance</span>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Upgrade CTA */}
-      <Card className="bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg border-0 text-white">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-bold mb-1">Need more capacity?</h3>
-              <p className="text-purple-100 text-sm">Upgrade your plan to unlock more teachers, students, and AI features.</p>
-            </div>
-            <Link href="/pricing">
-              <Button className="bg-white text-purple-700 hover:bg-purple-50 font-semibold">
-                <ArrowRight className="w-4 h-4 mr-2" />
-                View Plans
-              </Button>
-            </Link>
+                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => toast({ title: 'Invoice', description: 'Invoice download coming soon' })}>
+                  <Download className="w-3 h-3 mr-1" />Download Invoice
+                </Button>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* School Usage Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-blue-600" />
-              Teachers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Active Teachers</span>
-                <span className="font-semibold text-2xl text-blue-600">
-                  {usage.teachers?.active || 0}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Plan Limit</span>
-                <span className="font-semibold">
-                  {usage.teachers?.limit || 'Unlimited'}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-blue-600 h-2 rounded-full" 
-                  style={{ width: `${Math.min(usage.teachers?.percentage || 0, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="w-5 h-5 text-green-600" />
-              Students
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Active Students</span>
-                <span className="font-semibold text-2xl text-green-600">
-                  {usage.students?.active || 0}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Plan Limit</span>
-                <span className="font-semibold">
-                  {usage.students?.limit || 'Unlimited'}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-green-600 h-2 rounded-full" 
-                  style={{ width: `${Math.min(usage.students?.percentage || 0, 100)}%` }}
-                ></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-purple-600" />
-              Usage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Lesson Plans</span>
-                <span className="font-semibold">
-                  {usage.lessonPlans?.toLocaleString() || 0}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">AI Generations</span>
-                <span className="font-semibold">
-                  {usage.aiGenerations?.toLocaleString() || 0}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">This Month</span>
-                <span className={`font-semibold ${
-                  usage.growthRate?.startsWith('+') ? 'text-green-600' : 
-                  usage.growthRate?.startsWith('-') ? 'text-red-600' : 'text-purple-600'
-                }`}>
-                  {usage.growthRate || '0%'}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white shadow-lg border-0 hover:shadow-xl transition-shadow">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-orange-600" />
-              Analytics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Engagement</span>
-                <span className="font-semibold text-orange-600">
-                  {usage.analytics?.engagement || '0%'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600">Satisfaction</span>
-                <span className="font-semibold text-orange-600">
-                  {usage.analytics?.satisfaction || 'N/A'}
-                </span>
-              </div>
-              <div className="text-xs text-gray-400 mt-2">
-                Data refreshes daily
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Invoices (read-only) */}
-      <Card className="bg-white shadow-lg border-0">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-purple-600" />
-            Recent Invoices
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {invoices.length > 0 ? (
-            <>
-              <div className="space-y-3">
-                {invoices.slice(0, 5).map((invoice: any) => (
-                  <div key={invoice.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-gray-900">{invoice.period || invoice.invoiceNumber || `Invoice #${invoice.id.slice(0, 8)}`}</p>
-                      <p className="text-sm text-gray-600">
-                        {invoice.date ? new Date(invoice.date).toLocaleDateString() : new Date(invoice.createdAt).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">
-                        ${(invoice.totalAmount ?? invoice.amount ?? 0).toFixed(2)}
-                      </p>
-                      <Badge className={
-                        (invoice.status === 'paid' || invoice.status === 'PAID')
-                          ? 'bg-green-100 text-green-800'
-                          : (invoice.status === 'pending' || invoice.status === 'PENDING')
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }>
-                        {(invoice.status || 'N/A').charAt(0).toUpperCase() + (invoice.status || 'N/A').slice(1).toLowerCase()}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-6">
-              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600">No invoices available</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          {/* Invoice History */}
+          <Card className="border-slate-100 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2"><FileText className="w-5 h-5 text-indigo-600" />Recent Invoices & Payment History</CardTitle>
+              <CardDescription>Payment receipts and transactional records</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {invoices.length === 0 ? (
+                <div className="text-center py-10">
+                  <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                  <p className="text-sm font-semibold text-slate-700">No invoices yet</p>
+                  <p className="text-xs text-slate-400 mt-1">Invoices will appear once payments are processed</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase text-slate-500"><th className="py-3 px-4">Invoice ID</th><th className="py-3 px-4">Billing Period</th><th className="py-3 px-4">Amount</th><th className="py-3 px-4">Method</th><th className="py-3 px-4">Status</th><th className="py-3 px-4 text-right">Action</th></tr></thead>
+                    <tbody>
+                      {invoices.map((inv: any, i: number) => (
+                        <tr key={inv.id || i} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                          <td className="py-3 px-4 font-mono text-xs text-indigo-600 font-semibold">#{inv.id?.slice(-8) || `INV-${2026}-${String(i + 1).padStart(3, '0')}`}</td>
+                          <td className="py-3 px-4 text-slate-500">{inv.period || `Term ${i + 1} 2026`}</td>
+                          <td className="py-3 px-4 font-medium text-slate-800">{formatCurrency(inv.amount || inv.totalAmount || planPrice)}</td>
+                          <td className="py-3 px-4 text-slate-500">{inv.paymentMethod || 'M-Pesa'}</td>
+                          <td className="py-3 px-4">{inv.status === 'PAID' ? <span className="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700">Paid</span> : <span className="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">Pending</span>}</td>
+                          <td className="py-3 px-4 text-right">
+                            <Button variant="ghost" size="sm" className="h-7 text-xs"
+                              onClick={() => toast({ title: 'Receipt', description: 'PDF receipt download coming soon' })}>
+                              <Download className="w-3 h-3 mr-1" />PDF
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   )
 }
