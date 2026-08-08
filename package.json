@@ -54,7 +54,7 @@
     "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "dompurify": "^3.4.12",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.4.2",
     "handlebars": "^4.7.9",
     "html2canvas": "^1.4.1",
     "ioredis": "^5.5.0",
