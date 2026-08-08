@@ -85,12 +85,11 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
       time: meeting.time,
       duration: meeting.duration,
       location: meeting.location,
+      meetingType: (meeting as any).meetingType || 'IN_PERSON',
+      videoLink: (meeting as any).videoLink || (meeting as any).zoomJoinUrl || null,
       status: meeting.status,
       attendees: meeting.attendees,
-      createdBy: {
-        name: `${meeting.creator.firstName} ${meeting.creator.lastName}`,
-        email: meeting.creator.email
-      },
+      createdBy: { name: `${meeting.creator.firstName} ${meeting.creator.lastName}`, email: meeting.creator.email },
       createdAt: meeting.createdAt,
       updatedAt: meeting.updatedAt
     }))
@@ -117,7 +116,7 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
 
     const schoolId = schoolAdmin.schoolId
     const body = await req.json()
-    const { title, description, date, time, duration, location, attendees } = body
+    const { title, description, date, time, duration, location, attendees, meetingType, videoLink } = body
 
     // Validate required fields
     if (!title || !date || !time) {
@@ -127,18 +126,23 @@ export const POST = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
     }
 
     // Create meeting
+    const meetingData: any = {
+      schoolId,
+      createdBy: user.id,
+      title,
+      description: description || null,
+      date: new Date(date),
+      time,
+      duration: duration || 60,
+      location: location || null,
+      attendees: attendees || null,
+    }
+    if (meetingType) meetingData.meetingType = meetingType
+    if (videoLink) meetingData.videoLink = videoLink
+    if (meetingType === 'VIRTUAL') { meetingData.zoomProvider = 'manual'; meetingData.zoomJoinUrl = videoLink || null }
+
     const meeting = await prisma.meeting.create({
-      data: {
-        schoolId,
-        createdBy: user.id,
-        title,
-        description: description || null,
-        date: new Date(date),
-        time,
-        duration: duration || 60,
-        location: location || null,
-        attendees: attendees || null
-      },
+      data: meetingData,
       include: {
         creator: {
           select: {
