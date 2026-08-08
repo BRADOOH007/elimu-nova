@@ -40,7 +40,7 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-lg p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:hover:text-slate-200 dark:hover:bg-slate-800/80">
+      <DialogPrimitive.Close className="absolute right-4 top-4 z-10 rounded-full p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none dark:hover:text-slate-200 dark:hover:bg-slate-800/80">
         <X className="h-5 w-5" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -51,7 +51,10 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col gap-1.5 p-6 pb-4 border-b border-slate-100 dark:border-slate-800/60", className)} {...props} />
+  <div
+    className={cn("flex flex-col gap-1.5 border-b border-slate-100 p-6 pb-4 sm:p-8 sm:pb-4 dark:border-slate-800/60", className)}
+    {...props}
+  />
 )
 DialogHeader.displayName = "DialogHeader"
 
@@ -73,22 +76,29 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-slate-500 dark:text-slate-400 font-normal leading-relaxed mt-0.5", className)}
+    className={cn("text-sm text-slate-500 dark:text-slate-400 font-normal leading-relaxed mt-1", className)}
     {...props}
   />
 ))
 DialogDescription.displayName = DialogPrimitive.Description.displayName
 
 const DialogBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("overflow-y-auto p-6 sm:p-8 space-y-4", className)} style={{ maxHeight: 'calc(88vh - 140px)' }} {...props} />
+  <div
+    className={cn("overflow-y-auto px-6 py-4 sm:px-8 space-y-5", className)}
+    style={{ maxHeight: '65vh' }}
+    {...props}
+  />
 )
 DialogBody.displayName = "DialogBody"
 
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn(
-    "flex items-center justify-end gap-3 p-4 px-6 sm:px-8 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800/60 rounded-b-2xl",
-    className
-  )} {...props} />
+  <div
+    className={cn(
+      "flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8 rounded-b-2xl mt-4 dark:border-slate-800/60 dark:bg-slate-900/50",
+      className
+    )}
+    {...props}
+  />
 )
 DialogFooter.displayName = "DialogFooter"
 

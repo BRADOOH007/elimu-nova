@@ -10,28 +10,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 
-/* ──── ADMIN-MODAL UNIFIED PREMIUM WRAPPER ────
-   All School Admin modals share this container. It enforces:
-   · Fixed backdrop with blur
-   · Rounded box with shadow + border
-   · Structured header (icon, title, subtitle, close X)
-   · Proper body padding with overflow
-   · Sticky footer with cancel + primary CTA
+/* ──── ADMIN-MODAL — Unified Premium Wrapper for all Admin Modals ────
+   Enforces: backdrop-blur overlay, rounded-2xl shadow border box, 
+   structured header (icon + title + subtitle + X close), 
+   padded body with overflow, sticky footer with cancel + action.
 
-   Usage (minimal):
-   <AdminModal open={isOpen} onClose={onClose} title="Enroll Teacher" subtitle="Add a new teacher to your school." icon={<UserPlus />}>
-     <form>...</form>
-   </AdminModal>
-
-   Usage (with footer actions):
-   <AdminModal {...props} footer={
-     <AdminModalFooter onCancel={onClose} onSubmit={handleSubmit} submitLabel="Save" loading={isLoading} />
-   }>
-     <form>...</form>
-   </AdminModal>
-
-   The footer can also be overridden entirely by passing a custom footer element.
-   The "max-w" size can be set via the size prop: 'sm' | 'md' | 'lg' | 'xl' | '2xl'.
+   size: 'sm' | 'md' | 'lg' | 'xl' | '2xl'   (default: 'lg')
 */
 
 interface AdminModalProps {
@@ -55,31 +39,19 @@ const sizeMap: Record<string, string> = {
 }
 
 export function AdminModal({
-  open,
-  onClose,
-  title,
-  subtitle,
-  icon,
-  children,
-  footer,
-  size = 'lg',
-  className,
+  open, onClose, title, subtitle, icon, children, footer,
+  size = 'lg', className,
 }: AdminModalProps) {
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className={cn(
-          "max-w-lg w-full max-h-[90vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl p-0",
-          sizeMap[size],
-          className
-        )}
+        className={cn("max-w-lg w-full max-h-[90vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl p-0", sizeMap[size], className)}
       >
         {/* ── HEADER ── */}
-        <div className="relative border-b border-slate-100 p-6 sm:px-8">
-          {/* Close button */}
+        <div className="relative border-b border-slate-100 p-6 pb-4 sm:p-8 sm:pb-4">
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none"
           >
             <X className="w-5 h-5" />
             <span className="sr-only">Close</span>
@@ -94,26 +66,22 @@ export function AdminModal({
               </div>
             )}
             <div className="min-w-0 pr-8">
-              <DialogTitle className="text-xl font-semibold text-slate-900">
-                {title}
-              </DialogTitle>
+              <DialogTitle className="text-xl font-semibold text-slate-900">{title}</DialogTitle>
               {subtitle && (
-                <DialogDescription className="text-sm text-slate-500 mt-0.5">
-                  {subtitle}
-                </DialogDescription>
+                <DialogDescription className="text-sm text-slate-500 mt-1">{subtitle}</DialogDescription>
               )}
             </div>
           </div>
         </div>
 
         {/* ── BODY ── */}
-        <div className="overflow-y-auto p-6 sm:p-8 max-h-[calc(90vh-180px)] space-y-4">
+        <div className="overflow-y-auto px-6 py-4 sm:px-8 space-y-5" style={{ maxHeight: '65vh' }}>
           {children}
         </div>
 
         {/* ── FOOTER ── */}
         {footer && (
-          <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:px-8 flex justify-end items-center gap-3 rounded-b-2xl">
+          <div className="border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8 flex justify-end items-center gap-3 rounded-b-2xl mt-4">
             {footer}
           </div>
         )}
@@ -122,11 +90,7 @@ export function AdminModal({
   )
 }
 
-/* ──── ADMIN FORM INPUT ────
-   A unified label + input/textarea/select pattern for AdminModal bodies.
-   Use AdminFormInput for text/email/tel, AdminFormTextarea for textareas.
-*/
-
+/* ──── ADMIN FORM FIELD ──── */
 interface AdminFormFieldProps {
   label: string
   htmlFor: string
@@ -137,10 +101,10 @@ interface AdminFormFieldProps {
 
 export function AdminFormField({ label, htmlFor, required, error, children }: AdminFormFieldProps) {
   return (
-    <div>
+    <div className="space-y-2">
       <label
         htmlFor={htmlFor}
-        className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1.5"
+        className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-600"
       >
         {label}
         {required && <span className="text-red-500 ml-0.5">*</span>}
@@ -152,29 +116,20 @@ export function AdminFormField({ label, htmlFor, required, error, children }: Ad
 }
 
 export const adminInputClass =
-  "w-full rounded-lg border border-slate-300 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition"
+  "w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition-all"
 
-/* ──── ADMIN MODAL FOOTER ────
-   Renders Cancel + Primary action in the footer area.
-*/
-
+/* ──── ADMIN MODAL FOOTER ──── */
 interface AdminModalFooterProps {
   onCancel: () => void
   onSubmit?: () => void
   submitLabel?: string
   loading?: boolean
   disabled?: boolean
-  /** Pass "submit" if this is inside a <form> and should type="submit" */
   type?: "button" | "submit"
 }
 
 export function AdminModalFooter({
-  onCancel,
-  onSubmit,
-  submitLabel = "Save",
-  loading = false,
-  disabled = false,
-  type = "button",
+  onCancel, onSubmit, submitLabel = "Save", loading = false, disabled = false, type = "button",
 }: AdminModalFooterProps) {
   return (
     <>
@@ -190,7 +145,7 @@ export function AdminModalFooter({
         type={type}
         onClick={onSubmit}
         disabled={disabled || loading}
-        className="rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition disabled:opacity-50 inline-flex items-center gap-2"
+        className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition disabled:opacity-50 inline-flex items-center gap-2"
       >
         {loading && (
           <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
