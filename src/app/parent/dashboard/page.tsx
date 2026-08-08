@@ -2,18 +2,18 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock } from "lucide-react"
+import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock, Clock, CheckCircle, Activity } from "lucide-react"
 import Link from "next/link"
 import ParentGreeting from "@/components/parent/greeting"
 import { ParentStatCard } from "@/components/parent/stats-cards"
 import QuickNav from "@/components/parent/quick-nav"
 import ChildTrends from "@/components/parent/child-trends"
-import EngagementSummary from "@/components/parent/engagement-summary"
 import SkillComparison from "@/components/parent/skill-comparison"
 import ParentAIInsightsPanel from "@/components/parent/ai-insights-panel"
 import EnrollChildModal from "@/components/parent/enroll-child-modal"
 import PaymentModal from "@/components/billing/PaymentModal"
 import { useSubscription } from "@/hooks/use-subscription"
+import { useSchoolInfo } from "@/hooks/use-school-info"
 
 interface SkillSummary {
   skillName: string; skillCategory: string; masteryScore: number; timesCorrect: number; timesTested: number
@@ -43,6 +43,8 @@ function gradeColor(g: number | null) {
 export default function ParentDashboard() {
   const { data: session } = useSession()
   const { subscription, loading: subLoading } = useSubscription()
+  const { schoolInfo } = useSchoolInfo()
+  const isIndependent = !schoolInfo?.school?.id && !session?.user?.schoolId
   const [children, setChildren] = useState<Child[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
@@ -173,7 +175,35 @@ export default function ParentDashboard() {
           <ChildTrends />
           <SkillComparison children={children} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <EngagementSummary />
+            {isIndependent ? (
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex flex-col justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-4">30-Day Activity Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center"><Clock className="w-5 h-5 text-indigo-600" /></div>
+                      <div><p className="text-xs text-slate-500">Practice Hours</p><p className="text-lg font-bold text-slate-900">{children.reduce((s, c) => s + (c.progress?.totalQuestions ?? 0) * 0.05, 0).toFixed(1)} hrs</p></div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center"><CheckCircle className="w-5 h-5 text-emerald-600" /></div>
+                      <div><p className="text-xs text-slate-500">Tasks Completed</p><p className="text-lg font-bold text-slate-900">{children.reduce((s, c) => s + c.completedAssignments, 0)} completed</p></div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center"><Activity className="w-5 h-5 text-amber-600" /></div>
+                      <div><p className="text-xs text-slate-500">Children Tracked</p><p className="text-lg font-bold text-slate-900">{totalChildren} enrolled</p></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">School Activity</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-indigo-50"><p className="text-xs text-slate-500">Meetings</p><p className="text-lg font-bold text-indigo-700">—</p></div>
+                  <div className="p-3 rounded-xl bg-violet-50"><p className="text-xs text-slate-500">Messages</p><p className="text-lg font-bold text-violet-700">—</p></div>
+                </div>
+              </div>
+            )}
             <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border border-cyan-100 shadow-sm p-5 flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">Billing & Subscription</h3>
