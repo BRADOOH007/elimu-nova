@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, ClipboardList, TrendingUp, AlertTriangle, ArrowRight } from "lucide-react"
+import { Users, ClipboardList, TrendingUp, AlertTriangle, ArrowRight, Plus, UserPlus } from "lucide-react"
 import Link from "next/link"
 import ParentGreeting from "@/components/parent/greeting"
 import { ParentStatCard } from "@/components/parent/stats-cards"
@@ -13,6 +13,7 @@ import ChildTrends from "@/components/parent/child-trends"
 import EngagementSummary from "@/components/parent/engagement-summary"
 import SkillComparison from "@/components/parent/skill-comparison"
 import ParentAIInsightsPanel from "@/components/parent/ai-insights-panel"
+import EnrollChildModal from "@/components/parent/enroll-child-modal"
 
 interface SkillSummary {
   skillName: string; skillCategory: string; masteryScore: number; timesCorrect: number; timesTested: number
@@ -48,6 +49,7 @@ export default function ParentDashboard() {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
   const [alertsLoading, setAlertsLoading] = useState(true)
+  const [showEnrollChild, setShowEnrollChild] = useState(false)
   const [displayName, setDisplayName] = useState("")
 
   useEffect(() => {
@@ -111,6 +113,12 @@ export default function ParentDashboard() {
       <div className="flex items-start justify-between">
         <ParentGreeting displayName={displayName} />
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowEnrollChild(true)}
+            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm flex items-center gap-1.5"
+          >
+            <Plus className="w-4 h-4" /> Add Child
+          </button>
           <Link href="/parent/children">
             <div className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
               View Children
@@ -155,6 +163,13 @@ export default function ParentDashboard() {
           <QuickNav />
         </div>
       </div>
+      {showEnrollChild && (
+        <EnrollChildModal
+          isOpen={showEnrollChild}
+          onClose={() => setShowEnrollChild(false)}
+          onSuccess={() => { setShowEnrollChild(false); window.location.reload() }}
+        />
+      )}
     </div>
   )
 }

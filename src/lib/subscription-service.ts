@@ -12,7 +12,7 @@ export interface SubscriptionInfo {
   endDate?: Date
 }
 
-const TRIAL_DAYS = 10
+const TRIAL_DAYS = 14
 // Grace period after a subscription endDate passes — prevents paid subscribers
 // being locked out due to webhook delays, clock skew, or renewal races.
 const EXPIRY_GRACE_DAYS = 5
