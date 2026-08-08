@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, ClipboardList, TrendingUp, AlertTriangle, ArrowRight, Plus, UserPlus, Mail, Phone } from "lucide-react"
+import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, UserPlus, Mail } from "lucide-react"
 import Link from "next/link"
 import ParentGreeting from "@/components/parent/greeting"
 import { ParentStatCard } from "@/components/parent/stats-cards"
@@ -12,23 +12,21 @@ import EngagementSummary from "@/components/parent/engagement-summary"
 import SkillComparison from "@/components/parent/skill-comparison"
 import ParentAIInsightsPanel from "@/components/parent/ai-insights-panel"
 import EnrollChildModal from "@/components/parent/enroll-child-modal"
+import PaymentModal from "@/components/billing/PaymentModal"
 
 interface SkillSummary {
   skillName: string; skillCategory: string; masteryScore: number; timesCorrect: number; timesTested: number
 }
-
 interface ProgressSummary {
   xp: number; streak: number; masteryScore: number; consecutiveCorrect: number
   totalQuestions: number; correctAnswers: number; skillMastery: SkillSummary[]
 }
-
 interface Child {
   id: string; name: string; grade: string; school: string
   averageGrade: number | null; pendingAssignments: number
   completedAssignments: number; streakDays: number
   progress: ProgressSummary | null
 }
-
 interface Alert {
   id: string; studentName: string; title: string; message: string
   severity: "critical" | "warning" | "info"; type: string; subject?: string
@@ -48,13 +46,15 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true)
   const [alertsLoading, setAlertsLoading] = useState(true)
   const [showEnrollChild, setShowEnrollChild] = useState(false)
+  const [showPayment, setShowPayment] = useState(false)
   const [displayName, setDisplayName] = useState("")
+  const [country, setCountry] = useState("US")
 
   useEffect(() => {
     if (session?.user?.id) {
       fetch(`/api/user-profile?userId=${session.user.id}`)
         .then(r => r.ok ? r.json() : null)
-        .then(p => { if (p) setDisplayName(`${p.firstName || ""} ${p.lastName || ""}`.trim()) })
+        .then(p => { if (p) { setDisplayName(`${p.firstName || ""} ${p.lastName || ""}`.trim()); setCountry(p.country || "US") } })
         .catch(() => {})
     }
   }, [session?.user?.id])
@@ -86,14 +86,8 @@ export default function ParentDashboard() {
             }
           }))
         }
-      } catch { /* silent */ }
-      finally { setLoading(false) }
-
-      try {
-        const ar = await fetch("/api/parent/alerts")
-        if (ar.ok) setAlerts((await ar.json()).alerts || [])
-      } catch { /* silent */ }
-      finally { setAlertsLoading(false) }
+      } catch { /* silent */ } finally { setLoading(false) }
+      try { const ar = await fetch("/api/parent/alerts"); if (ar.ok) setAlerts((await ar.json()).alerts || []) } catch { } finally { setAlertsLoading(false) }
     }
     fetchData()
   }, [])
@@ -105,27 +99,33 @@ export default function ParentDashboard() {
   const warningAlerts = alerts.filter(a => a.severity === "warning").length
   const totalAlerts = criticalAlerts + warningAlerts
 
+  const currency = country === "KE" ? "KES" : "USD"
+  const fmt = (n: number) => country === "KE"
+    ? `KES ${n.toLocaleString()}.00`
+    : `$${n.toFixed(2)} USD`
+
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
+    <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
+      {/* Top Hero Header */}
       <div className="flex items-start justify-between">
         <ParentGreeting displayName={displayName} />
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowEnrollChild(true)}
-            className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" /> Add Child
-          </button>
-          <Link href="/parent/children">
-            <div className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
-              View Children
+          <Link href="/parent/billing">
+            <div className="px-3 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white text-xs font-semibold rounded-xl transition-all shadow-sm flex items-center gap-1.5">
+              <span>{fmt(0)}</span> · {currency === "KES" ? "KES" : "USD"}
             </div>
           </Link>
+          <button onClick={() => setShowEnrollChild(true)}
+            className="px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm flex items-center gap-1.5">
+            <Plus className="w-4 h-4" /> Add Child
+          </button>
         </div>
       </div>
 
-      {/* Stat Cards — single cohesive row */}
+      {/* Top Quick Navigation Bar */}
+      <QuickNav />
+
+      {/* KPI Metric Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <ParentStatCard label="Children" value={totalChildren} icon={Users} color="text-blue-600" href="/parent/children" />
         <ParentStatCard label="Pending Work" value={totalPending} icon={ClipboardList} color="text-amber-600" />
@@ -133,20 +133,20 @@ export default function ParentDashboard() {
         <ParentStatCard label="AI Alerts" value={totalAlerts} icon={AlertTriangle} color={criticalAlerts > 0 ? "text-red-600" : "text-amber-600"} href="/parent/alerts" />
       </div>
 
-      {/* Conditional: Empty onboarding or Full Dashboard */}
+      {/* Conditional Content */}
       {totalChildren === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mx-auto mb-4">
-            <Users className="w-8 h-8 text-indigo-600" />
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center mx-auto mb-4">
+            <Users className="w-8 h-8 text-emerald-600" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Welcome to Elimu Nova AI Parent Portal</h2>
           <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
-            Your account is not linked to any active student records yet. 
+            Your account is not linked to any active student records yet.
             Add your children below, or contact your school administrator to link your child's profile.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <button onClick={() => setShowEnrollChild(true)} className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Add My Children
+            <button onClick={() => setShowEnrollChild(true)} className="rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
+              <Plus className="w-4 h-4" /> + Link Child Profile
             </button>
             <Link href="/parent/messages" className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition flex items-center gap-2">
               <Mail className="w-4 h-4" /> Contact School Admin
@@ -155,37 +155,28 @@ export default function ParentDashboard() {
         </div>
       ) : (
         <>
-          {/* AI Insights */}
           <ParentAIInsightsPanel />
-
-          {/* Trends & Charts */}
           <ChildTrends />
-
-          {/* Skill Comparison */}
           <SkillComparison children={children} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <EngagementSummary />
+            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border border-cyan-100 shadow-sm p-5 flex flex-col justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">Billing & Subscription</h3>
+                <p className="text-2xl font-bold text-slate-900">{fmt(0)}</p>
+                <p className="text-xs text-slate-500 mt-1">14-day free trial · {currency === "KES" ? "KES" : "USD"} billing</p>
+              </div>
+              <button onClick={() => setShowPayment(true)}
+                className="mt-4 w-full rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition">
+                Upgrade Plan
+              </button>
+            </div>
+          </div>
         </>
       )}
 
-      {/* Bottom: Engagement + Quick Nav */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <EngagementSummary />
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm min-h-[110px] p-4 flex flex-col justify-between">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-              <ArrowRight className="w-4 h-4 text-blue-600" />
-            </div>
-            <h3 className="text-sm font-semibold text-slate-800">Quick Navigation</h3>
-          </div>
-          <QuickNav />
-        </div>
-      </div>
-      {showEnrollChild && (
-        <EnrollChildModal
-          isOpen={showEnrollChild}
-          onClose={() => setShowEnrollChild(false)}
-          onSuccess={() => { setShowEnrollChild(false); window.location.reload() }}
-        />
-      )}
+      {showEnrollChild && <EnrollChildModal isOpen={showEnrollChild} onClose={() => setShowEnrollChild(false)} onSuccess={() => { setShowEnrollChild(false); window.location.reload() }} />}
+      {showPayment && <PaymentModal isOpen={showPayment} onClose={() => setShowPayment(false)} country={country} currency={currency} amount={9.99} planName="Parent Premium" />}
     </div>
   )
 }
