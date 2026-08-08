@@ -237,15 +237,15 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
       icon={<UserPlus />} size="2xl"
       footer={credentials ? (
         <div className="flex gap-2 w-full justify-end">
-          <button onClick={copyCredentials} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5"><Copy className="h-4 w-4" />Copy All</button>
-          <button onClick={handleDone} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition">Done</button>
+          <button onClick={copyCredentials} className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5"><Copy className="h-4 w-4" />Copy All</button>
+          <button onClick={handleDone} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition">Done</button>
         </div>
       ) : (
         <AdminModalFooter onCancel={handleClose} submitLabel="Enroll Teacher" loading={isLoading} type="submit" />
       )}
     >
       {credentials ? (
-        <div className="space-y-4">
+        <div className="space-y-4 mt-1">
           <div className="text-center"><CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-2" /><h3 className="text-lg font-bold text-slate-900">Teacher Enrolled</h3><p className="text-sm text-slate-500 mt-1">Share these credentials with the teacher securely.</p></div>
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
             <div><p className="text-xs text-slate-500">Name</p><p className="font-semibold">{credentials.name}</p></div>
@@ -257,7 +257,7 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
           <p className="text-xs text-amber-600 text-center">Save these credentials now — the password cannot be recovered later</p>
         </div>
       ) : (
-        <form id="enroll-teacher-form" onSubmit={handleSubmit} className="space-y-5">
+        <form id="enroll-teacher-form" onSubmit={handleSubmit} className="space-y-5 mt-1">
           <div className="grid grid-cols-2 gap-4">
             <AdminFormField label="First Name" htmlFor="et-first" required>
               <input id="et-first" type="text" autoComplete="off" placeholder="Enter first name" value={formData.firstName} onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))} className={adminInputClass} required />
@@ -303,20 +303,6 @@ export function EnrollTeacherModal({ isOpen, onClose, onSuccess }: EnrollTeacher
                 <div key={band.label}><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">{band.label}</p><div className="flex flex-wrap gap-2">{band.grades.map(g => <Pill key={g} active={selectedGrades.includes(g)} onClick={() => toggleGrade(g)}>{g}</Pill>)}</div></div>
               ))}
             </div>
-          </div>
-
-          {/* Learning Areas / Subjects */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2"><BookOpen className="h-4 w-4 text-indigo-500" /><span className="text-sm font-medium text-slate-700">Learning Areas / Subjects</span></div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <button type="button" onClick={selectOnlyCore} className="text-[11px] font-medium text-indigo-600 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 rounded-full px-2.5 py-1 transition-colors">Core subjects</button>
-              <button type="button" onClick={selectAllSubjects} className="text-[11px] font-medium text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2.5 py-1 transition-colors">Select all</button>
-              <button type="button" onClick={clearSubjects} className="text-[11px] font-medium text-rose-500 bg-rose-50 border border-rose-100 hover:bg-rose-100 rounded-full px-2.5 py-1 transition-colors">Clear</button>
-              <span className="ml-auto text-[11px] text-slate-400">{effectiveSubjects.length} selected</span>
-            </div>
-            {selectedGrades.length > 0 && <p className="text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">Core subjects for the selected grades are pre-selected.</p>}
-            {autoAssignedSubjects.length > 0 && <div className="space-y-1.5"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Core</p><div className="flex flex-wrap gap-2">{autoAssignedSubjects.map(s => <Pill key={s} active={effectiveSubjects.includes(s)} onClick={() => toggleSubject(s)} badge="Core">{s}</Pill>)}</div></div>}
-            {optionalSubjects.length > 0 && <div className="space-y-1.5"><p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Optional</p><div className="flex flex-wrap gap-2">{optionalSubjects.map(s => <Pill key={s} active={effectiveSubjects.includes(s)} onClick={() => toggleSubject(s)}>{s}</Pill>)}</div></div>}
           </div>
 
           {/* Dynamic Class & Subject Mapping Grid */}
