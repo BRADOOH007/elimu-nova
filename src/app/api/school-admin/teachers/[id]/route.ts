@@ -14,7 +14,7 @@ export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }, { param
   if (!teacherId) return NextResponse.json({ error: 'Teacher ID required' }, { status: 400 })
 
   const body = await req.json()
-  const { firstName, lastName, email, phone, address, isActive, departmentHod, subjectAssignments } = body
+  const { firstName, lastName, email, phone, address, isActive, departmentHod, gradeLevels, subjects, subjectAssignments } = body
 
   const schoolId = schoolAdmin.schoolId
   const teacher = await prisma.teacher.findFirst({
@@ -23,7 +23,7 @@ export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }, { param
   if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
   // Update user record
-  if (firstName || lastName || email || isActive !== undefined) {
+  if (firstName || lastName || email || isActive !== undefined || phone !== undefined || address !== undefined) {
     await prisma.user.update({
       where: { id: teacher.userId },
       data: {
@@ -37,18 +37,19 @@ export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }, { param
     })
   }
 
-  // Update teacher record
-  await prisma.teacher.update({
-    where: { id: teacherId },
-    data: {
-      ...(departmentHod !== undefined && { departmentHod: departmentHod || null }),
-    },
-  })
+  // Update teacher record — now includes gradeLevels and subjects
+  const teacherData: any = {}
+  if (departmentHod !== undefined) teacherData.departmentHod = departmentHod || null
+  if (gradeLevels !== undefined) teacherData.gradeLevels = Array.isArray(gradeLevels) ? gradeLevels : []
+  if (subjects !== undefined) teacherData.subjects = Array.isArray(subjects) ? subjects : []
+
+  if (Object.keys(teacherData).length > 0) {
+    await prisma.teacher.update({ where: { id: teacherId }, data: teacherData })
+  }
 
   // Sync subject assignments — wipe and rebuild
   if (subjectAssignments !== undefined) {
     await (prisma as any).teacherSubjectAssignment.deleteMany({ where: { teacherId } })
-
     const rows: Array<{ classId: string; subject: string }> = Array.isArray(subjectAssignments) ? subjectAssignments : []
     for (const row of rows) {
       if (row.classId && row.subject) {
@@ -59,5 +60,31 @@ export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }, { param
     }
   }
 
-  return NextResponse.json({ message: 'Teacher updated successfully' })
+  return NextResponse.json({
+    message: 'Teacher updated successfully',
+    teacher: { id: teacherId, departmentHod: departmentHod || teacher.departmentHod, gradeLevels: gradeLevels || teacher.gradeLevels, subjects: subjects || teacher.subjects },
+  })
+})
+
+export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (_req, { user }, { params }) => {
+  const schoolAdmin = await prisma.schoolAdmin.findUnique({
+    where: { userId: user.id },
+    include: { school: true },
+  })
+  if (!schoolAdmin) return NextResponse.json({ error: 'School admin not found' }, { status: 404 })
+
+  const teacherId = (params as any)?.id
+  if (!teacherId) return NextResponse.json({ error: 'Teacher ID required' }, { status: 400 })
+
+  const teacher = await prisma.teacher.findFirst({
+    where: { id: teacherId, schoolId: schoolAdmin.schoolId },
+  })
+  if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
+
+  // Clean up related data
+  await (prisma as any).teacherSubjectAssignment.deleteMany({ where: { teacherId } })
+  // Deactivate the user (soft delete)
+  await prisma.user.update({ where: { id: teacher.userId }, data: { isActive: false } })
+
+  return NextResponse.json({ message: 'Teacher deactivated successfully' })
 })
