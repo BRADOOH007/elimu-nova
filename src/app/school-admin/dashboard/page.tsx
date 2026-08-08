@@ -95,13 +95,13 @@ export default function SchoolAdminDashboard() {
         <SubscriptionAlert />
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
           <div className="min-w-0">
-            <h1 className="text-2xl md:text-3xl font-bold mb-1 text-gray-900 truncate">
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900 truncate">
               {schoolData?.school?.name ? `${schoolData.school.name} Overview` : "School Admin Overview"}
             </h1>
-            <p className="text-gray-600 text-sm md:text-base">
-              {schoolData?.school?.name ? `Manage teachers, students, and operations at ${schoolData.school.name}` : "Manage teachers, students, and school operations"}
+            <p className="text-slate-500 text-sm md:text-base mt-1">
+              {schoolData?.school?.name ? `Manage teachers, students, and operations at ${schoolData.school.name}` : "Manage teachers, students, and operations"}
             </p>
           </div>
           <SubscriptionBadge subscription={subscription} formatCurrency={formatCurrency} />
