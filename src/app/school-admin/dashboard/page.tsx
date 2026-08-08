@@ -11,6 +11,7 @@ import SchoolAIInsightsPanel from "@/components/school-admin/ai-insights-panel"
 import { AIUsageCard } from "@/components/ai-usage-card"
 import ActivityLog from "@/components/school-admin/activity-log"
 import UpcomingMeetings from "@/components/school-admin/upcoming-meetings"
+import AnalyticsSummary from "@/components/school-admin/analytics-summary"
 import SubscriptionBadge from "@/components/school-admin/subscription-badge"
 import { EnrollTeacherModal } from "@/components/modals/enroll-teacher-modal"
 import EnrollStudentModal from "@/components/modals/enroll-student-modal"
@@ -114,6 +115,9 @@ export default function SchoolAdminDashboard() {
           termInfo={termInfo}
           cbcReadiness={cbcReadiness}
         />
+
+        {/* Analytics Summary Widget */}
+        <AnalyticsSummary />
 
         {/* Main grid: 2-col left, 1-col right */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">

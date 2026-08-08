@@ -1163,6 +1163,10 @@ model Meeting {
   zoomProvider         String   @default("manual") // "auto" (via API) or "manual"
   zoomMeetingRecording String? // JSON array of recording files from webhook
 
+  // Meeting type and video conferencing
+  meetingType String   @default("IN_PERSON") // IN_PERSON or VIRTUAL
+  videoLink   String?  // Google Meet / Jitsi / Zoom / WebRTC room link
+
   status      MeetingStatus @default(SCHEDULED)
   attendees   Json? // Store attendee information as JSON
   createdAt   DateTime      @default(now())
