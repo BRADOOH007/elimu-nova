@@ -1,429 +1,206 @@
-"use client"
+'use client'
 
 import { useState, useEffect } from 'react'
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { 
-  Calendar, 
-  Search, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  MoreHorizontal,
-  Clock,
-  MapPin,
-  User,
-  ArrowLeft,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  AlertCircle
+  Calendar, Search, Plus, Trash2, Clock, MapPin, User, Video, Users, Crown, CheckCircle, Copy, ExternalLink, Loader2, RefreshCw, Sparkles, Filter, ArrowRight, Phone
 } from "lucide-react"
 import { ScheduleMeetingModal } from "@/components/modals/schedule-meeting-modal"
 import { useRouter } from 'next/navigation'
 import { confirmToast } from '@/lib/confirm-toast'
+import { useToast } from "@/hooks/use-toast"
 
 interface Meeting {
-  id: string
-  title: string
-  description?: string
-  date: string
-  time: string
-  duration: number
-  location?: string
-  status: string
-  attendees?: any
-  createdBy: {
-    name: string
-    email: string
-  }
-  createdAt: string
-  updatedAt: string
+  id: string; title: string; description?: string; date: string; time: string
+  duration: number; location?: string; status: string; meetingType?: string; videoLink?: string
+  createdBy: { name: string; email: string }; createdAt: string
+}
+
+const TABS = [
+  { id: 'all', label: 'All Meetings' },
+  { id: 'SCHEDULED', label: 'Upcoming' },
+  { id: 'LIVE', label: 'In Progress' },
+  { id: 'COMPLETED', label: 'Completed' },
+  { id: 'CANCELLED', label: 'Cancelled' },
+]
+
+function SkeletonCard() {
+  return (
+    <div className="animate-pulse bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-3">
+      <div className="flex items-start justify-between">
+        <div className="space-y-2"><div className="h-4 w-48 bg-slate-200 rounded" /><div className="h-3 w-32 bg-slate-200 rounded" /></div>
+        <div className="h-5 w-16 bg-slate-200 rounded-full" />
+      </div>
+      <div className="h-3 w-40 bg-slate-200 rounded" />
+      <div className="flex items-center justify-between pt-2"><div className="h-8 w-24 bg-slate-200 rounded-lg" /><div className="flex gap-2"><div className="h-8 w-8 bg-slate-200 rounded-lg" /><div className="h-8 w-8 bg-slate-200 rounded-lg" /></div></div>
+    </div>
+  )
 }
 
 export default function MeetingsPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
-  const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null)
+  const [tab, setTab] = useState('all')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState<Meeting | null>(null)
 
-  useEffect(() => {
-    fetchMeetings()
-  }, [])
+  useEffect(() => { fetchMeetings() }, [])
 
   const fetchMeetings = async () => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/school-admin/meetings')
-      
-      if (response.ok) {
-        const data = await response.json()
-        setMeetings(data.meetings || [])
-      } else {
-        console.error('Failed to fetch meetings')
-      }
-    } catch (error) {
-      console.error('Error fetching meetings:', error)
-    } finally {
-      setLoading(false)
-    }
+    setLoading(true)
+    try { const r = await fetch('/api/school-admin/meetings?limit=50'); if (r.ok) setMeetings((await r.json()).meetings || []) } catch (e) { console.error(e) }
+    finally { setLoading(false) }
   }
 
-  const handleScheduleSuccess = () => {
-    fetchMeetings()
-    setIsScheduleModalOpen(false)
-    setEditingMeeting(null)
+  const handleDelete = async (id: string) => {
+    if (!(await confirmToast({ title: 'Delete this meeting?' }))) return
+    try { await fetch(`/api/school-admin/meetings/${id}`, { method: 'DELETE' }); setMeetings(prev => prev.filter(m => m.id !== id)); toast({ title: 'Deleted' }) }
+    catch { toast({ title: 'Error', variant: 'destructive' }) }
   }
 
-  const handleEditMeeting = (meeting: Meeting) => {
-    setEditingMeeting(meeting)
-    setIsScheduleModalOpen(true)
+  const copyInviteLink = (m: Meeting) => {
+    const link = m.videoLink || `${window.location.origin}/meetings/${m.id}`
+    navigator.clipboard.writeText(link); toast({ title: 'Copied', description: 'Invite link copied' })
   }
 
-  const handleDeleteMeeting = async (meetingId: string) => {
-    if (!(await confirmToast({ title: 'Are you sure you want to delete this meeting?' }))) return
-
-    try {
-      const response = await fetch(`/api/school-admin/meetings/${meetingId}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        setMeetings(meetings.filter(meeting => meeting.id !== meetingId))
-      } else {
-        console.error('Failed to delete meeting')
-      }
-    } catch (error) {
-      console.error('Error deleting meeting:', error)
-    }
-  }
-
-  const handleUpdateStatus = async (meetingId: string, newStatus: string) => {
-    try {
-      const response = await fetch(`/api/school-admin/meetings/${meetingId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: newStatus
-        })
-      })
-
-      if (response.ok) {
-        fetchMeetings()
-      } else {
-        console.error('Failed to update meeting status')
-      }
-    } catch (error) {
-      console.error('Error updating meeting status:', error)
-    }
-  }
-
-  const filteredMeetings = meetings.filter(meeting => {
-    const matchesSearch = meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (meeting.description && meeting.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                         (meeting.location && meeting.location.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesStatus = statusFilter === 'all' || meeting.status === statusFilter
-    
-    return matchesSearch && matchesStatus
+  const filtered = meetings.filter(m => {
+    const q = search.toLowerCase()
+    if (q && !m.title.toLowerCase().includes(q) && !m.description?.toLowerCase().includes(q)) return false
+    if (tab !== 'all' && m.status !== tab) return false
+    if (statusFilter !== 'all' && m.status !== statusFilter) return false
+    return true
   })
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+  const thisWeek = filtered.filter(m => {
+    const d = new Date(m.date); const now = new Date()
+    const start = new Date(now); start.setDate(now.getDate() - now.getDay())
+    const end = new Date(start); end.setDate(start.getDate() + 7)
+    return d >= start && d < end
+  })
+  const virtualCount = filtered.filter(m => m.meetingType === 'VIRTUAL' || m.videoLink).length
+  const ptaCount = filtered.filter(m => m.title?.toLowerCase().includes('pta') || m.title?.toLowerCase().includes('parent')).length
 
-  const formatTime = (timeString: string) => {
-    const [hours, minutes] = timeString.split(':')
-    const hour = parseInt(hours)
-    const ampm = hour >= 12 ? 'PM' : 'AM'
-    const displayHour = hour % 12 || 12
-    return `${displayHour}:${minutes} ${ampm}`
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'SCHEDULED':
-        return <Clock className="w-4 h-4 text-blue-500" />
-      case 'IN_PROGRESS':
-        return <AlertCircle className="w-4 h-4 text-yellow-500" />
-      case 'COMPLETED':
-        return <CheckCircle className="w-4 h-4 text-green-500" />
-      case 'CANCELLED':
-        return <XCircle className="w-4 h-4 text-red-500" />
-      case 'POSTPONED':
-        return <AlertCircle className="w-4 h-4 text-orange-500" />
-      default:
-        return <Clock className="w-4 h-4 text-gray-500" />
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'SCHEDULED':
-        return 'bg-blue-100 text-blue-800'
-      case 'IN_PROGRESS':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800'
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800'
-      case 'POSTPONED':
-        return 'bg-orange-100 text-orange-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading meetings...</p>
-        </div>
-      </div>
-    )
+  const getStatusBadge = (s: string) => {
+    switch(s) { case 'SCHEDULED': return <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Upcoming</span>; case 'LIVE': return <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 animate-pulse">Live</span>; case 'COMPLETED': return <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Ended</span>; case 'CANCELLED': return <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-red-100 text-red-700">Cancelled</span>; default: return <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{s}</span> }
   }
 
   return (
-    <div>
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center space-x-4 mb-4">
-          <Button 
-            variant="ghost" 
-            onClick={() => router.back()}
-            className="p-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">
-              <span className="edugenius-text-gradient">Meetings Management</span>
-            </h1>
-            <p className="text-gray-600">Schedule and manage school meetings</p>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Meetings Management</h1>
+          <p className="text-sm text-slate-500 mt-1">Schedule, manage, and host virtual and in-person meetings</p>
         </div>
-
-        {/* Search and Filters */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search meetings by title, description, or location..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-48">
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="SCHEDULED">Scheduled</SelectItem>
-              <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-              <SelectItem value="COMPLETED">Completed</SelectItem>
-              <SelectItem value="CANCELLED">Cancelled</SelectItem>
-              <SelectItem value="POSTPONED">Postponed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button 
-            onClick={() => setIsScheduleModalOpen(true)}
-            className="edugenius-button"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Schedule Meeting
-          </Button>
+        <div className="flex items-center gap-2">
+          <button onClick={fetchMeetings} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 transition"><RefreshCw className="w-4 h-4" /></button>
+          <button onClick={() => { setEditing(null); setModalOpen(true) }} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Schedule Meeting
+          </button>
         </div>
       </div>
 
-      {/* Meetings Table */}
-      <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-        <CardHeader>
-          <CardTitle className="edugenius-text-gradient-blue">Meetings List</CardTitle>
-          <CardDescription>
-            {filteredMeetings.length} meeting{filteredMeetings.length !== 1 ? 's' : ''} found
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {filteredMeetings.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-none">
-                    <TableHead className="border-none">Meeting</TableHead>
-                    <TableHead className="border-none">Date & Time</TableHead>
-                    <TableHead className="border-none">Duration</TableHead>
-                    <TableHead className="border-none">Location</TableHead>
-                    <TableHead className="border-none">Status</TableHead>
-                    <TableHead className="border-none">Created By</TableHead>
-                    <TableHead className="border-none">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMeetings.map((meeting) => (
-                    <TableRow key={meeting.id} className="border-none hover:bg-blue-50/50">
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">{meeting.title}</p>
-                            {meeting.description && (
-                              <p className="text-sm text-gray-500 line-clamp-2">{meeting.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium">{formatDate(meeting.date)}</p>
-                            <p className="text-xs text-gray-500">{formatTime(meeting.time)}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-2">
-                          <Clock className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm">{meeting.duration} min</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        {meeting.location ? (
-                          <div className="flex items-center space-x-2">
-                            <MapPin className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm">{meeting.location}</span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400">No location</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(meeting.status)}`}>
-                          {getStatusIcon(meeting.status)}
-                          <span className="ml-1">{meeting.status.replace('_', ' ')}</span>
-                        </span>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium">{meeting.createdBy.name}</p>
-                            <p className="text-xs text-gray-500">{meeting.createdBy.email}</p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditMeeting(meeting)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            {meeting.status === 'SCHEDULED' && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleUpdateStatus(meeting.id, 'IN_PROGRESS')}>
-                                  <AlertCircle className="w-4 h-4 mr-2" />
-                                  Start Meeting
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleUpdateStatus(meeting.id, 'CANCELLED')}>
-                                  <XCircle className="w-4 h-4 mr-2" />
-                                  Cancel
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {meeting.status === 'IN_PROGRESS' && (
-                              <DropdownMenuItem onClick={() => handleUpdateStatus(meeting.id, 'COMPLETED')}>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Complete
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem
-                              onClick={() => handleDeleteMeeting(meeting.id)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No meetings found</h3>
-              <p className="text-gray-500 mb-4">
-                {searchTerm || statusFilter !== 'all' 
-                  ? 'Try adjusting your search or filter criteria'
-                  : 'Get started by scheduling your first meeting'
-                }
-              </p>
-              {(!searchTerm && statusFilter === 'all') && (
-                <Button 
-                  onClick={() => setIsScheduleModalOpen(true)}
-                  className="edugenius-button"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Schedule First Meeting
-                </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="border-slate-100 shadow-sm"><CardContent className="p-5"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center"><Calendar className="w-5 h-5 text-indigo-600" /></div><div><p className="text-xs text-slate-500">Upcoming This Week</p><p className="text-xl font-bold text-slate-900">{thisWeek.length}</p></div></div></CardContent></Card>
+        <Card className="border-slate-100 shadow-sm"><CardContent className="p-5"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center"><Users className="w-5 h-5 text-emerald-600" /></div><div><p className="text-xs text-slate-500">PTA Conferences</p><p className="text-xl font-bold text-slate-900">{ptaCount}</p></div></div></CardContent></Card>
+        <Card className="border-slate-100 shadow-sm"><CardContent className="p-5"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center"><Video className="w-5 h-5 text-violet-600" /></div><div><p className="text-xs text-slate-500">Virtual Rooms</p><p className="text-xl font-bold text-slate-900">{virtualCount}<span className="text-sm font-normal text-slate-400"> active</span></p></div></div></CardContent></Card>
+      </div>
 
-      {/* Modals */}
-      <ScheduleMeetingModal
-        isOpen={isScheduleModalOpen}
-        onClose={() => { setIsScheduleModalOpen(false); setEditingMeeting(null) }}
-        onSuccess={handleScheduleSuccess}
-        meeting={editingMeeting}
-      />
+      {/* Tabs + Filters */}
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+        <div className="flex flex-wrap gap-1.5">
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-medium transition ${tab === t.id ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>{t.label}</button>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input type="text" placeholder="Search meetings..." value={search} onChange={e => setSearch(e.target.value)}
+              className="w-60 rounded-xl border border-slate-200 bg-white pl-9 pr-4 py-2 text-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition" />
+          </div>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none">
+            <option value="all">All Status</option>
+            <option value="SCHEDULED">Scheduled</option>
+            <option value="LIVE">In Progress</option>
+            <option value="COMPLETED">Ended</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Meeting Cards or Empty State */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="border-slate-100 shadow-sm bg-gradient-to-br from-slate-50 to-white">
+          <CardContent className="py-16 text-center">
+            <Calendar className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-slate-700 mb-2">No meetings found</h3>
+            <p className="text-sm text-slate-500 mb-6">Get started by scheduling your first meeting</p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button onClick={() => { setEditing(null); setModalOpen(true) }} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition flex items-center gap-2"><Plus className="w-4 h-4" /> Schedule Staff Briefing</button>
+              <button onClick={() => { setEditing(null); setModalOpen(true) }} className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition flex items-center gap-2"><Users className="w-4 h-4" /> Schedule PTA Session</button>
+              <button onClick={() => { setEditing(null); setModalOpen(true) }} className="rounded-lg bg-violet-600 hover:bg-violet-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition flex items-center gap-2"><Video className="w-4 h-4" /> Create Instant Jitsi Room</button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.map(m => {
+            const isLive = m.status === 'LIVE'
+            const isVirtual = m.meetingType === 'VIRTUAL' || !!m.videoLink
+            return (
+              <div key={m.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden transition hover:shadow-md ${isLive ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-100'}`}>
+                <div className={`h-1 ${isLive ? 'bg-gradient-to-r from-emerald-500 to-teal-500 animate-pulse' : isVirtual ? 'bg-gradient-to-r from-violet-500 to-purple-500' : 'bg-gradient-to-r from-indigo-500 to-blue-500'}`} />
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-slate-900 truncate">{m.title}</h3>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-slate-500">
+                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{new Date(m.date).toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })} · {m.time}</span>
+                        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{m.duration} min</span>
+                        {m.location && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{m.location}</span>}
+                      </div>
+                    </div>
+                    {getStatusBadge(m.status)}
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-50">
+                    <div className="flex items-center gap-2 text-xs text-slate-400">
+                      <User className="w-3 h-3" />by {m.createdBy?.name || 'Unknown'}
+                      {isVirtual && <span className="flex items-center gap-1 text-violet-600"><Video className="w-3 h-3" />Virtual</span>}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      {isVirtual && m.videoLink && (
+                        <a href={m.videoLink} target="_blank" rel="noopener noreferrer"
+                          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition ${isLive ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-violet-100 text-violet-700 hover:bg-violet-200'}`}>
+                          <Video className="w-3 h-3" /> Join
+                        </a>
+                      )}
+                      {isVirtual && (
+                        <button onClick={() => copyInviteLink(m)} className="px-2 py-1.5 rounded-lg text-[11px] text-slate-500 hover:bg-slate-100 transition" title="Copy link"><Copy className="w-3 h-3" /></button>
+                      )}
+                      <button onClick={() => { setEditing(m); setModalOpen(true) }} className="px-2 py-1.5 rounded-lg text-[11px] text-slate-500 hover:bg-slate-100 transition" title="Edit"><ExternalLink className="w-3 h-3" /></button>
+                      <button onClick={() => handleDelete(m.id)} className="px-2 py-1.5 rounded-lg text-[11px] text-slate-400 hover:text-red-600 hover:bg-red-50 transition" title="Delete"><Trash2 className="w-3 h-3" /></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {modalOpen && <ScheduleMeetingModal isOpen={modalOpen} onClose={() => { setModalOpen(false); setEditing(null) }} onSuccess={fetchMeetings} meeting={editing} />}
     </div>
   )
 }
