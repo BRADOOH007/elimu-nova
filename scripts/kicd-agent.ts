@@ -126,9 +126,9 @@ async function extractTextFromPDF(url: string): Promise<string> {
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
   const buffer = Buffer.from(await res.arrayBuffer())
-  const { default: PDFParse } = await import('pdf-parse')
-  const pdf = new PDFParse({ data: buffer })
-  const result = await pdf.getText({})
+  const pdfModule = await import('pdf-parse')
+  const PDFParse = pdfModule.PDFParse
+  const result = await new PDFParse({ data: buffer }).getText({})
   console.log(`  Extracted ${result.text.length} chars`)
   return result.text
 }
