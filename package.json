@@ -14,7 +14,8 @@
     "test:image-api": "tsx scripts/test-image-apis.ts",
     "reset:password": "tsx scripts/reset-student-password.ts",
     "reset:all-passwords": "tsx scripts/reset-all-student-passwords.ts",
-    "migrate:neon": "tsx scripts/migrate-to-neon.ts"
+    "migrate:neon": "tsx scripts/migrate-to-neon.ts",
+    "db:sync-kicd": "ts-node scripts/kicd-agent.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -77,6 +78,7 @@
     "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "stripe": "^20.0.0",
+    "swr": "^2.5.0",
     "tailwind-merge": "^3.3.1",
     "twilio": "^5.5.0",
     "zod": "^3.25.76"
