@@ -6,8 +6,9 @@ import {
   Calendar, Sparkles, Loader2, Trash2, RefreshCw,
   CheckCircle, AlertTriangle, AlertCircle, Users,
   GraduationCap, TrendingUp, ArrowRight, Brain,
-  Clock, BookOpen, Info
+  Clock, BookOpen, Info, Upload
 } from 'lucide-react'
+import UploadPreviewModal from '@/components/modals/upload-preview-modal'
 
 /* ──────────────── Types ──────────────── */
 interface Schedule {
@@ -73,6 +74,7 @@ export default function TimetablePage() {
   const [alloc, setAlloc]           = useState<AllocationResult | null>(null)
   const [allocLoading, setAllocLoading] = useState(false)
   const [applying, setApplying]     = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
 
   // Load existing timetable
   const loadSchedules = async () => {
@@ -160,9 +162,15 @@ export default function TimetablePage() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Academic Management</h1>
-        <p className="text-slate-500 text-sm mt-0.5">AI-powered timetable generation and teacher allocation</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Academic Management</h1>
+          <p className="text-slate-500 text-sm mt-0.5">AI-powered timetable generation and teacher allocation</p>
+        </div>
+        <button onClick={() => setUploadOpen(true)}
+          className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
+          <Upload className="w-4 h-4" /> Upload Timetable
+        </button>
       </div>
 
       {/* Tabs */}
@@ -439,6 +447,7 @@ export default function TimetablePage() {
           )}
         </div>
       )}
+      {uploadOpen && <UploadPreviewModal type="timetable" onClose={() => setUploadOpen(false)} onSuccess={() => { fetchSchedules(); setUploadOpen(false) }} />}
     </div>
   )
 }
