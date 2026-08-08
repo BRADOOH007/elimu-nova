@@ -17,7 +17,8 @@ function getGreeting() {
 export default function ParentGreeting({ displayName }: ParentGreetingProps) {
   const { data: session } = useSession()
   const { text, icon: GreetIcon } = getGreeting()
-  const name = (displayName || session?.user?.name || "Parent").split(" ")[0]
+  const raw = (displayName || session?.user?.name || "Parent").split(" ")[0]
+  const name = raw.charAt(0).toUpperCase() + raw.slice(1)
 
   return (
     <div className="flex items-center gap-3">

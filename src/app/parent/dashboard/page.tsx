@@ -2,13 +2,11 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, ClipboardList, TrendingUp, AlertTriangle, ArrowRight, Plus, UserPlus } from "lucide-react"
+import { Users, ClipboardList, TrendingUp, AlertTriangle, ArrowRight, Plus, UserPlus, Mail, Phone } from "lucide-react"
 import Link from "next/link"
 import ParentGreeting from "@/components/parent/greeting"
 import { ParentStatCard } from "@/components/parent/stats-cards"
-import ChildrenOverview from "@/components/parent/children-overview"
 import QuickNav from "@/components/parent/quick-nav"
-import LiveFamilyPulse from "@/components/parent/live-family-pulse"
 import ChildTrends from "@/components/parent/child-trends"
 import EngagementSummary from "@/components/parent/engagement-summary"
 import SkillComparison from "@/components/parent/skill-comparison"
@@ -127,10 +125,7 @@ export default function ParentDashboard() {
         </div>
       </div>
 
-      {/* Pulse Metrics */}
-      <LiveFamilyPulse />
-
-      {/* Stat Cards */}
+      {/* Stat Cards — single cohesive row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <ParentStatCard label="Children" value={totalChildren} icon={Users} color="text-blue-600" href="/parent/children" />
         <ParentStatCard label="Pending Work" value={totalPending} icon={ClipboardList} color="text-amber-600" />
@@ -138,22 +133,43 @@ export default function ParentDashboard() {
         <ParentStatCard label="AI Alerts" value={totalAlerts} icon={AlertTriangle} color={criticalAlerts > 0 ? "text-red-600" : "text-amber-600"} href="/parent/alerts" />
       </div>
 
-      {/* AI Insights */}
-      <ParentAIInsightsPanel />
+      {/* Conditional: Empty onboarding or Full Dashboard */}
+      {totalChildren === 0 ? (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center mx-auto mb-4">
+            <Users className="w-8 h-8 text-indigo-600" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">Welcome to Elimu Nova AI Parent Portal</h2>
+          <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+            Your account is not linked to any active student records yet. 
+            Add your children below, or contact your school administrator to link your child's profile.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button onClick={() => setShowEnrollChild(true)} className="rounded-lg bg-emerald-600 hover:bg-emerald-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add My Children
+            </button>
+            <Link href="/parent/messages" className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition flex items-center gap-2">
+              <Mail className="w-4 h-4" /> Contact School Admin
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* AI Insights */}
+          <ParentAIInsightsPanel />
 
-      {/* Trends & Charts */}
-      <ChildTrends />
+          {/* Trends & Charts */}
+          <ChildTrends />
 
-      {/* Children Overview + AI Warnings */}
-      <ChildrenOverview children={children} alerts={alerts} loading={loading} alertsLoading={alertsLoading} gradeColor={gradeColor} />
-
-      {/* Skill Comparison (multi-child) */}
-      <SkillComparison children={children} />
+          {/* Skill Comparison */}
+          <SkillComparison children={children} />
+        </>
+      )}
 
       {/* Bottom: Engagement + Quick Nav */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <EngagementSummary />
-        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm min-h-[110px] p-4 flex flex-col justify-between">
           <div className="flex items-center gap-2 mb-4">
             <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
               <ArrowRight className="w-4 h-4 text-blue-600" />
