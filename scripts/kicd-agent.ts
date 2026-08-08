@@ -142,67 +142,57 @@ async function crawlKicd(seedUrls: string[]): Promise<{ browser: any; entries: P
   return { browser, entries }
 }
 
-/* ──── PDF DOWNLOAD VIA BROWSER ──── */
-async function downloadPdfFromDrive(context: any, fileId: string): Promise<Buffer> {
-  // Use browser context's request API (shares cookies from KICD iframe)
-  // This way the request comes from the same authenticated browser session
-  const apiRequest = context.request || (context.pages?.()?.[0]?.request)
-  if (apiRequest) {
-    const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`
-    const resp = await apiRequest.get(downloadUrl, { timeout: 60000 })
-    if (resp.ok()) {
-      const body = await resp.body()
-      const buffer = Buffer.from(body)
-      if (buffer.slice(0, 5).toString() === '%PDF-') {
-        console.log(`    Downloaded ${(buffer.length / 1024).toFixed(0)} KB`)
-        return buffer
-      }
-      console.log(`    Not a PDF from direct download (${buffer.length} bytes), trying confirm=t...`)
-    }
+/* ──── PDF TEXT EXTRACTION ──── */
+async function extractTextFromDrive(page: any, fileId: string): Promise<{ text: string; method: string }> {
+  // Strategy: open the Google Drive preview, wait for the PDF to render,
+  // then extract text directly from the DOM (Google's PDF viewer renders text as selectable DOM nodes)
 
-    // Try with confirm=t for large files
-    const confirmUrl = `https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`
-    const resp2 = await apiRequest.get(confirmUrl, { timeout: 60000 })
-    if (resp2.ok()) {
-      const body2 = await resp2.body()
-      const buffer2 = Buffer.from(body2)
-      if (buffer2.slice(0, 5).toString() === '%PDF-') {
-        console.log(`    Downloaded ${(buffer2.length / 1024).toFixed(0)} KB (confirm=t)`)
-        return buffer2
-      }
-    }
-    console.log(`    Google Drive download blocked (file not publicly downloadable)`)
-  }
+  await page.goto(`https://drive.google.com/file/d/${fileId}/preview`, {
+    waitUntil: 'domcontentloaded', timeout: 30000,
+  })
+  await page.waitForTimeout(10000)
 
-  // Fallback: navigate to view page and try to find download link
-  const page = context.pages?.()?.[0]
-  if (!page) throw new Error('No browser page available')
+  // Get all visible text from the page
+  const bodyText = await page.evaluate(() => {
+    // Try to find the PDF viewer content container
+    const viewer = document.querySelector('[role="document"], #drive-viewer-page, .ndfHFb-c4YZDc')
+    if (viewer) return viewer.textContent || ''
+    return document.body.innerText || ''
+  })
 
-  console.log(`    Trying view page download...`)
-  const viewUrl = `https://drive.google.com/file/d/${fileId}/view`
-  await page.goto(viewUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
-  await page.waitForTimeout(6000)
-
-  // Try download button
-  const downloadBtn = await page.$('[aria-label="Download"], [data-tooltip="Download"], button[aria-label*="Download"]')
-  if (downloadBtn) {
-    const [download] = await Promise.all([
-      page.waitForEvent('download', { timeout: 15000 }),
-      downloadBtn.click(),
-    ])
-    if (download) {
-      const path = await download.path()
-      const fs = await import('fs')
-      const buf = fs.readFileSync(path)
-      console.log(`    Downloaded via button ${(buf.length / 1024).toFixed(0)} KB`)
-      return Buffer.from(buf)
+  if (bodyText.length > 200) {
+    // Clean up common Google Drive UI text
+    const cleaned = bodyText
+      .replace(/Sign\sin|Google\sDrive|Can't\sopen|You're\ssigned\sin/gi, '')
+      .replace(/JavaScript.*needed|Go to Drive|Open\sin.*editor/gi, '')
+      .trim()
+    if (cleaned.length > 150) {
+      console.log(`    Extracted ${cleaned.length} chars from DOM`)
+      return { text: cleaned, method: 'dom-text' }
     }
   }
 
-  // Last resort: render view page as PDF
-  console.log(`    Falling back to page.pdf() render...`)
-  const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true })
-  return Buffer.from(pdfBuffer)
+  // Fallback: screenshot + page.pdf for OCR (visual extraction)
+  console.log(`    DOM text too short (${bodyText.length} chars), using visual extraction...`)
+  const pdfBuf = await page.pdf({ format: 'A4', printBackground: true, scale: 1.5, margin: { top: 0, bottom: 0, left: 0, right: 0 } })
+  console.log(`    Visual PDF: ${(pdfBuf.length / 1024).toFixed(0)} KB`)
+  
+  // Try pdf-parse on the visual PDF (text may be embedded as images)
+  try {
+    const pdfModule = await import('pdf-parse')
+    const PDFParse = pdfModule.PDFParse
+    const result = await new PDFParse({ data: Buffer.from(pdfBuf) }).getText({})
+    if (result.text.length > 100) {
+      console.log(`    pdf-parse extracted ${result.text.length} chars from rendered PDF`)
+      return { text: result.text, method: 'page-pdf' }
+    }
+  } catch { /* pdf-parse failed, continue to image OCR */ }
+
+  // Last resort: pass the rendered page as base64 image to AI vision
+  const screenshot = await page.screenshot({ type: 'png', fullPage: true })
+  const base64 = Buffer.from(screenshot).toString('base64')
+  console.log(`    Screenshot: ${(screenshot.length / 1024).toFixed(0)} KB, will use AI vision OCR`)
+  return { text: `[image:${base64.slice(0, 50)}...]`, method: 'screenshot' }
 }
 
 /* ──── PDF EXTRACTION ──── */
@@ -237,10 +227,55 @@ async function extractTextFromPDF(url: string): Promise<string> {
   return result.text
 }
 
+/* ──── AI VISION OCR ──── */
+async function parseWithGeminiVision(imageData: string, filename: string): Promise<string> {
+  const openaiKey = process.env.OPENAI_API_KEY
+  if (!openaiKey) throw new Error('No OPENAI_API_KEY for vision')
+
+  const base64 = imageData.slice(7, -3)
+
+  // Use Google's Gemini via OpenRouter (or direct Google endpoint if key is GEMINI)
+  const geminiKey = process.env.GEMINI_API_KEY
+  if (geminiKey) {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { text: 'Extract ALL visible text from this curriculum document screenshot. Output raw text.' },
+          { inlineData: { mimeType: 'image/png', data: base64 } },
+        ]}],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+      }),
+      signal: AbortSignal.timeout(60000),
+    })
+    const data = await res.json() as any
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  }
+
+  // Fallback: OpenRouter with vision-capable model
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
+    body: JSON.stringify({
+      model: 'openai/gpt-4o-mini',
+      messages: [{ role: 'user', content: [
+        { type: 'text', text: 'Extract ALL visible text from this curriculum document screenshot. Output raw text only.' },
+        { type: 'image_url', image_url: { url: `data:image/png;base64,${base64}` } },
+      ]}],
+      temperature: 0.1,
+      max_tokens: 4096,
+    }),
+    signal: AbortSignal.timeout(60000),
+  })
+  const data = await res.json() as any
+  return data?.choices?.[0]?.message?.content || ''
+}
+
 /* ──── GEMINI OCR ──── */
 async function parseWithGemini(text: string, filename: string): Promise<ParsedCurriculum> {
-  const apiKey = process.env.GEMINI_API_KEY || process.env.OPENAI_API_KEY
-  if (!apiKey) throw new Error('No GEMINI_API_KEY or OPENAI_API_KEY in env')
+  const geminiKey = process.env.GEMINI_API_KEY
+  const openaiKey = process.env.OPENAI_API_KEY
 
   const prompt = `Extract the full CBC curriculum from this document. Return ONLY valid JSON:
 {
@@ -261,22 +296,46 @@ async function parseWithGemini(text: string, filename: string): Promise<ParsedCu
   }]
 }
 File: ${filename}
-Content: ${text.slice(0, 12000)}`
+Content: ${text.slice(0, 15000)}`
 
-  const res = await retry(() =>
-    fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
-      }),
-      signal: AbortSignal.timeout(60000),
-    })
-  )
+  let raw: string
 
-  const data = await res.json() as any
-  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  if (geminiKey) {
+    // Use Gemini
+    const res = await retry(() =>
+      fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
+        }),
+        signal: AbortSignal.timeout(120000),
+      })
+    )
+    const data = await res.json() as any
+    raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  } else if (openaiKey) {
+    // Fallback via OpenRouter (key starts with sk-or-v1)
+    const res = await retry(() =>
+      fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
+        body: JSON.stringify({
+          model: 'openai/gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.1,
+          max_tokens: 4096,
+        }),
+        signal: AbortSignal.timeout(120000),
+      })
+    )
+    const data = await res.json() as any
+    raw = data?.choices?.[0]?.message?.content || ''
+  } else {
+    throw new Error('No GEMINI_API_KEY or OPENAI_API_KEY in env')
+  }
+
   const json = extractJson(raw)
   if (!json) throw new Error('Could not parse AI response as JSON')
   return JSON.parse(json)
@@ -323,7 +382,7 @@ async function upsertCurriculum(data: ParsedCurriculum): Promise<{ strands: numb
 }
 
 /* ──── PROCESS ONE PDF ENTRY ──── */
-async function processEntry(context: any, entry: PdfEntry): Promise<string> {
+async function processEntry(page: any, entry: PdfEntry): Promise<string> {
   const url = `gdrive://${entry.fileId}`
   const existing = await (prisma as any).curriculumIngestionLog.findUnique({ where: { url } })
   if (existing?.status === 'COMPLETED') return 'SKIPPED'
@@ -335,30 +394,37 @@ async function processEntry(context: any, entry: PdfEntry): Promise<string> {
   })
 
   try {
-    let buffer: Buffer
+    let text: string
+
     if (entry.fileId.includes('/')) {
-      // Direct PDF URL (not Google Drive)
+      // Direct PDF URL — download normally
       console.log(`  Download: ${entry.fileId.slice(0, 80)}...`)
       const res = await fetch(entry.fileId, { signal: AbortSignal.timeout(60000) })
-      buffer = Buffer.from(await res.arrayBuffer())
+      const buf = Buffer.from(await res.arrayBuffer())
+      if (buf.slice(0, 5).toString() !== '%PDF-') throw new Error('Not a PDF')
+      const pdfModule = await import('pdf-parse')
+      const PDFParse = pdfModule.PDFParse
+      const result = await new PDFParse({ data: buf }).getText({})
+      text = result.text
+      console.log(`  Extracted ${text.length} chars`)
     } else {
-      // Google Drive file — download via browser context (has cookies from iframe)
-      console.log(`  Fetching: ${entry.fileId} (${entry.subject})...`)
-      buffer = await downloadPdfFromDrive(context, entry.fileId)
+      // Google Drive file — extract text from rendered preview
+      const extracted = await extractTextFromDrive(page, entry.fileId)
+      text = extracted.text
     }
 
-    const header = buffer.slice(0, 5).toString()
-    if (header !== '%PDF-') throw new Error(`Not a PDF (header: ${header || 'none'})`)
-
-    const pdfModule = await import('pdf-parse')
-    const PDFParse = pdfModule.PDFParse
-    const result = await new PDFParse({ data: buffer }).getText({})
-    console.log(`  Extracted ${result.text.length} chars`)
-
-    if (result.text.length < 50) throw new Error('PDF appears empty or image-only')
+    if (text.length < 50 || text.startsWith('[image:')) {
+      if (text.startsWith('[image:')) {
+        // Pass screenshot to Gemini 2.0 Flash vision (it supports images)
+        console.log('    Using AI vision OCR for screenshot...')
+        text = await parseWithGeminiVision(text, `${entry.gradeLabel}_${entry.subject}`)
+      } else {
+        throw new Error(`Text too short (${text.length} chars)`)
+      }
+    }
 
     const filename = `${entry.gradeLabel}_${entry.subject}.pdf`
-    const parsed = await parseWithGemini(result.text, filename)
+    const parsed = await parseWithGemini(text, filename)
 
     const gradeToSave = parsed.grade || entry.gradeLabel
     const subjectToSave = parsed.subject || entry.subject
@@ -426,12 +492,13 @@ async function main() {
   }
 
   const context = browser.contexts?.()?.[0]
+  const page = context?.pages?.()?.[0]
   console.log(`Processing ${entries.length} PDF(s)...\n`)
 
   let done = 0, failed = 0
   for (let i = 0; i < entries.length; i++) {
     console.log(`[${i + 1}/${entries.length}] ${entries[i].gradeLabel} ${entries[i].subject}`)
-    const result = await processEntry(context, entries[i])
+    const result = await processEntry(page, entries[i])
     console.log(`  ${result}\n`)
     if (result.startsWith('DONE')) done++
     else if (result !== 'SKIPPED') failed++
