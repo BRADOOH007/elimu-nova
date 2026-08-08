@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 import bcrypt from 'bcryptjs'
 
-export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }, { params }) => {
+export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
   const schoolAdmin = await prisma.schoolAdmin.findUnique({
     where: { userId: user.id },
     include: { school: true },
@@ -66,7 +66,7 @@ export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }, { param
   })
 })
 
-export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (_req, { user }, { params }) => {
+export const DELETE = route({ auth: 'SCHOOL_ADMIN' }, async (_req, { user, params }) => {
   const schoolAdmin = await prisma.schoolAdmin.findUnique({
     where: { userId: user.id },
     include: { school: true },

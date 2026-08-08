@@ -10,7 +10,7 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
   const [classes, teachers, submissions, students] = await Promise.all([
     prisma.class.findMany({
       where: { schoolId, isActive: true },
-      include: { students: true },
+      include: { students: { select: { id: true } } },
     }),
     prisma.teacher.findMany({
       where: { schoolId },
@@ -39,11 +39,24 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
   ])
 
   // ── Class Performance Ranking ──
+  // Build a map of studentId → classId for fast lookup
+  const studentClassMap = new Map<string, string>()
+  classes.forEach(cls => cls.students.forEach(s => studentClassMap.set(s.id, cls.id)))
+
+  const classScores = new Map<string, number[]>()
+  submissions.forEach(sub => {
+    const classId = studentClassMap.get(sub.student.id)
+    if (classId) {
+      const scores = classScores.get(classId) || []
+      scores.push(sub.grade!)
+      classScores.set(classId, scores)
+    }
+  })
+
   const classPerformance = classes.map(cls => {
-    const studentScores: number[] = []
-    cls.students.forEach(s => { s.submissions?.forEach((sub: any) => { if (sub.grade != null) studentScores.push(sub.grade) }) })
-    const avg = studentScores.length > 0 ? Number((studentScores.reduce((a: number, b: number) => a + b, 0) / studentScores.length).toFixed(1)) : 0
-    return { id: cls.id, name: cls.name, grade: cls.grade, studentCount: cls.students.length, avgScore: avg, totalScores: studentScores.length }
+    const scores = classScores.get(cls.id) || []
+    const avg = scores.length > 0 ? Number((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)) : 0
+    return { id: cls.id, name: cls.name, grade: cls.grade, studentCount: cls.students.length, avgScore: avg, totalScores: scores.length }
   }).sort((a, b) => b.avgScore - a.avgScore)
 
   // ── Subject Mastery Insights ──

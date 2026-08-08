@@ -284,9 +284,9 @@ export default function StudentDashboard() {
           {/* Upcoming */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><Clock className="h-5 w-5 text-cyan-600" />Upcoming</h2>
-            {(upcomingEvents && upcomingEvents.length) > 0 ? (
+            {(upcomingEvents?.length ?? 0) > 0 ? (
               <div className="space-y-2.5">
-                {upcomingEvents.slice(0, 4).map((event, i) => (
+                {upcomingEvents!.slice(0, 4).map((event, i) => (
                   <div key={i} className="flex items-start gap-2.5 text-sm">
                     <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: event.type === 'exam' ? '#ef4444' : event.type === 'live' ? 'LIVE' : '#3b82f6' }} />
                     <div className="min-w-0">

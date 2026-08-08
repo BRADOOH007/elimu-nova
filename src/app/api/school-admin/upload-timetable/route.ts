@@ -118,7 +118,8 @@ CSV data:\n${csv.slice(0, 8000)}`
 
   const created: any[] = []
   for (const slot of parsed) {
-    const teacherId = slot.teacherCode ? teacherMap.get(String(slot.teacherCode)) : undefined
+    const teacherCode = (slot as any).teacherCode
+    const teacherId = teacherCode ? teacherMap.get(String(teacherCode)) : undefined
     const record = await (prisma as any).timetableSlot.create({
       data: {
         schoolId: admin.schoolId, grade: slot.grade, dayOfWeek: slot.dayOfWeek,

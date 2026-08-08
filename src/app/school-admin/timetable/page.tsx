@@ -447,7 +447,7 @@ export default function TimetablePage() {
           )}
         </div>
       )}
-      {uploadOpen && <UploadPreviewModal type="timetable" onClose={() => setUploadOpen(false)} onSuccess={() => { fetchSchedules(); setUploadOpen(false) }} />}
+      {uploadOpen && <UploadPreviewModal type="timetable" onClose={() => setUploadOpen(false)} onSuccess={() => { loadSchedules(); setUploadOpen(false) }} />}
     </div>
   )
 }

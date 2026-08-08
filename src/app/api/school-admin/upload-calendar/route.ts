@@ -125,7 +125,7 @@ Text:\n${rawText.slice(0, 10000)}`
       data: {
         schoolId: admin.schoolId, title: event.title, category: event.category || 'ACADEMIC',
         startDate: new Date(event.startDate), endDate: new Date(event.endDate),
-        targetAudience: event.targetAudience || 'ALL', targetGrade: event.targetGrade || null,
+        targetAudience: event.targetAudience || 'ALL', targetGrade: (event as any).targetGrade || null,
         description: event.description || null,
       },
     })

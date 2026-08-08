@@ -53,7 +53,7 @@ export const GET = route({}, async (req, { user }) => {
     for (const a of assignments) {
       events.push({
         id: a.id,
-        type: a.status === 'Overdue' ? 'overdue' : 'assignment',
+        type: (a.status as string).toLowerCase() === 'overdue' ? 'overdue' : 'assignment',
         title: a.title,
         subject: a.subject || '',
         teacherName: '',

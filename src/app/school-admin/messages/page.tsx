@@ -41,7 +41,7 @@ export default function MessagesPage() {
       })
       if (res.ok) {
         const d = await res.json()
-        setSent(true); setForm({ title: '', message: '', targetRole: 'ALL', targetGrade: '' })
+        setSent(true); setForm({ title: '', message: '', targetRole: 'ALL', targetGrade: '', priority: 'INFO' })
         setMessages(prev => [{ id: Date.now().toString(), title: form.title, message: form.message, type: 'announcement', targetRole: form.targetRole, createdAt: new Date().toISOString(), sender: 'You' }, ...prev])
         setTimeout(() => setSent(false), 3000)
       } else { const d = await res.json(); setError(d.error || 'Failed') }
