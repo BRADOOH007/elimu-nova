@@ -1,696 +1,215 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/hooks/use-toast'
-import { generateReportPDF } from '@/lib/pdf-generator'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  FileText,
-  Search,
-  Filter,
-  Download,
-  Plus,
-  MoreHorizontal,
-  Calendar,
-  Clock,
-  User,
-  BarChart3,
-  DollarSign,
-  GraduationCap,
-  Users,
-  Activity,
-  Settings,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Eye,
-  Edit,
-  Trash2,
+  Search, Download, FileText, FileSpreadsheet, Users, ClipboardCheck,
+  CreditCard, Clock, BarChart3, BookOpen, GraduationCap, UserCheck,
+  AlertTriangle, Trash2, Eye, RefreshCw, Plus, ArrowUpRight, Loader2,
 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
+import { confirmToast } from '@/lib/confirm-toast'
+import GenerateReportModal from '@/components/modals/generate-report-modal'
 
-interface Report {
-  id: string
-  title: string
-  description: string | null
-  type: 'ANALYTICS' | 'FINANCIAL' | 'ACADEMIC' | 'USER_ACTIVITY' | 'SYSTEM_HEALTH' | 'CUSTOM'
-  status: 'DRAFT' | 'GENERATING' | 'COMPLETED' | 'FAILED' | 'EXPIRED'
-  content: string
-  filters: string | null
-  isPublic: boolean
-  scheduledAt: string | null
-  expiresAt: string | null
-  createdAt: string
-  updatedAt: string
-  generatedByUser: {
-    id: string
-    firstName: string
-    lastName: string
-    email: string
-  }
-  school: {
-    id: string
-    name: string
-    email: string
-    address?: string
-    phone?: string
-  } | null
+const TEMPLATES = [
+  { id: 'broadsheet',  title: 'CBC Formative Assessment Broadsheet',  desc: 'Full grid of EE, ME, AE, BE scores across all learning areas per grade stream.', formats: 'PDF, XLSX',  icon: BarChart3,   color: 'from-indigo-500 to-violet-500', bg: 'bg-indigo-50', text: 'text-indigo-700' },
+  { id: 'report-cards', title: 'Termly Student Progress Report Cards', desc: 'Bulk batch KICD report cards with teacher remarks and parent signature lines.',    formats: 'Zip (PDFs)',  icon: BookOpen,    color: 'from-emerald-500 to-teal-500',   bg: 'bg-emerald-50', text: 'text-emerald-700' },
+  { id: 'teacher-audit',title: 'Teacher Grading & Assessment Audit',   desc: 'Completed vs. pending rubric entries per teacher and learning area.',            formats: 'PDF, CSV',   icon: ClipboardCheck, color: 'from-amber-500 to-orange-500',  bg: 'bg-amber-50', text: 'text-amber-700' },
+  { id: 'attendance',  title: 'Student Attendance & Discipline Summary',desc: 'Class-by-class roll call, absenteeism flags, and behaviour tracking.',          formats: 'PDF, XLSX',  icon: UserCheck,   color: 'from-sky-500 to-cyan-500',     bg: 'bg-sky-50', text: 'text-sky-700' },
+  { id: 'financial',   title: 'Financial Fee Collections & Balances',   desc: 'Termly fee statement, outstanding balances per grade, M-Pesa receipt log.',    formats: 'PDF, XLSX',  icon: CreditCard,  color: 'from-rose-500 to-pink-500',    bg: 'bg-rose-50', text: 'text-rose-700' },
+]
+
+const CATEGORIES = [
+  { id: 'academic',   label: 'Academic & CBC',   icon: BarChart3 },
+  { id: 'student',    label: 'Student & Class',   icon: Users },
+  { id: 'teacher',    label: 'Teacher Audits',    icon: ClipboardCheck },
+  { id: 'financial',  label: 'Financial & Ops',   icon: CreditCard },
+  { id: 'archive',    label: 'Generated Archive', icon: Clock },
+]
+
+const TERMS = ['All Terms', 'Term 1', 'Term 2', 'Term 3']
+const GRADES = ['All Classes', 'PP1','PP2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12']
+
+interface ArchivedReport {
+  id: string; title: string; type: string; status: string; createdAt: string
+  generatedByUser?: { firstName: string; lastName: string }
 }
 
-const reportTypes = [
-  { value: 'all', label: 'All Types' },
-  { value: 'ANALYTICS', label: 'Analytics' },
-  { value: 'FINANCIAL', label: 'Financial' },
-  { value: 'ACADEMIC', label: 'Academic' },
-  { value: 'USER_ACTIVITY', label: 'User Activity' },
-  { value: 'SYSTEM_HEALTH', label: 'System Health' },
-  { value: 'CUSTOM', label: 'Custom' },
-]
-
-const statusOptions = [
-  { value: 'all', label: 'All Statuses' },
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'GENERATING', label: 'Generating' },
-  { value: 'COMPLETED', label: 'Completed' },
-  { value: 'FAILED', label: 'Failed' },
-  { value: 'EXPIRED', label: 'Expired' },
-]
-
-export default function SchoolAdminReportsPage() {
-  const [reports, setReports] = useState<Report[]>([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [typeFilter, setTypeFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null)
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [createFormData, setCreateFormData] = useState({
-    title: '',
-    description: '',
-    type: 'ANALYTICS' as const
-  })
+export default function ReportsPage() {
+  const [search, setSearch] = useState('')
+  const [term, setTerm] = useState('All Terms')
+  const [grade, setGrade] = useState('All Classes')
+  const [activeTab, setActiveTab] = useState('academic')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalType, setModalType] = useState({ type: '', title: '' })
+  const [archive, setArchive] = useState<ArchivedReport[]>([])
+  const [loadingArchive, setLoadingArchive] = useState(true)
   const { toast } = useToast()
 
-  const fetchReports = async () => {
+  useEffect(() => { fetchArchive() }, [])
+
+  const fetchArchive = async () => {
+    setLoadingArchive(true)
     try {
-      setLoading(true)
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '10',
-        sortBy: 'createdAt',
-        sortOrder: 'desc',
-        ...(searchTerm && { search: searchTerm }),
-        ...(typeFilter !== 'all' && { type: typeFilter }),
-        ...(statusFilter !== 'all' && { status: statusFilter }),
-      })
-
-      const response = await fetch(`/api/school-admin/reports?${params}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch reports')
-      }
-
-      const data = await response.json()
-      setReports(data.reports || [])
-      setTotalPages(data.totalPages || 1)
-    } catch (error) {
-      console.error('Error fetching reports:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to fetch reports',
-      })
-    } finally {
-      setLoading(false)
-    }
+      const res = await fetch('/api/school-admin/reports?limit=50')
+      if (res.ok) setArchive((await res.json()).reports || [])
+    } catch {} finally { setLoadingArchive(false) }
   }
 
-  useEffect(() => {
-    fetchReports()
-  }, [currentPage, searchTerm, typeFilter, statusFilter])
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    setCurrentPage(1)
-    fetchReports()
-  }
-
-  const handleDelete = async (reportId: string) => {
+  const handleDelete = async (id: string) => {
+    if (!(await confirmToast({ title: 'Delete this report?' }))) return
     try {
-      const response = await fetch(`/api/school-admin/reports/${reportId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to delete report')
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Report deleted successfully',
-      })
-
-      fetchReports()
-    } catch (error) {
-      console.error('Error deleting report:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to delete report',
-      })
-    }
+      await fetch(`/api/school-admin/reports/${id}`, { method: 'DELETE' })
+      setArchive(prev => prev.filter(r => r.id !== id))
+      toast({ title: 'Deleted', description: 'Report removed' })
+    } catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) }
   }
 
-  const handleDownload = async (report: Report) => {
-    try {
-      await generateReportPDF(report)
-      toast({
-        title: 'Success',
-        description: 'Report downloaded successfully',
-      })
-    } catch (error) {
-      console.error('Error downloading report:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to download report',
-      })
-    }
-  }
+  const openModal = (type: string, title: string) => { setModalType({ type, title }); setModalOpen(true) }
 
-  const handleCreateReport = async () => {
-    if (!createFormData.title || !createFormData.type) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please fill in all required fields',
-      })
-      return
-    }
-
-    try {
-      const response = await fetch('/api/school-admin/reports', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: createFormData.title,
-          description: createFormData.description || null,
-          type: createFormData.type,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create report')
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Report created successfully',
-      })
-
-      // Reset form and close modal
-      setCreateFormData({
-        title: '',
-        description: '',
-        type: 'ANALYTICS'
-      })
-      setIsCreateOpen(false)
-      fetchReports()
-    } catch (error) {
-      console.error('Error creating report:', error)
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to create report',
-      })
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return <CheckCircle className="w-4 h-4 text-green-500" />
-      case 'FAILED':
-        return <XCircle className="w-4 h-4 text-red-500" />
-      case 'GENERATING':
-        return <Clock className="w-4 h-4 text-yellow-500" />
-      case 'EXPIRED':
-        return <AlertCircle className="w-4 h-4 text-gray-500" />
-      default:
-        return <FileText className="w-4 h-4 text-blue-500" />
-    }
-  }
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'ANALYTICS':
-        return <BarChart3 className="w-4 h-4" />
-      case 'FINANCIAL':
-        return <DollarSign className="w-4 h-4" />
-      case 'ACADEMIC':
-        return <GraduationCap className="w-4 h-4" />
-      case 'USER_ACTIVITY':
-        return <Users className="w-4 h-4" />
-      case 'SYSTEM_HEALTH':
-        return <Activity className="w-4 h-4" />
-      default:
-        return <Settings className="w-4 h-4" />
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800'
-      case 'FAILED':
-        return 'bg-red-100 text-red-800'
-      case 'GENERATING':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'EXPIRED':
-        return 'bg-gray-100 text-gray-800'
-      default:
-        return 'bg-blue-100 text-blue-800'
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
+  const filteredArchive = archive.filter(r =>
+    r.title.toLowerCase().includes(search.toLowerCase()) ||
+    r.type?.toLowerCase().includes(search.toLowerCase())
+  )
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-          <p className="text-muted-foreground">
-            Generate and manage school reports and analytics
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">Reporting Suite</h1>
+          <p className="text-sm text-slate-500 mt-1">Generate CBC-compliant academic, financial, and operational reports</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Report
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New Report</DialogTitle>
-              <DialogDescription>
-                Generate a new report for your school
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Report Type</label>
-                  <Select 
-                    value={createFormData.type} 
-                    onValueChange={(value) => setCreateFormData(prev => ({ ...prev, type: value as any }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {reportTypes.slice(1).map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Title</label>
-                  <Input 
-                    placeholder="Enter report title" 
-                    value={createFormData.title}
-                    onChange={(e) => setCreateFormData(prev => ({ ...prev, title: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Description</label>
-                <Input 
-                  placeholder="Enter report description" 
-                  value={createFormData.description}
-                  onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateReport}>
-                  Create Report
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <div className="flex items-center gap-2">
+          <button onClick={() => openModal('batch', 'Batch Report Generation')}
+            className="rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
+            <ArrowUpRight className="w-4 h-4" /> Batch PDF Generation
+          </button>
+          <button onClick={() => toast({ title: 'Coming Soon', description: 'Excel export will be available in the next update' })}
+            className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition flex items-center gap-2">
+            <Download className="w-4 h-4" /> Export to Excel
+          </button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
-                  placeholder="Search reports..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+      {/* Search + Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input type="text" placeholder="Search templates & generated reports..."
+            value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-4 py-2.5 text-sm placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none transition" />
+        </div>
+        <select value={term} onChange={e => setTerm(e.target.value)}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none">
+          {TERMS.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={grade} onChange={e => setGrade(e.target.value)}
+          className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none">
+          {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="flex flex-wrap gap-1.5">
+        {CATEGORIES.map(cat => (
+          <button key={cat.id} onClick={() => setActiveTab(cat.id)}
+            className={`rounded-full px-4 py-1.5 text-xs font-medium transition flex items-center gap-1.5 ${
+              activeTab === cat.id ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+            }`}>
+            <cat.icon className="w-3.5 h-3.5" /> {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Template Cards Grid */}
+      {activeTab !== 'archive' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {TEMPLATES.filter(t => {
+            if (activeTab === 'academic') return t.id === 'broadsheet' || t.id === 'report-cards'
+            if (activeTab === 'student') return t.id === 'attendance' || t.id === 'report-cards'
+            if (activeTab === 'teacher') return t.id === 'teacher-audit'
+            if (activeTab === 'financial') return t.id === 'financial'
+            return true
+          }).map(t => (
+            <div key={t.id} className={`relative overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition group`}>
+              <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${t.color}`} />
+              <div className="p-5">
+                <div className="flex items-start gap-3 mb-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.bg} ${t.text}`}>
+                    <t.icon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-slate-900">{t.title}</h3>
+                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">{t.desc}</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{t.formats}</span>
+                  <button onClick={() => openModal(t.id, t.title)}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition bg-gradient-to-r ${t.color} text-white hover:opacity-90 shadow-sm flex items-center gap-1.5 group-hover:scale-105`}>
+                    <Plus className="w-3 h-3" /> Generate
+                  </button>
+                </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {reportTypes.map((type) => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button type="submit" variant="outline">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      )}
 
-      {/* Reports Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>School Reports</CardTitle>
-          <CardDescription>
-            Manage and download your school's reports
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      {/* Archive Table */}
+      {activeTab === 'archive' && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Generated Archive</h2>
+              <p className="text-xs text-slate-500">Previously generated reports — click to download</p>
             </div>
-          ) : reports.length === 0 ? (
-            <div className="text-center py-8">
-              <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No reports found</h3>
-              <p className="text-gray-500 mb-4">
-                Create your first report to get started
-              </p>
-              <Button onClick={() => setIsCreateOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Report
-              </Button>
+            <button onClick={fetchArchive} className="text-xs text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+              <RefreshCw className="w-3 h-3" /> Refresh
+            </button>
+          </div>
+          {loadingArchive ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>
+          ) : filteredArchive.length === 0 ? (
+            <div className="text-center py-16">
+              <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-slate-700">No reports generated yet</p>
+              <p className="text-xs text-slate-400 mt-1">Generate a report from the templates above</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              <Table>
-                <TableHeader className="border-none">
-                  <TableRow className="border-none">
-                    <TableHead className="border-none">Title</TableHead>
-                    <TableHead className="border-none">Type</TableHead>
-                    <TableHead className="border-none">Status</TableHead>
-                    <TableHead className="border-none">Created By</TableHead>
-                    <TableHead className="border-none">Created At</TableHead>
-                    <TableHead className="text-right border-none">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="border-none">
-                  {reports.map((report) => (
-                    <TableRow key={report.id} className="group border-none">
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-2">
-                          {getTypeIcon(report.type)}
-                          <div>
-                            <div className="font-medium">{report.title}</div>
-                            {report.description && (
-                              <div className="text-sm text-gray-500">
-                                {report.description}
-                              </div>
-                            )}
-                          </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase text-slate-500"><th className="py-3 px-5">Report Name</th><th className="py-3 px-5">Category</th><th className="py-3 px-5">Generated</th><th className="py-3 px-5">Format</th><th className="py-3 px-5">By</th><th className="py-3 px-5 text-right">Actions</th></tr></thead>
+                <tbody>
+                  {filteredArchive.map(r => (
+                    <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3 px-5 font-medium text-slate-800">{r.title}</td>
+                      <td className="py-3 px-5 text-slate-500">{r.type?.toLowerCase()}</td>
+                      <td className="py-3 px-5 text-slate-500">{new Date(r.createdAt).toLocaleDateString()}</td>
+                      <td className="py-3 px-5">
+                        <span className="inline-flex px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full bg-indigo-100 text-indigo-700">PDF</span>
+                      </td>
+                      <td className="py-3 px-5 text-slate-500">{r.generatedByUser ? `${r.generatedByUser.firstName} ${r.generatedByUser.lastName}` : 'System'}</td>
+                      <td className="py-3 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <a href={`/api/school-admin/reports/${r.id}/download?format=PDF`}
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition"><Download className="w-4 h-4" /></a>
+                          <button onClick={() => window.open(`/api/school-admin/reports/${r.id}/download?format=PDF`, '_blank')}
+                            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition"><Eye className="w-4 h-4" /></button>
+                          <button onClick={() => handleDelete(r.id)}
+                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition"><Trash2 className="w-4 h-4" /></button>
                         </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <Badge variant="outline">{report.type}</Badge>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-2">
-                          {getStatusIcon(report.status)}
-                          <Badge className={getStatusColor(report.status)}>
-                            {report.status}
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-2">
-                          <User className="w-4 h-4 text-gray-400" />
-                          <span>
-                            {report.generatedByUser.firstName}{' '}
-                            {report.generatedByUser.lastName}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="border-none">
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <span>{formatDate(report.createdAt)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right border-none">
-                        <div className="flex items-center justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedReport(report)
-                              setIsDetailsOpen(true)
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            title="View Details"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDownload(report)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            title="Download Report"
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                              >
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedReport(report)
-                                  setIsDetailsOpen(true)
-                                }}
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleDownload(report)}
-                              >
-                                <Download className="w-4 h-4 mr-2" />
-                                Download
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => handleDelete(report.id)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500">
-                    Page {currentPage} of {totalPages}
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
 
-      {/* Report Details Modal */}
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Report Details</DialogTitle>
-            <DialogDescription>
-              View and manage report information
-            </DialogDescription>
-          </DialogHeader>
-          {selectedReport && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Title</label>
-                  <p className="text-lg font-semibold">{selectedReport.title}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Type</label>
-                  <div className="flex items-center space-x-2">
-                    {getTypeIcon(selectedReport.type)}
-                    <Badge variant="outline">{selectedReport.type}</Badge>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Status</label>
-                  <div className="flex items-center space-x-2">
-                    {getStatusIcon(selectedReport.status)}
-                    <Badge className={getStatusColor(selectedReport.status)}>
-                      {selectedReport.status}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Created By</label>
-                  <p>{selectedReport.generatedByUser.firstName} {selectedReport.generatedByUser.lastName}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Created At</label>
-                  <p>{formatDate(selectedReport.createdAt)}</p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Updated At</label>
-                  <p>{formatDate(selectedReport.updatedAt)}</p>
-                </div>
-              </div>
-              
-              {selectedReport.description && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Description</label>
-                  <p className="mt-1">{selectedReport.description}</p>
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>
-                  Close
-                </Button>
-                <Button onClick={() => handleDownload(selectedReport)}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Report
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {modalOpen && <GenerateReportModal isOpen={modalOpen} onClose={() => { setModalOpen(false); fetchArchive() }} reportType={modalType.type} reportTitle={modalType.title} />}
     </div>
   )
 }
