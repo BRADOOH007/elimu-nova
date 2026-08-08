@@ -317,19 +317,30 @@ Content: ${text.slice(0, 15000)}`
     raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
   } else if (openaiKey) {
     // Fallback via OpenRouter (key starts with sk-or-v1)
+    const body = JSON.stringify({
+      model: 'openai/gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1,
+      max_tokens: 4096,
+    })
     const res = await retry(() =>
       fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-        body: JSON.stringify({
-          model: 'openai/gpt-4o-mini',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-          max_tokens: 4096,
-        }),
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${openaiKey}`,
+          'HTTP-Referer': 'https://elimu-nova.vercel.app',
+          'X-Title': 'Elimu Nova KICD Agent',
+        },
+        body,
         signal: AbortSignal.timeout(120000),
       })
     )
+    const data = await res.json() as any
+    if (!res.ok || data.error) {
+      console.log(`    OpenRouter error: ${res.status} - ${JSON.stringify(data).slice(0, 200)}`)
+      throw new Error(`OpenRouter API error: ${data.error?.message || res.status}`)
+    }
     const data = await res.json() as any
     raw = data?.choices?.[0]?.message?.content || ''
   } else {
@@ -415,7 +426,6 @@ async function processEntry(page: any, entry: PdfEntry): Promise<string> {
 
     if (text.length < 50 || text.startsWith('[image:')) {
       if (text.startsWith('[image:')) {
-        // Pass screenshot to Gemini 2.0 Flash vision (it supports images)
         console.log('    Using AI vision OCR for screenshot...')
         text = await parseWithGeminiVision(text, `${entry.gradeLabel}_${entry.subject}`)
       } else {
@@ -423,7 +433,26 @@ async function processEntry(page: any, entry: PdfEntry): Promise<string> {
       }
     }
 
+    // Save extracted text to file as backup (in case AI parsing fails later)
+    const cacheDir = 'cache/kicd-texts'
+    const fsMod = await import('fs')
+    const pathMod = await import('path')
+    fsMod.mkdirSync(cacheDir, { recursive: true })
+    const textFile = pathMod.join(cacheDir, `${entry.gradeLabel}_${entry.subject.replace(/[^a-zA-Z0-9]/g, '_')}.txt`)
+    fsMod.writeFileSync(textFile, text)
+
     const filename = `${entry.gradeLabel}_${entry.subject}.pdf`
+
+    if (extractOnly) {
+      console.log(`  Saved ${text.length} chars`)
+      await (prisma as any).curriculumIngestionLog.upsert({
+        where: { url: `gdrive://${entry.fileId}` },
+        update: { status: 'EXTRACTED', grade: entry.gradeLabel, subject: entry.subject },
+        create: { url: `gdrive://${entry.fileId}`, title: filename, status: 'EXTRACTED', grade: entry.gradeLabel, subject: entry.subject },
+      })
+      return `SAVED: ${entry.gradeLabel} ${entry.subject}`
+    }
+
     const parsed = await parseWithGemini(text, filename)
 
     const gradeToSave = parsed.grade || entry.gradeLabel
@@ -470,6 +499,7 @@ async function main() {
   const args = process.argv.slice(2)
   const urlIdx = args.indexOf('--url')
   const inputUrl = urlIdx >= 0 ? args[urlIdx + 1] : null
+  const extractOnly = args.includes('--extract-only')
 
   if (inputUrl && !inputUrl.includes('kicd.ac.ke')) {
     // Direct PDF/drive URL — single file (legacy mode)
@@ -500,7 +530,7 @@ async function main() {
     console.log(`[${i + 1}/${entries.length}] ${entries[i].gradeLabel} ${entries[i].subject}`)
     const result = await processEntry(page, entries[i])
     console.log(`  ${result}\n`)
-    if (result.startsWith('DONE')) done++
+    if (result.startsWith('DONE') || result.startsWith('SAVED')) done++
     else if (result !== 'SKIPPED') failed++
   }
 
