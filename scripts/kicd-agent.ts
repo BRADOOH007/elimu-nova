@@ -230,18 +230,15 @@ async function extractTextFromPDF(url: string): Promise<string> {
 }
 
 /* ──── AI VISION OCR ──── */
-async function parseWithGeminiVision(imageData: string, filename: string): Promise<string> {
-  const openaiKey = process.env.OPENAI_API_KEY
-  if (!openaiKey) throw new Error('No OPENAI_API_KEY for vision')
-
-  const base64 = imageData.slice(7, -3)
-
-  // Use Google's Gemini via OpenRouter (or direct Google endpoint if key is GEMINI)
+async function ocrWithVision(imageData: string, filename: string): Promise<string> {
   const geminiKey = process.env.GEMINI_API_KEY
   if (geminiKey) {
+    // Gemini native vision (most reliable for OCR)
+    const key = geminiKey.split(',')[0]?.trim()
+    const base64 = imageData.slice(7, -3)
     const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
         contents: [{ parts: [
           { text: 'Extract ALL visible text from this curriculum document screenshot. Output raw text.' },
@@ -251,34 +248,124 @@ async function parseWithGeminiVision(imageData: string, filename: string): Promi
       }),
       signal: AbortSignal.timeout(60000),
     })
-    const geminiVisData = await res.json() as any
-    return geminiVisData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const data = await res.json() as any
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    if (text.length > 50) return text
   }
 
-  // Fallback: OpenRouter with vision-capable model
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
-    body: JSON.stringify({
-      model: 'openai/gpt-4o-mini',
-      messages: [{ role: 'user', content: [
-        { type: 'text', text: 'Extract ALL visible text from this curriculum document screenshot. Output raw text only.' },
-        { type: 'image_url', image_url: { url: `data:image/png;base64,${base64}` } },
-      ]}],
-      temperature: 0.1,
-      max_tokens: 4096,
-    }),
-    signal: AbortSignal.timeout(60000),
-  })
-  const data = await res.json() as any
-  return data?.choices?.[0]?.message?.content || ''
+  // Fallback: use waterfall with a vision prompt (base64 may not work on all providers)
+  const { content } = await waterfallAI(`Extract ALL visible text from this curriculum document. Output raw text only.`)
+  return content
 }
 
-/* ──── GEMINI OCR ──── */
-async function parseWithGemini(text: string, filename: string): Promise<ParsedCurriculum> {
-  const geminiKey = process.env.GEMINI_API_KEY
-  const openaiKey = process.env.OPENAI_API_KEY
+/* ──── AI PROVIDER WATERFALL ──── */
+interface AIProviderConfig {
+  name: string
+  url: string
+  key: string
+  model: string
+  headers: (key: string) => Record<string, string>
+  bodyFn: (key: string) => object
+  parseResponse: (data: any) => string
+}
 
+async function callProvider(config: AIProviderConfig): Promise<string> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(config.url, {
+        method: 'POST',
+        headers: { ...config.headers(config.key), 'Content-Type': 'application/json' },
+        body: JSON.stringify(config.bodyFn(config.key)),
+        signal: AbortSignal.timeout(120000),
+      })
+      const json = await res.json() as any
+      if (res.status === 429 && attempt < 2) {
+        await new Promise(r => setTimeout(r, (attempt + 1) * 3000))
+        continue
+      }
+      if (!res.ok) throw new Error(`${config.name}: ${res.status} ${json.error?.message || ''}`)
+      return config.parseResponse(json) || ''
+    } catch (e: any) {
+      if (attempt === 2) throw e
+      if (e.message?.includes('429') || e.message?.includes('rate')) {
+        await new Promise(r => setTimeout(r, (attempt + 1) * 3000))
+        continue
+      }
+      throw e
+    }
+  }
+  throw new Error(`${config.name}: exhausted retries`)
+}
+
+async function waterfallAI(prompt: string): Promise<{ content: string; provider: string }> {
+  const OPENAI_FORMAT = (model: string) => ({
+    model,
+    messages: [{ role: 'user' as const, content: prompt }],
+    temperature: 0.1,
+    max_tokens: 4096,
+  })
+
+  const providers: AIProviderConfig[] = [
+    {
+      name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions',
+      key: process.env.GROQ_API_KEY || '',
+      model: 'llama-3.1-8b-instant',
+      headers: (k) => ({ 'Authorization': `Bearer ${k}` }),
+      bodyFn: () => OPENAI_FORMAT('llama-3.1-8b-instant'),
+      parseResponse: (d) => d?.choices?.[0]?.message?.content || '',
+    },
+    {
+      name: 'DeepSeek', url: 'https://api.deepseek.com/chat/completions',
+      key: process.env.DEEPSEEK_API_KEY || '',
+      model: 'deepseek-chat',
+      headers: (k) => ({ 'Authorization': `Bearer ${k}` }),
+      bodyFn: () => OPENAI_FORMAT('deepseek-chat'),
+      parseResponse: (d) => d?.choices?.[0]?.message?.content || '',
+    },
+    {
+      name: 'Gemini', url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+      key: (process.env.GEMINI_API_KEY || '').split(',')[0]?.trim() || '',
+      model: 'gemini-2.0-flash',
+      headers: (k) => ({ 'Authorization': `Bearer ${k}` }),
+      bodyFn: () => OPENAI_FORMAT('gemini-2.0-flash'),
+      parseResponse: (d) => d?.choices?.[0]?.message?.content || '',
+    },
+    {
+      name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions',
+      key: process.env.OPENAI_API_KEY || '',
+      model: 'openai/gpt-4o-mini',
+      headers: (k) => ({ 'Authorization': `Bearer ${k}`, 'HTTP-Referer': 'https://elimu-nova.vercel.app' }),
+      bodyFn: () => OPENAI_FORMAT('openai/gpt-4o-mini'),
+      parseResponse: (d) => d?.choices?.[0]?.message?.content || '',
+    },
+    {
+      name: 'Cerebras', url: 'https://api.cerebras.ai/v1/chat/completions',
+      key: process.env.CEREBRAS_API_KEY || '',
+      model: 'llama3.1-8b',
+      headers: (k) => ({ 'Authorization': `Bearer ${k}` }),
+      bodyFn: () => OPENAI_FORMAT('llama3.1-8b'),
+      parseResponse: (d) => d?.choices?.[0]?.message?.content || '',
+    },
+  ]
+
+  for (const p of providers) {
+    if (!p.key || p.key.length < 10) continue
+    try {
+      const content = await callProvider(p)
+      if (content && content.length > 20) {
+        console.log(`  AI: ${p.name} (${p.model}) — ${content.length} chars`)
+        return { content, provider: p.name }
+      }
+      console.log(`  ${p.name}: empty response`)
+    } catch (e: any) {
+      console.log(`  ${p.name}: ${e.message?.slice(0, 60)}`)
+    }
+  }
+  throw new Error('All AI providers failed')
+}
+
+/* ──── CURRICULUM PARSER ──── */
+async function parseCurriculum(text: string, filename: string): Promise<ParsedCurriculum> {
   const prompt = `Extract the full CBC curriculum from this document. Return ONLY valid JSON:
 {
   "grade": "Grade 8",
@@ -300,57 +387,19 @@ async function parseWithGemini(text: string, filename: string): Promise<ParsedCu
 File: ${filename}
 Content: ${text.slice(0, 15000)}`
 
-  let raw: string
-
-  if (geminiKey) {
-    // Use Gemini
-    const res = await retry(() =>
-      fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
-        }),
-        signal: AbortSignal.timeout(120000),
-      })
-    )
-    const geminiData = await res.json() as any
-    raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-  } else if (openaiKey) {
-    // Fallback via OpenRouter (key starts with sk-or-v1)
-    const body = JSON.stringify({
-      model: 'openai/gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.1,
-      max_tokens: 4096,
-    })
-    const res = await retry(() =>
-      fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': `Bearer ${openaiKey}`,
-          'HTTP-Referer': 'https://elimu-nova.vercel.app',
-          'X-Title': 'Elimu Nova KICD Agent',
-        },
-        body,
-        signal: AbortSignal.timeout(120000),
-      })
-    )
-    const orData = await res.json() as any
-    if (!res.ok || orData.error) {
-      console.log(`    OpenRouter error: ${res.status} - ${JSON.stringify(orData).slice(0, 200)}`)
-      throw new Error(`OpenRouter API error: ${orData.error?.message || res.status}`)
-    }
-    raw = orData?.choices?.[0]?.message?.content || ''
-  } else {
-    throw new Error('No GEMINI_API_KEY or OPENAI_API_KEY in env')
-  }
-
+  const { content: raw } = await waterfallAI(prompt)
   const json = extractJson(raw)
   if (!json) throw new Error('Could not parse AI response as JSON')
-  return JSON.parse(json)
+  const parsed = JSON.parse(json) as ParsedCurriculum
+
+  // Normalize: ensure strands is always an array
+  if (parsed && !Array.isArray(parsed.strands)) {
+    parsed.strands = Object.values(parsed.strands || {}).filter((s: any) => s && typeof s === 'object')
+  }
+  if (!Array.isArray(parsed.strands) || parsed.strands.length === 0) {
+    throw new Error('No valid strands found in AI response')
+  }
+  return parsed
 }
 
 function extractJson(raw: string): string {
@@ -428,7 +477,7 @@ async function processEntry(page: any, entry: PdfEntry, extractOnly: boolean): P
     if (text.length < 50 || text.startsWith('[image:')) {
       if (text.startsWith('[image:')) {
         console.log('    Using AI vision OCR for screenshot...')
-        text = await parseWithGeminiVision(text, `${entry.gradeLabel}_${entry.subject}`)
+        text = await ocrWithVision(text, `${entry.gradeLabel}_${entry.subject}`)
       } else {
         throw new Error(`Text too short (${text.length} chars)`)
       }
@@ -454,7 +503,7 @@ async function processEntry(page: any, entry: PdfEntry, extractOnly: boolean): P
       return `SAVED: ${entry.gradeLabel} ${entry.subject}`
     }
 
-    const parsed = await parseWithGemini(text, filename)
+    const parsed = await parseCurriculum(text, filename)
 
     const gradeToSave = parsed.grade || entry.gradeLabel
     const subjectToSave = parsed.subject || entry.subject
@@ -533,6 +582,8 @@ async function main() {
     console.log(`  ${result}\n`)
     if (result.startsWith('DONE') || result.startsWith('SAVED')) done++
     else if (result !== 'SKIPPED') failed++
+    // Rate-limit: wait between AI calls
+    if (!extractOnly) await new Promise(r => setTimeout(r, 2000))
   }
 
   await browser.close()
