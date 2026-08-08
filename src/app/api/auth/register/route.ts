@@ -116,6 +116,8 @@ export const POST = route({ auth: 'none' }, async (req) => {
     // Create role-specific profile if needed (e.g., Teacher for TEACHER, Parent for PARENT)
     if (role === 'TEACHER') {
       await (prisma as any).teacher.upsert({ where: { userId: user.id }, update: {}, create: { userId: user.id } })
+    } else if (role === 'STUDENT') {
+      await (prisma as any).student.upsert({ where: { userId: user.id }, update: { subjects: [] }, create: { userId: user.id, subjects: [] } })
     } else if (role === 'PARENT') {
       await (prisma as any).parent.upsert({ where: { userId: user.id }, update: {}, create: { userId: user.id } })
     }
