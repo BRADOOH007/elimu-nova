@@ -76,38 +76,59 @@ async function crawlKicd(seedUrls: string[]): Promise<string[]> {
       await retry(() => page.goto(seed, { waitUntil: 'domcontentloaded', timeout: 30000 }), 2)
       await page.waitForTimeout(2000)
 
-      // Extract subject links from the grade page
-      // These are <a> tags inside the content area that link to individual subject pages
+      // Extract subject links from the content area (not sidebar/header nav)
+      // KICD subject links are inside <ul> or <div> with class containing "design" or the main article area
       const subjectLinks = await page.evaluate(() => {
-        const links = document.querySelectorAll('a[href]')
-        return Array.from(links)
-          .map(a => (a as HTMLAnchorElement).href)
-          .filter(href =>
-            href.includes('kicd.ac.ke') &&
-            !href.includes('#') &&
-            !href.includes('grade-') &&
-            href !== window.location.href
-          )
+        const contentArea = document.querySelector('.entry-content, .page-content, article, .content-area, #content, main')
+          || document.body
+        const links = contentArea.querySelectorAll('a[href]')
+        const seen = new Set<string>()
+        const subjects: string[] = []
+        for (const a of links) {
+          const href = (a as HTMLAnchorElement).href
+          const text = (a as HTMLAnchorElement).textContent?.trim().toLowerCase() || ''
+          // Heuristic: subject links are named after subjects, not "grade", "home", "about" etc
+          if (!href.includes('kicd.ac.ke') || href.includes('#') || seen.has(href)) continue
+          const skipWords = ['grade', 'home', 'about', 'contact', 'tender', 'career', 'media', 'service', 'library',
+            'external', 'quick', 'portal', 'cloud', 'menu', 'search', 'sign', 'facebook', 'twitter', 'youtube']
+          const isNav = skipWords.some(w => text.includes(w) || href.toLowerCase().includes(w))
+          if (!isNav) {
+            seen.add(href)
+            subjects.push(href)
+          }
+        }
+        return subjects
       })
 
       const uniqueSubjects = [...new Set(subjectLinks)]
       console.log(`  Found ${uniqueSubjects.length} subject links`)
 
-      // Visit each subject page to find the PDF download
-      for (const subjUrl of uniqueSubjects.slice(0, 30)) {
+      // Visit each subject page to find the PDF download (limit to prevent timeout)
+      for (const subjUrl of uniqueSubjects.slice(0, 20)) {
         try {
           await page.goto(subjUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
-          await page.waitForTimeout(1000)
+          await page.waitForTimeout(1500)
+
+          // Check if we got redirected to a PDF or download
+          const currentUrl = page.url()
+          if (currentUrl.includes('.pdf') || currentUrl.includes('download')) {
+            allUrls.add(currentUrl)
+            continue
+          }
 
           const pdfLinks = await page.evaluate(() => {
-            return Array.from(document.querySelectorAll('a[href]'))
-              .map(a => (a as HTMLAnchorElement).href)
-              .filter(href => href.includes('.pdf') || href.includes('drive.google.com/file/d/'))
+            const links = Array.from(document.querySelectorAll('a[href]'))
+            return new Set(links.map(a => (a as HTMLAnchorElement).href).filter(href =>
+              href.includes('.pdf') || (href.includes('download') && href.includes('kicd.ac.ke'))
+            ))
           })
 
-          for (const pdf of pdfLinks) allUrls.add(pdf)
-          if (pdfLinks.length > 0) console.log(`    ${subjUrl.split('/').pop()}: ${pdfLinks.length} PDF(s)`)
-        } catch { /* skip broken pages */ }
+          for (const pdf of [...pdfLinks]) allUrls.add(pdf)
+          if (pdfLinks.size > 0) console.log(`    PDFs: ${pdfLinks.size} from ${subjUrl.split('/').pop()}`)
+        } catch (e: any) {
+          if (e?.message?.includes('Execution context was destroyed')) continue
+          console.warn(`    Skip: ${subjUrl.split('/').pop()} (${(e as any)?.message?.slice(0,50)})`)
+        }
       }
 
       // Also check any direct PDF links on the main grade page
