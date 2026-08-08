@@ -1184,6 +1184,40 @@ model Meeting {
   @@map("meetings")
 }
 
+// ── TimetableSlot — parsed from uploaded Excel schedules ─────────
+model TimetableSlot {
+  id       String  @id @default(cuid())
+  schoolId String
+  grade    String  // e.g. "Grade 4"
+  stream   String? // e.g. "Blue", "East"
+  teacherId String?
+  dayOfWeek String // MON, TUE, WED, THU, FRI
+  startTime String // "08:10"
+  endTime   String // "08:50"
+  subjectName String
+  room      String?
+
+  @@index([schoolId, grade, dayOfWeek])
+  @@map("timetable_slots")
+}
+
+// ── AcademicCalendarEvent — parsed events from calendar uploads ──
+model AcademicCalendarEvent {
+  id             String   @id @default(cuid())
+  schoolId       String
+  title          String
+  category       String   @default("ACADEMIC") // ACADEMIC, EXAM, HOLIDAY, CO_CURRICULAR, MEETING
+  startDate      DateTime
+  endDate        DateTime
+  targetAudience String   @default("ALL") // ALL, TEACHERS, STUDENTS, PARENTS, GRADE_SPECIFIC
+  targetGrade    String?  // e.g. "Grade 4", "Grade 4-6"
+  description    String?
+
+  @@index([schoolId, startDate])
+  @@index([schoolId, category])
+  @@map("academic_calendar_events")
+}
+
 model Activity {
   id          String       @id @default(cuid())
   schoolId    String
@@ -1198,6 +1232,7 @@ model Activity {
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   user   User?  @relation(fields: [userId], references: [id])
 
+  @@index([schoolId, createdAt])
   @@map("activities")
 }
 

@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Calendar, Plus, Trash2, Save, RotateCcw, Sun, BookOpen, Clock } from 'lucide-react'
+import { Loader2, Calendar, Plus, Trash2, Save, RotateCcw, Sun, BookOpen, Clock, Upload } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import UploadPreviewModal from '@/components/modals/upload-preview-modal'
 
 interface TermBreak {
   name: string
@@ -39,6 +40,7 @@ export default function AcademicCalendarPage() {
   const [year, setYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => { fetchCalendar() }, [year])
@@ -196,6 +198,9 @@ export default function AcademicCalendarPage() {
           <Button variant="outline" onClick={resetToDefaults}>
             <RotateCcw className="w-4 h-4 mr-2" />Reset to Kenya Defaults
           </Button>
+          <Button onClick={() => setUploadOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+            <Upload className="w-4 h-4 mr-2" />Upload Calendar
+          </Button>
           <Button onClick={handleSave} disabled={saving} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
             {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             Save Calendar
@@ -325,6 +330,7 @@ export default function AcademicCalendarPage() {
           ))}
         </div>
       )}
+      {uploadOpen && <UploadPreviewModal type="calendar" onClose={() => setUploadOpen(false)} onSuccess={() => { fetchCalendar(); setUploadOpen(false) }} />}
     </div>
   )
 }
