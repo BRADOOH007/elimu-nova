@@ -163,8 +163,10 @@ async function extractTextFromDrive(page: any, fileId: string): Promise<{ text: 
   if (bodyText.length > 200) {
     // Clean up common Google Drive UI text
     const cleaned = bodyText
-      .replace(/Sign\sin|Google\sDrive|Can't\sopen|You're\ssigned\sin/gi, '')
-      .replace(/JavaScript.*needed|Go to Drive|Open\sin.*editor/gi, '')
+      .replace(/Request a review|Learn more|Signature pending|Sign|Reject|View details|Review|Not spam|Remove forever\|Not spam|Loading[^\n]*/gi, '')
+      .replace(/\{"id":.*?\}/g, '')
+      .replace(/JavaScript.*needed|Go to Drive|Open in.*editor/gi, '')
+      .replace(/\n{3,}/g, '\n\n')
       .trim()
     if (cleaned.length > 150) {
       console.log(`    Extracted ${cleaned.length} chars from DOM`)
@@ -249,8 +251,8 @@ async function parseWithGeminiVision(imageData: string, filename: string): Promi
       }),
       signal: AbortSignal.timeout(60000),
     })
-    const data = await res.json() as any
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const geminiVisData = await res.json() as any
+    return geminiVisData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
   }
 
   // Fallback: OpenRouter with vision-capable model
@@ -313,8 +315,8 @@ Content: ${text.slice(0, 15000)}`
         signal: AbortSignal.timeout(120000),
       })
     )
-    const data = await res.json() as any
-    raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const geminiData = await res.json() as any
+    raw = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
   } else if (openaiKey) {
     // Fallback via OpenRouter (key starts with sk-or-v1)
     const body = JSON.stringify({
@@ -336,13 +338,12 @@ Content: ${text.slice(0, 15000)}`
         signal: AbortSignal.timeout(120000),
       })
     )
-    const data = await res.json() as any
-    if (!res.ok || data.error) {
-      console.log(`    OpenRouter error: ${res.status} - ${JSON.stringify(data).slice(0, 200)}`)
-      throw new Error(`OpenRouter API error: ${data.error?.message || res.status}`)
+    const orData = await res.json() as any
+    if (!res.ok || orData.error) {
+      console.log(`    OpenRouter error: ${res.status} - ${JSON.stringify(orData).slice(0, 200)}`)
+      throw new Error(`OpenRouter API error: ${orData.error?.message || res.status}`)
     }
-    const data = await res.json() as any
-    raw = data?.choices?.[0]?.message?.content || ''
+    raw = orData?.choices?.[0]?.message?.content || ''
   } else {
     throw new Error('No GEMINI_API_KEY or OPENAI_API_KEY in env')
   }
@@ -393,7 +394,7 @@ async function upsertCurriculum(data: ParsedCurriculum): Promise<{ strands: numb
 }
 
 /* ──── PROCESS ONE PDF ENTRY ──── */
-async function processEntry(page: any, entry: PdfEntry): Promise<string> {
+async function processEntry(page: any, entry: PdfEntry, extractOnly: boolean): Promise<string> {
   const url = `gdrive://${entry.fileId}`
   const existing = await (prisma as any).curriculumIngestionLog.findUnique({ where: { url } })
   if (existing?.status === 'COMPLETED') return 'SKIPPED'
@@ -528,7 +529,7 @@ async function main() {
   let done = 0, failed = 0
   for (let i = 0; i < entries.length; i++) {
     console.log(`[${i + 1}/${entries.length}] ${entries[i].gradeLabel} ${entries[i].subject}`)
-    const result = await processEntry(page, entries[i])
+    const result = await processEntry(page, entries[i], extractOnly)
     console.log(`  ${result}\n`)
     if (result.startsWith('DONE') || result.startsWith('SAVED')) done++
     else if (result !== 'SKIPPED') failed++
