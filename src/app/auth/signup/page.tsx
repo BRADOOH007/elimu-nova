@@ -9,8 +9,9 @@ import Link from 'next/link'
 import {
   Eye, EyeOff, Loader2, User, Mail, Lock, Building,
   ArrowLeft, CheckCircle2, GraduationCap, Users, Brain,
-  Zap, UserPlus, Heart,
+  Zap, UserPlus, Heart, Globe, BookOpen, Award,
 } from 'lucide-react'
+import { COUNTRIES, CURRICULA } from '@/lib/curricula'
 
 // ── Static features shown on the left brand panel ──
 const FEATURES = [
@@ -38,6 +39,9 @@ export default function SignUpPage() {
     schoolName: '',
     schoolAddress: '',
     schoolPhone: '',
+    country: 'KE',
+    curriculum: '',
+    grade: '',
   })
   const [showPassword, setShowPassword]             = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -273,6 +277,54 @@ export default function SignUpPage() {
                   ))}
                 </div>
               </div>
+
+              {/* ── Non-school user fields: Country + Curriculum + Grade ── */}
+              {formData.role !== 'SCHOOL_ADMIN' && (
+                <div className="space-y-4 p-4 bg-violet-50 border border-violet-100 rounded-xl">
+                  <p className="text-sm font-semibold text-violet-900">Learning Preferences</p>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Country</label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <select
+                        name="country" value={formData.country}
+                        onChange={handleInputChange as any}
+                        className="w-full h-11 bg-white border-gray-200 rounded-lg pl-9 pr-3 text-sm appearance-none cursor-pointer"
+                      >
+                        {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Curriculum</label>
+                    <div className="relative">
+                      <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <select
+                        name="curriculum" value={formData.curriculum}
+                        onChange={e => { setFormData(prev => ({ ...prev, curriculum: e.target.value })); if (formData.grade) { const c = CURRICULA.find(x => x.id === e.target.value); if (c && !c.grades.includes(formData.grade)) setFormData(prev => ({ ...prev, grade: (c as any).grades?.[0] || '' })) } }}
+                        className="w-full h-11 bg-white border-gray-200 rounded-lg pl-9 pr-3 text-sm appearance-none cursor-pointer"
+                      >
+                        <option value="">Select curriculum...</option>
+                        {CURRICULA.filter(c => c.country === formData.country).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Grade / Year</label>
+                    <div className="relative">
+                      <Award className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <select
+                        name="grade" value={formData.grade}
+                        onChange={handleInputChange as any}
+                        className="w-full h-11 bg-white border-gray-200 rounded-lg pl-9 pr-3 text-sm appearance-none cursor-pointer"
+                      >
+                        <option value="">Select grade...</option>
+                        {(CURRICULA.find(c => c.id === formData.curriculum)?.grades || []).map(g => <option key={g} value={g}>{g}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* ── School info (only shown for SCHOOL_ADMIN role) ── */}
               {formData.role === 'SCHOOL_ADMIN' && (
