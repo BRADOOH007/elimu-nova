@@ -9,13 +9,34 @@ import {
 import {
   UserPlus, Mail, Phone, MapPin, AlertCircle,
   Copy, CheckCircle, Eye, EyeOff, Sparkles, GraduationCap,
-  BookOpen, Plus, XCircle
+  BookOpen, Plus, XCircle, Printer
 } from 'lucide-react'
 
 const ALL_GRADES = [
   'PP1','PP2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6',
   'Grade 7','Grade 8','Grade 9','Form 1','Form 2','Form 3','Form 4',
 ]
+
+const GRADE_SUBJECT_MAP: Record<string, string[]> = {
+  PP1: ['Language Activities','Mathematical Activities','Environmental Activities','Psychomotor & Creative Activities'],
+  PP2: ['Language Activities','Mathematical Activities','Environmental Activities','Psychomotor & Creative Activities'],
+  'Grade 1': ['English','Kiswahili / KSL','Mathematics','Religious Education','Environmental Activities','Creative Activities'],
+  'Grade 2': ['English','Kiswahili / KSL','Mathematics','Religious Education','Environmental Activities','Creative Activities'],
+  'Grade 3': ['English','Kiswahili / KSL','Mathematics','Religious Education','Environmental Activities','Creative Activities'],
+  'Grade 4': ['English','Kiswahili / KSL','Mathematics','Science & Technology','Agriculture & Nutrition','Social Studies','Creative Arts','Religious Education'],
+  'Grade 5': ['English','Kiswahili / KSL','Mathematics','Science & Technology','Agriculture & Nutrition','Social Studies','Creative Arts','Religious Education'],
+  'Grade 6': ['English','Kiswahili / KSL','Mathematics','Science & Technology','Agriculture & Nutrition','Social Studies','Creative Arts','Religious Education'],
+  'Grade 7': ['English','Kiswahili / KSL','Mathematics','Integrated Science','Agriculture & Nutrition','Social Studies','Pre-Technical Studies','Creative Arts & Sports','Religious Education'],
+  'Grade 8': ['English','Kiswahili / KSL','Mathematics','Integrated Science','Agriculture & Nutrition','Social Studies','Pre-Technical Studies','Creative Arts & Sports','Religious Education'],
+  'Grade 9': ['English','Kiswahili / KSL','Mathematics','Integrated Science','Agriculture & Nutrition','Social Studies','Pre-Technical Studies','Creative Arts & Sports','Religious Education'],
+  'Grade 10': ['English / Kiswahili / KSL','Mathematics','Community Service Learning','Physical Education'],
+  'Grade 11': ['English / Kiswahili / KSL','Mathematics','Community Service Learning','Physical Education'],
+  'Grade 12': ['English / Kiswahili / KSL','Mathematics','Community Service Learning','Physical Education'],
+  'Form 1': ['English / Kiswahili / KSL','Mathematics','Community Service Learning','Physical Education'],
+  'Form 2': ['English / Kiswahili / KSL','Mathematics','Community Service Learning','Physical Education'],
+  'Form 3': ['English / Kiswahili / KSL','Mathematics','Community Service Learning','Physical Education'],
+  'Form 4': ['English / Kiswahili / KSL','Mathematics','Community Service Learning','Physical Education'],
+}
 
 interface EnrollStudentModalProps {
   isOpen: boolean; onClose: () => void; onSuccess: () => void
@@ -63,7 +84,7 @@ export default function EnrollStudentModal({
   const [customSubject, setCustomSubject] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [successData, setSuccessData] = useState<{ username?: string; email: string; password: string } | null>(null)
-  const [parentSuccessData, setParentSuccessData] = useState<{ email: string; password: string; emailSent?: boolean } | null>(null)
+  const [parentSuccessData, setParentSuccessData] = useState<{ email: string; password: string; existing?: boolean; emailSent?: boolean } | null>(null)
 
   useEffect(() => { if (isOpen) setPreviewPwd(generatePreviewPassword()) }, [isOpen])
   useEffect(() => {
@@ -72,12 +93,25 @@ export default function EnrollStudentModal({
     if (cls?.grade) setFormData(prev => ({ ...prev, grade: cls.grade }))
   }, [formData.classId, classes])
 
+  // Auto-select learning areas when grade changes
+  useEffect(() => {
+    if (!formData.grade || !isOpen) return
+    const gradeSubjects = GRADE_SUBJECT_MAP[formData.grade]
+    if (gradeSubjects && gradeSubjects.length > 0) {
+      setFormData(prev => ({ ...prev, subjects: [...gradeSubjects] }))
+    }
+  }, [formData.grade, isOpen])
+
   const previewUser = useMemo(() => previewUsername(formData.firstName, formData.lastName), [formData.firstName, formData.lastName])
   const availableSubjects = useMemo(() => {
+    if (formData.grade) {
+      const gradeSubjects = GRADE_SUBJECT_MAP[formData.grade]
+      if (gradeSubjects) return gradeSubjects
+    }
     const s = new Set<string>(); classes.forEach(c => { if (c.subject) s.add(c.subject) })
     if (s.size === 0) DEFAULT_SUBJECTS.forEach(x => s.add(x))
     return Array.from(s).sort()
-  }, [classes])
+  }, [classes, formData.grade])
 
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, [field]: e.target.value }))
   const validate = () => {
@@ -111,8 +145,7 @@ export default function EnrollStudentModal({
       if (res.ok) {
         setSuccessData(data.credentials || { username: previewUser, email: body.email || `${previewUser}@student.local`, password: previewPwd })
         if (data.parentCredentials) setParentSuccessData(data.parentCredentials)
-      } else { setErrors({ submit: data.error || 'Failed to enroll student' }) }
-    } catch { setErrors({ submit: 'Network error' }) }
+      } else { setErrors({ submit: data.error || 'Failed to enroll student' }) }    } catch { setErrors({ submit: 'Network error' }) }
     finally { setLoading(false) }
   }
 
@@ -126,10 +159,36 @@ export default function EnrollStudentModal({
     if (!successData) return
     const login = successData.username || successData.email.replace('@student.local', '')
     let text = `Student Login:\n  Username: ${login}\n  Password: ${successData.password}`
-    if (parentSuccessData) text += `\n\nParent Login:\n  Email: ${parentSuccessData.email}\n  Password: ${parentSuccessData.password}`
+    if (parentSuccessData) {
+      if (parentSuccessData.existing) {
+        text += `\n\nParent: Linked to existing account (${parentSuccessData.email})`
+      } else {
+        text += `\n\nParent Login:\n  Email: ${parentSuccessData.email}\n  Password: ${parentSuccessData.password}`
+      }
+    }
     await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2500)
   }
   const displayLogin = (email: string) => email.endsWith('@student.local') ? email.replace('@student.local', '') : email
+
+  const printParentSlip = () => {
+    if (!parentSuccessData) return
+    const studentName = successData ? (successData.username || displayLogin(successData.email)) : ''
+    const printWindow = window.open('', '_blank', 'width=640,height=820')
+    if (!printWindow) return
+    const body = parentSuccessData.existing
+      ? `<p>This parent already has an ElimuNova account at <strong>${parentSuccessData.email}</strong>. No new password was generated.</p>`
+      : `<p><strong>Parent Portal Login</strong></p>
+         <p>Email: <strong>${parentSuccessData.email}</strong></p>
+         <p>Password: <strong>${parentSuccessData.password}</strong></p>
+         <p class="muted">Sign in at the Parent Portal to view your child's progress, assignments and reports.</p>`
+    printWindow.document.write(`<!doctype html><html><head><title>Parent Welcome Slip</title><style>body{font-family:system-ui,sans-serif;max-width:520px;margin:40px auto;padding:0 20px;color:#0f172a} h1{font-size:20px;margin-bottom:4px} .school{color:#64748b;font-size:14px;margin-bottom:24px} .box{border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin:12px 0} .muted{color:#64748b;font-size:13px} strong{color:#0f172a}</style></head><body>
+      <h1>Welcome to ElimuNova</h1>
+      <p class="school">Parent / Guardian portal access — ${studentName}</p>
+      <div class="box">${body}</div>
+      <p class="muted">Keep this slip safe. If you lose it, contact your school administrator.</p>
+      <script>window.onload=function(){window.print()}</script></body></html>`)
+    printWindow.document.close()
+  }
 
   return (
     <AdminModal open={isOpen} onClose={handleClose} title="Enroll New Student"
@@ -137,18 +196,23 @@ export default function EnrollStudentModal({
       icon={<UserPlus />} size="2xl"
       footer={successData ? (
         <div className="flex justify-end gap-3 w-full">
-          <button onClick={copyCredentials} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5">
+          <button onClick={copyCredentials} className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5">
             {copied ? <CheckCircle className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
             {copied ? 'Copied!' : 'Copy Credentials'}
           </button>
-          <button onClick={handleClose} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition">Done</button>
+          {parentSuccessData && (
+            <button onClick={printParentSlip} className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition inline-flex items-center gap-1.5">
+              <Printer className="w-4 h-4" /> Print Parent Slip
+            </button>
+          )}
+          <button onClick={handleClose} className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition">Done</button>
         </div>
       ) : (
         <AdminModalFooter onCancel={handleClose} submitLabel="Enroll Student" loading={loading} type="submit" />
       )}
     >
       {successData ? (
-        <div className="space-y-5">
+        <div className="space-y-5 mt-1">
           <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
             <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center shrink-0"><CheckCircle className="w-6 h-6 text-white" /></div>
             <div><p className="font-semibold text-emerald-900 text-lg">Student Enrolled!</p><p className="text-sm text-emerald-700">Share the credentials below with the student.</p></div>
@@ -168,18 +232,24 @@ export default function EnrollStudentModal({
           </div>
           {parentSuccessData && (
             <div className="border-2 border-emerald-200 rounded-xl overflow-hidden">
-              <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2"><p className="text-white font-semibold text-sm flex items-center gap-2"><UserPlus className="w-4 h-4" /> Parent Account Created</p></div>
+              <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2"><p className="text-white font-semibold text-sm flex items-center gap-2"><UserPlus className="w-4 h-4" /> Parent Portal Credentials</p></div>
               <div className="p-4 space-y-3 bg-slate-50">
-                <p className="text-sm text-slate-600">Parent login credentials{parentSuccessData.emailSent ? ' were sent to ' : ' for '}<strong>{parentSuccessData.email}</strong>.{parentSuccessData.emailSent ? <span className="text-emerald-600 font-medium"> (delivered)</span> : <span className="text-amber-600 font-medium"> (displayed below)</span>}</p>
-                <div><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Parent Email</p><code className="block bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono text-slate-900">{parentSuccessData.email}</code></div>
-                <div><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Parent Password</p><code className="block bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono text-slate-900">{parentSuccessData.password}</code></div>
+                {parentSuccessData.existing ? (
+                  <p className="text-sm text-slate-600">This parent already has an ElimuNova account at <strong>{parentSuccessData.email}</strong>. They were automatically linked to the new student — no new credentials were generated.</p>
+                ) : (
+                  <>
+                    <p className="text-sm text-slate-600">Parent login credentials{parentSuccessData.emailSent ? ' were sent to ' : ' for '}<strong>{parentSuccessData.email}</strong>.{parentSuccessData.emailSent ? <span className="text-emerald-600 font-medium"> (delivered)</span> : <span className="text-amber-600 font-medium"> (displayed below)</span>}</p>
+                    <div><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Parent Email</p><code className="block bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono text-slate-900">{parentSuccessData.email}</code></div>
+                    <div><p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Parent Password</p><code className="block bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono text-slate-900">{showPwd ? parentSuccessData.password : '\u2022'.repeat(parentSuccessData.password.length)}</code></div>
+                  </>
+                )}
               </div>
             </div>
           )}
           <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800"><AlertCircle className="w-4 h-4 mt-0.5 shrink-0" /><span>Save or share these credentials now — the password won't be shown again in plain text.</span></div>
         </div>
       ) : (
-        <form id="enroll-student-form" onSubmit={handleSubmit} className="space-y-5">
+        <form id="enroll-student-form" onSubmit={handleSubmit} className="space-y-5 mt-1">
           {errors.submit && <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm"><AlertCircle className="w-4 h-4 shrink-0" />{errors.submit}</div>}
 
           <SectionCard icon={<UserPlus className="w-4 h-4 text-indigo-600" />} label="Student Information" color="from-indigo-50/60 to-violet-50/60">
@@ -256,7 +326,7 @@ export default function EnrollStudentModal({
           </SectionCard>
 
           <SectionCard icon={<BookOpen className="w-4 h-4 text-amber-600" />} label="Learning Areas / Subjects" color="from-amber-50/60 to-orange-50/60">
-            <p className="text-xs text-slate-500">Select the subjects this student is enrolled in.</p>
+            <p className="text-xs text-slate-500">Auto-assigned based on {formData.grade || 'selected grade'}. Tap to adjust.</p>
             <div className="flex flex-wrap gap-1.5">
               {availableSubjects.map(subject => {
                 const selected = formData.subjects.includes(subject)
