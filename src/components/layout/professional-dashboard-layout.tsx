@@ -24,6 +24,7 @@ import { IdleLogoutWarning } from "@/components/ui/idle-logout-warning"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
 import { OfflineBanner } from "@/components/ui/offline-banner"
 import { SkipToContent } from "@/components/ui/skip-to-content"
+import ActiveMeetingBanner from "@/components/layout/active-meeting-banner"
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import { useSubscription } from '@/hooks/use-subscription'
 import { TourProvider } from '@/components/tour/TourProvider'
@@ -433,6 +434,10 @@ export function ProfessionalDashboardLayout({
         id="main-content"
         className={`transition-all duration-200 ${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-64'} pt-14 sm:pt-16`}
       >
+        {/* Active Meeting Banner — shows for all roles */}
+        <ErrorBoundary>
+          <ActiveMeetingBanner />
+        </ErrorBoundary>
         <div className="p-3 sm:p-4 md:p-6 max-w-full overflow-x-auto animate-fadeIn">
           <ErrorBoundary>
             {children}
