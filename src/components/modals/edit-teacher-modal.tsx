@@ -1,19 +1,14 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+  AdminModal,
+  AdminModalFooter,
+  AdminFormField,
+  adminInputClass,
+} from "@/components/ui/admin-modal"
 import { Loader2, User, Mail, Phone, MapPin } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 interface Teacher {
   id: string
@@ -42,6 +37,7 @@ export function EditTeacherModal({ isOpen, onClose, onSuccess, teacher }: EditTe
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const { toast } = useToast()
 
   useEffect(() => {
     if (teacher) {
@@ -67,22 +63,17 @@ export function EditTeacherModal({ isOpen, onClose, onSuccess, teacher }: EditTe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!teacher) return
-
     setLoading(true)
     setError('')
-
     try {
       const response = await fetch(`/api/school-admin/teachers/${teacher.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       })
-
       if (response.ok) {
+        toast({ title: "Success", description: "Teacher updated successfully" })
         onSuccess()
         onClose()
       } else {
@@ -92,20 +83,11 @@ export function EditTeacherModal({ isOpen, onClose, onSuccess, teacher }: EditTe
     } catch (error) {
       console.error('Error updating teacher:', error)
       setError('Failed to update teacher')
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
   const handleClose = () => {
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      address: '',
-      isActive: true
-    })
+    setFormData({ firstName: '', lastName: '', email: '', phone: '', address: '', isActive: true })
     setError('')
     onClose()
   }
@@ -113,124 +95,68 @@ export function EditTeacherModal({ isOpen, onClose, onSuccess, teacher }: EditTe
   if (!teacher) return null
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <User className="w-5 h-5 text-blue-600" />
-            <span>Edit Teacher</span>
-          </DialogTitle>
-          <DialogDescription>
-            Update teacher information and settings
-          </DialogDescription>
-        </DialogHeader>
+    <AdminModal
+      open={isOpen} onClose={handleClose}
+      title="Edit Teacher"
+      subtitle="Update teacher information and settings"
+      icon={<User />}
+      size="md"
+      footer={<AdminModalFooter onCancel={handleClose} submitLabel="Update Teacher" loading={loading} type="submit" />}
+    >
+      <form id="edit-teacher-form" onSubmit={handleSubmit} className="space-y-5">
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="firstName">First Name</Label>
-              <Input
-                id="firstName"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleInputChange}
-                placeholder="Enter first name"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="lastName">Last Name</Label>
-              <Input
-                id="lastName"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleInputChange}
-                placeholder="Enter last name"
-                required
-              />
-            </div>
+        <div className="grid grid-cols-2 gap-4">
+          <AdminFormField label="First Name" htmlFor="et-first">
+            <input id="et-first" name="firstName" type="text" autoComplete="off"
+              value={formData.firstName} onChange={handleInputChange}
+              placeholder="Enter first name" className={adminInputClass} required />
+          </AdminFormField>
+          <AdminFormField label="Last Name" htmlFor="et-last">
+            <input id="et-last" name="lastName" type="text" autoComplete="off"
+              value={formData.lastName} onChange={handleInputChange}
+              placeholder="Enter last name" className={adminInputClass} required />
+          </AdminFormField>
+        </div>
+
+        <AdminFormField label="Email Address" htmlFor="et-email">
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input id="et-email" name="email" type="email" autoComplete="off"
+              value={formData.email} onChange={handleInputChange}
+              placeholder="Enter email address" className={`${adminInputClass} pl-9`} required />
           </div>
+        </AdminFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="email" className="flex items-center space-x-2">
-              <Mail className="w-4 h-4" />
-              <span>Email Address</span>
-            </Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              placeholder="Enter email address"
-              required
-            />
+        <AdminFormField label="Phone Number" htmlFor="et-phone">
+          <div className="relative">
+            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input id="et-phone" name="phone" type="tel" autoComplete="off"
+              value={formData.phone} onChange={handleInputChange}
+              placeholder="Enter phone number" className={`${adminInputClass} pl-9`} />
           </div>
+        </AdminFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone" className="flex items-center space-x-2">
-              <Phone className="w-4 h-4" />
-              <span>Phone Number</span>
-            </Label>
-            <Input
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              placeholder="Enter phone number"
-            />
+        <AdminFormField label="Address" htmlFor="et-addr">
+          <div className="relative">
+            <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+            <textarea id="et-addr" name="address" autoComplete="off"
+              value={formData.address} onChange={handleInputChange}
+              placeholder="Enter address" rows={3}
+              className={`${adminInputClass} pl-9 resize-none`} />
           </div>
+        </AdminFormField>
 
-          <div className="space-y-2">
-            <Label htmlFor="address" className="flex items-center space-x-2">
-              <MapPin className="w-4 h-4" />
-              <span>Address</span>
-            </Label>
-            <Textarea
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleInputChange}
-              placeholder="Enter address"
-              rows={3}
-            />
-          </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" name="isActive" checked={formData.isActive}
+            onChange={handleInputChange}
+            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+          <span className="text-sm text-slate-700">Active Status</span>
+        </label>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="isActive"
-              name="isActive"
-              checked={formData.isActive}
-              onChange={handleInputChange}
-              className="rounded border-gray-300"
-            />
-            <Label htmlFor="isActive">Active Status</Label>
-          </div>
-
-          {error && (
-            <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="edugenius-button">
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Teacher'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        {error && (
+          <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</div>
+        )}
+      </form>
+    </AdminModal>
   )
 }
