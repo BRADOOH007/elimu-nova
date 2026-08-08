@@ -4,19 +4,16 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useSchoolInfo } from "@/hooks/use-school-info"
 import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
-import { Loader2 } from "lucide-react"
+import DashboardSkeleton from "@/components/dashboard-skeleton"
 import StatsGrid from "@/components/school-admin/stats-grid"
 import QuickActions from "@/components/school-admin/quick-actions"
-import SchoolInfoPanel from "@/components/school-admin/school-info-panel"
-import PersonList from "@/components/school-admin/person-list"
-import SchoolOverview from "@/components/school-admin/school-overview"
 import SchoolAIInsightsPanel from "@/components/school-admin/ai-insights-panel"
 import { AIUsageCard } from "@/components/ai-usage-card"
+import ActivityLog from "@/components/school-admin/activity-log"
+import UpcomingMeetings from "@/components/school-admin/upcoming-meetings"
+import SubscriptionBadge from "@/components/school-admin/subscription-badge"
 import { EnrollTeacherModal } from "@/components/modals/enroll-teacher-modal"
-import { confirmToast } from '@/lib/confirm-toast'
 import EnrollStudentModal from "@/components/modals/enroll-student-modal"
-import CreateClassModal from "@/components/modals/create-class-modal"
-import { ScheduleMeetingModal } from "@/components/modals/schedule-meeting-modal"
 import { EditTeacherModal } from "@/components/modals/edit-teacher-modal"
 import EditStudentModal from "@/components/modals/edit-student-modal"
 
@@ -26,33 +23,39 @@ interface DashboardStats {
   activeClasses: { value: number; change: string }
   monthlyRevenue: { value: number; change: string }
   activeTeachers: { value: number; change: string }
+  activeStudents: { value: number; change: string }
 }
 
-interface Teacher { id: string; name: string; email: string; students: number; status: string; joinDate: string }
-interface Student { id: string; name: string; email: string; teacher: string; status: string; joinDate: string }
-interface Activity { id: string; type: string; action: string; description: string; metadata: any; user: { name: string; email: string; role: string } | null; createdAt: string }
-interface SchoolInfo { name: string; address: string; package: string; subscription: { packageName: string; status: string; amount: number; daysRemaining: number }; packagePrice: number }
+interface TermInfo {
+  termName: string; term: number; weekNumber: number; weeksCount: number; nextEvent: string
+}
+
+interface Teacher { id: string; name: string; email: string; phone?: string; address?: string; status: string; students?: number; joinDate?: string }
+interface Student { id: string; name: string; email: string; grade?: string; teacher?: string; status: string; joinDate?: string }
+interface Activity { id: string; type: string; action: string; description: string; metadata: unknown; user: { name: string; email: string; role: string } | null; createdAt: string }
+interface Meeting { id: string; title: string; description?: string; date: string; time: string; duration: number; location?: string; creator: string }
+interface Subscription { packageName: string; status: string; amount: number; daysRemaining: number }
 
 function formatCurrency(amount: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 }).format(amount)
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(amount)
 }
 
 export default function SchoolAdminDashboard() {
   const router = useRouter()
   const { schoolInfo: schoolData } = useSchoolInfo()
   const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [recentTeachers, setRecentTeachers] = useState<Teacher[]>([])
-  const [recentStudents, setRecentStudents] = useState<Student[]>([])
   const [recentActivities, setRecentActivities] = useState<Activity[]>([])
-  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
-  const [upcomingMeetings, setUpcomingMeetings] = useState<any[]>([])
-  const [availableClasses, setAvailableClasses] = useState<any[]>([])
+  const [upcomingMeetings, setUpcomingMeetings] = useState<Meeting[]>([])
+  const [gradeBreakdown, setGradeBreakdown] = useState<{ grade: string; count: number }[]>([])
+  const [subjectCoverage, setSubjectCoverage] = useState<{ total: number; assigned: number }>({ total: 0, assigned: 0 })
+  const [termInfo, setTermInfo] = useState<TermInfo | null>(null)
+  const [cbcReadiness, setCbcReadiness] = useState<{ percent: number; total: number; pending: number }>({ percent: 0, total: 0, pending: 0 })
+  const [subscription, setSubscription] = useState<Subscription | null>(null)
+  const [availableClasses, setAvailableClasses] = useState<Array<{ id: string; name: string; subject: string; grade: string }>>([])
   const [loading, setLoading] = useState(true)
 
   const [enrollTeacherOpen, setEnrollTeacherOpen] = useState(false)
   const [enrollStudentOpen, setEnrollStudentOpen] = useState(false)
-  const [createClassOpen, setCreateClassOpen] = useState(false)
-  const [scheduleMeetingOpen, setScheduleMeetingOpen] = useState(false)
   const [editTeacherOpen, setEditTeacherOpen] = useState(false)
   const [editStudentOpen, setEditStudentOpen] = useState(false)
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null)
@@ -63,104 +66,86 @@ export default function SchoolAdminDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true)
-      const [statsRes, classesRes] = await Promise.all([
-        fetch("/api/school-admin/dashboard-stats"),
-        fetch("/api/school-admin/classes"),
-      ])
+      const statsRes = await fetch("/api/school-admin/dashboard-stats")
+      const classesRes = await fetch("/api/school-admin/classes")
+      if (classesRes.ok) setAvailableClasses((await classesRes.json()).classes || [])
       if (statsRes.ok) {
         const data = await statsRes.json()
         setStats(data.stats)
-        setRecentTeachers(data.recentTeachers)
-        setRecentStudents(data.recentStudents)
-        setRecentActivities(data.recentActivities)
-        setSchoolInfo(data.schoolInfo)
+        setRecentActivities(data.recentActivities || [])
         setUpcomingMeetings(data.upcomingMeetings || [])
+        setGradeBreakdown(data.gradeBreakdown || [])
+        setSubjectCoverage(data.subjectCoverage || { total: 0, assigned: 0 })
+        setTermInfo(data.termInfo || null)
+        setCbcReadiness(data.cbcReadiness || { percent: 0, total: 0, pending: 0 })
+        if (data.schoolInfo?.subscription) setSubscription(data.schoolInfo.subscription)
       }
-      if (classesRes.ok) setAvailableClasses((await classesRes.json()).classes || [])
     } catch (e) { console.error("Error fetching dashboard data:", e) }
     finally { setLoading(false) }
   }
 
   const handleModalSuccess = () => fetchDashboardData()
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading dashboard data...</p>
-        </div>
-      </div>
-    )
-  }
+  if (loading) return <DashboardSkeleton variant="admin" />
 
   return (
-    <div className="max-w-full overflow-x-auto">
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-hidden">
+      <div className="space-y-6 py-4 md:py-6">
         <SubscriptionAlert />
 
-        <div className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold mb-2 text-gray-900">
-            {schoolData?.school?.name ? `${schoolData.school.name} Overview` : "School Admin Overview"}
-          </h1>
-          <p className="text-gray-600 text-sm md:text-base">
-            {schoolData?.school?.name ? `Manage teachers, students, and operations at ${schoolData.school.name}` : "Manage teachers, students, and school operations"}
-          </p>
-        </div>
-
-        <StatsGrid stats={stats} formatCurrency={formatCurrency} />
-
-        {/* AI Insights */}
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <SchoolAIInsightsPanel />
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl md:text-3xl font-bold mb-1 text-gray-900 truncate">
+              {schoolData?.school?.name ? `${schoolData.school.name} Overview` : "School Admin Overview"}
+            </h1>
+            <p className="text-gray-600 text-sm md:text-base">
+              {schoolData?.school?.name ? `Manage teachers, students, and operations at ${schoolData.school.name}` : "Manage teachers, students, and school operations"}
+            </p>
           </div>
-          <AIUsageCard />
+          <SubscriptionBadge subscription={subscription} formatCurrency={formatCurrency} />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8 mb-8">
-          <QuickActions
-            onEnrollTeacher={() => setEnrollTeacherOpen(true)}
-            onEnrollStudent={() => setEnrollStudentOpen(true)}
-            onCreateClass={() => setCreateClassOpen(true)}
-            onScheduleMeeting={() => setScheduleMeetingOpen(true)}
-          />
-          <SchoolInfoPanel schoolInfo={schoolInfo} activities={recentActivities} formatCurrency={formatCurrency} />
-        </div>
-
-        <PersonList
-          teachers={recentTeachers}
-          students={recentStudents}
-          onEditTeacher={(t) => { setSelectedTeacher(t); setEditTeacherOpen(true) }}
-          onEditStudent={(s) => { setSelectedStudent(s); setEditStudentOpen(true) }}
-          onDeleteTeacher={async (id) => {
-            if (!(await confirmToast({ title: 'Delete this teacher?' }))) return
-            try { await fetch(`/api/school-admin/teachers/${id}`, { method: "DELETE" }); setRecentTeachers(prev => prev.filter(t => t.id !== id)) }
-            catch (e) { console.error("Error deleting teacher:", e) }
-          }}
-          onDeleteStudent={async (id) => {
-            if (!(await confirmToast({ title: 'Delete this student?' }))) return
-            try { await fetch(`/api/school-admin/students/${id}`, { method: "DELETE" }); setRecentStudents(prev => prev.filter(s => s.id !== id)) }
-            catch (e) { console.error("Error deleting student:", e) }
-          }}
-          onToggleTeacherStatus={async (id, status) => {
-            try { await fetch(`/api/school-admin/teachers/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: status === "Inactive" }) }); fetchDashboardData() }
-            catch (e) { console.error("Error updating teacher status:", e) }
-          }}
-          onToggleStudentStatus={async (id, status) => {
-            try { await fetch(`/api/school-admin/students/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive: status === "Inactive" }) }); fetchDashboardData() }
-            catch (e) { console.error("Error updating student status:", e) }
-          }}
-          onViewTeachers={() => router.push("/school-admin/teachers")}
-          onViewStudents={() => router.push("/school-admin/students")}
+        {/* Top KPI metrics */}
+        <StatsGrid
+          stats={stats}
+          gradeBreakdown={gradeBreakdown}
+          subjectCoverage={subjectCoverage}
+          termInfo={termInfo}
+          cbcReadiness={cbcReadiness}
         />
 
-        <SchoolOverview stats={stats} upcomingMeetings={upcomingMeetings} />
+        {/* Main grid: 2-col left, 1-col right */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
+
+          {/* Left column: 2/3 width */}
+          <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            {/* AI Insights + Usage */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+              <div className="xl:col-span-2">
+                <SchoolAIInsightsPanel />
+              </div>
+              <AIUsageCard />
+            </div>
+
+            {/* Quick Actions */}
+            <QuickActions
+              onEnrollTeacher={() => setEnrollTeacherOpen(true)}
+              onEnrollStudent={() => setEnrollStudentOpen(true)}
+            />
+
+            {/* System Activity Log (unified — replaces dual teacher/student cards) */}
+            <ActivityLog activities={recentActivities} />
+          </div>
+
+          {/* Right column: 1/3 width */}
+          <div className="lg:col-span-1 space-y-4 md:space-y-6">
+            <UpcomingMeetings meetings={upcomingMeetings} />
+          </div>
+        </div>
 
         <EnrollTeacherModal isOpen={enrollTeacherOpen} onClose={() => setEnrollTeacherOpen(false)} onSuccess={handleModalSuccess} />
         <EnrollStudentModal isOpen={enrollStudentOpen} onClose={() => setEnrollStudentOpen(false)} onSuccess={handleModalSuccess} classes={availableClasses} />
-        <CreateClassModal isOpen={createClassOpen} onClose={() => setCreateClassOpen(false)} onSuccess={handleModalSuccess} />
-        <ScheduleMeetingModal isOpen={scheduleMeetingOpen} onClose={() => setScheduleMeetingOpen(false)} onSuccess={handleModalSuccess} />
         <EditTeacherModal isOpen={editTeacherOpen} onClose={() => { setEditTeacherOpen(false); setSelectedTeacher(null) }} onSuccess={handleModalSuccess} teacher={selectedTeacher} />
         <EditStudentModal isOpen={editStudentOpen} onClose={() => { setEditStudentOpen(false); setSelectedStudent(null) }} onSuccess={handleModalSuccess} student={selectedStudent} classes={availableClasses} />
       </div>
