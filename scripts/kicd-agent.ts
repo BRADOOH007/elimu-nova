@@ -366,26 +366,48 @@ async function waterfallAI(prompt: string): Promise<{ content: string; provider:
 
 /* ──── CURRICULUM PARSER ──── */
 async function parseCurriculum(text: string, filename: string): Promise<ParsedCurriculum> {
-  const prompt = `Extract the full CBC curriculum from this document. Return ONLY valid JSON:
+  const gradeFromFilename = filename.match(/grade[_ ]?(\w+)/i)?.[1] || filename.split('_')[0] || ''
+  const subjectFromFilename = filename.split('_').slice(1).join(' ') || filename
+
+  const prompt = `You are a CBC curriculum data extraction tool. Read the document below and output ONLY valid JSON.
+
+IMPORTANT: The filename tells you EXACTLY what grade and subject this is. DO NOT guess or use a different grade/subject. If the document says "Grade 4" but the filename says "Grade 5", use the document.
+
+File: ${filename}
+Grade: ${gradeFromFilename}
+Subject: ${subjectFromFilename}
+
+Extract this structure (only fields that exist):
 {
-  "grade": "Grade 8",
-  "subject": "Social Studies",
+  "grade": "Grade 4",
+  "subject": "Mathematics",
   "strands": [{
-    "name": "1.0 Natural Monuments",
+    "name": "1.0 Whole Numbers",
     "order": 1,
     "substrands": [{
-      "name": "1.1 Historical Sites",
+      "name": "1.1 Place Value",
       "order": 1,
-      "teachingWeeks": 6,
+      "teachingWeeks": 4,
       "learningOutcomes": ["By the end of the sub-strand, the learner should be able to..."],
       "inquiryQuestions": ["What is the importance of...?"],
-      "coreCompetencies": ["Communication", "Critical thinking"],
-      "suggestedActivities": ["Learners visit a nearby site..."]
+      "coreCompetencies": ["Communication and collaboration", "Critical thinking and problem solving"],
+      "suggestedActivities": ["Learners use place value charts to..."]
     }]
   }]
 }
-File: ${filename}
-Content: ${text.slice(0, 15000)}`
+
+Rules:
+- Extract the ACTUAL grade and subject from the document
+- strand name: include the numbering exactly as in the document (e.g. "1.0 Numbers")
+- sub-strand name: include the numbering (e.g. "1.1 Whole Numbers")
+- learningOutcomes: the actual "By the end of the sub-strand..." statements
+- inquiryQuestions: the actual key inquiry questions listed
+- coreCompetencies: use standard CBC values like "Communication and collaboration", "Critical thinking and problem solving", "Creativity and imagination", "Citizenship", "Digital literacy", "Learning to learn", "Self efficacy"
+- suggestedActivities: specific activities mentioned in the document
+- Skip any fields not present in the document
+
+Document:
+${text.slice(0, 15000)}`
 
   const { content: raw } = await waterfallAI(prompt)
   const json = extractJson(raw)
@@ -583,7 +605,7 @@ async function main() {
     if (result.startsWith('DONE') || result.startsWith('SAVED')) done++
     else if (result !== 'SKIPPED') failed++
     // Rate-limit: wait between AI calls
-    if (!extractOnly) await new Promise(r => setTimeout(r, 2000))
+    if (!extractOnly) await new Promise(r => setTimeout(r, 8000))
   }
 
   await browser.close()
