@@ -16,8 +16,15 @@ import { chromium } from 'playwright'
 const prisma = new PrismaClient()
 
 const KICD_SEEDS = [
-  'https://kicd.ac.ke/cbc-materials/curriculum-designs/regular-curriculum-designs/',
-  'https://kicd.ac.ke/downloads/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-four-designs/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-five-designs/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-six-designs/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-seven-designs/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-eight-designs/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-nine-designs/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-ten/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-eleven/',
+  'https://kicd.ac.ke/cbc-materials/curriculum-designs/grade-twelve/',
 ]
 
 interface ParsedCurriculum {
@@ -59,7 +66,6 @@ async function crawlKicd(seedUrls: string[]): Promise<string[]> {
   const browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-    extraHTTPHeaders: { 'Accept-Language': 'en-US,en;q=0.9' },
   })
   const page = await context.newPage()
   const allUrls = new Set<string>()
@@ -67,50 +73,55 @@ async function crawlKicd(seedUrls: string[]): Promise<string[]> {
   for (const seed of seedUrls) {
     console.log(`Crawling: ${seed}`)
     try {
-      await retry(() => page.goto(seed, { waitUntil: 'networkidle', timeout: 30000 }), 2)
+      await retry(() => page.goto(seed, { waitUntil: 'domcontentloaded', timeout: 30000 }), 2)
+      await page.waitForTimeout(2000)
 
-      // Click any "Load more" or pagination buttons
-      const loadButtons = page.locator('a:has-text("Load more"), button:has-text("More"), a:has-text("Next"), a:has-text("2")')
-      const loadCount = await loadButtons.count()
-      for (let i = 0; i < loadCount && i < 5; i++) {
-        try {
-          await loadButtons.nth(i).click()
-          await page.waitForTimeout(2000)
-        } catch { /* ignore */ }
-      }
-
-      // Extract all links from the page
-      const links = await page.evaluate(() => {
-        const anchors = Array.from(document.querySelectorAll('a[href]'))
-        return anchors.map(a => (a as HTMLAnchorElement).href).filter(href =>
-          href.includes('.pdf') || href.includes('drive.google.com/file/d/') || href.includes('download')
-        )
+      // Extract subject links from the grade page
+      // These are <a> tags inside the content area that link to individual subject pages
+      const subjectLinks = await page.evaluate(() => {
+        const links = document.querySelectorAll('a[href]')
+        return Array.from(links)
+          .map(a => (a as HTMLAnchorElement).href)
+          .filter(href =>
+            href.includes('kicd.ac.ke') &&
+            !href.includes('#') &&
+            !href.includes('grade-') &&
+            href !== window.location.href
+          )
       })
 
-      for (const link of links) {
-        if (isPdfUrl(link)) allUrls.add(link)
+      const uniqueSubjects = [...new Set(subjectLinks)]
+      console.log(`  Found ${uniqueSubjects.length} subject links`)
+
+      // Visit each subject page to find the PDF download
+      for (const subjUrl of uniqueSubjects.slice(0, 30)) {
+        try {
+          await page.goto(subjUrl, { waitUntil: 'domcontentloaded', timeout: 15000 })
+          await page.waitForTimeout(1000)
+
+          const pdfLinks = await page.evaluate(() => {
+            return Array.from(document.querySelectorAll('a[href]'))
+              .map(a => (a as HTMLAnchorElement).href)
+              .filter(href => href.includes('.pdf') || href.includes('drive.google.com/file/d/'))
+          })
+
+          for (const pdf of pdfLinks) allUrls.add(pdf)
+          if (pdfLinks.length > 0) console.log(`    ${subjUrl.split('/').pop()}: ${pdfLinks.length} PDF(s)`)
+        } catch { /* skip broken pages */ }
       }
-      console.log(`  Found ${links.length} PDF links on this page`)
+
+      // Also check any direct PDF links on the main grade page
+      const directPdfs = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('a[href]')).map(a => (a as HTMLAnchorElement).href).filter(href => href.includes('.pdf'))
+      })
+      for (const pdf of directPdfs) allUrls.add(pdf)
     } catch (e) {
-      console.warn(`  Crawl error for ${seed}:`, e)
+      console.warn(`  Crawl error:`, e)
     }
   }
 
-  // Also check iframe sources on KICD pages
-  for (const seed of seedUrls) {
-    try {
-      await page.goto(seed, { waitUntil: 'domcontentloaded', timeout: 15000 })
-      const iframeUrls = await page.evaluate(() => {
-        return Array.from(document.querySelectorAll('iframe[src]')).map(f => (f as HTMLIFrameElement).src)
-      })
-      for (const url of iframeUrls) {
-        if (isPdfUrl(url)) allUrls.add(url)
-      }
-    } catch { /* ignore */ }
-  }
-
   await browser.close()
-  console.log(`Total unique PDFs found: ${allUrls.size}\n`)
+  console.log(`\nTotal unique PDFs discovered: ${allUrls.size}`)
   return [...allUrls]
 }
 
