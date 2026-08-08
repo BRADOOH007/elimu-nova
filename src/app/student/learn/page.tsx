@@ -122,7 +122,11 @@ function LearnPageContent() {
   useEffect(() => {
     const subj = searchParams.get('subject')
     const grd = searchParams.get('grade')
-    if (subj) setStudySubject(subj)
+    if (subj) {
+      // Capitalize for UI dropdown ("english" -> "English")
+      const formatted = subj.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
+      setStudySubject(formatted)
+    }
     if (grd) setStudyGrade(grd)
   }, [searchParams])
 

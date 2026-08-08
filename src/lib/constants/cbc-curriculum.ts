@@ -140,3 +140,39 @@ export function getAllCBCSubjects(): string[] {
   }
   return [...all]
 }
+
+export function getStrandsForSubject(grade: string, subjectName: string): string[] {
+  if (!subjectName) return []
+  const normalized = subjectName.trim().toLowerCase()
+  const map: Record<string, string[]> = {
+    'english': [],
+    'english language activities': [],
+    'kiswahili': [],
+    'kiswahili / ksl': [],
+    'mathematics': [],
+    'maths': [],
+    'science': [],
+    'science & technology': [],
+    'integrated science': [],
+    'social studies': [],
+    'religious education': [],
+    'cre': [],
+    'creative arts': [],
+    'creative arts & sports': [],
+    'agriculture': [],
+    'agriculture & nutrition': [],
+    'pre-technical studies': [],
+    'business studies': [],
+    'computer studies': [],
+    'indigenous language': [],
+    'environmental activities': [],
+    'physics': [],
+    'chemistry': [],
+    'biology': [],
+    'history & citizenship': [],
+    'geography': [],
+    'community service learning': [],
+    'physical education': [],
+  }
+  return map[normalized] || []
+}
