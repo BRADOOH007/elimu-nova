@@ -18,6 +18,7 @@ import { Recommendations } from '@/components/student/recommendations'
 import { FocusTimer } from '@/components/student/focus-timer'
 import { AIStudyBuddy } from '@/components/student/ai-study-buddy'
 import { HopeAITutorDrawer } from '@/components/ai-tutor-drawer'
+import { FloatingNotesWidget } from '@/components/student/floating-notes-widget'
 import { useAITutor } from '@/components/ai-tutor-provider'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
 import { getGameState, updateStreak, awardXP, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
@@ -161,6 +162,14 @@ function LearnPageContent() {
     if (grd) setStudyGrade(grd)
   }, [searchParams])
 
+  // Once the student's profile grade loads, adopt it as the default study grade
+  // (unless the URL explicitly requested a grade)
+  useEffect(() => {
+    if (defaultGrade && !searchParams.get('grade')) {
+      setStudyGrade(defaultGrade)
+    }
+  }, [defaultGrade, searchParams])
+
   // Hope AI drawer state
   const [showHopeDrawer, setShowHopeDrawer] = useState(false)
   const [hopeContext, setHopeContext] = useState('')
@@ -180,13 +189,13 @@ function LearnPageContent() {
     try {
       const s = subj || studySubject
       const g = grade || studyGrade
-      const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(g)}&subject=${encodeURIComponent(s)}`)
+      const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(g)}&subject=${encodeURIComponent(s)}${curriculum && curriculum !== 'cbc' ? `&curriculum=${encodeURIComponent(curriculum)}` : ''}`)
       if (res.ok) setPathData(await res.json())
     } catch { /* ignore */ }
     finally { setPathLoading(false) }
   }
 
-  useEffect(() => { fetchLearningPath() }, [studySubject, studyGrade])
+  useEffect(() => { fetchLearningPath() }, [studySubject, studyGrade, curriculum])
 
   // ── Lesson Generation ─────────────────────────────────────
   const generateLesson = async (subjectArg?: string, topicArg?: string) => {
@@ -456,7 +465,7 @@ function LearnPageContent() {
 
       {/* ═══ BODY ═══ */}
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
-        <div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
+        <div className="w-full space-y-6">
 
           {/* ── LEFT: Study Area ── */}
           <div className="min-w-0 space-y-6">
@@ -747,7 +756,7 @@ function LearnPageContent() {
                   </span>
                   <h2 className="text-lg font-extrabold text-slate-900">Explore the Curriculum</h2>
                 </div>
-                <CurriculumBrowser onSelectTopic={handleExploreTopic} defaultSubject={studySubject} defaultGrade={studyGrade} />
+                <CurriculumBrowser onSelectTopic={handleExploreTopic} defaultSubject={studySubject} defaultGrade={studyGrade} curriculum={curriculum} />
                 <Recommendations onStudy={handleExploreTopic} />
               </div>
             )}
@@ -762,135 +771,53 @@ function LearnPageContent() {
             )}
           </div>
 
-          {/* ── RIGHT: Sidebar ── */}
-          <aside className="space-y-6 lg:sticky lg:top-4">
-
-            {/* Daily Challenge */}
-            {!dailyDone && dailyTopic && (
-              <button onClick={startDailyChallenge} className="group w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 shadow-md">
-                    <Trophy className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-amber-900">Daily Challenge</p>
-                    <p className="truncate text-xs text-amber-700">{dailySubject}: {dailyTopic}</p>
-                    <span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-600">+{XP_REWARDS.dailyChallenge} XP</span>
-                  </div>
+          {/* Daily Challenge + Learning Path (inline, formerly sidebar) */}
+          {!dailyDone && dailyTopic && (
+            <button onClick={startDailyChallenge} className="group w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 shadow-md"><Trophy className="h-5 w-5 text-white" /></div>
+                <div className="min-w-0"><p className="text-sm font-bold text-amber-900">Daily Challenge</p><p className="truncate text-xs text-amber-700">{dailySubject}: {dailyTopic}</p><span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-600">+{XP_REWARDS.dailyChallenge} XP</span></div>
+              </div>
+            </button>
+          )}
+          {pathData && (
+            <Card className="rounded-2xl border border-indigo-200 shadow-sm">
+              <CardContent className="flex items-center justify-between gap-2 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100"><GitBranch className="h-4 w-4 text-indigo-600" /></span>
+                  <div className="min-w-0"><p className="truncate text-sm font-bold text-indigo-900">{studySubject} - {studyGrade}</p><p className="text-[11px] text-indigo-500">{pathData.completedCount}/{pathData.totalCount} topics · {Math.round(pathData.percentComplete || 0)}%</p></div>
                 </div>
-              </button>
-            )}
-
-            {/* Learning Path Progress */}
-            {pathData && (
-              <Card className="rounded-2xl border border-indigo-200 shadow-sm">
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100"><GitBranch className="h-4 w-4 text-indigo-600" /></span>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-indigo-900">{studySubject} — {studyGrade}</p>
-                        <p className="text-[11px] text-indigo-500">{pathData.completedCount}/{pathData.totalCount} topics</p>
-                      </div>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-1 text-xs font-bold text-indigo-600">{Math.round(pathData.percentComplete || 0)}%</span>
-                  </div>
-                  <Progress value={pathData.percentComplete || 0} className="h-2" />
-                  {pathData.resumeTopic && pathData.resumeTopic.topicName !== studyTopic && (
-                    <div className="flex items-center justify-between gap-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-indigo-50 to-violet-50 p-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-indigo-800">Continue: {pathData.resumeTopic.topicName}</p>
-                      </div>
-                      <Button size="sm" onClick={() => resumeTopicLesson(studySubject, pathData.resumeTopic.topicName)}
-                        className="shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 text-white"><Play className="mr-1 h-3.5 w-3.5" />Resume</Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Due Reviews */}
-            {dueReviews.length > 0 && (
-              <Card className="rounded-2xl border border-orange-200 shadow-sm">
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100"><Repeat className="h-4 w-4 text-orange-600" /></span>
-                    <div>
-                      <p className="text-sm font-bold text-orange-900">Spaced Repetition</p>
-                      <p className="text-[11px] text-orange-600">{dueReviews.length} topic{dueReviews.length > 1 ? 's' : ''} due today</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {dueReviews.slice(0, 3).map((r, i) => (
-                      <Button key={i} size="sm" variant="outline" onClick={() => resumeTopicLesson(r.subject, r.topic)}
-                        className="rounded-full border-orange-300 text-xs text-orange-700 hover:bg-orange-100">
-                        <Repeat className="mr-1 h-3 w-3" />{r.topic} ({r.score}%)
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Mistake Review */}
-            {mistakeMode && unreviewedMistakes.length > 0 && (
-              <Card className="rounded-2xl border-2 border-red-200 shadow-sm">
-                <CardContent className="space-y-3 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100"><AlertCircle className="h-4 w-4 text-red-600" /></span>
-                      <p className="text-sm font-bold text-red-800">Mistake Review <span className="font-semibold text-red-500">({mistakeIdx + 1}/{unreviewedMistakes.length})</span></p>
-                    </div>
-                    <button onClick={() => setMistakeMode(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-500 transition-colors hover:bg-red-200"><X className="h-4 w-4" /></button>
-                  </div>
-                  {(() => {
-                    const m = unreviewedMistakes[mistakeIdx]
-                    if (!m) return null
-                    return (
-                      <div className="space-y-3 rounded-xl border border-red-100 bg-white p-3">
-                        <p className="text-sm font-semibold text-slate-800">{m.question}</p>
-                        <div className="flex flex-wrap gap-2 text-xs">
-                          <span className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-red-700">Your answer: {m.yourAnswer}</span>
-                          <span className="rounded-lg border border-green-100 bg-green-50 px-2.5 py-1 text-green-700">Correct: {m.correctAnswer}</span>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => { markMistakeReviewed(m.id); setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Got it</Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Skip</Button>
-                        </div>
-                      </div>
-                    )
-                  })()}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Notes */}
-            <Card className="rounded-2xl border border-slate-200 shadow-sm">
-              <CardHeader className="cursor-pointer select-none py-4" onClick={() => setNotesOpen(!notesOpen)}>
-                <CardTitle className="flex items-center justify-between text-base">
-                  <span className="flex items-center gap-2">📝 My Notes</span>
-                  <span className="text-sm text-slate-400">{notesOpen ? '▼' : '▶'}</span>
-                </CardTitle>
-              </CardHeader>
-              {notesOpen && (
-                <CardContent className="space-y-3">
-                  <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Type your notes here..." rows={4} className="resize-none" />
-                  <Button onClick={saveNote} disabled={!notes.trim()} size="sm" className="bg-amber-500 hover:bg-amber-600">Save Note</Button>
-                  {savedNotes.length > 0 && (
-                    <div className="max-h-40 space-y-2 overflow-y-auto">
-                      {savedNotes.map(n => (
-                        <div key={n.id} className="rounded-lg bg-slate-50 p-3">
-                          <p className="text-xs text-slate-400">{n.topic}</p>
-                          <p className="text-sm text-slate-700">{n.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              )}
+                <Progress value={pathData.percentComplete || 0} className="h-2 w-24" />
+                {pathData.resumeTopic && pathData.resumeTopic.topicName !== studyTopic && (
+                  <Button size="sm" onClick={() => resumeTopicLesson(studySubject, pathData.resumeTopic.topicName)} className="shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 text-white"><Play className="mr-1 h-3.5 w-3.5" />Resume</Button>
+                )}
+              </CardContent>
             </Card>
-          </aside>
+          )}
+
+          {/* Spaced Repetition */}
+          {dueReviews.length > 0 && (
+            <Card className="rounded-2xl border border-orange-200 shadow-sm">
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100"><Repeat className="h-4 w-4 text-orange-600" /></span><p className="text-sm font-bold text-orange-900">Spaced Repetition</p><p className="text-[11px] text-orange-600">{dueReviews.length} topic{dueReviews.length > 1 ? 's' : ''} due today</p></div>
+                <div className="flex flex-wrap gap-2">{dueReviews.slice(0, 3).map((r, i) => (<Button key={i} size="sm" variant="outline" onClick={() => resumeTopicLesson(r.subject, r.topic)} className="rounded-full border-orange-300 text-xs text-orange-700 hover:bg-orange-100"><Repeat className="mr-1 h-3 w-3" />{r.topic} ({r.score}%)</Button>))}</div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Mistake Review (inline) */}
+          {mistakeMode && unreviewedMistakes.length > 0 && (
+            <Card className="rounded-2xl border-2 border-red-200 shadow-sm">
+              <CardContent className="space-y-3 p-4">
+                <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100"><AlertCircle className="h-4 w-4 text-red-600" /></span><p className="text-sm font-bold text-red-800">Mistake Review <span className="font-semibold text-red-500">({mistakeIdx + 1}/{unreviewedMistakes.length})</span></p></div><button onClick={() => setMistakeMode(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200"><X className="h-4 w-4" /></button></div>
+                {(() => { const m = unreviewedMistakes[mistakeIdx]; if (!m) return null; return (<div className="space-y-3 rounded-xl border border-red-100 bg-white p-3"><p className="text-sm font-semibold text-slate-800">{m.question}</p><div className="flex flex-wrap gap-2 text-xs"><span className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-red-700">Your answer: {m.yourAnswer}</span><span className="rounded-lg border border-green-100 bg-green-50 px-2.5 py-1 text-green-700">Correct: {m.correctAnswer}</span></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => { markMistakeReviewed(m.id); setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Got it</Button><Button size="sm" variant="ghost" onClick={() => { setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Skip</Button></div></div>) })()}
+              </CardContent>
+            </Card>
+          )}
         </div>
+
+        {/* Floating Notes Widget */}
+        <FloatingNotesWidget notes={notes} setNotes={setNotes} savedNotes={savedNotes} saveNote={saveNote} activeLesson={activeLesson} />
 
         {/* AI Study Buddy — always visible at bottom */}
         <div className="mt-6">
