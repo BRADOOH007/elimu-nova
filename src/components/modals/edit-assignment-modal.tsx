@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -300,8 +300,7 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl">
-        <div className="max-h-[85vh] overflow-y-auto px-1">
+      <DialogContent className="max-w-5xl bg-white border-0 shadow-2xl">
         <DialogHeader className="pb-4 border-b border-gray-100">
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
@@ -314,7 +313,8 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+        <DialogBody className="space-y-6 mt-1">
+          <form id="edit-assignment-form" onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
           <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 space-y-6">
             <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
@@ -713,32 +713,32 @@ export default function EditAssignmentModal({ isOpen, onClose, onSuccess, assign
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              className="bg-white border-gray-200 hover:bg-gray-50"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              ) : (
-                <Edit className="w-4 h-4 mr-2" />
-              )}
-              {loading ? 'Updating...' : 'Update Assignment'}
-            </Button>
-          </div>
-        </form>
-        </div>
+          </form>
+        </DialogBody>
+        <DialogFooter className="border-t border-gray-200">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            className="bg-white border-gray-200 hover:bg-gray-50 px-5 py-2.5 text-sm font-medium"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="edit-assignment-form"
+            disabled={loading}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg px-5 py-2.5 text-sm font-medium"
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            ) : (
+              <Edit className="w-4 h-4 mr-2" />
+            )}
+            {loading ? 'Updating...' : 'Update Assignment'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

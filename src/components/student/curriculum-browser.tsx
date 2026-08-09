@@ -132,7 +132,7 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
       setStrands(fallback.map((t, i) => ({ id: `fb-${i}`, name: t, order: i })))
     }
     setLoading(false)
-  }, [getFallbackTopics, subject])
+  }, [grade, subject])
 
   // Re-fetch strands + statuses whenever BOTH the grade and subject change
   // (either from the in-component dropdowns or the parent's selectedSubject/selectedGrade).

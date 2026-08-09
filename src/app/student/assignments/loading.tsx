@@ -1,17 +1,23 @@
-import { Skeleton } from '@/components/ui/skeleton'
+import { ShimmerBlock, HeaderSkeleton, ContentCardSkeleton } from '@/components/ui/skeletons'
 
 export default function AssignmentsLoading() {
   return (
-    <div className="p-6 space-y-6">
-      <Skeleton className="h-8 w-48" />
-      <div className="flex gap-3">
-        <Skeleton className="h-10 w-32 rounded-lg" />
-        <Skeleton className="h-10 w-32 rounded-lg" />
-        <Skeleton className="h-10 w-32 rounded-lg" />
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <HeaderSkeleton subtitle />
+
+      {/* Filter bar */}
+      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-3">
+          <ShimmerBlock className="h-10 flex-1 rounded-xl" />
+          <ShimmerBlock className="h-10 w-full md:w-40 rounded-xl" />
+          <ShimmerBlock className="h-10 w-full md:w-40 rounded-xl" />
+        </div>
       </div>
-      <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-20 rounded-xl" />
+
+      {/* Assignment cards */}
+      <div className="space-y-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <ContentCardSkeleton key={i} lines={2} />
         ))}
       </div>
     </div>

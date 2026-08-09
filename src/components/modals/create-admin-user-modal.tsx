@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { 
-  X, 
   Save, 
   UserPlus,
   Loader2,
@@ -195,25 +195,21 @@ export function CreateAdminUserModal({ isOpen, onClose, onUserCreated }: CreateA
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl bg-white border-0 shadow-2xl p-0">
+        <DialogHeader className="border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
           <div className="flex items-center space-x-3">
             <UserPlus className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Create New User</h2>
+            <div>
+              <DialogTitle className="text-xl font-semibold text-gray-900">Create New User</DialogTitle>
+              <DialogDescription className="text-gray-600">Add a new administrator or school user</DialogDescription>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleClose} disabled={loading}>
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <div className="overflow-y-auto max-h-96 p-6">
-            <div className="space-y-6">
+        <DialogBody className="space-y-6 mt-1">
+          <form id="create-admin-user-form" onSubmit={handleSubmit} className="space-y-6">
               {/* Personal Information */}
               <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
                 <CardHeader>
@@ -377,34 +373,33 @@ export function CreateAdminUserModal({ isOpen, onClose, onUserCreated }: CreateA
                   </div>
                 </CardContent>
               </Card>
-            </div>
-          </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
-            <Button variant="outline" onClick={handleClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              disabled={loading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Create User
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          </form>
+        </DialogBody>
+        <DialogFooter className="border-t border-gray-200 bg-gray-50">
+          <Button variant="outline" onClick={handleClose} disabled={loading} className="px-5 py-2.5 text-sm font-medium">
+            Cancel
+          </Button>
+          <Button 
+            type="submit"
+            form="create-admin-user-form"
+            disabled={loading}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-5 py-2.5 text-sm font-medium"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Create User
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

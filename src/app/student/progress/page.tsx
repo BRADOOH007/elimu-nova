@@ -122,7 +122,7 @@ export default function ProgressPage() {
     )
   }
 
-  // Never show error page â€” use zeroed fallback data so UI always renders
+  // Never show error page — use zeroed fallback data so UI always renders
   const d = data || {} as ProgressPageData
   const dash = dashboard || {} as DashboardData
   const mast = mastery || {} as MasteryPayload
@@ -147,7 +147,7 @@ export default function ProgressPage() {
     { label: "Accuracy", value: `${accuracy}%`, icon: Target, gradient: "from-emerald-500 to-teal-500", bg: "bg-emerald-50", text: "text-emerald-700", hint: `${d.correctAnswers || 0}/${d.totalQuestions || 0} correct` },
     { label: "Questions", value: (d.totalQuestions || 0).toLocaleString(), icon: MessagesSquare, gradient: "from-blue-500 to-cyan-500", bg: "bg-blue-50", text: "text-blue-700", hint: `${d.consecutiveCorrect || 0} in a row` },
     { label: "Study Time", value: totalStudyTime >= 60 ? `${Math.round(totalStudyTime / 60)}h` : `${totalStudyTime}m`, icon: Clock, gradient: "from-violet-500 to-purple-500", bg: "bg-violet-50", text: "text-violet-700", hint: `Weekly goal ${Math.round(weeklyGoal / 60)}h` },
-    { label: "Average Grade", value: avgGrade != null ? `${avgGrade}%` : "â€”", icon: TrendingUp, gradient: "from-amber-500 to-orange-500", bg: "bg-amber-50", text: "text-amber-700", hint: `${completedAssignments} assignments done` },
+    { label: "Average Grade", value: avgGrade != null ? `${avgGrade}%` : "—", icon: TrendingUp, gradient: "from-amber-500 to-orange-500", bg: "bg-amber-50", text: "text-amber-700", hint: `${completedAssignments} assignments done` },
   ]
 
   return (
@@ -188,7 +188,7 @@ export default function ProgressPage() {
               </div>
               <Progress value={weeklyPct} className="h-2 bg-white/20" />
               <p className="text-[11px] text-slate-400 mt-2">
-                {totalStudyTime} min studied this week Â· {Math.max(0, weeklyGoal - totalStudyTime)} min to go
+                {totalStudyTime} min studied this week · {Math.max(0, weeklyGoal - totalStudyTime)} min to go
               </p>
             </div>
           </div>
@@ -287,7 +287,7 @@ export default function ProgressPage() {
               <p className="text-sm text-slate-400 text-center py-6">No skills tracked yet. Complete quizzes and study sessions to build skill mastery.</p>
             ) : (
               <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
-                {d.skills || [].slice(0, 12).map((skill, i) => (
+                {(d.skills || []).slice(0, 12).map((skill, i) => (
                   <div key={i}>
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium text-slate-700 truncate mr-2">{skill.name}</span>
@@ -318,7 +318,7 @@ export default function ProgressPage() {
               <p className="text-sm text-slate-400 text-center py-6">No topics studied yet. Head to the Learning Hub to get started.</p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {d.topics || [].slice(0, 9).map((topic, i) => (
+                {(d.topics || []).slice(0, 9).map((topic, i) => (
                   <div key={i} className="border border-slate-100 rounded-xl p-4 hover:shadow-md hover:border-blue-200 transition-all">
                     <div className="flex items-start justify-between mb-2">
                       <div className="min-w-0">

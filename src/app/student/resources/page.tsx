@@ -6,7 +6,7 @@ import { confirmToast } from '@/lib/confirm-toast'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -529,7 +529,7 @@ export default function ResourcesPage() {
 
       {/* View Resource Modal */}
       <Dialog open={showViewModal} onOpenChange={setShowViewModal}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[800px]">
           <DialogHeader>
             <DialogTitle className="flex items-center">
               <FileText className="w-5 h-5 mr-2 text-blue-600" />
@@ -540,7 +540,7 @@ export default function ResourcesPage() {
             </DialogDescription>
           </DialogHeader>
           {selectedResource && (
-            <div className="space-y-6 py-4">
+            <DialogBody className="space-y-6 mt-1">
               <div className="flex flex-wrap gap-2">
                 {selectedResource.tags.map((tag, index) => (
                   <Badge key={index} variant="outline">
@@ -583,7 +583,7 @@ export default function ResourcesPage() {
                   )}
                 </div>
               )}
-            </div>
+            </DialogBody>
           )}
         </DialogContent>
       </Dialog>

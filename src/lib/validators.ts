@@ -16,6 +16,7 @@ export const CreateStudentSchema = z.object({
   classId: z.string().optional().nullable().or(z.literal('')),
   password: z.string().min(6).max(100).optional(),
   teacherId: z.string().optional().nullable().or(z.literal('')),
+  grade: z.string().optional().or(z.literal('')),
   subjects: z.array(z.string()).optional(),
   parentFirstName: z.string().optional().or(z.literal('')),
   parentLastName: z.string().optional().or(z.literal('')),

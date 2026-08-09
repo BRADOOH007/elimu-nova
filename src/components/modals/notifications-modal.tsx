@@ -6,13 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody } from "@/components/ui/dialog"
 import {
   Bell,
-  X,
   Check,
   AlertCircle,
   Info,
   CheckCircle,
   AlertTriangle,
-  Trash2,
   CheckCheck,
   MessageSquare
 } from "lucide-react"
@@ -261,7 +259,7 @@ export function NotificationsModal({ isOpen, onClose, userId, role, onUnreadChan
           {loading ? (
             <div className="p-12 text-center"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto" /><p className="mt-4 text-gray-600 font-medium">Loading activity...</p></div>
           ) : filteredActivities.length === 0 ? (
-            <div className="p-12 text-center"><div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto mb-4"><Bell className="w-8 h-8 text-gray-400" /></div><p className="text-gray-600 font-medium">No activity found</p><p className="text-sm text-gray-400 mt-1">You're all caught up!</p></div>
+            <div className="p-12 text-center"><div className="w-16 h-16 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mx-auto mb-4"><Bell className="w-8 h-8 text-gray-400" /></div><p className="text-gray-600 font-medium">No activity found</p><p className="text-sm text-gray-400 mt-1">You&apos;re all caught up!</p></div>
           ) : (
             <div className="divide-y divide-gray-100">
               {filteredActivities.map((item) => (

@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -127,7 +128,8 @@ export default function CreateActivityModal({ isOpen, onClose, onActivityCreated
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="create-activity-form" onSubmit={handleSubmit} className="contents">
+          <DialogBody className="space-y-4 mt-1">
           <div className="space-y-2">
             <Label htmlFor="type">Activity Type *</Label>
             <Select
@@ -183,20 +185,22 @@ export default function CreateActivityModal({ isOpen, onClose, onActivityCreated
             </p>
           </div>
 
+          </DialogBody>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={handleClose}
               disabled={isLoading}
-              className="edugenius-glass"
+              className="edugenius-glass px-5 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>
             <Button
               type="submit"
+              form="create-activity-form"
               disabled={isLoading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-5 py-2.5 text-sm font-medium"
             >
               {isLoading ? (
                 <>

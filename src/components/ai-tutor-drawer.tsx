@@ -24,10 +24,10 @@ interface HopeDrawerProps {
 }
 
 const QUICK_CHIPS = [
-  { label: 'Explain simply', icon: 'ðŸ’¡' },
-  { label: 'Quiz me on this', icon: 'ðŸ“' },
-  { label: 'Real-world example', icon: 'ðŸŽ¯' },
-  { label: 'Step-by-step breakdown', icon: 'ðŸš€' },
+  { label: 'Explain simply', icon: '💡' },
+  { label: 'Quiz me on this', icon: '📝' },
+  { label: 'Real-world example', icon: '🎯' },
+  { label: 'Step-by-step breakdown', icon: '🚀' },
 ]
 
 export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, currentTopic, currentGrade, initialPrompt }: HopeDrawerProps) {
@@ -200,7 +200,7 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
                 <h2 className="font-bold text-sm truncate">Hope AI Assistant</h2>
                 {subject && (
                   <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full backdrop-blur-sm inline-block mt-0.5 max-w-full truncate">
-                    {subject}{topic ? ` Â· ${topic}` : ''}
+                    {subject}{topic ? ` · ${topic}` : ''}
                   </span>
                 )}
               </div>

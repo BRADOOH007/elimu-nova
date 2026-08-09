@@ -7,12 +7,14 @@ interface LivePreviewProps {
   html: string
   css?: string
   js?: string
+  onError?: (error: string) => void
 }
 
-export function LivePreview({ html, css = '', js = '' }: LivePreviewProps) {
+export function LivePreview({ html, css = '', js = '', onError }: LivePreviewProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [key, setKey] = useState(0)
   const [fullscreen, setFullscreen] = useState(false)
+  const lastErrorRef = useRef('')
 
   const generateDocument = () => {
     return `<!DOCTYPE html>
@@ -29,10 +31,14 @@ export function LivePreview({ html, css = '', js = '' }: LivePreviewProps) {
 <body>
   ${html}
   <script>
+    window.onerror = function (msg, src, line) {
+      window.parent.postMessage({ type: 'codepreview:error', message: String(msg), line: line || 0 }, '*');
+    };
     try {
       ${js}
     } catch (e) {
-      console.error('Runtime error:', e);
+      var m = (e && e.message) ? e.message : String(e);
+      window.parent.postMessage({ type: 'codepreview:error', message: m, line: 0 }, '*');
     }
   <\/script>
 </body>
@@ -49,6 +55,20 @@ export function LivePreview({ html, css = '', js = '' }: LivePreviewProps) {
       }
     }
   }, [html, css, js, key])
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === 'codepreview:error' && typeof e.data.message === 'string') {
+        const next = `Error${e.data.line ? ` (line ${e.data.line})` : ''}: ${e.data.message}`
+        if (next !== lastErrorRef.current) {
+          lastErrorRef.current = next
+          onError?.(next)
+        }
+      }
+    }
+    window.addEventListener('message', handler)
+    return () => window.removeEventListener('message', handler)
+  }, [onError])
 
   return (
     <div className={`rounded-lg overflow-hidden border border-zinc-700/50 ${fullscreen ? 'fixed inset-4 z-50 bg-zinc-900' : ''}`}>

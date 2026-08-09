@@ -11,11 +11,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
+import { useAITutor } from '@/components/ai-tutor-provider'
 import { 
   FileText, 
   Calendar, 
   Clock, 
   CheckCircle, 
+  CheckCircle2,
   AlertCircle,
   Upload,
   Download,
@@ -26,14 +28,15 @@ import {
   Plus,
   Bot,
   Lightbulb,
-  BookOpen,
+  User,
   Target,
   TrendingUp,
   Zap,
   Paperclip,
   X,
   File,
-  Play
+  Play,
+  Sparkles
 } from "lucide-react"
 
 interface Assignment {
@@ -80,6 +83,7 @@ interface AIInsights {
 export default function AssignmentsPage() {
   const { toast } = useToast()
   const router = useRouter()
+  const { openAITutor } = useAITutor()
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
@@ -179,29 +183,27 @@ export default function AssignmentsPage() {
     return `${Math.abs(diffDays)} days ago`
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusPillClass = (status: string) => {
     switch (status) {
       case 'GRADED':
-        return 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-      case 'OVERDUE':
-        return 'bg-gradient-to-r from-red-500 to-pink-600 text-white'
       case 'SUBMITTED':
-        return 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white'
+        return 'bg-emerald-50 text-emerald-700 border border-emerald-200/60 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5'
+      case 'OVERDUE':
+        return 'bg-rose-50 text-rose-700 border border-rose-200/60 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5'
       default:
-        return 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white'
+        return 'bg-amber-50 text-amber-700 border border-amber-200/60 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5'
     }
   }
 
-  const getStatusIcon = (status: string) => {
+  const getStatusPillIcon = (status: string) => {
     switch (status) {
       case 'GRADED':
-        return <CheckCircle className="w-4 h-4" />
-      case 'OVERDUE':
-        return <AlertCircle className="w-4 h-4" />
       case 'SUBMITTED':
-        return <Clock className="w-4 h-4" />
+        return <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+      case 'OVERDUE':
+        return <AlertCircle className="w-3.5 h-3.5 shrink-0" />
       default:
-        return <FileText className="w-4 h-4" />
+        return <Clock className="w-3.5 h-3.5 shrink-0" />
     }
   }
 
@@ -233,13 +235,20 @@ export default function AssignmentsPage() {
         body: JSON.stringify(body)
       })
       if (!response.ok) {
-        throw new Error('Failed to generate assignment')
+        let message = 'Failed to generate assignment'
+        try {
+          const d = await response.json()
+          if (d?.error) message = d.error
+        } catch { /* keep default */ }
+        throw new Error(message)
       }
       // Refresh assignments list to include the newly generated assignment
       await fetchAssignments()
       setShowAIGenerator(false)
-    } catch (error) {
+      toast({ title: 'Assignment generated!' })
+    } catch (error: any) {
       console.error('Error generating assignment:', error)
+      toast({ variant: 'destructive', title: 'Failed to generate assignment', description: error?.message })
     } finally {
       setIsGenerating(false)
     }
@@ -377,6 +386,15 @@ export default function AssignmentsPage() {
         <p className="text-gray-600 text-lg">
           Smart assignment management with AI assistance and insights
         </p>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <Button
+            onClick={() => openAITutor('Can you help me plan and understand my assignments?', subjectFilter !== 'all' ? subjectFilter : undefined)}
+            className="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Chat with AI Tutor
+          </Button>
+        </div>
       </div>
 
       {/* AI Insights Banner */}
@@ -519,103 +537,99 @@ export default function AssignmentsPage() {
           filteredAssignments.map((assignment) => (
             <Card key={assignment.id} className="shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-white via-blue-50/30 to-purple-50/30 backdrop-blur-sm">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-start space-x-4 mb-4">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getStatusColor(assignment.status)}`}>
-                        {getStatusIcon(assignment.status)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-xl font-semibold text-gray-900">
-                            {assignment.title}
-                          </h3>
-                          <Badge variant="outline" className="bg-white/70 backdrop-blur-sm">
-                            {assignment.subject}
-                          </Badge>
-                          {assignment.videoUrl && (
-                            <Badge variant="outline" className="flex items-center gap-1 text-violet-600 border-violet-300 bg-violet-50">
-                              <Play className="w-3 h-3 fill-violet-500" />
-                              Video
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-gray-600 mb-3">{assignment.description}</p>
-                        <div className="flex items-center space-x-6 text-sm text-gray-500">
-                          <span className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            Due: {formatDate(assignment.dueDate)}
-                          </span>
-                          <span className="flex items-center">
-                            <BookOpen className="w-4 h-4 mr-1" />
-                            {assignment.teacher.firstName} {assignment.teacher.lastName}
-                          </span>
-                          {assignment.grade && (
-                            <span className="flex items-center text-green-600 font-medium">
-                              <TrendingUp className="w-4 h-4 mr-1" />
-                              Grade: {Math.round(assignment.grade)}%
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <Badge className={getStatusColor(assignment.status)}>
-                          {assignment.status}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <h3 className="text-xl font-semibold text-gray-900 truncate">
+                        {assignment.title}
+                      </h3>
+                      <Badge variant="outline" className="bg-white/70 backdrop-blur-sm shrink-0">
+                        {assignment.subject}
+                      </Badge>
+                      {assignment.videoUrl && (
+                        <Badge variant="outline" className="flex items-center gap-1 text-violet-600 border-violet-300 bg-violet-50 shrink-0">
+                          <Play className="w-3 h-3 fill-violet-500" />
+                          Video
                         </Badge>
-                        {assignment.lessonPlan && (
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                            From: {assignment.lessonPlan.title}
-                          </Badge>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center space-x-2">
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => handleAIHelp(assignment)}
-                          className="bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 border-0"
-                        >
-                          <Bot className="w-4 h-4 mr-2" />
-                          AI Help
-                        </Button>
-                        {assignment.status === 'PENDING' && (
-                          <Button size="sm" className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
-                            onClick={() => handleOpenSubmit(assignment)}
-                          >
-                            <Upload className="w-4 h-4 mr-2" />
-                            Submit
-                          </Button>
-                        )}
-                        <Button size="sm" variant="outline" onClick={() => handleView(assignment.id)} className="bg-white/70 backdrop-blur-sm">
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
-                        </Button>
-                        {assignment.status === 'GRADED' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="bg-white/70 backdrop-blur-sm"
-                            onClick={() => {
-                              const text = `Assignment: ${assignment.title}\n\nGrade: ${assignment.grade ?? 'N/A'}%\n\nFeedback:\n${assignment.submissions?.[0]?.feedback || 'No feedback yet'}`
-                              const blob = new Blob([text], { type: 'text/plain' })
-                              const url = URL.createObjectURL(blob)
-                              const a = document.createElement('a')
-                              a.href = url
-                              a.download = `${assignment.title.replace(/[^a-z0-9]/gi, '_')}_result.txt`
-                              a.click()
-                              URL.revokeObjectURL(url)
-                            }}
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Download
-                          </Button>
-                        )}
-                      </div>
+                      )}
                     </div>
+                    <span className={`${getStatusPillClass(assignment.status)} shrink-0`}>
+                      {getStatusPillIcon(assignment.status)}
+                      {assignment.status}
+                    </span>
+                  </div>
+
+                  <p className="text-gray-600 mb-3">{assignment.description}</p>
+
+                  <div className="flex flex-wrap items-center space-x-6 text-sm text-gray-500">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      Due: {formatDate(assignment.dueDate)}
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-slate-400" />
+                      {assignment.teacher.firstName} {assignment.teacher.lastName}
+                    </span>
+                    {assignment.grade && (
+                      <span className="flex items-center gap-1.5 text-green-600 font-medium">
+                        <TrendingUp className="w-4 h-4 text-slate-400" />
+                        Grade: {Math.round(assignment.grade)}%
+                      </span>
+                    )}
+                  </div>
+
+                  {assignment.lessonPlan && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 mt-3">
+                      From: {assignment.lessonPlan.title}
+                    </Badge>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-2 mt-5 pt-4 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => handleView(assignment.id)}
+                      className="border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5"
+                    >
+                      <Eye className="w-4 h-4" />
+                      View
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAIHelp(assignment)}
+                      className="bg-purple-50 text-purple-700 border border-purple-200/60 hover:bg-purple-100 px-3.5 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5"
+                    >
+                      <Bot className="w-4 h-4" />
+                      AI Help
+                    </button>
+                    {assignment.status === 'PENDING' && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenSubmit(assignment)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5"
+                      >
+                        <Upload className="w-4 h-4" />
+                        Submit Assignment
+                      </button>
+                    )}
+                    {assignment.status === 'GRADED' && (
+                      <button
+                        type="button"
+                        className="border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 px-3.5 py-2 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5"
+                        onClick={() => {
+                          const text = `Assignment: ${assignment.title}\n\nGrade: ${assignment.grade ?? 'N/A'}%\n\nFeedback:\n${assignment.submissions?.[0]?.feedback || 'No feedback yet'}`
+                          const blob = new Blob([text], { type: 'text/plain' })
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `${assignment.title.replace(/[^a-z0-9]/gi, '_')}_result.txt`
+                          a.click()
+                          URL.revokeObjectURL(url)
+                        }}
+                      >
+                        <Download className="w-4 h-4" />
+                        Download
+                      </button>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -725,6 +739,23 @@ export default function AssignmentsPage() {
                         <span className="text-sm font-medium">{label}</span>
                       </Button>
                     ))}
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left h-auto py-3 px-4 hover:bg-purple-50 hover:border-purple-300"
+                      onClick={() => {
+                        const a = selectedAssignment
+                        if (!a) return
+                        setShowAIHelp(false)
+                        setAiHelpResponse('')
+                        openAITutor(
+                          `Can you help me with the assignment "${a.title}"? Here's what it asks: ${a.description}`,
+                          a.subject || undefined,
+                        )
+                      }}
+                    >
+                      <Sparkles className="w-4 h-4 mr-3 text-purple-500 shrink-0" />
+                      <span className="text-sm font-medium">Chat with AI Tutor about this assignment</span>
+                    </Button>
                   </div>
                 )}
 

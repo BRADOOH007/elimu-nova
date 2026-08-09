@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { COUNTRIES, getCurriculaByCountry } from '@/lib/curricula'
 import { Settings, Save, User, Bell, Palette, Globe, Shield, Key } from "lucide-react"
 
@@ -301,8 +302,8 @@ export function SettingsModal({ isOpen, onClose, userId, userName, userEmail }: 
         </DialogBody>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={savePreferences} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-sm shadow-indigo-500/20 rounded-lg px-4 py-2 text-sm transition-all">
+          <Button variant="outline" onClick={onClose} className="px-5 py-2.5 text-sm font-medium">Cancel</Button>
+          <Button onClick={savePreferences} disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-500/20 rounded-lg px-5 py-2.5 text-sm font-medium transition-all">
             {saving ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />Saving...</> : <><Save className="w-4 h-4 mr-2" />Save Changes</>}
           </Button>
         </DialogFooter>

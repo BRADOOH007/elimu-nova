@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+// Fail fast on missing critical env vars (DATABASE_URL, NEXTAUTH_SECRET) at build/boot time.
+import "./src/lib/env";
+
 const nextConfig: NextConfig = {
 
   experimental: {

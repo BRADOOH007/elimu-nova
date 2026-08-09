@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { stripPasswordFromAddress, extractEncryptedPassword } from '@/lib/password-encryption'
+import type { Prisma } from '@prisma/client'
+import { stripPasswordFromAddress } from '@/lib/password-encryption'
 import { route } from '@/lib/api-middleware'
 
 export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params }) => {
@@ -96,27 +97,53 @@ export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params })
       return NextResponse.json({ error: 'Student not found' }, { status: 404 })
     }
 
+    // When the class changes, derive the new teacherId from that class so the
+    // student appears in the correct teacher's roster/dashboard immediately.
+    let teacherId: string | null | undefined = undefined
+    if (classId !== undefined) {
+      teacherId = null
+      if (classId) {
+        const cls = await prisma.class.findFirst({
+          where: { id: classId, schoolId: schoolAdmin.schoolId },
+          select: { teacherId: true },
+        })
+        teacherId = cls?.teacherId ?? null
+      }
+    }
+
+    const updateData: Prisma.StudentUpdateInput = {
+      subjects: subjects !== undefined ? subjects : existingStudent.subjects,
+      user: {
+        update: {
+          firstName: firstName || existingStudent.user.firstName,
+          lastName: lastName || existingStudent.user.lastName,
+          email: email || existingStudent.user.email,
+          phone: phone !== undefined ? phone : existingStudent.user.phone,
+          address: address !== undefined
+            ? (existingStudent.user.address?.startsWith('PWD_ENC:')
+              ? existingStudent.user.address.split('\n---\n')[0] + '\n---\n' + address
+              : address)
+            : existingStudent.user.address,
+          isActive: isActive !== undefined ? isActive : existingStudent.user.isActive
+        }
+      },
+    }
+
+    if (classId !== undefined) {
+      updateData.class = classId
+        ? { connect: { id: classId } }
+        : { disconnect: true }
+    }
+    if (teacherId !== undefined) {
+      updateData.teacher = teacherId
+        ? { connect: { id: teacherId } }
+        : { disconnect: true }
+    }
+
     // Update student's user information
     const updatedStudent = await prisma.student.update({
       where: { id },
-      data: {
-        classId: classId !== undefined ? (classId || null) : existingStudent.classId,
-        subjects: subjects !== undefined ? subjects : existingStudent.subjects,
-        user: {
-          update: {
-            firstName: firstName || existingStudent.user.firstName,
-            lastName: lastName || existingStudent.user.lastName,
-            email: email || existingStudent.user.email,
-            phone: phone !== undefined ? phone : existingStudent.user.phone,
-            address: address !== undefined
-              ? (existingStudent.user.address?.startsWith('PWD_ENC:')
-                ? existingStudent.user.address.split('\n---\n')[0] + '\n---\n' + address
-                : address)
-              : existingStudent.user.address,
-            isActive: isActive !== undefined ? isActive : existingStudent.user.isActive
-          }
-        }
-      },
+      data: updateData,
       include: {
         user: {
           select: {

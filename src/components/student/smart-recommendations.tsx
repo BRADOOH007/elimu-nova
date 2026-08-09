@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import useSWR from 'swr'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Lightbulb, AlertTriangle, AlertCircle, Info, CheckCircle, Loader2, ArrowRight, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
+import { useAITutor } from '@/components/ai-tutor-provider'
 
 interface Recommendation {
   type: string; title: string; description: string; action: string; href: string
@@ -25,20 +26,18 @@ const typeConfig: Record<string, TypeConfig> = {
 }
 
 export default function SmartRecommendations() {
-  const [recs, setRecs] = useState<Recommendation[]>([])
-  const [loading, setLoading] = useState(true)
+  const { openAITutor } = useAITutor()
+  const { data, isLoading } = useSWR<{ recommendations?: Recommendation[] }>(
+    '/api/student/recommendations',
+    async (url: string) => {
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('Failed to fetch recommendations')
+      return res.json()
+    },
+  )
+  const recs = data?.recommendations || []
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/student/recommendations')
-        if (res.ok) { const d = await res.json(); setRecs(d.recommendations || []) }
-      } catch { /* ignore */ }
-      finally { setLoading(false) }
-    })()
-  }, [])
-
-  if (loading) return (
+  if (isLoading) return (
     <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex items-center justify-center h-32">
       <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
     </div>
@@ -66,13 +65,21 @@ export default function SmartRecommendations() {
                     <Badge className={`${cfg.badge} border-0 text-[10px]`}>{r.type}</Badge>
                   </div>
                   <p className="text-xs text-slate-500">{r.description}</p>
-                  {r.href && (
+                  {r.action === 'Chat with AI Tutor' ? (
+                    <Button
+                      variant="link"
+                      className="h-auto p-0 text-xs text-blue-600 hover:text-blue-800 mt-1"
+                      onClick={() => openAITutor('Can you help me understand where I went wrong on this topic?')}
+                    >
+                      {r.action} <ArrowRight className="w-3 h-3 ml-1" />
+                    </Button>
+                  ) : r.href ? (
                     <Link href={r.href}>
                       <Button variant="link" className="h-auto p-0 text-xs text-blue-600 hover:text-blue-800 mt-1">
                         {r.action} <ArrowRight className="w-3 h-3 ml-1" />
                       </Button>
                     </Link>
-                  )}
+                  ) : null}
                 </div>
               </div>
             </div>

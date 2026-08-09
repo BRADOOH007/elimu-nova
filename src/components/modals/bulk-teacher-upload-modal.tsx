@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Upload, Download, Loader2, CheckCircle, XCircle, X, ChevronDown, ChevronRight } from 'lucide-react'
+import { Upload, Download, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog'
 
 interface ImportResult {
   firstName: string; lastName: string; email: string
@@ -116,14 +117,14 @@ export default function BulkTeacherUploadModal({ isOpen, onClose, onSuccess }: B
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between p-5 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900">Bulk Upload Teachers</h2>
-          <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-slate-100"><X className="h-5 w-5 text-slate-500" /></button>
-        </div>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl bg-white border-0 shadow-2xl p-0">
+        <DialogHeader className="border-b border-slate-200">
+          <DialogTitle className="text-lg font-bold text-slate-900">Bulk Upload Teachers</DialogTitle>
+          <DialogDescription className="text-xs text-slate-500">Import teachers from a CSV file (max 500 per batch)</DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        <DialogBody className="mt-1">
           {step === 'upload' && (
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -220,9 +221,9 @@ export default function BulkTeacherUploadModal({ isOpen, onClose, onSuccess }: B
               <Button onClick={handleClose} className="w-full">Done</Button>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   )
 }
 

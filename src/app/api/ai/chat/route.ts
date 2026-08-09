@@ -23,12 +23,12 @@ export const POST = route({ auth: 'none' }, async (request) => {
 
     if (context === 'teacher_assistant') {
       systemPrompt = `You are Hope, an AI teaching assistant for ElimuNova AI. You help Kenyan teachers with:
-1. Lesson Planning â€” Create detailed, engaging CBC-aligned lesson plans
-2. Curriculum Development â€” Structure curricula and learning objectives  
-3. Assessment Ideas â€” Suggest creative, CBC-appropriate assessments
-4. Student Engagement â€” Make learning interactive and practical
-5. Differentiation â€” Adapt content for different learning styles
-6. Classroom Management â€” Positive learning environment strategies
+1. Lesson Planning — Create detailed, engaging CBC-aligned lesson plans
+2. Curriculum Development — Structure curricula and learning objectives  
+3. Assessment Ideas — Suggest creative, CBC-appropriate assessments
+4. Student Engagement — Make learning interactive and practical
+5. Differentiation — Adapt content for different learning styles
+6. Classroom Management — Positive learning environment strategies
 
 Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan education context.`
 
@@ -58,11 +58,11 @@ Be practical, actionable, and encouraging. Reference CBC competencies and Kenyan
       // Inject lesson/scheme/assignment context if provided
       if (lessonContext?.lessonPlan) {
         const { title, subject, grade, content } = lessonContext.lessonPlan
-        contextInfo += `\n\nCURRENT LESSON: "${title}" â€” ${subject}, ${grade}.\nContent summary: ${(content?.generatedContent || '').slice(0, 400)}`
+        contextInfo += `\n\nCURRENT LESSON: "${title}" — ${subject}, ${grade}.\nContent summary: ${(content?.generatedContent || '').slice(0, 400)}`
       }
       if (schemeContext?.schemeOfWork) {
         const { title, subject, grade } = schemeContext.schemeOfWork
-        contextInfo += `\n\nCURRENT SCHEME: "${title}" â€” ${subject}, ${grade}.`
+        contextInfo += `\n\nCURRENT SCHEME: "${title}" — ${subject}, ${grade}.`
       }
       if (assignmentsContext?.assignments?.length) {
         const names = assignmentsContext.assignments.slice(0, 3).map((a: any) => a.title).join(', ')
@@ -83,13 +83,13 @@ Teaching rules:
 3. After each answer: tell them if they were correct, give a brief explanation, then move to the next question.
 4. Each MCQ must have 4 options labelled A, B, C, D.
 5. Use Kenyan examples and contexts.
-6. Be encouraging â€” praise correct answers, gently correct wrong ones with a clearer explanation.
+6. Be encouraging — praise correct answers, gently correct wrong ones with a clearer explanation.
 7. After all 5 questions, ask if they want to review any topic again or try more questions.
-8. Stay educational â€” answer ANY question naturally, then gently guide back to learning`
+8. Stay educational — answer ANY question naturally, then gently guide back to learning`
       }
     }
 
-    // â”€â”€ Call AI through waterfall â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Call AI through waterfall ─────────────────────────────────────────
     const chatMessages: { role: 'user' | 'system' | 'assistant'; content: string }[] = [
       { role: 'system', content: systemPrompt },
     ]
@@ -112,18 +112,20 @@ Teaching rules:
         .catch(() => {})
     }
 
-    // Persist session for Hope AI chat history
-    if (context === 'student_tutor') {
+    // Persist session for Hope AI chat history.
+    // AITutorSession.studentId references Student.id, so we can only persist
+    // once the student record has been resolved from the session above.
+    if (context === 'student_tutor' && studentId) {
       prisma.aITutorSession.create({
         data: {
-          studentId: studentId || user.id,
+          studentId,
           sessionType: 'hope',
           question: message,
           response: detailed.content,
           subject: subject || '',
           topic: topic || '',
         } as any,
-        }).catch(() => {})
+      }).catch(() => {})
     }
 
     return NextResponse.json({

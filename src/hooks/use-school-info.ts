@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import useSWR from 'swr'
 import { useSession } from 'next-auth/react'
 
 interface SchoolInfo {
@@ -29,82 +29,50 @@ interface SchoolInfo {
   }
 }
 
+const fetcher = async (url: string) => {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 8000)
+  try {
+    const response = await fetch(url, { signal: controller.signal })
+    clearTimeout(timeoutId)
+    if (!response.ok) {
+      if (response.status === 404) return null
+      throw new Error('Failed to fetch school information')
+    }
+    return await response.json()
+  } catch (err) {
+    clearTimeout(timeoutId)
+    throw err
+  }
+}
+
 export function useSchoolInfo() {
   const { data: session, status } = useSession()
-  const [schoolInfo, setSchoolInfo] = useState<SchoolInfo | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isIndependent, setIsIndependent] = useState(false)
 
-  useEffect(() => {
-    if (status === 'loading') return
-    if (!session) {
-      setLoading(false)
-      return
-    }
+  let endpoint: string | null = null
+  switch (session?.user?.role) {
+    case 'SCHOOL_ADMIN':
+      endpoint = '/api/school-admin/school-info'
+      break
+    case 'TEACHER':
+      endpoint = '/api/teacher/school-info'
+      break
+    case 'STUDENT':
+      endpoint = '/api/student/school-info'
+      break
+    default:
+      endpoint = null
+  }
 
-    const fetchSchoolInfo = async () => {
-      try {
-        setLoading(true)
-        setError(null)
+  const ready = status !== 'loading' && !!endpoint
+  const { data, error, isLoading } = useSWR<SchoolInfo | null>(
+    ready ? endpoint : null,
+    fetcher,
+    { revalidateOnFocus: false },
+  )
 
-        let endpoint = ''
-        switch (session.user.role) {
-          case 'SCHOOL_ADMIN':
-            endpoint = '/api/school-admin/school-info'
-            break
-          case 'TEACHER':
-            endpoint = '/api/teacher/school-info'
-            break
-          case 'STUDENT':
-            endpoint = '/api/student/school-info'
-            break
-          default:
-            // PARENT, SUPER_ADMIN etc. — no school info needed
-            setIsIndependent(false)
-            return
-        }
+  const schoolInfo = data || null
+  const isIndependent = ready && (data === null || (session?.user?.role === 'TEACHER' || session?.user?.role === 'STUDENT') && !!error)
 
-        // 8-second timeout so the app never hangs indefinitely
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 8000)
-
-        const response = await fetch(endpoint, { signal: controller.signal })
-        clearTimeout(timeoutId)
-        if (!response.ok) {
-          // If no school info found, user is independent
-          if (response.status === 404) {
-            setIsIndependent(true)
-            setSchoolInfo(null)
-            return
-          }
-          throw new Error('Failed to fetch school information')
-        }
-
-        const data = await response.json()
-        setSchoolInfo(data)
-        setIsIndependent(false)
-      } catch (err) {
-        // Abort/timeout or network error — assume independent mode for students/teachers
-        const isAbort = err instanceof Error && err.name === 'AbortError'
-        if (isAbort) console.warn('School info fetch timed out — defaulting to independent mode')
-        else console.error('Error fetching school info:', err)
-
-        if (session.user.role === 'TEACHER' || session.user.role === 'STUDENT') {
-          setIsIndependent(true)
-          setSchoolInfo(null)
-          setError(null)
-        } else {
-          setError(err instanceof Error ? err.message : 'Unknown error')
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchSchoolInfo()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, session?.user?.role, status])
-
-  return { schoolInfo, loading, error, isIndependent }
+  return { schoolInfo, loading: isLoading && ready, error: error ? (error instanceof Error ? error.message : 'Unknown error') : null, isIndependent }
 }

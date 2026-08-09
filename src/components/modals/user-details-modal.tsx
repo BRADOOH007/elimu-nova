@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useToast } from "@/hooks/use-toast"
 import { useDeleteConfirmation } from "@/components/ui/delete-confirmation-dialog"
@@ -456,73 +456,18 @@ export function UserDetailsModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] bg-gradient-to-br from-white via-blue-50 to-purple-50 flex flex-col gap-0 p-0 [&>button]:hidden">
-        {/* Header - Fixed */}
-        <div className="flex-shrink-0 p-6 border-b border-gray-200">
-          <DialogHeader>
-            <DialogTitle className="edugenius-text-gradient-blue flex items-center justify-between">
-              <div className="flex items-center">
-                {getRoleIcon(user.role)}
-                <span className="ml-2">User Details</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                {editing ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditing(false)}
-                      disabled={saving}
-                      className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                    >
-                      <X className="w-4 h-4 mr-1" />
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleSave}
-                      disabled={saving}
-                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                    >
-                      {saving ? (
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4 mr-1" />
-                      )}
-                      Save
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      size="sm"
-                      onClick={() => setEditing(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleDeleteClick}
-                      className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Delete
-                    </Button>
-                  </>
-                )}
-              </div>
+        <DialogContent className="sm:max-w-[700px] bg-gradient-to-br from-white via-blue-50 to-purple-50 [&>button]:hidden">
+          <DialogHeader className="border-b border-gray-200">
+            <DialogTitle className="edugenius-text-gradient-blue flex items-center">
+              {getRoleIcon(user.role)}
+              <span className="ml-2">User Details</span>
             </DialogTitle>
             <DialogDescription>
               View and manage user information and permissions
             </DialogDescription>
           </DialogHeader>
-        </div>
 
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <DialogBody className="space-y-6 mt-1">
           {/* User Information */}
           <Card className="bg-gradient-to-br from-white/70 to-blue-50/70 backdrop-blur-sm border-0">
             <CardHeader>
@@ -829,10 +774,59 @@ export function UserDetailsModal({
               )}
             </CardContent>
           </Card>
-        </div>
-      </DialogContent>
-    </Dialog>
-    <DeleteConfirmationDialog />
-  </>
+          </DialogBody>
+          <DialogFooter className="border-t border-gray-200">
+            {editing ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditing(false)}
+                  disabled={saving}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-100 px-5 py-2.5 text-sm font-medium"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm px-5 py-2.5 text-sm font-medium"
+                >
+                  {saving ? (
+                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-1" />
+                  )}
+                  Save
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => setEditing(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm px-5 py-2.5 text-sm font-medium"
+                >
+                  <Edit className="w-4 h-4 mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteClick}
+                  className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 px-5 py-2.5 text-sm font-medium"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <DeleteConfirmationDialog />
+    </>
   )
 }

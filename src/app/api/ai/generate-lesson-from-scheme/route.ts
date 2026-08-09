@@ -21,7 +21,7 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
     if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
 
     const {
-      schemeId,        // optional Ã¢â‚¬â€ link to existing scheme
+      schemeId,        // optional — link to existing scheme
       row,             // KICDRow data
       subject,
       grade,
@@ -135,7 +135,7 @@ Use local examples. Each activity should have clear timing and instructions.`
       { maxTokens: 2000, temperature: 0.5 }
     )
 
-    // Robust JSON extraction Ã¢â‚¬â€ find first { and last }
+    // Robust JSON extraction — find first { and last }
     let lessonData: any = {}
     try {
       const json = cleanAiJson(raw)
@@ -150,7 +150,7 @@ Use local examples. Each activity should have clear timing and instructions.`
     // Save to DB linked to scheme
     const title = lessonData.title || `${subject} - ${row.subStrand} - Week ${row.week} Lesson ${row.lesson}`
 
-    // Ã¢â€â‚¬Ã¢â€â‚¬ Dedup: never create duplicates for the same scheme row Ã¢â€â‚¬Ã¢â€â‚¬
+    // ── Dedup: never create duplicates for the same scheme row ──
     // A lesson plan for this scheme + week + lesson already exists? Return it.
     if (schemeId) {
       const existingForRow = await prisma.lessonPlan.findFirst({

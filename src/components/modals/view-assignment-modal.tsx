@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -101,8 +101,7 @@ export default function ViewAssignmentModal({ isOpen, onClose, assignmentId, onE
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] bg-gradient-to-br from-white via-purple-50 to-blue-50 border-0 shadow-2xl">
-        <div className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl bg-gradient-to-br from-white via-purple-50 to-blue-50 border-0 shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Eye className="w-6 h-6 text-purple-600" />
@@ -114,14 +113,14 @@ export default function ViewAssignmentModal({ isOpen, onClose, assignmentId, onE
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
+          <DialogBody className="flex items-center justify-center py-12 mt-1">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
               <p className="mt-2 text-gray-600">Loading assignment details...</p>
             </div>
-          </div>
+          </DialogBody>
         ) : assignment ? (
-          <div className="space-y-6">
+          <DialogBody className="space-y-6 mt-1">
             {/* Header Information */}
             <div className="bg-white/70 backdrop-blur-sm rounded-lg p-6 border border-gray-200">
               <div className="flex items-start justify-between mb-4">
@@ -346,35 +345,34 @@ export default function ViewAssignmentModal({ isOpen, onClose, assignmentId, onE
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Close
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleEdit}
-                className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleDelete}
-                className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          </div>
+          </DialogBody>
         ) : null}
-        </div>
+        <DialogFooter className="border-t border-gray-200">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90 px-5 py-2.5 text-sm font-medium"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Close
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleEdit}
+            className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90 px-5 py-2.5 text-sm font-medium"
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDelete}
+            className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100 px-5 py-2.5 text-sm font-medium"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

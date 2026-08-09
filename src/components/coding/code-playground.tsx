@@ -15,9 +15,11 @@ interface CodePlaygroundProps {
   files: FileTab[]
   initialTab?: string
   title?: string
+  onCodeChange?: (files: FileTab[]) => void
+  onPreviewError?: (error: string) => void
 }
 
-export function CodePlayground({ files, initialTab, title }: CodePlaygroundProps) {
+export function CodePlayground({ files, initialTab, title, onCodeChange, onPreviewError }: CodePlaygroundProps) {
   const [tabs, setTabs] = useState(files)
   const [activeTab, setActiveTab] = useState(initialTab ?? files[0]?.name ?? 'index.html')
   const [showPreview, setShowPreview] = useState(true)
@@ -29,8 +31,12 @@ export function CodePlayground({ files, initialTab, title }: CodePlaygroundProps
   const jsFile = tabs.find(t => t.name.endsWith('.js'))
 
   const updateCode = useCallback((value: string) => {
-    setTabs(prev => prev.map(t => t.name === activeTab ? { ...t, content: value } : t))
-  }, [activeTab])
+    setTabs(prev => {
+      const next = prev.map(t => t.name === activeTab ? { ...t, content: value } : t)
+      onCodeChange?.(next)
+      return next
+    })
+  }, [activeTab, onCodeChange])
 
   const resetCode = useCallback(() => {
     setTabs(files.map(f => ({ ...f })))
@@ -112,6 +118,7 @@ export function CodePlayground({ files, initialTab, title }: CodePlaygroundProps
               html={htmlFile?.content ?? ''}
               css={cssFile?.content ?? ''}
               js={jsFile?.content ?? ''}
+              onError={onPreviewError}
             />
           </div>
         )}

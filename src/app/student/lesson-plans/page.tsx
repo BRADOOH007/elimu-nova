@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { useToast } from '@/hooks/use-toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -10,6 +9,7 @@ import { cleanAIText } from '@/lib/clean-ai-text'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import CustomLessonModal from '@/components/custom-lesson-modal'
+import { useAITutor } from '@/components/ai-tutor-provider'
 import { 
   BookOpen, 
   Search,
@@ -57,8 +57,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -123,8 +125,8 @@ interface StudySession {
 }
 
 export default function StudentLessonPlansPage() {
-  const router = useRouter()
   const { toast } = useToast()
+  const { openAITutor } = useAITutor()
   const [sharedLessonPlans, setSharedLessonPlans] = useState<SharedLessonPlan[]>([])
   const [aiLessons, setAiLessons] = useState<AILesson[]>([])
   const [currentSession, setCurrentSession] = useState<StudySession | null>(null)
@@ -222,16 +224,13 @@ export default function StudentLessonPlansPage() {
   }
 
   const handleStartAITutor = (lessonPlan: any) => {
-    const context = {
-      lessonPlan: {
-        title: lessonPlan.title,
-        subject: lessonPlan.subject,
-        grade: lessonPlan.grade,
-        content: lessonPlan.content
-      }
-    }
-    sessionStorage.setItem('currentLessonContext', JSON.stringify(context))
-    router.push('/student/learn')
+    const subject = lessonPlan?.subject || 'your studies'
+    const topic = lessonPlan?.title || ''
+    openAITutor(
+      `I'm studying "${topic}" in ${subject}. Can you walk me through this lesson and explain it clearly?`,
+      subject,
+      topic,
+    )
   }
 
   const handleStartAILesson = async (lesson: AILesson) => {
@@ -903,7 +902,7 @@ export default function StudentLessonPlansPage() {
 
       {/* AI Lesson Modal */}
       <Dialog open={aiLessonModalOpen} onOpenChange={setAiLessonModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-2xl flex items-center">
               <Brain className="w-6 h-6 mr-2 text-purple-600" />
@@ -913,7 +912,7 @@ export default function StudentLessonPlansPage() {
               {selectedAILesson?.subject} • Grade {selectedAILesson?.grade} • {selectedAILesson?.difficulty}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-6">
+          <DialogBody className="space-y-6 mt-1">
             {selectedAILesson?.generatedContent ? (
               <div className="prose max-w-none">
                 <div 
@@ -939,8 +938,8 @@ export default function StudentLessonPlansPage() {
                 </ul>
               </div>
             )}
-          </div>
-          <div className="flex justify-end space-x-2 pt-4 border-t">
+          </DialogBody>
+          <DialogFooter>
             <Button 
               onClick={() => selectedAILesson && handleCompleteLesson(selectedAILesson)}
               className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
@@ -955,13 +954,13 @@ export default function StudentLessonPlansPage() {
               <Brain className="w-4 h-4 mr-2" />
               Ask AI Tutor
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* View Lesson Plan Modal */}
       <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-2xl">
               {selectedLessonPlan?.lessonPlan.title}
@@ -970,7 +969,7 @@ export default function StudentLessonPlansPage() {
               {selectedLessonPlan?.lessonPlan.subject} • Grade {selectedLessonPlan?.lessonPlan.grade}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4 mt-1">
             {selectedLessonPlan?.lessonPlan.content?.generatedContent ? (
               <div className="prose max-w-none">
                 <div 
@@ -986,8 +985,8 @@ export default function StudentLessonPlansPage() {
                 <p>No content available for this lesson plan.</p>
               </div>
             )}
-          </div>
-          <div className="flex justify-end space-x-2 pt-4 border-t">
+          </DialogBody>
+          <DialogFooter>
             <Button 
               onClick={() => selectedLessonPlan && handleStartAITutor(selectedLessonPlan.lessonPlan)}
               className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
@@ -1009,7 +1008,7 @@ export default function StudentLessonPlansPage() {
               <FileText className="w-4 h-4 mr-2" />
               Generate Notes
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

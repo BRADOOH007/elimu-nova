@@ -45,10 +45,10 @@ export function AdminModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className={cn("max-w-lg w-full max-h-[90vh] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl p-0", sizeMap[size], className)}
+        className={cn("max-w-lg w-full max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl", sizeMap[size], className)}
       >
         {/* ── HEADER ── */}
-        <div className="relative border-b border-slate-100 p-6 pb-4 sm:p-8 sm:pb-4">
+        <div className="relative p-6 pb-4 border-b border-slate-100 bg-white shrink-0">
           <button
             onClick={onClose}
             className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none"
@@ -75,13 +75,13 @@ export function AdminModal({
         </div>
 
         {/* ── BODY ── */}
-        <div className="overflow-y-auto px-6 py-4 sm:px-8 space-y-5" style={{ maxHeight: '65vh' }}>
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {children}
         </div>
 
         {/* ── FOOTER ── */}
         {footer && (
-          <div className="border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8 flex justify-end items-center gap-3 rounded-b-2xl mt-4">
+          <div className="p-4 sm:px-6 border-t border-slate-100 bg-slate-50/80 flex justify-end items-center gap-3 shrink-0 rounded-b-2xl">
             {footer}
           </div>
         )}
@@ -137,7 +137,7 @@ export function AdminModalFooter({
         type="button"
         onClick={onCancel}
         disabled={loading}
-        className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
+        className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition disabled:opacity-50"
       >
         Cancel
       </button>
@@ -145,7 +145,7 @@ export function AdminModalFooter({
         type={type}
         onClick={onSubmit}
         disabled={disabled || loading}
-        className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition disabled:opacity-50 inline-flex items-center gap-2"
+        className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition disabled:opacity-50 inline-flex items-center gap-2"
       >
         {loading && (
           <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">

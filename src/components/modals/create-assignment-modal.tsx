@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -607,19 +607,16 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl p-0 gap-0">
-        {/* Header */}
-        <div className="px-6 pt-6 pb-0">
-          <DialogHeader className="pb-4 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-sm">
-                  <Plus className="w-5 h-5 text-white" />
-                </div>
-                Create Assignment
-              </DialogTitle>
-            </div>
-          </DialogHeader>
+      <DialogContent className="max-w-4xl bg-white border-0 shadow-2xl">
+        <DialogHeader className="pb-4 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center shadow-sm">
+                <Plus className="w-5 h-5 text-white" />
+              </div>
+              Create Assignment
+            </DialogTitle>
+          </div>
 
           {/* Steps */}
           <div className="flex items-center gap-1 py-4">
@@ -637,10 +634,9 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
               </div>
             ))}
           </div>
-        </div>
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="px-6 pb-6 overflow-y-auto max-h-[65vh]">
+        <DialogBody className="mt-1">
           {/* ── STEP 0: DETAILS ── */}
           {step === 0 && (
             <div className="space-y-5">
@@ -1227,10 +1223,9 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
               )}
             </div>
           )}
-        </div>
+        </DialogBody>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-gray-50/50">
+        <DialogFooter className="border-t border-gray-100 bg-gray-50/50 flex justify-between">
           <div className="text-xs text-gray-400">
             {step === 0 && 'Basic details about the assignment'}
             {step === 1 && 'Add a video lecture or tutorial (optional)'}
@@ -1240,31 +1235,31 @@ export default function CreateAssignmentModal({ isOpen, onClose, onSuccess, init
           </div>
           <div className="flex gap-2">
             {step > 0 ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setStep(s => s - 1)}
-                className="h-9 gap-1.5 text-sm">
+              <Button type="button" variant="outline" onClick={() => setStep(s => s - 1)}
+                className="px-5 py-2.5 text-sm font-medium gap-1.5">
                 <ChevronLeft className="w-4 h-4" /> Back
               </Button>
             ) : (
-              <Button type="button" variant="outline" size="sm" onClick={handleClose} className="h-9 text-sm">
+              <Button type="button" variant="outline" onClick={handleClose} className="px-5 py-2.5 text-sm font-medium">
                 Cancel
               </Button>
             )}
             {step < STEPS.length - 1 ? (
-              <Button type="button" size="sm" onClick={() => {
+              <Button type="button" onClick={() => {
                 if (step === 0 && (!form.title.trim() || !form.dueDate)) { toast({ title: 'Fill in required fields' }); return }
                 setStep(s => s + 1)
-              }} className="h-9 gap-1.5 text-sm bg-gray-900 hover:bg-gray-800 text-white shadow-sm">
+              }} className="px-5 py-2.5 text-sm font-medium gap-1.5 bg-gray-900 hover:bg-gray-800 text-white shadow-sm">
                 Next <ChevronRight className="w-4 h-4" />
               </Button>
             ) : (
-              <Button type="button" size="sm" onClick={handleSubmit} disabled={loading}
-                className="h-9 gap-1.5 text-sm bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white shadow-sm">
+              <Button type="button" onClick={handleSubmit} disabled={loading}
+                className="px-5 py-2.5 text-sm font-medium gap-1.5 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700 text-white shadow-sm">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {loading ? 'Creating...' : 'Create Assignment'}
               </Button>
             )}
           </div>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

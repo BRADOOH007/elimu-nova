@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, BookOpen, Plus, Search, Edit, Trash2, Users, GraduationCap, Clock, BarChart3 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -145,17 +145,19 @@ export default function SchoolAdminCoursesPage() {
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader><DialogTitle>{editingCourse ? 'Edit Course' : 'Add Course'}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4">
             <div><label className="text-sm text-gray-600">Title</label><Input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} /></div>
             <div><label className="text-sm text-gray-600">Type</label><Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['CBC_ENGLISH','CBC_MATH','CBC_SCIENCE','CBC_KISWAHILI','CODING_SCRATCH','CODING_WEB_DEV','CODING_AI_FOR_KIDS','CODING_PYTHON','ROBOTICS_BASIC','OTHER'].map(t => <SelectItem key={t} value={t}>{t.replace(/_/g, ' ')}</SelectItem>)}</SelectContent></Select></div>
             <div><label className="text-sm text-gray-600">Grade Level</label><select value={form.gradeLevel} onChange={e => setForm(p => ({ ...p, gradeLevel: e.target.value }))} className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select grade</option>{GRADES.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
             <div><label className="text-sm text-gray-600">Difficulty</label><Select value={form.difficulty} onValueChange={v => setForm(p => ({ ...p, difficulty: v }))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['EASY','MEDIUM','HARD','EXPERT'].map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent></Select></div>
             <div><label className="text-sm text-gray-600">Duration</label><Input value={form.duration} onChange={e => setForm(p => ({ ...p, duration: e.target.value }))} placeholder="e.g. 12 weeks" /></div>
             <div><label className="text-sm text-gray-600">Description</label><textarea value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} rows={3} className="w-full p-3 border rounded-lg" /></div>
-            <Button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-2.5 text-sm font-medium">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} {editingCourse ? 'Update Course' : 'Create Course'}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface LearningArea {
@@ -358,7 +358,7 @@ export default function LearningAreasPage() {
               Select from the list of unassigned {assignTarget?.type === 'teacher' ? 'teachers' : 'students'}.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <DialogBody>
             <Select value={selectedPersonId} onValueChange={setSelectedPersonId}>
               <SelectTrigger>
                 <SelectValue placeholder={`Select ${assignTarget?.type === 'teacher' ? 'teacher' : 'student'}...`} />
@@ -372,14 +372,14 @@ export default function LearningAreasPage() {
                 )}
               </SelectContent>
             </Select>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setAssignTarget(null)}>Cancel</Button>
-              <Button onClick={handleAssign} disabled={!selectedPersonId || assigning}>
-                {assigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                Assign
-              </Button>
-            </div>
-          </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignTarget(null)} className="px-5 py-2.5 text-sm font-medium">Cancel</Button>
+            <Button onClick={handleAssign} disabled={!selectedPersonId || assigning} className="px-5 py-2.5 text-sm font-medium">
+              {assigning ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+              Assign
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -392,15 +392,15 @@ export default function LearningAreasPage() {
               Remove {removeConfirm?.person.name} from {removeConfirm?.area.name}?
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setRemoveConfirm(null)}>Cancel</Button>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveConfirm(null)} className="px-5 py-2.5 text-sm font-medium">Cancel</Button>
             <Button variant="destructive" onClick={() => {
               if (!removeConfirm) return
               handleRemove(removeConfirm.area, removeConfirm.type, removeConfirm.person.id)
-            }}>
+            }} className="px-5 py-2.5 text-sm font-medium">
               <UserMinus className="mr-2 h-4 w-4" /> Remove
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

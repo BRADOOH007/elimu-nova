@@ -13,6 +13,15 @@ export const PUT = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user, params })
     const body = await req.json()
     const { name, description, subject, grade, teacherId } = body
 
+    // When the class teacher changes, propagate to all students already in the
+    // class so they show up in the new teacher's roster/dashboard immediately.
+    if (teacherId && teacherId !== cls.teacherId) {
+      await prisma.student.updateMany({
+        where: { classId: id },
+        data: { teacherId },
+      })
+    }
+
     const updated = await prisma.class.update({
       where: { id },
       data: { name, description, subject, grade, teacherId: teacherId || null },

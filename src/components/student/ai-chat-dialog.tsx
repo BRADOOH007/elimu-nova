@@ -1,11 +1,11 @@
 "use client"
 
 import { Bot, MessageSquare, Loader2, BookOpen } from "lucide-react"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { MarkdownRenderer } from "@/components/ui/markdown-renderer"
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useRef } from "react"
 
 interface ChatMessage {
   id: string
@@ -43,13 +43,13 @@ export default function AIChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-full h-[90vh] p-0 gap-0 flex flex-col overflow-hidden rounded-2xl shadow-2xl">
-        <div className="flex items-center gap-3 px-5 py-4 bg-gradient-to-r from-blue-600 to-purple-600 flex-shrink-0">
+      <DialogContent className="max-w-2xl w-full [&>button]:hidden">
+        <DialogHeader className="flex-row items-center gap-3 border-0 bg-gradient-to-r from-blue-600 to-purple-600 p-4 text-white shrink-0">
           <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
             <Bot className="w-5 h-5 text-white" />
           </div>
           <div className="flex-1">
-            <p className="text-white font-bold text-base leading-tight">AI Teacher</p>
+            <DialogTitle className="text-white font-bold text-base leading-tight">AI Teacher</DialogTitle>
             <p className="text-blue-100 text-xs">Personalised learning assistant</p>
           </div>
           {currentLesson && (
@@ -64,9 +64,9 @@ export default function AIChatDialog({
           >
             ✕
           </button>
-        </div>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto bg-gray-50 px-4 py-4 space-y-4 min-h-0">
+        <DialogBody className="bg-gray-50 px-4 py-4 min-h-0">
           {messages.map((msg) => (
             <div
               key={msg.id}
@@ -112,49 +112,51 @@ export default function AIChatDialog({
           )}
 
           <div ref={chatBottomRef} />
-        </div>
+        </DialogBody>
 
-        <div className="flex gap-2 px-4 py-2 bg-white border-t border-gray-100 flex-shrink-0 overflow-x-auto">
-          {["Explain this lesson", "Give me practice questions", "What should I study next?", "Quiz me!"].map(p => (
-            <button
-              key={p}
-              onClick={() => onMessageChange(p)}
-              className="text-xs whitespace-nowrap px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full hover:bg-blue-100 transition-colors font-medium flex-shrink-0"
-            >
-              {p}
-            </button>
-          ))}
-        </div>
-
-        <div className="px-4 py-3 bg-white border-t border-gray-200 flex-shrink-0">
-          <div className="flex items-end gap-2 bg-gray-100 rounded-2xl px-4 py-2">
-            <Textarea
-              value={message}
-              onChange={(e) => onMessageChange(e.target.value)}
-              placeholder="Ask me anything about your lessons…"
-              rows={1}
-              className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none text-sm p-0 min-h-[24px] max-h-32"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  onSend(message)
-                }
-              }}
-            />
-            <Button
-              onClick={() => onSend(message)}
-              disabled={isTyping || !message.trim()}
-              size="sm"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 rounded-xl h-9 w-9 p-0 shrink-0 disabled:opacity-40"
-            >
-              {isTyping
-                ? <Loader2 className="w-4 h-4 animate-spin" />
-                : <MessageSquare className="w-4 h-4" />
-              }
-            </Button>
+        <DialogFooter className="flex-col gap-0 p-0 bg-white border-t border-gray-200">
+          <div className="flex gap-2 px-4 py-2 overflow-x-auto w-full">
+            {["Explain this lesson", "Give me practice questions", "What should I study next?", "Quiz me!"].map(p => (
+              <button
+                key={p}
+                onClick={() => onMessageChange(p)}
+                className="text-xs whitespace-nowrap px-3 py-1.5 bg-blue-50 border border-blue-200 text-blue-700 rounded-full hover:bg-blue-100 transition-colors font-medium flex-shrink-0"
+              >
+                {p}
+              </button>
+            ))}
           </div>
-          <p className="text-[10px] text-gray-400 text-center mt-1.5">Press Enter to send · Shift+Enter for new line</p>
-        </div>
+
+          <div className="px-4 py-3 w-full">
+            <div className="flex items-end gap-2 bg-gray-100 rounded-2xl px-4 py-2">
+              <Textarea
+                value={message}
+                onChange={(e) => onMessageChange(e.target.value)}
+                placeholder="Ask me anything about your lessons…"
+                rows={1}
+                className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none text-sm p-0 min-h-[24px] max-h-32"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    onSend(message)
+                  }
+                }}
+              />
+              <Button
+                onClick={() => onSend(message)}
+                disabled={isTyping || !message.trim()}
+                size="sm"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:opacity-90 rounded-xl h-9 w-9 p-0 shrink-0 disabled:opacity-40"
+              >
+                {isTyping
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <MessageSquare className="w-4 h-4" />
+                }
+              </Button>
+            </div>
+            <p className="text-[10px] text-gray-400 text-center mt-1.5">Press Enter to send · Shift+Enter for new line</p>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

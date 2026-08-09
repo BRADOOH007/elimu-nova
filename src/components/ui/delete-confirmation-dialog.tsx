@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogBody } from "@/components/ui/dialog"
 import { AlertTriangle, Loader2 } from "lucide-react"
 
 export interface DeleteConfirmationDialogProps {
@@ -49,32 +49,35 @@ export function DeleteConfirmationDialog({
           <DialogDescription className="text-gray-700 mt-4">
             {description}
           </DialogDescription>
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        </DialogHeader>
+
+        <DialogBody>
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
             <p className="text-sm text-red-800 font-medium">
               You are about to permanently delete:
             </p>
             <p className="text-sm text-red-900 font-semibold mt-1">
-              "{itemName}"
+              &quot;{itemName}&quot;
             </p>
             <p className="text-xs text-red-700 mt-2">
               This action cannot be undone.
             </p>
           </div>
-        </DialogHeader>
-        
-        <DialogFooter className="flex flex-row justify-end space-x-2 mt-6">
+        </DialogBody>
+
+        <DialogFooter>
           <Button
             variant="outline"
             onClick={onClose}
             disabled={confirming || isLoading}
-            className="min-w-[80px]"
+            className="px-5 py-2.5 text-sm font-medium"
           >
             Cancel
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={confirming || isLoading}
-            className="min-w-[80px] bg-red-600 hover:bg-red-700 text-white"
+            className="px-5 py-2.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white"
           >
             {confirming || isLoading ? (
               <div className="flex items-center space-x-2">

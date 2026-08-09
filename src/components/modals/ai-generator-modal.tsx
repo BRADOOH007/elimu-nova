@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -364,9 +364,8 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl">
-        <div className="max-h-[85vh] overflow-y-auto px-1">
-          <DialogHeader className="pb-4 border-b border-gray-100">
+      <DialogContent className="max-w-6xl bg-white border-0 shadow-2xl">
+        <DialogHeader className="pb-4 border-b border-gray-100">
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
                 <Brain className="w-5 h-5 text-white" />
@@ -378,7 +377,8 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-6">
+          <DialogBody className="mt-1">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-5 bg-gradient-to-r from-purple-50 to-blue-50 p-1 rounded-lg">
             <TabsTrigger value="rubric" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
               {getTabIcon('rubric')}
@@ -1005,20 +1005,20 @@ export default function AIGeneratorModal({ isOpen, onClose, onSuccess }: AIGener
             )}
           </Tabs>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 mt-6">
+          </DialogBody>
+
+          <DialogFooter className="border-t border-gray-200">
             <Button
               type="button"
               variant="outline"
               onClick={handleClose}
-              className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
+              className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90 px-5 py-2.5 text-sm font-medium"
             >
               <X className="w-4 h-4 mr-2" />
               Close
             </Button>
-          </div>
-        </div>
-      </DialogContent>
+          </DialogFooter>
+        </DialogContent>
     </Dialog>
   )
 }

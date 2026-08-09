@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Loader2, CreditCard, School, Package, Calendar, DollarSign } from "lucide-react"
 
@@ -197,8 +197,8 @@ export function CreateBillingModal({ isOpen, onClose, onBillingCreated }: Create
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
-        <DialogHeader className="sticky top-0 bg-gradient-to-br from-white via-blue-50 to-purple-50 z-10 pb-4">
+      <DialogContent className="sm:max-w-[700px] bg-gradient-to-br from-white via-blue-50 to-purple-50">
+        <DialogHeader>
           <DialogTitle className="edugenius-text-gradient-blue flex items-center">
             <CreditCard className="w-5 h-5 mr-2" />
             Create New Billing Record
@@ -209,12 +209,13 @@ export function CreateBillingModal({ isOpen, onClose, onBillingCreated }: Create
         </DialogHeader>
 
         {dataLoading ? (
-          <div className="flex items-center justify-center py-12">
+          <DialogBody className="flex items-center justify-center py-12 mt-1">
             <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
             <span className="ml-3 text-gray-500">Loading schools and packages...</span>
-          </div>
+          </DialogBody>
         ) : (
-        <form onSubmit={handleSubmit} className="space-y-6 pb-4">
+        <form id="create-billing-form" onSubmit={handleSubmit} className="contents">
+          <DialogBody className="space-y-6 mt-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="schoolId">School *</Label>
@@ -412,20 +413,22 @@ export function CreateBillingModal({ isOpen, onClose, onBillingCreated }: Create
             />
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4">
+          </DialogBody>
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={loading}
-              className="edugenius-glass"
+              className="edugenius-glass px-5 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>
             <Button
               type="submit"
+              form="create-billing-form"
               disabled={loading}
-              className="edugenius-button"
+              className="edugenius-button px-5 py-2.5 text-sm font-medium"
             >
               {loading ? (
                 <>
@@ -439,7 +442,7 @@ export function CreateBillingModal({ isOpen, onClose, onBillingCreated }: Create
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
         )}
       </DialogContent>

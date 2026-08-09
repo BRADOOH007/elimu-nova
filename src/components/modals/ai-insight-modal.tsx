@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -156,7 +157,7 @@ export default function AIInsightModal({ isOpen, onClose, onInsightUpdated, insi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+      <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
         <DialogHeader>
           <DialogTitle className="edugenius-text-gradient-blue flex items-center">
             <Brain className="w-5 h-5 mr-2" />
@@ -169,7 +170,7 @@ export default function AIInsightModal({ isOpen, onClose, onInsightUpdated, insi
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <DialogBody className="space-y-6 mt-1">
           {/* Insight Header */}
           <div className="p-4 bg-gradient-to-r from-white/70 to-blue-50/70 backdrop-blur-sm rounded-lg">
             <div className="flex items-center space-x-3 mb-3">
@@ -310,7 +311,7 @@ export default function AIInsightModal({ isOpen, onClose, onInsightUpdated, insi
           <div className="text-xs text-gray-500">
             Generated: {new Date(insight.createdAt).toLocaleDateString()} at {new Date(insight.createdAt).toLocaleTimeString()}
           </div>
-        </div>
+        </DialogBody>
 
         <DialogFooter>
           <Button
@@ -318,7 +319,7 @@ export default function AIInsightModal({ isOpen, onClose, onInsightUpdated, insi
             variant="outline"
             onClick={onClose}
             disabled={isLoading}
-            className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
+            className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90 px-5 py-2.5 text-sm font-medium"
           >
             <X className="w-4 h-4 mr-2" />
             Close
@@ -328,7 +329,7 @@ export default function AIInsightModal({ isOpen, onClose, onInsightUpdated, insi
             <Button
               onClick={handleSave}
               disabled={isLoading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-5 py-2.5 text-sm font-medium"
             >
               {isLoading ? (
                 <>
@@ -348,7 +349,7 @@ export default function AIInsightModal({ isOpen, onClose, onInsightUpdated, insi
             <Button
               onClick={handleDismiss}
               disabled={isLoading}
-              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+              className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 px-5 py-2.5 text-sm font-medium"
             >
               {isLoading ? (
                 <>

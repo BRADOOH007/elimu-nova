@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, BookOpen, Plus, Search, Edit, Trash2, ChevronRight, ChevronDown, GraduationCap } from "lucide-react"
@@ -147,13 +147,15 @@ export default function CurriculumManagementPage() {
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader><DialogTitle>Add Curriculum</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4">
             <div><label className="text-sm text-gray-600">Name</label><Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. CBC Grade 7" /></div>
             <div><label className="text-sm text-gray-600">Type</label><Select value={type} onValueChange={setType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{['CBC','CAMBRIDGE','IGCSE','IB','OTHER'].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
             <div><label className="text-sm text-gray-600">Grade</label><select value={grade} onChange={e => setGrade(e.target.value)} className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select grade</option>{GRADES.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
             <div><label className="text-sm text-gray-600">Description</label><textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full p-3 border rounded-lg" /></div>
-            <Button onClick={handleCreate} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-purple-600">Create</Button>
-          </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={handleCreate} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-2.5 text-sm font-medium">Create</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

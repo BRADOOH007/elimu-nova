@@ -14,7 +14,7 @@ export const POST = route({ auth: ['STUDENT', 'TEACHER', 'SUPER_ADMIN'] }, async
 
     const systemPrompt = `You are an AI assessment generator for ElimuNova AI (Kenya CBC curriculum).
 ${isKiswahili ? 'IMPORTANT: Generate this assessment entirely in Swahili.' : 'IMPORTANT: Generate this assessment entirely in English.'}
-Return ONLY valid JSON â€” no markdown, no explanation.
+Return ONLY valid JSON — no markdown, no explanation.
 JSON format: { "title": "...", "description": "...", "questions": [{ "id": 1, "type": "multiple_choice", "question": "...", "options": ["A","B","C","D"], "correctAnswer": "A", "explanation": "...", "difficulty": "easy" }], "instructions": "...", "timeLimit": "30 minutes" }`
 
     const userPrompt = `Generate a ${assessmentType || 'mixed'} assessment (${questionCount || 10} questions) for:
