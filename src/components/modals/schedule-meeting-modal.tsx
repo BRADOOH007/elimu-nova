@@ -52,7 +52,7 @@ export function ScheduleMeetingModal({ isOpen, onClose, onSuccess, meeting }: Sc
           topic: formData.title,
           startTime: `${formData.date}T${formData.time}:00`,
           duration: parseInt(formData.duration) || 60,
-          agenda: formData.description,
+          description: formData.description,
         })
         if (zoom?.join_url) {
           formData.videoLink = zoom.join_url

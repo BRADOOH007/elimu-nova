@@ -100,7 +100,7 @@ export default function LiveClassPage() {
             topic: title || `${subject} Live Class`,
             startTime: new Date().toISOString(),
             duration: 60,
-            agenda: `Live class for ${subject || 'General'} — Grade ${selectedClass || 'All'}`,
+            description: `Live class for ${subject || 'General'} — Grade ${selectedClass || 'All'}`,
           })
           if (zoom?.join_url) link = zoom.join_url
         } catch { /* will fall back to Jitsi */ }
