@@ -351,18 +351,13 @@ export function ProfessionalDashboardLayout({
           sidebarCollapsed ? 'w-16' : 'w-64'
         } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
-        {/* User strip */}
+        {/* Brand strip */}
         <div className={`flex items-center gap-3 px-3 py-3 sm:py-4 border-b border-white/5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-slate-700 flex items-center justify-center shrink-0 overflow-hidden ring-1 ring-white/10">
-            {userProfile.avatar && !avatarError
-              ? <img key={userProfile.avatar} src={userProfile.avatar} alt="Profile" className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
-              : <span className="text-slate-300 font-semibold text-xs sm:text-sm">{(userProfile.firstName || userName).slice(0, 2).toUpperCase()}</span>
-            }
-          </div>
-          {!sidebarCollapsed && (
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{userProfile.firstName} {userProfile.lastName}</p>
-              <p className="text-xs text-slate-400 truncate">{getRoleDisplayName(userRole)}</p>
+          {!sidebarCollapsed ? (
+            <Link href="/" className="shrink-0"><Logo size="sm" variant="white" /></Link>
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <span className="text-white font-bold text-xs">EN</span>
             </div>
           )}
         </div>
