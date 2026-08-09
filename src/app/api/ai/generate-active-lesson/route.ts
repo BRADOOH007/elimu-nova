@@ -72,7 +72,7 @@ function cleanJson(raw: string): string {
   return cleaned
 }
 
-export const POST = route({}, async (req, { user }) => {
+export const POST = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
   const body = await req.json()
   const { subject, topic, grade } = body
 
@@ -117,35 +117,38 @@ Use relatable local examples where natural.
   ],
   "recall": [
     {
-      "question": "MCQ about the first concept",
+      "question": "MCQ about the first key concept",
       "type": "mcq",
       "options": ["Wrong A", "Correct answer", "Wrong C", "Wrong D"],
       "answer": "Correct answer",
       "explanation": "Why the correct answer is right"
     },
     {
-      "question": "Short-answer about the second concept",
-      "type": "short",
-      "answer": "Expected answer",
-      "explanation": "Brief explanation"
-    },
-    {
-      "question": "Calculation or fill-blank about the third concept",
-      "type": "fill",
-      "answer": "The answer",
-      "explanation": "Brief explanation"
-    },
-    {
-      "question": "Another MCQ",
+      "question": "MCQ about the second key concept",
       "type": "mcq",
-      "options": ["Wrong", "Wrong", "Correct", "Wrong"],
-      "answer": "Correct",
+      "options": ["Wrong A", "Wrong B", "Correct answer", "Wrong D"],
+      "answer": "Correct answer",
       "explanation": "Brief explanation"
     },
     {
-      "question": "Final application question",
-      "type": "short",
-      "answer": "Expected answer",
+      "question": "MCQ about the third key concept",
+      "type": "mcq",
+      "options": ["Correct answer", "Wrong B", "Wrong C", "Wrong D"],
+      "answer": "Correct answer",
+      "explanation": "Brief explanation"
+    },
+    {
+      "question": "MCQ about the fourth key concept",
+      "type": "mcq",
+      "options": ["Wrong A", "Correct answer", "Wrong C", "Wrong D"],
+      "answer": "Correct answer",
+      "explanation": "Brief explanation"
+    },
+    {
+      "question": "Final MCQ testing application of all concepts",
+      "type": "mcq",
+      "options": ["Wrong A", "Wrong B", "Correct answer", "Wrong D"],
+      "answer": "Correct answer",
       "explanation": "Brief explanation"
     }
   ]
@@ -200,7 +203,7 @@ RULES:
     }
 
     // One illustration per key section, capped for cost/latency
-    lesson.images = await Promise.all(
+    const rawImages = await Promise.all(
       imageMeta.slice(0, MAX_SECTION_IMAGES).map(async (meta, i) => {
         try {
           const img = await OpenAIService.generateImage({
@@ -211,14 +214,15 @@ RULES:
           })
           const durableUrl = img?.url
             ? await persistImage(img.url, meta.imagePrompt || '', meta.sectionTitle, user?.id || 'system')
-            : fallbackSvg(meta.sectionTitle, meta.imagePrompt)
-          return { ...meta, imageUrl: durableUrl }
+            : null
+          return durableUrl ? { ...meta, imageUrl: durableUrl } : null
         } catch (e) {
-          console.warn(`[ActiveLesson] Section image ${i} failed:`, e)
-          return { ...meta, imageUrl: fallbackSvg(meta.sectionTitle, meta.imagePrompt) }
+          console.warn(`[ActiveLesson] Section image ${i} failed, skipping`)
+          return null
         }
       })
     )
+    lesson.images = rawImages.filter(Boolean) as unknown as ActiveLessonImage[]
 
     await intelligentCacheSave(subject, topic, gradeStr, lesson as unknown as Prisma.InputJsonValue)
 

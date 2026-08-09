@@ -64,18 +64,20 @@ function useCurriculumSubjects() {
         if (res.ok) {
           const p = await res.json()
           setCurriculum(p.curriculum || 'cbc')
-          setDefaultGrade((p.tourCompletion as any)?.grade || 'Grade 4')
+          const g = (p.tourCompletion as any)?.grade || 'Grade 4'
+          setDefaultGrade(g)
+          setSubjects(getSubjectsForCurriculum(p.curriculum || 'cbc', g))
         }
       } catch { /* use defaults */ }
     }
     load()
   }, [session])
 
-  useEffect(() => {
-    setSubjects(getSubjectsForCurriculum(curriculum, defaultGrade))
-  }, [curriculum, defaultGrade])
+  const updateSubjectsForGrade = (grade: string) => {
+    setSubjects(getSubjectsForCurriculum(curriculum, grade))
+  }
 
-  return { subjects, curriculum, defaultGrade, setDefaultGrade }
+  return { subjects, curriculum, defaultGrade, updateSubjectsForGrade }
 }
 
 const ALL_SUBJECTS_FALLBACK = getAllCBCSubjects()
@@ -85,7 +87,7 @@ function LearnPageContent() {
   const { data: session } = useSession()
   const { openAITutor } = useAITutor()
   const searchParams = useSearchParams()
-  const { subjects, curriculum, defaultGrade } = useCurriculumSubjects()
+  const { subjects, curriculum, defaultGrade, updateSubjectsForGrade } = useCurriculumSubjects()
 
   // Core study state — initialized from URL params if present
   const [studySubject, setStudySubject] = useState(() => {
@@ -763,7 +765,9 @@ function LearnPageContent() {
             )}
           </div>
 
-          {/* Inline cards (formerly sidebar) */}
+          {/* Inline cards (formerly sidebar) — hidden during active study */}
+          {!activeLesson && !studying && !quickQuizOpen && (
+            <>
           {!dailyDone && dailyTopic && (
             <button onClick={startDailyChallenge} className="group w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
               <div className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 shadow-md"><Trophy className="h-5 w-5 text-white" /></div><div className="min-w-0"><p className="text-sm font-bold text-amber-900">Daily Challenge</p><p className="truncate text-xs text-amber-700">{dailySubject}: {dailyTopic}</p><span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-600">+{XP_REWARDS.dailyChallenge} XP</span></div></div>
@@ -783,6 +787,8 @@ function LearnPageContent() {
             <Card className="rounded-2xl border-2 border-red-200 shadow-sm">
               <CardContent className="space-y-3 p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100"><AlertCircle className="h-4 w-4 text-red-600" /></span><p className="text-sm font-bold text-red-800">Mistake Review <span className="font-semibold text-red-500">({mistakeIdx+1}/{unreviewedMistakes.length})</span></p></div><button onClick={()=>setMistakeMode(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200"><X className="h-4 w-4"/></button></div>{(()=>{const m=unreviewedMistakes[mistakeIdx];if(!m)return null;return(<div className="space-y-3 rounded-xl border border-red-100 bg-white p-3"><p className="text-sm font-semibold text-slate-800">{m.question}</p><div className="flex flex-wrap gap-2 text-xs"><span className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-red-700">Your answer: {m.yourAnswer}</span><span className="rounded-lg border border-green-100 bg-green-50 px-2.5 py-1 text-green-700">Correct: {m.correctAnswer}</span></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>{markMistakeReviewed(m.id);setMistakeIdx(i=>Math.min(i+1,unreviewedMistakes.length-1))}} className="text-xs">Got it</Button><Button size="sm" variant="ghost" onClick={()=>{setMistakeIdx(i=>Math.min(i+1,unreviewedMistakes.length-1))}} className="text-xs">Skip</Button></div></div>)})()}</CardContent>
             </Card>
+          )}
+          </>
           )}
         </div>
 
