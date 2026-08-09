@@ -1,117 +1,48 @@
 import { NextResponse } from 'next/server'
-import { route } from '@/lib/api-middleware'
-import { supabaseAdmin, BUCKETS, ensureBucket } from '@/lib/supabase'
-import { saveFileLocally, removeFileLocally } from '@/lib/local-storage'
 import { prisma } from '@/lib/prisma'
+import { route } from '@/lib/api-middleware'
+import { writeFile, mkdir } from 'fs/promises'
+import path from 'path'
+import crypto from 'crypto'
 
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-
-export const POST = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'PARENT'], skipSubscriptionCheck: true }, async (req, { user }) => {
-  const formData = await req.formData()
-  const file = formData.get('file') as File | null
-
-  if (!file) {
-    return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-  }
-
-  if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: 'File must be JPEG, PNG, GIF, or WebP' }, { status: 400 })
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: 'File must be less than 5MB' }, { status: 400 })
-  }
-
-  if (!supabaseAdmin) {
-    const ext = file.name.split('.').pop() || 'png'
-    const localPath = `${user.id}_${Date.now()}.${ext}`
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
-    const localUrl = await saveFileLocally(BUCKETS.AVATARS, localPath, buffer)
-    if (!localUrl) {
-      return NextResponse.json({ error: 'Upload failed: could not save file' }, { status: 500 })
-    }
-
-    // Save avatar URL to user profile
-    const currentUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { avatar: true }
-    })
-
-    try {
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { avatar: localUrl },
-      })
-      // Clean up old local avatar
-      if (currentUser?.avatar?.startsWith('/uploads/')) {
-        await removeFileLocally(currentUser.avatar)
-      }
-    } catch (dbError) {
-      await removeFileLocally(localUrl)
-      console.error('Failed to save avatar URL:', dbError)
-      return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
-    }
-
-    return NextResponse.json({ url: localUrl })
-  }
-
-  const bucket = BUCKETS.AVATARS
-
-  // Ensure the bucket exists
-  await ensureBucket(bucket, {
-    public: true,
-    allowedMimeTypes: ALLOWED_TYPES,
-    fileSizeLimit: 5 * 1024 * 1024,
-  })
-
-  // Get current avatar to delete old file
-  const currentUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { avatar: true }
-  })
-
-  const ext = file.name.split('.').pop() || 'png'
-  const path = `${user.id}_${Date.now()}.${ext}`
-  const bytes = await file.arrayBuffer()
-  const buffer = Buffer.from(bytes)
-
-  const { error: uploadError } = await supabaseAdmin.storage
-    .from(bucket)
-    .upload(path, buffer, { contentType: file.type, upsert: true })
-
-  if (uploadError) {
-    console.error('Supabase upload error:', uploadError)
-    return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
-  }
-
-  const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(path)
-  const publicUrl = urlData.publicUrl
-
+export const POST = route({ auth: ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] }, async (req, { user }) => {
   try {
-    // Save avatar URL to user profile
+    const formData = await req.formData()
+    const file = formData.get('file') as File | null
+
+    if (!file) return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
+
+    const bytes = Buffer.from(await file.arrayBuffer())
+    
+    // Validate: max 5MB, image only
+    if (bytes.length > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large — max 5MB' }, { status: 400 })
+    }
+    
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'png'
+    if (!['png','jpg','jpeg','gif','webp'].includes(ext)) {
+      return NextResponse.json({ error: 'Invalid file type' }, { status: 400 })
+    }
+
+    // Save to public/uploads/avatars/
+    const dir = path.join(process.cwd(), 'public', 'uploads', 'avatars')
+    await mkdir(dir, { recursive: true })
+    
+    const filename = `avatar_${user.id}_${crypto.randomBytes(4).toString('hex')}.${ext}`
+    const filepath = path.join(dir, filename)
+    await writeFile(filepath, bytes)
+
+    const url = `/uploads/avatars/${filename}`
+
+    // Update user avatar
     await prisma.user.update({
       where: { id: user.id },
-      data: { avatar: publicUrl },
+      data: { avatar: url },
     })
 
-    // Delete old avatar file (after successful DB update)
-    if (currentUser?.avatar && currentUser.avatar.includes(bucket)) {
-      try {
-        const oldPath = currentUser.avatar.split(`${bucket}/`).pop()?.split('?')[0]
-        if (oldPath && oldPath !== path) {
-          await supabaseAdmin.storage.from(bucket).remove([oldPath])
-        }
-      } catch { /* non-critical cleanup */ }
-    }
-  } catch (dbError) {
-    // DB update failed — clean up the uploaded file
-    try {
-      await supabaseAdmin.storage.from(bucket).remove([path])
-    } catch { /* best effort cleanup */ }
-    return NextResponse.json({ error: 'Failed to save profile' }, { status: 500 })
+    return NextResponse.json({ url })
+  } catch (e: any) {
+    console.error('Avatar upload error:', e)
+    return NextResponse.json({ error: 'Upload failed' }, { status: 500 })
   }
-
-  return NextResponse.json({ url: publicUrl })
 })
