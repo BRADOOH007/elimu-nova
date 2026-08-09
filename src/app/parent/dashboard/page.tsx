@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock, Clock, CheckCircle, Activity, KeyRound, Copy, Eye, EyeOff } from "lucide-react"
+import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock, Clock, CheckCircle, Activity, KeyRound, Copy, Eye, EyeOff, Home, School } from "lucide-react"
 import Link from "next/link"
 import ParentGreeting from "@/components/parent/greeting"
 import { ParentStatCard } from "@/components/parent/stats-cards"
@@ -113,7 +113,12 @@ export default function ParentDashboard() {
     <div className="p-4 sm:p-6 space-y-5 max-w-7xl mx-auto">
       {/* Top Hero Header */}
       <div className="flex items-start justify-between">
-        <ParentGreeting displayName={displayName} />
+        <div className="flex items-center gap-3">
+          <ParentGreeting displayName={displayName} />
+          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold border ${isIndependent ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+            {isIndependent ? <><Home className="w-3 h-3" /> Home School</> : <><School className="w-3 h-3" /> School Connected</>}
+          </span>
+        </div>
         <div className="flex items-center gap-2">
           {subscription && !subLoading && (
             <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm ${
