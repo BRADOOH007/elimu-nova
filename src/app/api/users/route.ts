@@ -76,6 +76,9 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req) => {
           include: {
             school: { select: { id: true, name: true } }
           }
+        },
+        parent: {
+          select: { schoolId: true }
         }
       }
     }),
