@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock, Clock, CheckCircle, Activity } from "lucide-react"
+import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock, Clock, CheckCircle, Activity, KeyRound, Copy, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
 import ParentGreeting from "@/components/parent/greeting"
 import { ParentStatCard } from "@/components/parent/stats-cards"
@@ -53,6 +53,7 @@ export default function ParentDashboard() {
   const [showPayment, setShowPayment] = useState(false)
   const [displayName, setDisplayName] = useState("")
   const [country, setCountry] = useState("US")
+  const [showParentCreds, setShowParentCreds] = useState(false)
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -148,6 +149,27 @@ export default function ParentDashboard() {
         <ParentStatCard label="Average Grade" value={avgGrade !== null ? `${avgGrade}%` : "—"} icon={TrendingUp} color={gradeColor(avgGrade)} />
         <ParentStatCard label="AI Alerts" value={totalAlerts} icon={AlertTriangle} color={criticalAlerts > 0 ? "text-red-600" : "text-amber-600"} href="/parent/alerts" />
       </div>
+
+      {/* Parent Login Info */}
+      <div className="bg-gradient-to-r from-indigo-50 to-violet-50 rounded-xl border border-indigo-100 p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-indigo-500 flex items-center justify-center"><KeyRound className="w-4.5 h-4.5 text-white" /></div>
+          <div>
+            <p className="text-xs text-slate-500">Your Login</p>
+            <p className="text-sm font-mono font-bold text-indigo-700">{session?.user?.email || '—'}</p>
+            <p className="text-[10px] text-slate-400">{session?.user?.name || '—'}</p>
+          </div>
+        </div>
+        <button onClick={() => setShowParentCreds(v => !v)} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
+          {showParentCreds ? 'Hide' : 'Share with children'}
+        </button>
+      </div>
+      {showParentCreds && (
+        <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 text-center text-xs text-slate-500">
+          <p>Your children sign in with their own credentials at <strong>/auth/signin</strong>.</p>
+          <p className="mt-1">Go to <Link href="/parent/children" className="text-indigo-600 font-semibold hover:underline">My Children</Link> → click a child → <strong>Account</strong> to see their username and password.</p>
+        </div>
+      )}
 
       {/* Conditional Content */}
       {totalChildren === 0 ? (
