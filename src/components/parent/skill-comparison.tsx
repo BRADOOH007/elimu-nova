@@ -19,7 +19,7 @@ interface ChildSummary {
 }
 
 interface SkillComparisonProps {
-  children: ChildSummary[]
+  childSummaries: ChildSummary[]
 }
 
 function scoreColor(score: number): string {
@@ -34,8 +34,8 @@ function scoreText(score: number): string {
   return "text-red-600"
 }
 
-export default function SkillComparison({ children }: SkillComparisonProps) {
-  const withProgress = children.filter(c => c.progress?.skillMastery && c.progress.skillMastery.length > 0)
+export default function SkillComparison({ childSummaries }: SkillComparisonProps) {
+  const withProgress = childSummaries.filter(c => c.progress?.skillMastery && c.progress.skillMastery.length > 0)
   if (withProgress.length === 0) return null
 
   const allSkills = [...new Set(withProgress.flatMap(c => c.progress!.skillMastery.map(s => s.skillName)))]

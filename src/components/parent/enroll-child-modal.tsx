@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { AdminModal, AdminFormField, adminInputClass } from "@/components/ui/admin-modal"
-import { UserPlus, Plus, Trash2, CheckCircle, Copy, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { UserPlus, Trash2, CheckCircle, Copy, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import { useToast } from "@/hooks/use-toast"
 
 interface ChildForm {
@@ -17,6 +17,13 @@ interface EnrollChildModalProps {
   onSuccess: () => void
 }
 
+interface CreatedChild {
+  name: string
+  username: string
+  email: string
+  password: string
+}
+
 const GRADES = ['PP1','PP2','Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12']
 
 function previewUsername(first: string, last: string) {
@@ -27,7 +34,7 @@ export default function EnrollChildModal({ isOpen, onClose, onSuccess }: EnrollC
   const [count, setCount] = useState(1)
   const [children, setChildren] = useState<ChildForm[]>([{ firstName: '', lastName: '', grade: '' }])
   const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<Array<{ name: string; username: string; email: string; password: string }>>([])
+  const [results, setResults] = useState<CreatedChild[]>([])
   const [showPwd, setShowPwd] = useState<Record<number, boolean>>({})
   const { toast } = useToast()
 
@@ -50,7 +57,7 @@ export default function EnrollChildModal({ isOpen, onClose, onSuccess }: EnrollC
     if (valid.length === 0) { toast({ title: 'Error', description: 'Please fill in at least one child\'s name', variant: 'destructive' }); return }
 
     setLoading(true)
-    const created: any[] = []
+    const created: CreatedChild[] = []
     for (const child of valid) {
       try {
         const res = await fetch('/api/parent/enroll-child', {
@@ -58,7 +65,7 @@ export default function EnrollChildModal({ isOpen, onClose, onSuccess }: EnrollC
           body: JSON.stringify({ firstName: child.firstName.trim(), lastName: child.lastName.trim(), grade: child.grade || undefined }),
         })
         if (res.ok) {
-          const d = await res.json()
+          const d = await res.json() as { credentials: { username: string; email: string; password: string } }
           created.push({ name: `${child.firstName} ${child.lastName}`, username: d.credentials.username, email: d.credentials.email, password: d.credentials.password })
         }
       } catch { /* continue */ }
