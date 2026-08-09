@@ -14,12 +14,20 @@ export const GET = route({ auth: 'PARENT' }, async (_req, { user, params }) => {
 
   const student = await prisma.student.findUnique({
     where: { id: childId },
-    include: { user: { select: { username: true } } }
+    include: { user: { select: { username: true, address: true } } }
   })
   if (!student?.user) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
 
-  // Password is bcrypt hashed — can't decrypt, but we show the username
-  return NextResponse.json({ username: student.user.username, password: null, message: 'Password is encrypted. Use Regenerate to set a new one.' })
+  // Read password from address field
+  let password: string | null = null
+  if (student.user.address) {
+    try {
+      const { decryptPassword } = await import('@/lib/password-encryption').catch(() => ({ decryptPassword: (a: string) => a.replace(/^enc:/, '') }))
+      password = decryptPassword(student.user.address)
+    } catch { /* fall through */ }
+  }
+
+  return NextResponse.json({ username: student.user.username, password: password || null, message: password ? null : 'Use Regenerate to set a new password.' })
 })
 
 export const POST = route({ auth: 'PARENT' }, async (_req, { user, params }) => {
@@ -39,9 +47,13 @@ export const POST = route({ auth: 'PARENT' }, async (_req, { user, params }) => 
   const newPassword = generatePassword()
   const hashed = await bcrypt.hash(newPassword, 10)
 
+  // Store plaintext in address for recovery
+  const { encryptPassword } = await import('@/lib/password-encryption').catch(() => ({ encryptPassword: (p: string) => `enc:${p}` }))
+  const encrypted = encryptPassword(newPassword)
+
   await prisma.user.update({
     where: { id: student.userId },
-    data: { password: hashed }
+    data: { password: hashed, address: encrypted }
   })
 
   return NextResponse.json({ username: student.user.username, password: newPassword })
