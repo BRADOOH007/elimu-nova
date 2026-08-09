@@ -131,8 +131,12 @@ export default function UsersPage() {
   const schoolName = (user: User) =>
     user.schoolAdmin?.school?.name || user.teacher?.school?.name || user.student?.school?.name || null
 
-  const isIndependentParent = (user: User) =>
-    user.role === 'PARENT' && !user.parent?.schoolId && !schoolName(user)
+  const isIndependent = (user: User) => {
+    if (user.role === 'PARENT') return !user.parent?.schoolId && !schoolName(user)
+    if (user.role === 'TEACHER') return !user.teacher?.school?.id && !schoolName(user)
+    if (user.role === 'STUDENT') return !user.student?.school?.id && !schoolName(user)
+    return false
+  }
 
   const roleCfg = (role: string) => (ROLE_CONFIG as any)[role] || ROLE_CONFIG.PARENT
 
@@ -346,7 +350,7 @@ export default function UsersPage() {
                         <span className="truncate max-w-[100px]">{school}</span>
                       </span>
                     )}
-                    {isIndependentParent(user) && (
+                    {isIndependent(user) && (
                       <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                         <Home className="w-3 h-3" />
                         Independent
