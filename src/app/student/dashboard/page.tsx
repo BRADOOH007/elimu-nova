@@ -312,9 +312,9 @@ export default function StudentDashboard() {
           {/* Recent Activity */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-3"><TrendingUp className="h-5 w-5 text-emerald-600" />Recent Activity</h2>
-            {(recentActivity && recentActivity.length) > 0 ? (
+            {(recentActivity?.length ?? 0) > 0 ? (
               <div className="space-y-2.5">
-                {recentActivity.slice(0, 5).map((item, i) => (
+                {(recentActivity ?? []).slice(0, 5).map((item, i) => (
                   <div key={i} className="flex items-center gap-2.5 text-sm">
                     <span className="text-xs">{item.icon}</span>
                     <div className="min-w-0 flex-1">

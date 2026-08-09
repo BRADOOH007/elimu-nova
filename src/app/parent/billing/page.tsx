@@ -8,8 +8,8 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import {
-  Loader2, CreditCard, CheckCircle, AlertCircle, Download, FileText,
-  Calendar, DollarSign, Receipt, Smartphone, Building, Wallet,
+  CreditCard, Download, FileText,
+  Calendar, Receipt, Smartphone, Building, Wallet,
   ArrowRight, ShieldCheck,
 } from 'lucide-react'
 import PaymentModal from '@/components/billing/PaymentModal'
@@ -19,8 +19,16 @@ interface Invoice {
   description: string; dueDate: string; paidAt: string; createdAt: string; planName?: string
 }
 
+interface BillingSummary {
+  status: string | null
+  planName: string
+  amount: number
+  startDate: string | null
+  endDate: string | null
+}
+
 export default function ParentBillingPage() {
-  const [billing, setBilling] = useState<any>(null)
+  const [billing, setBilling] = useState<BillingSummary | null>(null)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
   const [showPayment, setShowPayment] = useState(false)

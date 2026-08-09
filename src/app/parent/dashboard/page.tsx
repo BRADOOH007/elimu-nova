@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
-import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock, Clock, CheckCircle, Activity, KeyRound, Copy, Eye, EyeOff, Home, School } from "lucide-react"
+import { Users, ClipboardList, TrendingUp, AlertTriangle, Plus, Mail, Sparkles, CalendarClock, Clock, CheckCircle, Activity, KeyRound, Home, School } from "lucide-react"
 import Link from "next/link"
 import ParentGreeting from "@/components/parent/greeting"
 import { ParentStatCard } from "@/components/parent/stats-cards"
@@ -33,6 +33,25 @@ interface Alert {
   severity: "critical" | "warning" | "info"; type: string; subject?: string
 }
 
+interface ApiSkillMastery {
+  skillName: string; skillCategory: string; masteryScore: number; timesCorrect: number; timesTested: number
+}
+interface ApiProgress {
+  xp: number; streak: number; masteryScore: number; consecutiveCorrect: number
+  totalQuestions: number; correctAnswers: number; skillMastery: ApiSkillMastery[]
+}
+interface ApiChild {
+  id: string
+  user: { firstName: string; lastName: string }
+  class?: { grade: string } | null
+  school?: { name: string } | null
+  analytics?: {
+    averageGrade: number | null; pendingAssignments: number
+    completedAssignments: number; streakDays: number
+  } | null
+  studentProgress?: ApiProgress[] | null
+}
+
 function gradeColor(g: number | null) {
   if (g === null) return "text-slate-400"
   if (g >= 75) return "text-emerald-600"
@@ -47,8 +66,6 @@ export default function ParentDashboard() {
   const isIndependent = !schoolInfo?.school?.id && !session?.user?.schoolId
   const [children, setChildren] = useState<Child[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
-  const [loading, setLoading] = useState(true)
-  const [alertsLoading, setAlertsLoading] = useState(true)
   const [showEnrollChild, setShowEnrollChild] = useState(false)
   const [showPayment, setShowPayment] = useState(false)
   const [displayName, setDisplayName] = useState("")
@@ -70,7 +87,7 @@ export default function ParentDashboard() {
         const res = await fetch("/api/parent/children")
         if (res.ok) {
           const { children: raw } = await res.json()
-          setChildren(raw.map((c: any) => {
+          setChildren(raw.map((c: ApiChild) => {
             const p = c.studentProgress?.[0]
             return {
               id: c.id, name: `${c.user.firstName} ${c.user.lastName}`,
@@ -83,7 +100,7 @@ export default function ParentDashboard() {
                 xp: p.xp, streak: p.streak, masteryScore: p.masteryScore,
                 consecutiveCorrect: p.consecutiveCorrect,
                 totalQuestions: p.totalQuestions, correctAnswers: p.correctAnswers,
-                skillMastery: (p.skillMastery || []).map((sm: any) => ({
+                skillMastery: (p.skillMastery || []).map((sm: ApiSkillMastery) => ({
                   skillName: sm.skillName, skillCategory: sm.skillCategory,
                   masteryScore: sm.masteryScore, timesCorrect: sm.timesCorrect, timesTested: sm.timesTested,
                 })),
@@ -91,8 +108,8 @@ export default function ParentDashboard() {
             }
           }))
         }
-      } catch { /* silent */ } finally { setLoading(false) }
-      try { const ar = await fetch("/api/parent/alerts"); if (ar.ok) setAlerts((await ar.json()).alerts || []) } catch { } finally { setAlertsLoading(false) }
+      } catch { /* silent */ }
+      try { const ar = await fetch("/api/parent/alerts"); if (ar.ok) setAlerts((await ar.json()).alerts || []) } catch { /* silent */ }
     }
     fetchData()
   }, [])
@@ -185,7 +202,7 @@ export default function ParentDashboard() {
           <h2 className="text-xl font-bold text-slate-900 mb-2">Welcome to Elimu Nova AI Parent Portal</h2>
           <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
             Your account is not linked to any active student records yet.
-            Add your children below, or contact your school administrator to link your child's profile.
+            Add your children below, or contact your school administrator to link your child&apos;s profile.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button onClick={() => setShowEnrollChild(true)} className="rounded-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
@@ -200,7 +217,7 @@ export default function ParentDashboard() {
         <>
           <ParentAIInsightsPanel />
           <ChildTrends />
-          <SkillComparison children={children} />
+          <SkillComparison childSummaries={children} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {isIndependent ? (
               <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 flex flex-col justify-between">

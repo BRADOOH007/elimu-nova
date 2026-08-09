@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSession } from "next-auth/react"
-import { MessageSquare, Send, RefreshCw, Inbox, Mail, ArrowLeft, Bell } from "lucide-react"
+import { Send, RefreshCw, Inbox, Mail, Bell } from "lucide-react"
 import { ClientDate } from "@/components/ui/client-date"
 import NotificationsTab from '@/components/notifications-tab'
 
@@ -13,13 +12,9 @@ interface Message {
   senderName?: string; recipientName?: string
 }
 
-interface Child { id: string; name: string }
-
 export default function ParentMessages() {
-  const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [parentId, setParentId] = useState<string | null>(null)
-  const [children, setChildren] = useState<Child[]>([])
   const [teachers, setTeachers] = useState<{ id: string; name: string; email: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Message | null>(null)
@@ -33,20 +28,14 @@ export default function ParentMessages() {
   const [replyContent, setReplyContent] = useState("")
 
   const fetchMessages = async () => {
-    setLoading(true)
     try {
-      const [msgRes, childRes, teacherRes] = await Promise.all([
+      const [msgRes, teacherRes] = await Promise.all([
         fetch(`/api/parent/messages?page=${page}&limit=20`),
-        fetch("/api/parent/children"),
         fetch("/api/parent/teachers"),
       ])
       if (msgRes.ok) {
         const { messages: raw, parentId: pid, pagination } = await msgRes.json()
         setMessages(raw || []); setParentId(pid || null); setTotalPages(pagination?.totalPages || 1)
-      }
-      if (childRes.ok) {
-        const { children: raw } = await childRes.json()
-        setChildren(raw.map((c: any) => ({ id: c.id, name: `${c.user.firstName} ${c.user.lastName}` })))
       }
       if (teacherRes.ok) {
         const { teachers: raw } = await teacherRes.json()
@@ -56,8 +45,29 @@ export default function ParentMessages() {
     finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchMessages() }, [page])
-  useEffect(() => { setPage(1) }, [tab])
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const [msgRes, teacherRes] = await Promise.all([
+          fetch(`/api/parent/messages?page=${page}&limit=20`),
+          fetch("/api/parent/teachers"),
+        ])
+        if (cancelled) return
+        if (msgRes.ok) {
+          const { messages: raw, parentId: pid, pagination } = await msgRes.json()
+          setMessages(raw || []); setParentId(pid || null); setTotalPages(pagination?.totalPages || 1)
+        }
+        if (teacherRes.ok) {
+          const { teachers: raw } = await teacherRes.json()
+          setTeachers(raw || [])
+        }
+      } catch { /* silent */ }
+      finally { if (!cancelled) setLoading(false) }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [page])
 
   const markRead = async (msg: Message) => {
     if (!msg.isRead) {
@@ -155,7 +165,7 @@ export default function ParentMessages() {
           {/* Tabs */}
           <div className="flex border-b border-slate-100">
             {([["inbox", "Inbox", unread], ["sent", "Sent", 0]] as const).map(([key, label, count]) => (
-              <button key={key} onClick={() => setTab(key)}
+              <button key={key} onClick={() => { setTab(key); setPage(1) }}
                 className={`flex-1 py-3 text-sm font-semibold transition-colors ${
                   tab === key
                     ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50/60"
