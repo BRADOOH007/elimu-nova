@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { useToast } from '@/hooks/use-toast'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cleanAIText } from '@/lib/clean-ai-text'
@@ -47,7 +49,9 @@ import {
   Microscope,
   Palette,
   Music,
-  Activity
+  Activity,
+  Lock,
+  ArrowRight
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -139,7 +143,10 @@ export default function StudentLessonPlansPage() {
   const [customLessonModalOpen, setCustomLessonModalOpen] = useState(false)
   const [filterSubject, setFilterSubject] = useState('all')
   const [filterType, setFilterType] = useState('all')
-  const [activeTab, setActiveTab] = useState<'shared' | 'ai' | 'recommended'>('ai')
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<'shared' | 'ai' | 'recommended' | 'quizzes'>(() => {
+    return (searchParams.get('tab') as any) || 'ai'
+  })
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiInsights, setAiInsights] = useState<any>(null)
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([])
@@ -589,7 +596,8 @@ export default function StudentLessonPlansPage() {
           {[
             { id: 'ai', label: 'AI Lessons', icon: Brain },
             { id: 'shared', label: 'Teacher Shared', icon: BookOpen },
-            { id: 'recommended', label: 'Recommended', icon: Star }
+            { id: 'recommended', label: 'Recommended', icon: Star },
+            { id: 'quizzes', label: 'Quizzes', icon: Target }
           ].map((tab) => {
             const Icon = tab.icon
             return (
@@ -895,6 +903,50 @@ export default function StudentLessonPlansPage() {
                 )}
                 Get AI Recommendations
               </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+      {activeTab === 'quizzes' && (
+        <div className="space-y-6">
+          <Card className="bg-gradient-to-br from-white via-amber-50 to-orange-50 shadow-lg backdrop-blur-sm border-0">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-amber-600" /> Topic Quizzes
+              </CardTitle>
+              <CardDescription>Test your knowledge after completing each topic on the Learn page</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['Place Value','Fractions','Algebra Basics','Geometry Intro'].map(topic => {
+                  const completed = Math.random() > 0.4
+                  return (
+                    <div key={topic} className={`rounded-xl border p-4 ${completed ? 'border-amber-200 bg-white' : 'border-slate-200 bg-slate-50/50'}`}>
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-800">{topic}</h3>
+                          <p className="text-xs text-slate-500 mt-0.5">10 questions · ~5 min</p>
+                        </div>
+                        {completed ? <Target className="w-5 h-5 text-amber-500" /> : <Lock className="w-5 h-5 text-slate-400" />}
+                      </div>
+                      {completed ? (
+                        <Link href={`/student/learn?topic=${encodeURIComponent(topic)}&subject=Mathematics&grade=Grade 4`}>
+                          <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">
+                            Start Quiz <ArrowRight className="w-4 h-4 ml-1" />
+                          </Button>
+                        </Link>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-xs text-slate-400 flex items-center gap-1"><Lock className="w-3 h-3" /> Complete &quot;{topic}&quot; on the Learn page first</p>
+                          <Link href={`/student/learn?topic=${encodeURIComponent(topic)}`}>
+                            <Button variant="outline" size="sm" className="w-full text-xs">Go to Topic</Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
             </CardContent>
           </Card>
         </div>
