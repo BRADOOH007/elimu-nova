@@ -86,15 +86,15 @@ export default function ChildDetailPage() {
                   <div>
                     <p className="text-xs text-slate-500">Password</p>
                     <div className="flex items-center gap-2">
-                      <code className="text-sm font-mono">{showPwd ? credentials.password : '\u2022'.repeat(credentials.password.length)}</code>
-                      <button onClick={() => setShowPwd(v => !v)} className="text-slate-400 hover:text-slate-600">{showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+                      <code className="text-sm font-mono">{credentials.password ? (showPwd ? credentials.password : '\u2022'.repeat(credentials.password.length)) : 'Set a new password'}</code>
+                      {credentials.password && <button onClick={() => setShowPwd(v => !v)} className="text-slate-400 hover:text-slate-600">{showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>}
                     </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={copyCredentials} className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition flex items-center justify-center gap-1.5"><Copy className="w-4 h-4" />Copy</button>
+                  <button onClick={copyCredentials} disabled={!credentials.password} className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition flex items-center justify-center gap-1.5 disabled:opacity-50"><Copy className="w-4 h-4" />Copy</button>
                   <button onClick={regeneratePassword} disabled={regenerating} className="flex-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition flex items-center justify-center gap-1.5 disabled:opacity-50">
-                    {regenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}Regenerate
+                    {regenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}{credentials.password ? 'Regenerate' : 'Generate'}
                   </button>
                 </div>
               </div>
