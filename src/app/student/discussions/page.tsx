@@ -126,7 +126,7 @@ export default function StudentDiscussions() {
               <span className="text-[10px] font-bold text-slate-500">+{onlineCount - 5}</span>
             </div>
           </div>
-          <span className="text-xs text-slate-500 flex items-center gap-1"><span className="w-2 h-2 bg-emerald-500 rounded-full inline-block" />{onlineCount} students active now</span>
+          <span className="text-xs text-slate-500">Active now</span>
         </div>
       </div>
 
@@ -144,7 +144,7 @@ export default function StudentDiscussions() {
       )}
 
       {/* Chat Feed */}
-      <div className="flex-1 overflow-y-auto mx-4 sm:mx-6 mb-2 p-4 space-y-4 bg-slate-50/60 rounded-3xl border border-slate-200/80 shadow-inner">
+      <div className="flex-1 overflow-y-auto mx-4 sm:mx-6 mb-2 pt-6 pr-2 space-y-4 bg-slate-50/60 rounded-3xl border border-slate-200/80 shadow-inner">
         {loading ? (
           <div className="flex items-center justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-purple-500" /></div>
         ) : discussions.length === 0 ? (

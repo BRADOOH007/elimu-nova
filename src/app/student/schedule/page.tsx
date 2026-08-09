@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  Calendar, Radio, MessageSquare, Loader2, Clock, MapPin, Users, BookOpen,
+  Calendar, Radio, Loader2, Clock, MapPin, Users, BookOpen,
   RefreshCw, Search, User, Brain, Bot, MessageCircle, Star, Zap, CheckCircle,
   AlertTriangle, Lightbulb, Target, Activity, BarChart3, TrendingUp,
   BookMarked, AlertCircle, Video, Link2
@@ -19,7 +19,6 @@ import { useToast } from '@/hooks/use-toast'
 import { formatTeacherName, formatDuration } from '@/lib/utils/formatters'
 
 const LiveClassTab = dynamic(() => import('@/app/student/live-class/page'),  { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
-const DiscussTab   = dynamic(() => import('@/app/student/discussions/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-blue-500"/></div> })
 
 interface ScheduleEvent {
   id: string
@@ -422,11 +421,9 @@ export default function StudentClassesPage() {
       <TabsList className="w-full overflow-x-auto flex gap-1.5 px-2">
         <TabsTrigger value="schedule" className="shrink-0 whitespace-nowrap"><Calendar className="w-4 h-4 mr-2"/>Schedule</TabsTrigger>
         <TabsTrigger value="live" className="shrink-0 whitespace-nowrap"><Radio className="w-4 h-4 mr-2"/>Live Class</TabsTrigger>
-        <TabsTrigger value="discussions" className="shrink-0 whitespace-nowrap"><MessageSquare className="w-4 h-4 mr-2"/>Discussions</TabsTrigger>
       </TabsList>
       <TabsContent value="schedule"><StudentSchedulePage /></TabsContent>
       <TabsContent value="live"><LiveClassTab /></TabsContent>
-      <TabsContent value="discussions"><DiscussTab /></TabsContent>
     </Tabs>
   )
 }
