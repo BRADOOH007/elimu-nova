@@ -3,11 +3,11 @@ import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
 
-export const POST = route({}, async (request, { user }) => {
+export const POST = route({ skipSubscriptionCheck: true }, async (request, { user }) => {
     const { lessonTitle, subject, grade, learningOutcomes, content, topic, subStrand } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
-    const prompt = `Generate 10 quick checkpoint quiz questions for end of lesson.
+    const prompt = `Generate 10 multiple-choice checkpoint quiz questions for end of lesson.
 
 Lesson: ${lessonTitle || topic || subject}
 Subject: ${subject} | Grade: ${grade}
@@ -19,19 +19,14 @@ Return ONLY a JSON array of 10 objects:
   {
     "question": "Short, clear question",
     "type": "multiple_choice",
-    "options": ["A. option", "B. option", "C. option", "D. option"],
+    "options": ["A. Option A", "B. Option B", "C. Option C", "D. Option D"],
     "correct": 0,
     "explanation": "Why this is correct (1 sentence)",
     "points": 2
   }
 ]
 
-Mix question types:
-- Q1-3: multiple_choice (type="multiple_choice", options array, correct=0-3 index)
-- Q4: true_false (type="true_false", options=["True","False"], correct=0 or 1)
-- Q5: short_answer (type="short_answer", model_answer="expected answer")
-
-Keep language simple and appropriate for ${grade}.`
+ALL questions must be type "multiple_choice" with exactly 4 options (A-D) and a correct index (0-3). No true/false or short_answer. Easy for auto-grading.`
 
     const raw = await OpenAIService.generateText([
       { role: 'system', content: 'You are a quiz creator. Return ONLY valid JSON array. No LaTeX, no TeX commands.' },
