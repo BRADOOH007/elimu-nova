@@ -20,25 +20,25 @@ jobs:
     name: Typecheck, Lint & Build
     runs-on: ubuntu-latest
     env:
-      # CI has no local .env; validation in src/lib/env.ts only throws on
-      # missing DATABASE_URL / NEXTAUTH_SECRET in production. Provide real
-      # values via repo secrets when available, otherwise bypass the check.
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-      NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://localhost:5432/placeholder' }}
+      NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET || 'ci-test-secret' }}
+      NEXTAUTH_URL: ${{ secrets.NEXTAUTH_URL || 'http://localhost:3000' }}
       SKIP_ENV_CHECK: '1'
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
 
       - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
 
       - name: Typecheck
         run: npm run typecheck
