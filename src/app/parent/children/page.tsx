@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Users, TrendingUp, Calendar, BookOpen, ClipboardList, Brain, RefreshCw, ArrowRight, Zap, Flame } from "lucide-react"
+import { Users, TrendingUp, Calendar, BookOpen, ClipboardList, Brain, RefreshCw, ArrowRight, Zap, Flame, KeyRound, Shield } from "lucide-react"
 import Link from "next/link"
 
 interface Child {
@@ -129,29 +129,31 @@ export default function ParentChildren() {
             const grad = initialsColors[idx % initialsColors.length]
             const avg = child.averageGrade
             return (
-              <div key={child.id} className="group bg-white rounded-xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden">
+              <div key={child.id} className="group bg-white rounded-xl border border-slate-200/80 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer">
                 {/* Top accent bar */}
                 <div className={`h-1.5 bg-gradient-to-r ${grad}`} />
 
                 <div className="p-5">
-                  {/* Header */}
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm`}>
-                      {child.initials}
+                  {/* Header — clickable */}
+                  <Link href={`/parent/children/${child.id}`} className="block">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${grad} flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm`}>
+                        {child.initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold text-slate-900 text-lg leading-tight group-hover:text-indigo-600 transition-colors">{child.name}</h3>
+                        <p className="text-sm text-slate-500">{child.grade} &middot; {child.school}</p>
+                      </div>
+                      <div className={`text-right ${gradeBg(avg)} rounded-xl px-4 py-2`}>
+                        <p className={`text-xl font-bold ${gradeColor(avg)}`}>
+                          {avg !== null ? `${Math.round(avg)}%` : "—"}
+                        </p>
+                        <p className={`text-[10px] font-semibold ${gradeColor(avg)}`}>
+                          {gradeLabel(avg)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="font-bold text-slate-900 text-lg leading-tight">{child.name}</h3>
-                      <p className="text-sm text-slate-500">{child.grade} &middot; {child.school}</p>
-                    </div>
-                    <div className={`text-right ${gradeBg(avg)} rounded-xl px-4 py-2`}>
-                      <p className={`text-xl font-bold ${gradeColor(avg)}`}>
-                        {avg !== null ? `${Math.round(avg)}%` : "—"}
-                      </p>
-                      <p className={`text-[10px] font-semibold ${gradeColor(avg)}`}>
-                        {gradeLabel(avg)}
-                      </p>
-                    </div>
-                  </div>
+                  </Link>
 
                   {/* Stats */}
                   <div className="grid grid-cols-3 gap-2.5 mb-4">
@@ -177,15 +179,20 @@ export default function ParentChildren() {
                   </div>
 
                   {/* Actions */}
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-3 gap-2">
                     <Link href={`/parent/progress?studentId=${child.id}`}>
-                      <div className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-blue-50 text-blue-700 text-sm font-semibold hover:bg-blue-100 transition-colors">
-                        <TrendingUp className="h-4 w-4" /> Progress
+                      <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition-colors">
+                        <TrendingUp className="h-3.5 w-3.5" /> Progress
                       </div>
                     </Link>
                     <Link href={`/parent/assignments?studentId=${child.id}`}>
-                      <div className="flex items-center justify-center gap-2 py-2.5 rounded-lg bg-violet-50 text-violet-700 text-sm font-semibold hover:bg-violet-100 transition-colors">
-                        <BookOpen className="h-4 w-4" /> Assignments
+                      <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-violet-50 text-violet-700 text-xs font-semibold hover:bg-violet-100 transition-colors">
+                        <BookOpen className="h-3.5 w-3.5" /> Assignments
+                      </div>
+                    </Link>
+                    <Link href={`/parent/children/${child.id}`}>
+                      <div className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-semibold hover:bg-emerald-100 transition-colors">
+                        <KeyRound className="h-3.5 w-3.5" /> Account
                       </div>
                     </Link>
                   </div>
