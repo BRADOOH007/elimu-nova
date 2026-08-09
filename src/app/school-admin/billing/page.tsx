@@ -103,7 +103,7 @@ export default function SchoolAdminBilling() {
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
                       {isFreemium ? (
-                        <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" />KES 0 / month (Free Forever)</span>
+                        <span className="flex items-center gap-1 text-emerald-600 font-semibold">Free Forever</span>
                       ) : (
                         <>
                           <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" />{formatCurrency(planPrice)} / Term</span>
