@@ -160,11 +160,41 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
     synthRef.current.cancel()
     const plain = content.replace(/[#*`\[\]>|~_-]/g, ' ').trim()
     const utterance = new SpeechSynthesisUtterance(plain)
-    const voices = synthRef.current.getVoices()
-    const female = voices.find(v => v.name.includes('Female') || v.name.includes('Zira') || v.name.includes('Samantha'))
-    if (female) utterance.voice = female
-    utterance.rate = 0.95
+
+    // Load voices if needed (async)
+    let voices = synthRef.current.getVoices()
+    if (voices.length === 0) {
+      // Chrome loads voices asynchronously — retry
+      synthRef.current.onvoiceschanged = () => {
+        voices = synthRef.current!.getVoices()
+        pickBestVoice(utterance, voices)
+        synthRef.current!.speak(utterance)
+      }
+      return
+    }
+    pickBestVoice(utterance, voices)
     synthRef.current.speak(utterance)
+  }
+
+  function pickBestVoice(utterance: SpeechSynthesisUtterance, voices: SpeechSynthesisVoice[]) {
+    // Prefer natural-sounding female voices (Google Neural2 > Microsoft > others)
+    const preferred = [
+      'Samantha', 'Google US English', 'Google UK English Female',
+      'Microsoft Zira', 'Microsoft Hazel', 'Microsoft Aria',
+      'Karen', 'Moira', 'Fiona', 'Veena',
+    ]
+    for (const name of preferred) {
+      const match = voices.find(v => v.name.includes(name))
+      if (match) { utterance.voice = match; break }
+    }
+    // Fallback: any female voice with 'en' locale
+    if (!utterance.voice) {
+      utterance.voice = voices.find(v => v.name.toLowerCase().includes('female') && v.lang.startsWith('en'))
+        || voices.find(v => v.lang.startsWith('en'))
+        || voices[0]
+    }
+    utterance.rate = 0.92
+    utterance.pitch = 1.05
   }
 
   const regenerate = async (msgId: string) => {
