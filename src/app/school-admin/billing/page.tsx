@@ -38,14 +38,12 @@ export default function SchoolAdminBilling() {
   const aiCredits = usage?.aiGenerations || 0
   const aiCreditLimit = 10000
 
-  // Detect freemium
-  const isFreemium = sub?.isFreemium === true || sub?.package?.price === 0 || (sub?.status === 'TRIAL' && !sub?.endDate)
-  const isPremium = sub?.status === 'ACTIVE' && !isFreemium
-  const isTrial = sub?.status === 'TRIAL' && sub?.endDate && !isFreemium
-  const planMaxTeachers = isFreemium ? 9999 : (sub?.package?.maxTeachers || 15)
-  const planMaxStudents = isFreemium ? 9999 : (sub?.package?.maxStudents || 500)
-  const planName = isFreemium ? 'Freemium' : (sub?.package?.name || sub?.packageName || 'Free Trial')
-  const planPrice = isFreemium ? 0 : (sub?.amount || sub?.package?.price || 0)
+  const isPremium = sub?.status === 'ACTIVE'
+  const isTrial = sub?.status === 'TRIAL' && sub?.endDate
+  const planMaxTeachers = sub?.package?.maxTeachers || 15
+  const planMaxStudents = sub?.package?.maxStudents || 500
+  const planName = sub?.package?.name || sub?.packageName || 'Free Trial'
+  const planPrice = sub?.amount || sub?.package?.price || 0
   const renewDate = sub?.endDate ? new Date(sub.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : null
   const daysLeft = sub?.endDate ? Math.max(0, Math.ceil((new Date(sub.endDate).getTime() - Date.now()) / 86400000)) : 0
 
@@ -60,14 +58,12 @@ export default function SchoolAdminBilling() {
 
   const getCardGradient = () => {
     if (isPremium) return 'bg-gradient-to-br from-indigo-50 via-violet-50 to-purple-50'
-    if (isFreemium) return 'bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50'
     if (isTrial) return 'bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50'
     return 'bg-gradient-to-br from-slate-50 to-slate-100'
   }
 
   const getIconGradient = () => {
     if (isPremium) return 'bg-gradient-to-br from-indigo-500 to-violet-500'
-    if (isFreemium) return 'bg-gradient-to-br from-emerald-500 to-teal-500'
     if (isTrial) return 'bg-gradient-to-br from-amber-500 to-orange-500'
     return 'bg-gradient-to-br from-slate-400 to-slate-500'
   }
@@ -99,29 +95,17 @@ export default function SchoolAdminBilling() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <h2 className="text-lg font-bold text-slate-900">{planName}</h2>
-                      <StatusBadge tier={isFreemium ? 'Freemium' : isPremium ? 'Premium' : isTrial ? 'Trial' : 'Inactive'} active={isFreemium || isPremium} />
+                      <StatusBadge tier={isPremium ? 'Premium' : isTrial ? 'Trial' : 'Inactive'} active={isPremium} />
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
-                      {isFreemium ? (
-                        <span className="flex items-center gap-1 text-emerald-600 font-semibold">Free Forever</span>
-                      ) : (
-                        <>
-                          <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" />{formatCurrency(planPrice)} / Term</span>
-                          {renewDate && <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />Renews: {renewDate}</span>}
-                        </>
-                      )}
+                      <span className="flex items-center gap-1"><DollarSign className="w-4 h-4" />{formatCurrency(planPrice)} / Term</span>
+                      {renewDate && <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />Renews: {renewDate}</span>}
                       {isTrial && daysLeft > 0 && <span className="flex items-center gap-1 font-semibold text-amber-600"><Clock className="w-4 h-4" />{daysLeft} Days Left</span>}
                     </div>
-                    {isFreemium && (
-                      <p className="text-sm text-emerald-600 mt-2 flex items-center gap-1.5">
-                        <Shield className="w-3.5 h-3.5" />
-                        Your school is on the Freemium plan with full access to standard features.
-                      </p>
-                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  {isFreemium || isTrial ? (
+                  {isTrial ? (
                     <>
                       <Button className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700" onClick={() => toast({ title: 'Upgrade', description: 'Plan comparison & checkout modal coming soon' })}>
                         <Crown className="w-4 h-4 mr-1.5" />Upgrade to Premium
@@ -153,17 +137,11 @@ export default function SchoolAdminBilling() {
                   <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center"><Users className="w-5 h-5 text-indigo-600" /></div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Active Teachers</p>
-                    <p className="text-lg font-bold text-slate-900">{teacherCount}<span className="text-sm font-normal text-slate-400">{isFreemium ? '' : `/${planMaxTeachers}`}</span></p>
+                    <p className="text-lg font-bold text-slate-900">{teacherCount}<span className="text-sm font-normal text-slate-400">/{planMaxTeachers}</span></p>
                   </div>
                 </div>
-                {isFreemium ? (
-                  <p className="text-[10px] text-emerald-600 font-medium">Unlimited · Freemium plan</p>
-                ) : (
-                  <>
-                    <ProgressBar value={teacherCount} max={planMaxTeachers} color="bg-indigo-500" />
-                    <p className="text-[10px] text-slate-400 mt-1.5">{Math.round((teacherCount / planMaxTeachers) * 100)}% of {planMaxTeachers} seats</p>
-                  </>
-                )}
+                <ProgressBar value={teacherCount} max={planMaxTeachers} color="bg-indigo-500" />
+                <p className="text-[10px] text-slate-400 mt-1.5">{Math.round((teacherCount / planMaxTeachers) * 100)}% of {planMaxTeachers} seats</p>
               </CardContent>
             </Card>
             <Card className="border border-slate-100 shadow-sm">
@@ -172,27 +150,21 @@ export default function SchoolAdminBilling() {
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center"><GraduationCap className="w-5 h-5 text-emerald-600" /></div>
                   <div className="min-w-0">
                     <p className="text-xs text-slate-500">Active Students</p>
-                    <p className="text-lg font-bold text-slate-900">{studentCount}<span className="text-sm font-normal text-slate-400">{isFreemium ? '' : `/${planMaxStudents}`}</span></p>
+                    <p className="text-lg font-bold text-slate-900">{studentCount}<span className="text-sm font-normal text-slate-400">/{planMaxStudents}</span></p>
                   </div>
                 </div>
-                {isFreemium ? (
-                  <p className="text-[10px] text-emerald-600 font-medium">Unlimited · Freemium plan</p>
-                ) : (
-                  <>
-                    <ProgressBar value={studentCount} max={planMaxStudents} color="bg-emerald-500" />
-                    <p className="text-[10px] text-slate-400 mt-1.5">{Math.round((studentCount / planMaxStudents) * 100)}% of {planMaxStudents} capacity</p>
-                  </>
-                )}
+                <ProgressBar value={studentCount} max={planMaxStudents} color="bg-emerald-500" />
+                <p className="text-[10px] text-slate-400 mt-1.5">{Math.round((studentCount / planMaxStudents) * 100)}% of {planMaxStudents} capacity</p>
               </CardContent>
             </Card>
             <Card className="border border-slate-100 shadow-sm">
               <CardContent className="p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center"><Sparkles className="w-5 h-5 text-amber-600" /></div>
-                  <div className="min-w-0"><p className="text-xs text-slate-500">AI Credits Used</p><p className="text-lg font-bold text-slate-900">{aiCredits.toLocaleString()}<span className="text-sm font-normal text-slate-400">/{isFreemium ? '1,000' : aiCreditLimit.toLocaleString()}</span></p></div>
+                  <div className="min-w-0"><p className="text-xs text-slate-500">AI Credits Used</p><p className="text-lg font-bold text-slate-900">{aiCredits.toLocaleString()}<span className="text-sm font-normal text-slate-400">/{aiCreditLimit.toLocaleString()}</span></p></div>
                 </div>
-                <ProgressBar value={aiCredits} max={isFreemium ? 1000 : aiCreditLimit} color="bg-amber-500" />
-                <p className="text-[10px] text-slate-400 mt-1.5">{isFreemium ? '1,000/month free tier' : `${Math.round((aiCredits / aiCreditLimit) * 100)}% of monthly allowance`}</p>
+                <ProgressBar value={aiCredits} max={aiCreditLimit} color="bg-amber-500" />
+                <p className="text-[10px] text-slate-400 mt-1.5">{Math.round((aiCredits / aiCreditLimit) * 100)}% of monthly allowance</p>
               </CardContent>
             </Card>
             <Card className="border border-slate-100 shadow-sm">
@@ -201,19 +173,13 @@ export default function SchoolAdminBilling() {
                   <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center"><CreditCard className="w-5 h-5 text-violet-600" /></div>
                   <div>
                     <p className="text-xs text-slate-500">Payment Method</p>
-                    <p className="text-sm font-bold text-slate-900">{isFreemium ? 'None (Free)' : 'M-Pesa Express'}</p>
-                    <p className="text-[10px] text-slate-400">{isFreemium ? 'No payment needed' : 'Paybill 247247'}</p>
+                    <p className="text-sm font-bold text-slate-900">M-Pesa Express</p>
+                    <p className="text-[10px] text-slate-400">Paybill 247247</p>
                   </div>
                 </div>
-                {isFreemium ? (
-                  <Button variant="outline" size="sm" className="w-full text-xs bg-white" onClick={() => toast({ title: 'Upgrade', description: 'Add a payment method when upgrading' })}>
-                    <Crown className="w-3 h-3 mr-1" />Upgrade Plan
-                  </Button>
-                ) : (
-                  <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => toast({ title: 'Invoice', description: 'Invoice download coming soon' })}>
-                    <Download className="w-3 h-3 mr-1" />Download Invoice
-                  </Button>
-                )}
+                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => toast({ title: 'Invoice', description: 'Invoice download coming soon' })}>
+                  <Download className="w-3 h-3 mr-1" />Download Invoice
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -227,20 +193,8 @@ export default function SchoolAdminBilling() {
               {invoices.length === 0 ? (
                 <div className="text-center py-10">
                   <FileText className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  {isFreemium ? (
-                    <>
-                      <p className="text-sm font-semibold text-slate-700">No billing history</p>
-                      <p className="text-xs text-slate-400 mt-1">Freemium plan is free of charge — no invoices yet.</p>
-                      <Button variant="outline" size="sm" className="mt-4 bg-white" onClick={() => toast({ title: 'Upgrade', description: 'Plan comparison & checkout modal coming soon' })}>
-                        <Crown className="w-3 h-3 mr-1.5" />Upgrade Plan
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm font-semibold text-slate-700">No invoices yet</p>
-                      <p className="text-xs text-slate-400 mt-1">Invoices will appear once payments are processed</p>
-                    </>
-                  )}
+                  <p className="text-sm font-semibold text-slate-700">No invoices yet</p>
+                  <p className="text-xs text-slate-400 mt-1">Invoices will appear once payments are processed</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
