@@ -12,17 +12,14 @@ interface Recommendation {
 }
 
 interface TypeConfig {
-  icon: LucideIcon
-  accent: string
-  bg: string
-  badge: string
+  icon: LucideIcon; accent: string; bg: string; badge: string; label: string
 }
 
 const typeConfig: Record<string, TypeConfig> = {
-  danger:  { icon: AlertTriangle, accent: 'border-l-red-500', bg: 'bg-red-50/50', badge: 'bg-red-100 text-red-700' },
-  warning: { icon: AlertCircle,   accent: 'border-l-amber-500', bg: 'bg-amber-50/50', badge: 'bg-amber-100 text-amber-700' },
-  info:    { icon: Info,          accent: 'border-l-blue-500', bg: 'bg-blue-50/50', badge: 'bg-blue-100 text-blue-700' },
-  success: { icon: CheckCircle,   accent: 'border-l-green-500', bg: 'bg-green-50/50', badge: 'bg-green-100 text-green-700' },
+  danger:  { icon: AlertTriangle, accent: 'border-l-red-500', bg: 'bg-red-50/50', badge: 'bg-red-100 text-red-700', label: 'High Priority' },
+  warning: { icon: AlertCircle,   accent: 'border-l-amber-500', bg: 'bg-amber-50/50', badge: 'bg-amber-100 text-amber-700', label: 'Needs Attention' },
+  info:    { icon: Info,          accent: 'border-l-blue-500', bg: 'bg-blue-50/50', badge: 'bg-blue-100 text-blue-700', label: 'Tip' },
+  success: { icon: CheckCircle,   accent: 'border-l-green-500', bg: 'bg-green-50/50', badge: 'bg-green-100 text-green-700', label: 'On Track' },
 }
 
 export default function SmartRecommendations() {
@@ -62,7 +59,7 @@ export default function SmartRecommendations() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="font-semibold text-sm text-slate-800">{r.title}</p>
-                    <Badge className={`${cfg.badge} border-0 text-[10px]`}>{r.type}</Badge>
+                    <Badge className={`${cfg.badge} border-0 text-[10px]`}>{cfg.label}</Badge>
                   </div>
                   <p className="text-xs text-slate-500">{r.description}</p>
                   {r.action === 'Chat with AI Tutor' ? (
