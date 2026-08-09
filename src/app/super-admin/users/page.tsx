@@ -10,7 +10,7 @@ import { useDeleteConfirmation } from "@/components/ui/delete-confirmation-dialo
 import {
   Search, Plus, Users, User, School, GraduationCap, Shield, Mail, Phone,
   Eye, Trash2, Loader2, ChevronLeft, ChevronRight, RefreshCw, X,
-  Calendar, Sparkles, Building2
+  Calendar, Sparkles, Building2, Home
 } from "lucide-react"
 
 interface User {
@@ -20,6 +20,7 @@ interface User {
   schoolAdmin?: { school: { id: string; name: string } }
   teacher?: { school: { id: string; name: string } }
   student?: { school: { id: string; name: string } }
+  parent?: { schoolId: string | null }
 }
 
 interface UserStats {
@@ -129,6 +130,9 @@ export default function UsersPage() {
 
   const schoolName = (user: User) =>
     user.schoolAdmin?.school?.name || user.teacher?.school?.name || user.student?.school?.name || null
+
+  const isIndependentParent = (user: User) =>
+    user.role === 'PARENT' && !user.parent?.schoolId && !schoolName(user)
 
   const roleCfg = (role: string) => (ROLE_CONFIG as any)[role] || ROLE_CONFIG.PARENT
 
@@ -340,6 +344,12 @@ export default function UsersPage() {
                       <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-100">
                         <Building2 className="w-3 h-3" />
                         <span className="truncate max-w-[100px]">{school}</span>
+                      </span>
+                    )}
+                    {isIndependentParent(user) && (
+                      <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        <Home className="w-3 h-3" />
+                        Independent
                       </span>
                     )}
                   </div>
