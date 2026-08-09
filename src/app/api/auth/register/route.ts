@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { autoCreateTrial } from '@/lib/subscription-service'
 import { generateUsername } from '@/lib/bulk-import'
 
 async function uniqueUsername(first: string, last: string): Promise<string> {
@@ -87,8 +88,7 @@ export const POST = route({ auth: 'none' }, async (req) => {
       }
     })
 
-    // No free trial — schools must subscribe to a paid plan
-    // await autoCreateTrial(undefined, school.id)
+    await autoCreateTrial(undefined, school.id)
 
     return NextResponse.json({ message: 'School admin account created successfully' })
   } else {
@@ -122,8 +122,7 @@ export const POST = route({ auth: 'none' }, async (req) => {
       await (prisma as any).parent.upsert({ where: { userId: user.id }, update: {}, create: { userId: user.id } })
     }
 
-    // No free trial — independent users must subscribe to a paid plan
-    // await autoCreateTrial(user.id, undefined)
+    await autoCreateTrial(user.id, undefined)
 
     return NextResponse.json({
       message: 'Account created successfully.'
