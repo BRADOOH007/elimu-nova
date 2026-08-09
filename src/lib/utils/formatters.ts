@@ -40,3 +40,13 @@ export function sanitizeText(text?: string | null): string {
     .replace(/Â/g, '')
     .trim()
 }
+
+export function formatCurrency(amount: number, currency?: string): string {
+  const c = (currency || 'USD').toUpperCase()
+  const locale = c === 'KES' ? 'en-KE' : 'en-US'
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency: c }).format(amount)
+  } catch {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
+  }
+}
