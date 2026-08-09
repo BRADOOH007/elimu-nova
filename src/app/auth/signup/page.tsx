@@ -309,6 +309,7 @@ export default function SignUpPage() {
                       </select>
                     </div>
                   </div>
+                  {formData.role !== 'PARENT' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Grade / Year</label>
                     <div className="relative">
@@ -323,6 +324,7 @@ export default function SignUpPage() {
                       </select>
                     </div>
                   </div>
+                  )}
                 </div>
               )}
 
