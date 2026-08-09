@@ -19,7 +19,6 @@ import { FocusTimer } from '@/components/student/focus-timer'
 import { AIStudyBuddy } from '@/components/student/ai-study-buddy'
 import { HopeAITutorDrawer } from '@/components/ai-tutor-drawer'
 import { FloatingNotesWidget } from '@/components/student/floating-notes-widget'
-import { LearningJourneyBanner } from '@/components/student/learning-journey-banner'
 import { useAITutor } from '@/components/ai-tutor-provider'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
 import { getGameState, updateStreak, awardXP, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
@@ -65,7 +64,7 @@ function useCurriculumSubjects() {
         if (res.ok) {
           const p = await res.json()
           setCurriculum(p.curriculum || 'cbc')
-          setDefaultGrade((p.tourCompletion && (p.tourCompletion as any)?.grade) || p.grade || 'Grade 4')
+          setDefaultGrade((p.tourCompletion as any)?.grade || 'Grade 4')
         }
       } catch { /* use defaults */ }
     }
@@ -163,14 +162,6 @@ function LearnPageContent() {
     if (grd) setStudyGrade(grd)
   }, [searchParams])
 
-  // Once the student's profile grade loads, adopt it as the default study grade
-  // (unless the URL explicitly requested a grade)
-  useEffect(() => {
-    if (defaultGrade && !searchParams.get('grade')) {
-      setStudyGrade(defaultGrade)
-    }
-  }, [defaultGrade, searchParams])
-
   // Hope AI drawer state
   const [showHopeDrawer, setShowHopeDrawer] = useState(false)
   const [hopeContext, setHopeContext] = useState('')
@@ -190,13 +181,13 @@ function LearnPageContent() {
     try {
       const s = subj || studySubject
       const g = grade || studyGrade
-      const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(g)}&subject=${encodeURIComponent(s)}${curriculum && curriculum !== 'cbc' ? `&curriculum=${encodeURIComponent(curriculum)}` : ''}`)
+      const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(g)}&subject=${encodeURIComponent(s)}`)
       if (res.ok) setPathData(await res.json())
     } catch { /* ignore */ }
     finally { setPathLoading(false) }
   }
 
-  useEffect(() => { fetchLearningPath() }, [studySubject, studyGrade, curriculum])
+  useEffect(() => { fetchLearningPath() }, [studySubject, studyGrade])
 
   // ── Lesson Generation ─────────────────────────────────────
   const generateLesson = async (subjectArg?: string, topicArg?: string) => {
@@ -390,16 +381,79 @@ function LearnPageContent() {
     <div className="min-h-screen bg-slate-50 pb-28">
 
       {/* ═══ HERO ═══ */}
-      <LearningJourneyBanner
-        gameState={gameState}
-        levelName={levelName}
-        xpProgress={xpProgress}
-        showXpGain={showXpGain}
-        mistakeCount={getMistakeCount().unreviewed}
-        onOpenMistakes={() => { setMistakeMode(true); setMistakeIdx(0) }}
-        onAskHope={() => openAITutor(undefined, studySubject, studyTopic || undefined)}
-        getLevelName={getLevelName}
-      />
+      <header className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white">
+        <div className="absolute -top-24 -right-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-fuchsia-400/25 blur-3xl" />
+        <div className="absolute top-1/2 left-1/3 h-40 w-40 rounded-full bg-cyan-300/20 blur-3xl" />
+
+        <div className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-200">Learning Studio</p>
+              <h1 className="text-2xl font-extrabold sm:text-3xl">Your Learning Journey</h1>
+              <p className="mt-1 text-sm text-indigo-100/90">Study a topic, take a quiz, beat your streak</p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Badge className="gap-1.5 border border-white/20 bg-white/15 px-3 py-1.5 text-white backdrop-blur">
+                <Flame className="h-4 w-4 text-amber-300" />
+                {gameState.streak}d streak
+              </Badge>
+              <Badge className="gap-1.5 border border-white/20 bg-white/15 px-3 py-1.5 text-white backdrop-blur">
+                <Zap className="h-4 w-4 text-yellow-300" />
+                Lv.{gameState.level}
+              </Badge>
+              {getMistakeCount().unreviewed > 0 && (
+                <button
+                  onClick={() => { setMistakeMode(true); setMistakeIdx(0) }}
+                  className="flex items-center gap-1.5 rounded-full border border-red-300/40 bg-red-500/25 px-3 py-1.5 text-sm font-semibold backdrop-blur transition-colors hover:bg-red-500/35"
+                >
+                  <AlertCircle className="h-4 w-4 text-red-200" />
+                  {getMistakeCount().unreviewed}
+                </button>
+              )}
+              <button
+                onClick={() => openAITutor(undefined, studySubject, studyTopic || undefined)}
+                className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-sm font-semibold backdrop-blur transition-colors hover:bg-white/25"
+              >
+                <MessageSquare className="h-4 w-4 text-white" />
+                Ask Hope
+              </button>
+            </div>
+          </div>
+
+          {/* XP Progress Bar */}
+          <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-amber-300" />
+                <span className="text-sm font-bold">{levelName}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm font-bold text-amber-200">
+                <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
+                {gameState.xp} XP
+              </div>
+            </div>
+            <div className="h-2.5 overflow-hidden rounded-full bg-white/20">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400 transition-all duration-500"
+                style={{ width: `${xpProgress.progress}%` }}
+              />
+            </div>
+            <div className="mt-1.5 flex justify-between text-[11px] text-indigo-100/80">
+              <span>{levelName}</span>
+              <span>Next: {getLevelName(gameState.level + 1)}</span>
+            </div>
+          </div>
+
+          {/* XP Gain Toast */}
+          {showXpGain.visible && (
+            <div className="mt-3 inline-flex animate-bounce items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-sm font-bold shadow-lg">
+              <Zap className="h-4 w-4" />+{showXpGain.amount} XP!
+            </div>
+          )}
+        </div>
+      </header>
 
       {/* ═══ BODY ═══ */}
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
@@ -709,52 +763,29 @@ function LearnPageContent() {
             )}
           </div>
 
-          {/* Daily Challenge + Learning Path (inline, formerly sidebar) */}
+          {/* Inline cards (formerly sidebar) */}
           {!dailyDone && dailyTopic && (
             <button onClick={startDailyChallenge} className="group w-full rounded-2xl border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 shadow-md"><Trophy className="h-5 w-5 text-white" /></div>
-                <div className="min-w-0"><p className="text-sm font-bold text-amber-900">Daily Challenge</p><p className="truncate text-xs text-amber-700">{dailySubject}: {dailyTopic}</p><span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-600">+{XP_REWARDS.dailyChallenge} XP</span></div>
-              </div>
+              <div className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-600 shadow-md"><Trophy className="h-5 w-5 text-white" /></div><div className="min-w-0"><p className="text-sm font-bold text-amber-900">Daily Challenge</p><p className="truncate text-xs text-amber-700">{dailySubject}: {dailyTopic}</p><span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-600">+{XP_REWARDS.dailyChallenge} XP</span></div></div>
             </button>
           )}
           {pathData && (
             <Card className="rounded-2xl border border-indigo-200 shadow-sm">
-              <CardContent className="flex items-center justify-between gap-2 p-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100"><GitBranch className="h-4 w-4 text-indigo-600" /></span>
-                  <div className="min-w-0"><p className="truncate text-sm font-bold text-indigo-900">{studySubject} - {studyGrade}</p><p className="text-[11px] text-indigo-500">{pathData.completedCount}/{pathData.totalCount} topics · {Math.round(pathData.percentComplete || 0)}%</p></div>
-                </div>
-                <Progress value={pathData.percentComplete || 0} className="h-2 w-24" />
-                {pathData.resumeTopic && pathData.resumeTopic.topicName !== studyTopic && (
-                  <Button size="sm" onClick={() => resumeTopicLesson(studySubject, pathData.resumeTopic.topicName)} className="shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 text-white"><Play className="mr-1 h-3.5 w-3.5" />Resume</Button>
-                )}
-              </CardContent>
+              <CardContent className="flex items-center justify-between gap-2 p-4"><div className="flex items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-100"><GitBranch className="h-4 w-4 text-indigo-600" /></span><div className="min-w-0"><p className="truncate text-sm font-bold text-indigo-900">{studySubject} — {studyGrade}</p><p className="text-[11px] text-indigo-500">{pathData.completedCount}/{pathData.totalCount} topics · {Math.round(pathData.percentComplete || 0)}%</p></div></div><Progress value={pathData.percentComplete || 0} className="h-2 w-24" />{pathData.resumeTopic && pathData.resumeTopic.topicName !== studyTopic && <Button size="sm" onClick={() => resumeTopicLesson(studySubject, pathData.resumeTopic.topicName)} className="shrink-0 bg-gradient-to-r from-blue-500 to-indigo-600 text-white"><Play className="mr-1 h-3.5 w-3.5" />Resume</Button>}</CardContent>
             </Card>
           )}
-
-          {/* Spaced Repetition */}
           {dueReviews.length > 0 && (
             <Card className="rounded-2xl border border-orange-200 shadow-sm">
-              <CardContent className="space-y-3 p-4">
-                <div className="flex items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100"><Repeat className="h-4 w-4 text-orange-600" /></span><p className="text-sm font-bold text-orange-900">Spaced Repetition</p><p className="text-[11px] text-orange-600">{dueReviews.length} topic{dueReviews.length > 1 ? 's' : ''} due today</p></div>
-                <div className="flex flex-wrap gap-2">{dueReviews.slice(0, 3).map((r, i) => (<Button key={i} size="sm" variant="outline" onClick={() => resumeTopicLesson(r.subject, r.topic)} className="rounded-full border-orange-300 text-xs text-orange-700 hover:bg-orange-100"><Repeat className="mr-1 h-3 w-3" />{r.topic} ({r.score}%)</Button>))}</div>
-              </CardContent>
+              <CardContent className="space-y-3 p-4"><div className="flex items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-100"><Repeat className="h-4 w-4 text-orange-600" /></span><p className="text-sm font-bold text-orange-900">Spaced Repetition</p><p className="text-[11px] text-orange-600">{dueReviews.length} topic{dueReviews.length>1?'s':''} due today</p></div><div className="flex flex-wrap gap-2">{dueReviews.slice(0,3).map((r,i)=><Button key={i} size="sm" variant="outline" onClick={()=>resumeTopicLesson(r.subject,r.topic)} className="rounded-full border-orange-300 text-xs text-orange-700 hover:bg-orange-100"><Repeat className="mr-1 h-3 w-3"/>{r.topic} ({r.score}%)</Button>)}</div></CardContent>
             </Card>
           )}
-
-          {/* Mistake Review (inline) */}
           {mistakeMode && unreviewedMistakes.length > 0 && (
             <Card className="rounded-2xl border-2 border-red-200 shadow-sm">
-              <CardContent className="space-y-3 p-4">
-                <div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100"><AlertCircle className="h-4 w-4 text-red-600" /></span><p className="text-sm font-bold text-red-800">Mistake Review <span className="font-semibold text-red-500">({mistakeIdx + 1}/{unreviewedMistakes.length})</span></p></div><button onClick={() => setMistakeMode(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200"><X className="h-4 w-4" /></button></div>
-                {(() => { const m = unreviewedMistakes[mistakeIdx]; if (!m) return null; return (<div className="space-y-3 rounded-xl border border-red-100 bg-white p-3"><p className="text-sm font-semibold text-slate-800">{m.question}</p><div className="flex flex-wrap gap-2 text-xs"><span className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-red-700">Your answer: {m.yourAnswer}</span><span className="rounded-lg border border-green-100 bg-green-50 px-2.5 py-1 text-green-700">Correct: {m.correctAnswer}</span></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={() => { markMistakeReviewed(m.id); setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Got it</Button><Button size="sm" variant="ghost" onClick={() => { setMistakeIdx(i => Math.min(i + 1, unreviewedMistakes.length - 1)) }} className="text-xs">Skip</Button></div></div>) })()}
-              </CardContent>
+              <CardContent className="space-y-3 p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100"><AlertCircle className="h-4 w-4 text-red-600" /></span><p className="text-sm font-bold text-red-800">Mistake Review <span className="font-semibold text-red-500">({mistakeIdx+1}/{unreviewedMistakes.length})</span></p></div><button onClick={()=>setMistakeMode(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-red-100 text-red-500 hover:bg-red-200"><X className="h-4 w-4"/></button></div>{(()=>{const m=unreviewedMistakes[mistakeIdx];if(!m)return null;return(<div className="space-y-3 rounded-xl border border-red-100 bg-white p-3"><p className="text-sm font-semibold text-slate-800">{m.question}</p><div className="flex flex-wrap gap-2 text-xs"><span className="rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-red-700">Your answer: {m.yourAnswer}</span><span className="rounded-lg border border-green-100 bg-green-50 px-2.5 py-1 text-green-700">Correct: {m.correctAnswer}</span></div><div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>{markMistakeReviewed(m.id);setMistakeIdx(i=>Math.min(i+1,unreviewedMistakes.length-1))}} className="text-xs">Got it</Button><Button size="sm" variant="ghost" onClick={()=>{setMistakeIdx(i=>Math.min(i+1,unreviewedMistakes.length-1))}} className="text-xs">Skip</Button></div></div>)})()}</CardContent>
             </Card>
           )}
         </div>
 
-        {/* Floating Notes Widget */}
         <FloatingNotesWidget notes={notes} setNotes={setNotes} savedNotes={savedNotes} saveNote={saveNote} activeLesson={activeLesson} />
 
         {/* AI Study Buddy — always visible at bottom */}
