@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
-import { Dialog, DialogContent, DialogHeader, DialogBody, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { 
   User, 
   X, 
@@ -284,9 +284,9 @@ export function UserProfileModal({ isOpen, onClose, userId, onProfileUpdate }: U
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <DialogTitle className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 User Profile
-              </h2>
+              </DialogTitle>
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-white/50">
