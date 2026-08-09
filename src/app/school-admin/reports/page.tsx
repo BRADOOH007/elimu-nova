@@ -84,9 +84,9 @@ export default function ReportsPage() {
             className="rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 px-4 py-2 text-sm font-medium text-white shadow-sm transition flex items-center gap-2">
             <ArrowUpRight className="w-4 h-4" /> Batch PDF Generation
           </button>
-          <button onClick={() => toast({ title: 'Coming Soon', description: 'Excel export will be available in the next update' })}
+          <button onClick={() => { const modal = document.querySelector('[role="dialog"]'); if (modal) (modal as any).click() }}
             className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition flex items-center gap-2">
-            <Download className="w-4 h-4" /> Export to Excel
+            <Download className="w-4 h-4" /> Generate Report
           </button>
         </div>
       </div>

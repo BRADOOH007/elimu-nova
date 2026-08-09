@@ -285,7 +285,20 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
                 rows={1}
                 className="flex-1 resize-none rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 min-h-[44px] max-h-32"
               />
-              <button onClick={() => { toast({ title: 'Voice input is coming soon' }) }} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 transition-colors" title="Voice input" aria-label="Voice input">
+              <button
+                onClick={() => {
+                  const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+                  if (!SpeechRecognition) { toast({ title: 'Voice input not supported in this browser' }); return }
+                  const recognition = new SpeechRecognition()
+                  recognition.lang = 'en-US'
+                  recognition.interimResults = false
+                  recognition.onresult = (event: any) => {
+                    const transcript = event.results[0][0].transcript
+                    setInput((prev: string) => prev + ' ' + transcript)
+                  }
+                  recognition.start()
+                }}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 transition-colors" title="Voice input" aria-label="Voice input">
                 <Mic className="h-5 w-5" />
               </button>
               <button onClick={() => sendMessage(input)} disabled={!input.trim() || sending}

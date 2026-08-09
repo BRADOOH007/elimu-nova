@@ -366,7 +366,7 @@ export default function GlobalSettingsPage() {
                       <SelectItem value="ar">Arabic</SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-gray-400">UI language for new users (content translations coming soon)</p>
+                  <p className="text-xs text-gray-400">Default language for new user accounts and platform UI</p>
                 </div>
               </div>
               <div className="flex justify-end">

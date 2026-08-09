@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
+import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -21,6 +22,7 @@ interface ExamData {
   subject: string;
   gradeLevel: string;
   curriculum: string;
+  country: string;
   numberOfQuestions: number;
   difficulty: string;
   totalMarks: number;
@@ -38,6 +40,7 @@ export function AIExamGenerator() {
     subject: '',
     gradeLevel: '',
     curriculum: 'cbc',
+    country: 'KE',
     numberOfQuestions: 25,
     difficulty: 'medium',
     totalMarks: 100,
@@ -277,7 +280,7 @@ export function AIExamGenerator() {
 
                     <div className="space-y-2">
                       <Label className="text-purple-900 font-semibold">Country</Label>
-                      <Select value={country} onValueChange={(v) => { setCountry(v); setExamData(prev => ({ ...prev, curriculum: '', subject: '', gradeLevel: '' })) }}>
+                      <Select value={country} onValueChange={(v) => { setCountry(v); setExamData(prev => ({ ...prev, country: v, curriculum: '', subject: '', gradeLevel: '' })) }}>
                         <SelectTrigger className="bg-white border-purple-200 focus:ring-2 focus:ring-purple-400">
                           <SelectValue />
                         </SelectTrigger>
@@ -443,7 +446,37 @@ export function AIExamGenerator() {
                   <CardDescription>Fine-tune your exam generation</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <p className="text-gray-600">Advanced features coming soon! Use the standard tab for now.</p>
+                  <div className="space-y-4">
+                    <div>
+                      <Label className="text-sm font-medium">Question Count</Label>
+                      <Select defaultValue="10">
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          {[5,10,15,20,25,30].map(n => <SelectItem key={n} value={String(n)}>{n} questions</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Difficulty Level</Label>
+                      <Select defaultValue="mixed">
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="easy">Easy</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="hard">Hard</SelectItem>
+                          <SelectItem value="mixed">Mixed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="include-answers" defaultChecked />
+                      <Label htmlFor="include-answers" className="text-sm">Include Answer Key</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox id="include-rubric" />
+                      <Label htmlFor="include-rubric" className="text-sm">Include CBC Grading Rubric</Label>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

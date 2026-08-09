@@ -107,20 +107,20 @@ export default function SchoolAdminBilling() {
                 <div className="flex items-center gap-2">
                   {isTrial ? (
                     <>
-                      <Button className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700" onClick={() => toast({ title: 'Upgrade', description: 'Plan comparison & checkout modal coming soon' })}>
+                      <Button className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700">
                         <Crown className="w-4 h-4 mr-1.5" />Upgrade to Premium
                       </Button>
-                      <Button variant="outline" className="bg-white border-slate-200" onClick={() => toast({ title: 'Contact', description: 'Contact sales for custom enterprise plans' })}>
-                        <ArrowRight className="w-4 h-4 mr-1.5" />Talk to Sales
+                      <Button variant="outline" className="bg-white border-slate-200" onClick={() => window.location.href = 'mailto:sales@elimunova.com?subject=Enterprise Plan Inquiry'}>
+                        <ArrowRight className="w-4 h-4 mr-1.5" />Contact Sales
                       </Button>
                     </>
                   ) : (
                     <>
-                      <Button variant="outline" className="bg-white border-slate-200 hover:bg-slate-50" onClick={() => toast({ title: 'Manage', description: 'Subscription management coming soon' })}>
+                      <Button variant="outline" className="bg-white border-slate-200 hover:bg-slate-50" onClick={() => window.location.href = 'mailto:billing@elimunova.com?subject=Subscription Management'}>
                         Manage Subscription
                       </Button>
-                      <Button className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700" onClick={() => toast({ title: 'Invoice', description: 'Tax invoice download coming soon' })}>
-                        <Download className="w-4 h-4 mr-1.5" />Download Tax Invoice
+                      <Button className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700" onClick={() => window.print()}>
+                        <Download className="w-4 h-4 mr-1.5" />Download Statement
                       </Button>
                     </>
                   )}
@@ -177,8 +177,8 @@ export default function SchoolAdminBilling() {
                     <p className="text-[10px] text-slate-400">Paybill 247247</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => toast({ title: 'Invoice', description: 'Invoice download coming soon' })}>
-                  <Download className="w-3 h-3 mr-1" />Download Invoice
+                <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => window.print()}>
+                  <Download className="w-3 h-3 mr-1" />Download Statement
                 </Button>
               </CardContent>
             </Card>
@@ -209,7 +209,7 @@ export default function SchoolAdminBilling() {
                           <td className="py-3 px-4 text-slate-500">{inv.paymentMethod || 'M-Pesa'}</td>
                           <td className="py-3 px-4">{inv.status === 'PAID' || inv.status === 'paid' ? <span className="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-100 text-emerald-700">Paid</span> : <span className="inline-flex px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700">Pending</span>}</td>
                           <td className="py-3 px-4 text-right">
-                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => toast({ title: 'Receipt', description: 'PDF receipt download coming soon' })}>
+                            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => window.print()}>
                               <Download className="w-3 h-3 mr-1" />PDF
                             </Button>
                           </td>
