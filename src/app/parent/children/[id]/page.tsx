@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Eye, EyeOff, RefreshCw, Copy } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, RefreshCw, Copy, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
 interface ChildDetail {
@@ -55,6 +55,19 @@ export default function ChildDetailPage() {
     if (!credentials) return
     navigator.clipboard.writeText(`Username: ${credentials.username}\nPassword: ${credentials.password}`)
     toast({ title: 'Copied', description: 'Credentials copied to clipboard' })
+  }
+
+  const handleDeleteChild = async () => {
+    if (!confirm(`Delete ${child?.name || 'this child'}'s profile and all associated data? This action cannot be undone.`)) return
+    try {
+      const res = await fetch(`/api/parent/children/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        toast({ title: 'Deleted', description: 'Child profile and data removed' })
+        router.push('/parent/children')
+      } else {
+        toast({ title: 'Error', variant: 'destructive' })
+      }
+    } catch { toast({ title: 'Network error', variant: 'destructive' }) }
   }
 
   if (loading) return <div className="p-8 max-w-2xl mx-auto animate-pulse"><div className="h-8 w-48 bg-slate-200 rounded mb-6" /><div className="h-40 bg-slate-200 rounded-2xl mb-4" /><div className="h-32 bg-slate-200 rounded-2xl" /></div>
@@ -119,6 +132,15 @@ export default function ChildDetailPage() {
             ) : (
               <div className="text-center py-6 text-slate-500"><p>Credentials not available</p><button onClick={regeneratePassword} className="mt-2 text-sm text-indigo-600 hover:text-indigo-700">Generate password</button></div>
             )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-6">
+            <h2 className="text-base font-semibold text-red-700 mb-2">Danger Zone</h2>
+            <p className="text-xs text-slate-500 mb-3">Remove this child from your account and delete all associated learning data, AI interactions, and progress records. This complies with COPPA and GDPR data deletion rights.</p>
+            <button onClick={handleDeleteChild}
+              className="rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 px-4 py-2 text-sm font-medium text-red-700 transition flex items-center gap-1.5">
+              <Trash2 className="w-4 h-4" /> Delete Child Profile & Data
+            </button>
           </div>
         </>
       )}

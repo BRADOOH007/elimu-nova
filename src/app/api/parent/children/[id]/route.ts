@@ -6,20 +6,20 @@ export const GET = route({ auth: 'PARENT' }, async (_req, { user, params }) => {
   try {
     const { id } = await params
     const parent = await prisma.parent.findUnique({
-      where: { userId: user.id },
-      include: { students: { select: { studentId: true } } }
-    })
+    where: { userId: user.id },
+    include: { students: { select: { studentId: true } } }
+  })
 
-    if (!parent) {
-      return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
-    }
+  if (!parent) {
+    return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
+  }
 
-    const childIds = parent.students.map(ps => ps.studentId)
-    if (!childIds.includes(id)) {
-      return NextResponse.json({ error: 'Child not linked to parent' }, { status: 403 })
-    }
+  const childIds = parent.students.map(ps => ps.studentId)
+  if (!childIds.includes(id)) {
+    return NextResponse.json({ error: 'Child not linked to parent' }, { status: 403 })
+  }
 
-    const student = await prisma.student.findUnique({
+  const student = await prisma.student.findUnique({
       where: { id },
       include: {
         user: { select: { firstName: true, lastName: true, email: true } },
@@ -71,4 +71,39 @@ export const GET = route({ auth: 'PARENT' }, async (_req, { user, params }) => {
     console.error('[GET_PARENT_CHILDREN_ID]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
+})
+
+export const DELETE = route({ auth: 'PARENT' }, async (_req, { user, params }) => {
+  const parent = await (prisma as any).parent.findUnique({ where: { userId: user.id } })
+  if (!parent) return NextResponse.json({ error: 'Parent not found' }, { status: 404 })
+
+  const childId = (params as any)?.id
+  if (!childId) return NextResponse.json({ error: 'Child ID required' }, { status: 400 })
+
+  // Verify parent-child link
+  const link = await (prisma as any).parentStudent.findFirst({
+    where: { parentId: parent.id, studentId: childId }
+  })
+  if (!link) return NextResponse.json({ error: 'Child not linked to this parent' }, { status: 403 })
+
+  // Cascade delete: remove parent-student link, AI tutor sessions, study sessions, activities
+  await (prisma as any).parentStudent.deleteMany({ where: { parentId: parent.id, studentId: childId } })
+  await (prisma as any).aiTutorSession.deleteMany({ where: { studentId: childId } })
+  await (prisma as any).studySession.deleteMany({ where: { studentId: childId } })
+  await (prisma as any).tutorSession.deleteMany({ where: { studentId: childId } })
+  await (prisma as any).studentProgress.deleteMany({ where: { studentId: childId } })
+  await (prisma as any).unitMastery.deleteMany({ where: { studentId: childId } })
+  await (prisma as any).submission.deleteMany({ where: { studentId: childId } })
+  await (prisma as any).studentAnalytics.deleteMany({ where: { studentId: childId } })
+  await (prisma as any).courseEnrollment.deleteMany({ where: { studentId: childId } })
+  await (prisma as any).studentMemory.deleteMany({ where: { studentId: childId } })
+
+  // Soft-delete the student user
+  const student = await prisma.student.findUnique({ where: { id: childId }, select: { userId: true } })
+  if (student) {
+    await prisma.user.update({ where: { id: student.userId }, data: { isActive: false } })
+    await prisma.student.update({ where: { id: childId }, data: { deletedAt: new Date() } })
+  }
+
+  return NextResponse.json({ message: 'Child unlinked and data removed' })
 })
