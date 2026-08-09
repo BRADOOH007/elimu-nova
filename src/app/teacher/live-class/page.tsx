@@ -91,10 +91,25 @@ export default function LiveClassPage() {
   const startSession = async () => {
     setLoading(true)
     try {
+      let link = meetingLink
+      // Auto-create Zoom meeting if no link provided and Zoom is configured
+      if (!link) {
+        try {
+          const { createZoomMeeting } = await import('@/lib/zoom-api')
+          const zoom = await createZoomMeeting({
+            topic: title || `${subject} Live Class`,
+            startTime: new Date().toISOString(),
+            duration: 60,
+            agenda: `Live class for ${subject || 'General'} — Grade ${selectedClass || 'All'}`,
+          })
+          if (zoom?.join_url) link = zoom.join_url
+        } catch { /* will fall back to Jitsi */ }
+      }
+
       const res = await fetch('/api/live-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, classId: selectedClass, subject, meetingLink }),
+        body: JSON.stringify({ title, classId: selectedClass, subject, meetingLink: link }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Failed to start session' }))
@@ -283,7 +298,7 @@ export default function LiveClassPage() {
             <div className="relative flex-1">
               <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input value={meetingLink} onChange={e => setMeetingLink(e.target.value)}
-                placeholder="Paste Zoom/Meet link, or leave empty for auto-generated Jitsi room"
+                placeholder="Leave empty to auto-create Zoom (if configured) or Jitsi room"
                 className="w-full h-10 pl-9 pr-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
