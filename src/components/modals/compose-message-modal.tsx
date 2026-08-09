@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Send, User, Mail, MessageSquare, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
+import { Send, User, Mail, MessageSquare, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 
 interface ComposeMessageModalProps {
   isOpen: boolean
@@ -86,31 +87,22 @@ export default function ComposeMessageModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl bg-white border-0 shadow-2xl p-0">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-                <Send className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold">New Message</h2>
-                <p className="text-blue-100 text-sm">
-                  Send a message to a {selectedRecipientType.toLowerCase()}
-                </p>
-              </div>
+        <DialogHeader className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-6 pb-4 text-white border-0">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <Send className="w-6 h-6" />
             </div>
-            <button
-              onClick={handleClose}
-              disabled={sending}
-              className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all disabled:opacity-50"
-            >
-              <X className="w-6 h-6" />
-            </button>
+            <div>
+              <DialogTitle className="text-2xl font-bold text-white">New Message</DialogTitle>
+              <DialogDescription className="text-blue-100 text-sm">
+                Send a message to a {selectedRecipientType.toLowerCase()}
+              </DialogDescription>
+            </div>
           </div>
-        </div>
+        </DialogHeader>
 
         {/* Feedback banner */}
         {feedback && (
@@ -121,7 +113,7 @@ export default function ComposeMessageModal({
         )}
 
         {/* Content */}
-        <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+        <DialogBody className="space-y-6 mt-1">
           {/* Recipient Type Selector */}
           {showRecipientTypeSelector && (
             <div className="space-y-2">
@@ -233,39 +225,37 @@ export default function ComposeMessageModal({
               {content.length} characters
             </p>
           </div>
-        </div>
+        </DialogBody>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-6 bg-gray-50">
-          <div className="flex gap-3 justify-end">
-            <Button
-              onClick={handleClose}
-              disabled={sending}
-              variant="outline"
-              className="px-6 border-2 hover:bg-gray-100"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSend}
-              disabled={sending || !subject.trim() || !content.trim() || (currentRecipients.length > 0 && !recipientId)}
-              className="px-6 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-lg disabled:opacity-50"
-            >
-              {sending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Message
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <DialogFooter className="border-t border-gray-200 bg-gray-50">
+          <Button
+            onClick={handleClose}
+            disabled={sending}
+            variant="outline"
+            className="px-5 py-2.5 text-sm font-medium border-2 hover:bg-gray-100"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSend}
+            disabled={sending || !subject.trim() || !content.trim() || (currentRecipients.length > 0 && !recipientId)}
+            className="px-5 py-2.5 text-sm font-medium bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white shadow-lg disabled:opacity-50"
+          >
+            {sending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Send Message
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

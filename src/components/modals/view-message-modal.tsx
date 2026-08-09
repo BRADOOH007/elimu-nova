@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { X, Reply, User, Clock, CheckCircle2, Mail, Send, Loader2, MessageSquare } from 'lucide-react'
+import { Reply, User, Clock, CheckCircle2, Mail, Send, Loader2, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogHeader, DialogBody, DialogFooter } from '@/components/ui/dialog'
 
 interface Message {
   id: string
@@ -76,35 +77,24 @@ export default function ViewMessageModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-xl font-bold overflow-hidden">
-                {message.from.avatar && !avatarError ? <img src={message.from.avatar} alt="" className="w-full h-full object-cover" onError={() => setAvatarError(true)} /> : getInitials(message.from.name)}
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold">{message.from.name}</h2>
-                <p className="text-blue-100 text-sm flex items-center gap-2">
-                  <User className="w-3 h-3" />
-                  {message.from.role}
-                </p>
-              </div>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader className="bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-600 p-6 pb-4 text-white border-b-0 shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-xl font-bold overflow-hidden">
+              {message.from.avatar && !avatarError ? <img src={message.from.avatar} alt="" className="w-full h-full object-cover" onError={() => setAvatarError(true)} /> : getInitials(message.from.name)}
             </div>
-            <button
-              onClick={handleClose}
-              disabled={sending}
-              className="text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-2 transition-all disabled:opacity-50"
-            >
-              <X className="w-6 h-6" />
-            </button>
+            <div>
+              <h2 className="text-2xl font-bold">{message.from.name}</h2>
+              <p className="text-blue-100 text-sm flex items-center gap-2">
+                <User className="w-3 h-3" />
+                {message.from.role}
+              </p>
+            </div>
           </div>
-        </div>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="p-6 space-y-6 overflow-y-auto max-h-[calc(90vh-280px)]">
+        <DialogBody className="space-y-6 mt-1">
           {/* Message Info */}
           <div className="space-y-4">
             {/* Subject */}
@@ -192,14 +182,14 @@ export default function ViewMessageModal({
                       }}
                       disabled={sending}
                       variant="outline"
-                      className="flex-1 border-2 hover:bg-gray-100"
+                      className="flex-1 border-2 hover:bg-gray-100 px-5 py-2.5 text-sm font-medium"
                     >
                       Cancel
                     </Button>
                     <Button
                       onClick={handleReply}
                       disabled={sending || !replyContent.trim()}
-                      className="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg disabled:opacity-50"
+                      className="flex-1 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white shadow-lg disabled:opacity-50 px-5 py-2.5 text-sm font-medium"
                     >
                       {sending ? (
                         <>
@@ -218,22 +208,19 @@ export default function ViewMessageModal({
               )}
             </div>
           )}
-        </div>
+        </DialogBody>
 
-        {/* Footer */}
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
-          <div className="flex justify-end">
-            <Button
-              onClick={handleClose}
-              disabled={sending}
-              variant="outline"
-              className="px-6 border-2 hover:bg-gray-100"
-            >
-              Close
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+        <DialogFooter className="border-t border-gray-200 bg-gray-50">
+          <Button
+            onClick={handleClose}
+            disabled={sending}
+            variant="outline"
+            className="px-5 py-2.5 text-sm font-medium border-2 hover:bg-gray-100"
+          >
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

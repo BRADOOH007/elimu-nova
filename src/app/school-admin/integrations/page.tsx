@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogBody } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, Database, Mail, MessageSquare, Server, Plus, Trash2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -174,7 +174,7 @@ export default function SchoolAdminIntegrationsPage() {
       <Dialog open={showDbDialog} onOpenChange={setShowDbDialog}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader><DialogTitle>Add External Database</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4">
             <div className="space-y-2">
               <Label>Name</Label>
               <Input value={dbForm.name} onChange={e => setDbForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Analytics DB" />
@@ -212,13 +212,13 @@ export default function SchoolAdminIntegrationsPage() {
                 <Input type="password" value={dbForm.password} onChange={e => setDbForm(p => ({ ...p, password: e.target.value }))} />
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowDbDialog(false)}>Cancel</Button>
-              <Button onClick={handleAddDatabase} disabled={saving} className="bg-gradient-to-r from-blue-600 to-purple-600">
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Add Database
-              </Button>
-            </DialogFooter>
-          </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDbDialog(false)} className="px-5 py-2.5 text-sm font-medium">Cancel</Button>
+            <Button onClick={handleAddDatabase} disabled={saving} className="bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-2.5 text-sm font-medium">
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Add Database
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -226,7 +226,7 @@ export default function SchoolAdminIntegrationsPage() {
       <Dialog open={showServiceDialog} onOpenChange={setShowServiceDialog}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader><DialogTitle>Add Communication Service</DialogTitle></DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4">
             <div className="space-y-2">
               <Label>Name</Label>
               <Input value={svcForm.name} onChange={e => setSvcForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. School Email" />
@@ -261,13 +261,13 @@ export default function SchoolAdminIntegrationsPage() {
               <Label>From Email</Label>
               <Input value={svcForm.fromEmail} onChange={e => setSvcForm(p => ({ ...p, fromEmail: e.target.value }))} placeholder="noreply@school.edu" />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowServiceDialog(false)}>Cancel</Button>
-              <Button onClick={handleAddService} disabled={saving} className="bg-gradient-to-r from-blue-600 to-purple-600">
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Add Service
-              </Button>
-            </DialogFooter>
-          </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowServiceDialog(false)} className="px-5 py-2.5 text-sm font-medium">Cancel</Button>
+            <Button onClick={handleAddService} disabled={saving} className="bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-2.5 text-sm font-medium">
+              {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null} Add Service
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

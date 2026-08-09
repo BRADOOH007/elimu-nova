@@ -142,7 +142,7 @@ Use local examples. Each activity should have clear timing and instructions.`
       })
     }
 
-    // â”€â”€ Term mode: generate multiple lessons across weeks â”€â”€
+    // ── Term mode: generate multiple lessons across weeks ──
     const finalWeeks = weeksCount || 13
     const finalLessonsPerWeek = lessonsPerWeek || 5
     const topicsList: string[] = requestTopics || (topic ? [topic] : [])

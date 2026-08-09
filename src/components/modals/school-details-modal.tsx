@@ -8,8 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
 import { useDeleteConfirmation } from "@/components/ui/delete-confirmation-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { 
-  X, 
   Save, 
   School,
   Loader2,
@@ -249,47 +249,45 @@ export function SchoolDetailsModal({
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50 flex-shrink-0">
-          <div className="flex items-center space-x-3">
-            <School className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              {schoolData ? schoolData.name : 'School Details'}
-            </h2>
-          </div>
-          <div className="flex items-center space-x-2">
-            {schoolData && !editing && (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setEditing(true)}
-                  disabled={loading}
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleDeleteClick}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete
-                </Button>
-              </>
-            )}
-            <Button variant="ghost" size="sm" onClick={handleClose} disabled={saving}>
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
-        </div>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent className="max-w-4xl bg-white border-0 shadow-2xl p-0">
+          <DialogHeader className="border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50 flex-row items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <School className="w-6 h-6 text-blue-600" />
+              <div>
+                <DialogTitle className="text-xl font-semibold text-gray-900">
+                  {schoolData ? schoolData.name : 'School Details'}
+                </DialogTitle>
+                <DialogDescription className="text-gray-600">Manage school details and settings</DialogDescription>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              {schoolData && !editing && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setEditing(true)}
+                    disabled={loading}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleDeleteClick}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </Button>
+                </>
+              )}
+            </div>
+          </DialogHeader>
 
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6">
+          <DialogBody className="mt-1">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -497,35 +495,36 @@ export function SchoolDetailsModal({
               <p className="text-gray-500">No school data available</p>
             </div>
           )}
-        </div>
+        </DialogBody>
 
-        {/* Footer - Always visible when editing */}
-        {editing && (
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
-            <Button variant="outline" onClick={() => setEditing(false)} disabled={saving}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
+        <DialogFooter className="border-t border-gray-200 bg-gray-50">
+          {editing && (
+            <>
+              <Button variant="outline" onClick={() => setEditing(false)} disabled={saving} className="px-5 py-2.5 text-sm font-medium">
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSave}
+                disabled={saving}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-5 py-2.5 text-sm font-medium"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <DeleteConfirmationDialog />
   </>
   )

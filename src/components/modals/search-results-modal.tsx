@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { 
@@ -124,7 +124,7 @@ export function SearchResultsModal({ isOpen, onClose, initialQuery = '' }: Searc
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Search className="w-5 h-5" />
@@ -132,7 +132,7 @@ export function SearchResultsModal({ isOpen, onClose, initialQuery = '' }: Searc
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody className="space-y-4 mt-1">
           {/* Search Input */}
           <form onSubmit={handleSubmit} className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -165,7 +165,7 @@ export function SearchResultsModal({ isOpen, onClose, initialQuery = '' }: Searc
           )}
 
           {/* Results */}
-          <div className="overflow-y-auto max-h-[50vh] space-y-4">
+          <div className="space-y-4">
             {!isLoading && results.total === 0 && query && (
               <div className="text-center py-8 text-gray-500">
                 <Search className="w-12 h-12 mx-auto mb-4 text-gray-300" />
@@ -304,7 +304,7 @@ export function SearchResultsModal({ isOpen, onClose, initialQuery = '' }: Searc
               </div>
             )}
           </div>
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

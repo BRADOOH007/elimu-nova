@@ -598,7 +598,7 @@ async function main() {
   console.log(`Processing ${entries.length} PDF(s)...\n`)
 
   let done = 0, failed = 0
-  for (let i = 0; i < entries.length; i++) {
+  for (let i = 0; i < Math.min(entries.length, 3); i++) {
     console.log(`[${i + 1}/${entries.length}] ${entries[i].gradeLabel} ${entries[i].subject}`)
     const result = await processEntry(page, entries[i], extractOnly)
     console.log(`  ${result}\n`)

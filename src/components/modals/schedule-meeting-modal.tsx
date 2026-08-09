@@ -67,7 +67,7 @@ export function ScheduleMeetingModal({ isOpen, onClose, onSuccess, meeting }: Sc
       icon={<Calendar />} size="lg"
       footer={<AdminModalFooter onCancel={onClose} submitLabel={isEdit ? 'Update Meeting' : 'Schedule Meeting'} loading={isLoading} type="submit" />}
     >
-      <form id="schedule-meeting-form" onSubmit={handleSubmit} className="space-y-4">
+      <form id="schedule-meeting-form" onSubmit={handleSubmit} className="mt-1 space-y-4">
         <AdminFormField label="Meeting Title" htmlFor="mt-title" required>
           <input id="mt-title" type="text" autoComplete="off" placeholder="e.g., Parent-Teacher Conference"
             value={formData.title} onChange={set('title')} className={adminInputClass} required />

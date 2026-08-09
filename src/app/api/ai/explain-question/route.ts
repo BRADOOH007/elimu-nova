@@ -1,6 +1,6 @@
 /**
  * POST /api/ai/explain-question
- * AI Explain Question â€” step-by-step explanation for any exam question
+ * AI Explain Question — step-by-step explanation for any exam question
  */
 import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
@@ -23,7 +23,7 @@ ${context ? `\nContext: ${context}` : ''}
 
 Provide a clear, step-by-step explanation in this JSON format:
 {
-  "summary": "One sentence â€” what concept this tests",
+  "summary": "One sentence — what concept this tests",
   "correctAnswer": "${correctAnswer || 'See steps'}",
   "steps": [
     { "step": 1, "title": "Step title", "explanation": "Clear explanation using Kenyan examples" },

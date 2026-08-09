@@ -42,8 +42,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -882,7 +884,7 @@ export default function PlanningPage() {
 
       {/* View Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedLessonPlan && <BookOpen className="h-5 w-5 text-blue-600" />}
@@ -903,7 +905,7 @@ export default function PlanningPage() {
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4 mt-1">
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-2">Content</h4>
               <LessonPlanViewer
@@ -912,32 +914,32 @@ export default function PlanningPage() {
                 date={currentDate || undefined}
               />
             </div>
-            <div className="flex justify-end space-x-2">
-              {selectedLessonPlan && (
-                <>
-                  <Button variant="outline" onClick={() => handleDownload(selectedLessonPlan)}>
-                    <Download className="mr-2 h-4 w-4" /> Download
-                  </Button>
-                  <Button
-                    onClick={() => router.push(`/teacher/lesson-plans/edit/${selectedLessonPlan.id}`)}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  >
-                    <Edit className="mr-2 h-4 w-4" /> Edit
-                  </Button>
-                </>
-              )}
-              {selectedScheme && (
-                <>
-                  <Button
-                    onClick={() => router.push(`/teacher/schemes-of-work/edit/${selectedScheme.id}`)}
-                    className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-                  >
-                    <Edit className="mr-2 h-4 w-4" /> Edit
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
+          </DialogBody>
+          <DialogFooter>
+            {selectedLessonPlan && (
+              <>
+                <Button variant="outline" onClick={() => handleDownload(selectedLessonPlan)}>
+                  <Download className="mr-2 h-4 w-4" /> Download
+                </Button>
+                <Button
+                  onClick={() => router.push(`/teacher/lesson-plans/edit/${selectedLessonPlan.id}`)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+              </>
+            )}
+            {selectedScheme && (
+              <>
+                <Button
+                  onClick={() => router.push(`/teacher/schemes-of-work/edit/${selectedScheme.id}`)}
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                >
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Button>
+              </>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

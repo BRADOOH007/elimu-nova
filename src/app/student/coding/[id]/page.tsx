@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, ArrowLeft, Code2, Globe, Gamepad2, Brain, Play, ExternalLink } from "lucide-react"
+import { Loader2, ArrowLeft, Code2, Globe, Gamepad2, Brain, Play, ExternalLink, Sparkles } from "lucide-react"
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { CodePlayground } from '@/components/coding/code-playground'
+import { HopeAITutorDrawer } from '@/components/ai-tutor-drawer'
 
 interface CodingLesson {
   id: number; title: string; description: string; difficulty: string
@@ -48,6 +49,7 @@ export default function StudentCodingDetailPage() {
   const id = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
   const [track, setTrack] = useState<string>("")
   const [lessonId, setLessonId] = useState(1)
+  const [showDrawer, setShowDrawer] = useState(false)
 
   useEffect(() => {
     // Parse query params from the id: track-lessonId format
@@ -77,6 +79,9 @@ export default function StudentCodingDetailPage() {
             <Button key={l.id} size="sm" variant={l.id === lessonId ? 'default' : 'outline'}
               onClick={() => setLessonId(l.id)}>{l.id}</Button>
           ))}
+          <Button size="sm" onClick={() => setShowDrawer(true)} className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white ml-2">
+            <Sparkles className="w-4 h-4 mr-2" /> Ask Hope
+          </Button>
         </div>
       </div>
 
@@ -134,6 +139,15 @@ export default function StudentCodingDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <HopeAITutorDrawer
+        open={showDrawer}
+        onClose={() => setShowDrawer(false)}
+        studentName=""
+        currentSubject="Programming"
+        currentTopic={lesson.title}
+        initialPrompt={`I'm learning "${lesson.title}" (${lesson.description}, ${lesson.difficulty}). Can you help me understand this coding lesson?`}
+      />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -129,8 +129,7 @@ export default function ViewStudentModal({ isOpen, onClose, student, onEdit, onD
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] bg-white border-0 shadow-2xl overflow-hidden">
-        <div className="max-h-[85vh] overflow-y-auto px-1">
+      <DialogContent className="max-w-2xl bg-white border-0 shadow-2xl">
         <DialogHeader className="pb-4 border-b border-gray-100">
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
@@ -144,14 +143,14 @@ export default function ViewStudentModal({ isOpen, onClose, student, onEdit, onD
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12">
+          <DialogBody className="flex items-center justify-center py-12 mt-1">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-2 text-gray-600">Loading student details...</p>
             </div>
-          </div>
+          </DialogBody>
         ) : (
-          <div className="space-y-6 mt-6">
+          <DialogBody className="space-y-6 mt-1">
             {/* Student Information */}
             <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
               <div className="flex items-start justify-between mb-4">
@@ -309,52 +308,50 @@ export default function ViewStudentModal({ isOpen, onClose, student, onEdit, onD
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                className="bg-white border-gray-200 hover:bg-gray-50"
-              >
-                <X className="w-4 h-4 mr-2" />
-                Close
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleToggleStatus}
-                className="bg-white border-gray-200 hover:bg-gray-50"
-              >
-                {(studentData?.status || student.status) === 'Active' ? (
-                  <>
-                    <UserX className="w-4 h-4 mr-2" />
-                    Deactivate
-                  </>
-                ) : (
-                  <>
-                    <UserCheck className="w-4 h-4 mr-2" />
-                    Activate
-                  </>
-                )}
-              </Button>
-              <Button
-                onClick={handleEdit}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg"
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleDelete}
-                className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          </div>
+          </DialogBody>
         )}
-        </div>
+        <DialogFooter className="border-t border-gray-200">
+          <Button
+            variant="outline"
+            onClick={handleClose}
+            className="bg-white border-gray-200 hover:bg-gray-50 px-5 py-2.5 text-sm font-medium"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Close
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleToggleStatus}
+            className="bg-white border-gray-200 hover:bg-gray-50 px-5 py-2.5 text-sm font-medium"
+          >
+            {(studentData?.status || student.status) === 'Active' ? (
+              <>
+                <UserX className="w-4 h-4 mr-2" />
+                Deactivate
+              </>
+            ) : (
+              <>
+                <UserCheck className="w-4 h-4 mr-2" />
+                Activate
+              </>
+            )}
+          </Button>
+          <Button
+            onClick={handleEdit}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg px-5 py-2.5 text-sm font-medium"
+          >
+            <Edit className="w-4 h-4 mr-2" />
+            Edit
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDelete}
+            className="bg-red-50 text-red-600 border-red-200 hover:bg-red-100 px-5 py-2.5 text-sm font-medium"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete
+          </Button>
+        </DialogFooter>
       </DialogContent>
 
       {/* Password Generation Modal */}

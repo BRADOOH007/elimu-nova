@@ -94,12 +94,12 @@ export function parseRows(lines: string[], hasHeader: boolean): ImportRow[] {
   const rows: ImportRow[] = []
   const dataLines = hasHeader ? lines.slice(1) : lines
 
-  let headerIdx = hasHeader ? detectHeaders(parseCSVLine(lines[0])) : null
+  const headerIdx = hasHeader ? detectHeaders(parseCSVLine(lines[0])) : null
 
   for (const line of dataLines) {
     if (!line.trim()) continue
     const cols = parseCSVLine(line)
-    let row: ImportRow = { firstName: '', lastName: '', email: '', raw: line }
+    const row: ImportRow = { firstName: '', lastName: '', email: '', raw: line }
 
     if (headerIdx) {
       row.firstName  = cols[headerIdx.firstName]?.trim() || ''
@@ -112,11 +112,6 @@ export function parseRows(lines: string[], hasHeader: boolean): ImportRow[] {
 
       // Full-name column fallback
       if (!row.firstName && headerIdx.firstName < 0) {
-        const fnIdx = HEADER_ALIASES.fullName.map(a => lines[0].toLowerCase().includes(a)).findIndex(Boolean)
-        if (fnIdx >= 0) {
-          const fullIdx = detectHeaders(parseCSVLine(lines[0])).firstName
-          // already handled above; try direct
-        }
         // fallback: check columns for "name"
         const parts = line.split(',')
         for (let i = 0; i < parts.length; i++) {
@@ -213,6 +208,17 @@ export async function createStudentUser(
   const hashedPwd = await bcrypt.hash(plainPwd, 10)
   const addressWithPwd = encryptPassword(plainPwd)
 
+  // Derive the teacherId from the assigned class when not passed explicitly,
+  // so the student appears in that teacher's roster/dashboard immediately.
+  let resolvedTeacherId = teacherId || null
+  if (!resolvedTeacherId && classId) {
+    const cls = await prisma.class.findFirst({
+      where: { id: classId },
+      select: { teacherId: true },
+    })
+    resolvedTeacherId = cls?.teacherId ?? null
+  }
+
   const user = await prisma.user.create({
     data: {
       firstName: row.firstName,
@@ -231,7 +237,7 @@ export async function createStudentUser(
     data: {
       userId: user.id,
       schoolId,
-      teacherId: teacherId || null,
+      teacherId: resolvedTeacherId,
       classId: classId || null,
 
     },
@@ -280,9 +286,9 @@ export async function importStudents(
       const { email, password, username } = await createStudentUser(row, schoolId, teacherId, resolvedClassId)
       created++
       results.push({ name: `${row.firstName} ${row.lastName}`, email, username, password, status: 'created' })
-    } catch (e: any) {
+    } catch (e: unknown) {
       skipped++
-      results.push({ name: `${row.firstName} ${row.lastName}`, email: '', username: '', password: '', status: 'skipped', reason: e.message?.slice(0, 80) || 'Unknown error' })
+      results.push({ name: `${row.firstName} ${row.lastName}`, email: '', username: '', password: '', status: 'skipped', reason: e instanceof Error ? e.message.slice(0, 80) : 'Unknown error' })
     }
   }
 

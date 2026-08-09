@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -167,8 +167,7 @@ export default function ViewStudentPasswordModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] bg-white border-0 shadow-2xl overflow-hidden">
-        <div className="max-h-[85vh] overflow-y-auto px-1">
+      <DialogContent className="max-w-2xl bg-white border-0 shadow-2xl">
         <DialogHeader className="pb-4 border-b border-gray-100">
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
@@ -181,7 +180,7 @@ export default function ViewStudentPasswordModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 mt-6">
+        <DialogBody className="space-y-6 mt-1">
           {/* Student Info */}
           <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 shadow-none">
             <CardHeader className="pb-3">
@@ -339,18 +338,17 @@ export default function ViewStudentPasswordModal({
               </li>
             </ul>
           </div>
-        </div>
+        </DialogBody>
 
-        <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+        <DialogFooter className="border-t border-gray-200">
           <Button 
             variant="outline" 
             onClick={onClose}
-            className="bg-white border-gray-200 hover:bg-gray-50"
+            className="bg-white border-gray-200 hover:bg-gray-50 px-5 py-2.5 text-sm font-medium"
           >
             Close
           </Button>
-        </div>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

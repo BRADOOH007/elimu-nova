@@ -6,3 +6,6 @@
 {"userId":"unknown","userRole":"unknown","input":"which ai model are you using ","reason":"Query does not appear educational","category":"non_educational","route":"callAI","timestamp":"2026-07-31T07:27:18.580Z"}
 {"userId":"unknown","userRole":"unknown","input":"HI, tell me something education unrelated","reason":"Query does not appear educational","category":"non_educational","route":"callAI","timestamp":"2026-08-01T11:48:35.159Z"}
 {"userId":"unknown","userRole":"unknown","input":"give me any uneducational anything","reason":"Query does not appear educational","category":"non_educational","route":"callAI","timestamp":"2026-08-01T12:49:55.281Z"}
+{"userId":"unknown","userRole":"unknown","input":"i wanna learn about pollination","reason":"Query does not appear educational","category":"non_educational","route":"callAI","timestamp":"2026-08-06T16:07:05.617Z"}
+{"userId":"unknown","userRole":"unknown","input":"Can you help me understand where I went wrong on this topic?","reason":"Query does not appear educational","category":"non_educational","route":"callAI","timestamp":"2026-08-06T16:39:35.871Z"}
+{"userId":"unknown","userRole":"unknown","input":"whats the easiest way to know this ","reason":"Query does not appear educational","category":"non_educational","route":"callAI","timestamp":"2026-08-08T03:27:16.166Z"}

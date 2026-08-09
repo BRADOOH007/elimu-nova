@@ -39,8 +39,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -762,7 +764,7 @@ export default function SchemesOfWorkPage() {
 
         {/* View Scheme of Work Modal */}
         <Dialog open={isViewModalOpen} onOpenChange={setViewModalOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle className="flex items-center">
                 <FileText className="mr-2 h-5 w-5" />
@@ -775,7 +777,7 @@ export default function SchemesOfWorkPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <DialogBody className="space-y-4 mt-1">
               {selectedSchemeOfWork?.content?.generatedContent || selectedSchemeOfWork?.content ? (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <h4 className="font-semibold text-gray-900 mb-2">Scheme of Work Content</h4>
@@ -792,8 +794,8 @@ export default function SchemesOfWorkPage() {
                   <p>No content available for this scheme of work.</p>
                 </div>
               )}
-            </div>
-            <div className="flex justify-end space-x-2 pt-4 border-t">
+            </DialogBody>
+            <DialogFooter>
               <Button
                 onClick={() => selectedSchemeOfWork && handleEditSchemeOfWork(selectedSchemeOfWork)}
                 className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
@@ -808,7 +810,7 @@ export default function SchemesOfWorkPage() {
                 <Share2 className="w-4 h-4 mr-2" />
                 Share
               </Button>
-            </div>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
@@ -921,7 +923,7 @@ export default function SchemesOfWorkPage() {
 
         {/* Coverage Tracker Modal */}
         <Dialog open={showCoverage} onOpenChange={setShowCoverage}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl">
             <CoverageTracker onClose={() => setShowCoverage(false)} />
           </DialogContent>
         </Dialog>

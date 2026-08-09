@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { useToast } from '@/hooks/use-toast'
@@ -151,7 +151,7 @@ export default function CreateSystemSettingModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="w-5 h-5 text-blue-600" />
@@ -159,123 +159,126 @@ export default function CreateSystemSettingModal({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form id="create-system-setting-form" onSubmit={handleSubmit} className="contents">
+          <DialogBody className="space-y-6 mt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="key">Setting Key *</Label>
+                <Input
+                  id="key"
+                  value={formData.key}
+                  onChange={(e) => handleInputChange('key', e.target.value)}
+                  placeholder="e.g., site_name, maintenance_mode"
+                  className="edugenius-glass"
+                  required
+                />
+                <p className="text-xs text-gray-500">Unique identifier for the setting</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type">Data Type *</Label>
+                <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
+                  <SelectTrigger className="edugenius-glass">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="string">String</SelectItem>
+                    <SelectItem value="number">Number</SelectItem>
+                    <SelectItem value="boolean">Boolean</SelectItem>
+                    <SelectItem value="json">JSON</SelectItem>
+                    <SelectItem value="array">Array</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="key">Setting Key *</Label>
+              <Label htmlFor="value">Value *</Label>
               <Input
-                id="key"
-                value={formData.key}
-                onChange={(e) => handleInputChange('key', e.target.value)}
-                placeholder="e.g., site_name, maintenance_mode"
+                id="value"
+                value={formData.value}
+                onChange={(e) => handleInputChange('value', e.target.value)}
+                placeholder={getValuePlaceholder(formData.type)}
                 className="edugenius-glass"
                 required
               />
-              <p className="text-xs text-gray-500">Unique identifier for the setting</p>
+              {formData.value && !validateValue(formData.value, formData.type) && (
+                <p className="text-xs text-red-500">
+                  Invalid {formData.type} format
+                </p>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="type">Data Type *</Label>
-              <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                <SelectTrigger className="edugenius-glass">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="string">String</SelectItem>
-                  <SelectItem value="number">Number</SelectItem>
-                  <SelectItem value="boolean">Boolean</SelectItem>
-                  <SelectItem value="json">JSON</SelectItem>
-                  <SelectItem value="array">Array</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="value">Value *</Label>
-            <Input
-              id="value"
-              value={formData.value}
-              onChange={(e) => handleInputChange('value', e.target.value)}
-              placeholder={getValuePlaceholder(formData.type)}
-              className="edugenius-glass"
-              required
-            />
-            {formData.value && !validateValue(formData.value, formData.type) && (
-              <p className="text-xs text-red-500">
-                Invalid {formData.type} format
-              </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="category">Category *</Label>
-              <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                <SelectTrigger className="edugenius-glass">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="general">General</SelectItem>
-                  <SelectItem value="security">Security</SelectItem>
-                  <SelectItem value="notifications">Notifications</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
-                  <SelectItem value="analytics">Analytics</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Input
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="Brief description of the setting"
-                className="edugenius-glass"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="isPublic">Public Setting</Label>
-                <p className="text-xs text-gray-500">Visible to non-admin users</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Category *</Label>
+                <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                  <SelectTrigger className="edugenius-glass">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="general">General</SelectItem>
+                    <SelectItem value="security">Security</SelectItem>
+                    <SelectItem value="notifications">Notifications</SelectItem>
+                    <SelectItem value="system">System</SelectItem>
+                    <SelectItem value="analytics">Analytics</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Switch
-                id="isPublic"
-                checked={formData.isPublic}
-                onCheckedChange={(checked) => handleInputChange('isPublic', checked)}
-              />
-            </div>
 
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="isEditable">Editable</Label>
-                <p className="text-xs text-gray-500">Can be modified after creation</p>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Brief description of the setting"
+                  className="edugenius-glass"
+                />
               </div>
-              <Switch
-                id="isEditable"
-                checked={formData.isEditable}
-                onCheckedChange={(checked) => handleInputChange('isEditable', checked)}
-              />
             </div>
-          </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isPublic">Public Setting</Label>
+                  <p className="text-xs text-gray-500">Visible to non-admin users</p>
+                </div>
+                <Switch
+                  id="isPublic"
+                  checked={formData.isPublic}
+                  onCheckedChange={(checked) => handleInputChange('isPublic', checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="isEditable">Editable</Label>
+                  <p className="text-xs text-gray-500">Can be modified after creation</p>
+                </div>
+                <Switch
+                  id="isEditable"
+                  checked={formData.isEditable}
+                  onCheckedChange={(checked) => handleInputChange('isEditable', checked)}
+                />
+              </div>
+            </div>
+          </DialogBody>
+
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="edugenius-glass"
+              className="edugenius-glass px-5 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>
             <Button
               type="submit"
+              form="create-system-setting-form"
               disabled={loading || !validateValue(formData.value, formData.type)}
-              className="edugenius-button"
+              className="edugenius-button px-5 py-2.5 text-sm font-medium"
             >
               {loading ? (
                 <>
@@ -289,7 +292,7 @@ export default function CreateSystemSettingModal({
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogBody } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
@@ -1105,7 +1105,7 @@ export default function SchoolAdminSecurityPage() {
               Create a new security event log entry
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="eventType">Event Type</Label>
@@ -1178,12 +1178,12 @@ export default function SchoolAdminSecurityPage() {
                 rows={2}
               />
             </div>
-          </div>
+          </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateLogModalOpen(false)}>
+            <Button variant="outline" onClick={() => setCreateLogModalOpen(false)} className="px-5 py-2.5 text-sm font-medium">
               Cancel
             </Button>
-            <Button onClick={handleCreateLog}>
+            <Button onClick={handleCreateLog} className="px-5 py-2.5 text-sm font-medium">
               Create Log
             </Button>
           </DialogFooter>

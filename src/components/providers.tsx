@@ -1,9 +1,16 @@
 'use client'
 
 import { SessionProvider } from 'next-auth/react'
+import { SWRConfig } from 'swr'
 import React, { ReactNode, useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { SWRegister } from '@/components/sw-register'
+import { AITutorProvider } from '@/components/ai-tutor-provider'
+
+const swrConfig = {
+  staleTime: 1000 * 60 * 5,
+  keepPreviousData: true,
+}
 
 interface ProvidersProps {
   children: ReactNode
@@ -108,7 +115,11 @@ export function Providers({ children }: ProvidersProps) {
       refetchInterval={5 * 60}        // re-check session every 5 min (not on every focus)
       refetchOnWindowFocus={false}    // don't refetch on tab switch — prevents the loading flash
     >
-      <ClientErrorBoundary>{children}</ClientErrorBoundary>
+      <ClientErrorBoundary>
+        <SWRConfig value={swrConfig}>
+          <AITutorProvider>{children}</AITutorProvider>
+        </SWRConfig>
+      </ClientErrorBoundary>
       <Toaster
         position="top-right"
         richColors

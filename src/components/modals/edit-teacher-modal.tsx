@@ -128,7 +128,7 @@ export function EditTeacherModal({ isOpen, onClose, onSuccess, teacher }: EditTe
       subtitle="Update teacher information and settings" icon={<User />} size="xl"
       footer={<AdminModalFooter onCancel={handleClose} submitLabel="Update Teacher" loading={loading} type="submit" />}
     >
-      <form id="edit-teacher-form" onSubmit={handleSubmit} className="space-y-5">
+      <form id="edit-teacher-form" onSubmit={handleSubmit} className="space-y-5 mt-1">
         <div className="grid grid-cols-2 gap-4">
           <AdminFormField label="First Name" htmlFor="et-first">
             <input id="et-first" name="firstName" type="text" autoComplete="off" value={formData.firstName} onChange={handleInputChange} placeholder="Enter first name" className={adminInputClass} required />

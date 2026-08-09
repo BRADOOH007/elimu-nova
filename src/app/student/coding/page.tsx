@@ -7,10 +7,10 @@ import {
   ArrowLeft, Sparkles, Lightbulb, RefreshCw, CheckCircle,
   BookOpen, Target, Zap, ChevronRight, X
 } from 'lucide-react'
-import ChatContainer from '@/components/chat/chat-container'
 import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { CodePlayground } from '@/components/coding/code-playground'
 import { ScratchEmbed } from '@/components/coding/scratch-embed'
+import { AICodingTutorDrawer, type CodingTrackId } from '@/components/ai/ai-coding-tutor-drawer'
 
 /* ─────────────────────────── Types ─────────────────────────── */
 type Track = 'scratch' | 'web' | 'ai-kids' | 'advanced'
@@ -123,31 +123,33 @@ const TRACKS = [
   },
 ]
 
-/* ─────────────────────────── AI Tutor Panel ─────────────────── */
-function AITutorPanel({ language, lessonTitle }: { language: string; lessonTitle: string }) {
-  const handleCodingChat = async (message: string) => {
-    const res = await fetch('/api/student/coding/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, language, lessonTitle }),
-    })
-    if (!res.ok) throw new Error('API error')
-    const data = await res.json()
-    return data.response || 'Sorry, try again!'
-  }
+/* ─────────────────────────── AI Tutor Drawer wiring ─────────────────── */
+// The old inline ChatContainer-based AITutorPanel has been replaced by the reusable
+// <AICodingTutorDrawer /> so the coding tutor is persistent, context-aware, and shared
+// across every track. The mapping below reconciles the page's track ids
+// ("scratch" | "web" | "ai-kids" | "advanced") with the drawer's track taxonomy
+// ("scratch" | "web-dev" | "ai-for-kids" | "python").
+const DRAWER_TRACK: Record<Track, CodingTrackId> = {
+  scratch: 'scratch',
+  web: 'web-dev',
+  'ai-kids': 'ai-for-kids',
+  advanced: 'python',
+}
 
+const trackBadge: Record<string, string> = {
+  scratch: 'bg-blue-100 text-blue-700',
+  web: 'bg-emerald-100 text-emerald-700',
+  'ai-kids': 'bg-purple-100 text-purple-700',
+  advanced: 'bg-cyan-100 text-cyan-700',
+}
+
+function AITutorDrawer({ track, lesson, activeCode, errorLogs }: { track: Track; lesson: Lesson; activeCode: string; errorLogs: string[] }) {
   return (
-    <ChatContainer
-      onSend={handleCodingChat}
-      headerTitle="AI Coding Tutor"
-      headerSubtitle={`Helping with ${lessonTitle}`}
-      quickPrompts={[
-        `How do I make the sprite move right?`,
-        `How do I make it loop forever?`,
-        `Explain the 'when flag clicked' block`,
-      ]}
-      placeholder="Ask your coding question..."
-      icon="brain"
+    <AICodingTutorDrawer
+      trackId={DRAWER_TRACK[track]}
+      lessonId={lesson.title}
+      activeCode={activeCode}
+      errorLogs={errorLogs}
     />
   )
 }
@@ -159,10 +161,23 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
   const showPlayground = track.id === 'web' && lesson.starterCode
   const showScratch = track.id === 'scratch'
 
+  // Live code + preview errors shared with the persistent coding tutor.
+  const [activeCode, setActiveCode] = useState('')
+  const [previewErrors, setPreviewErrors] = useState<string[]>([])
+
+  const drawer = (
+    <AITutorDrawer
+      track={track.id}
+      lesson={lesson}
+      activeCode={activeCode}
+      errorLogs={previewErrors}
+    />
+  )
+
   if (showPlayground) {
     return (
-      <div className="grid xl:grid-cols-[1fr_340px] gap-5 min-h-[calc(100vh-180px)]">
-        <div className="min-h-0 space-y-4">
+      <div className="flex flex-col xl:flex-row gap-5 items-start">
+        <div className="min-w-0 flex-1 space-y-4">
           <div className={`p-5 bg-gradient-to-r ${track.grad} rounded-2xl`}>
             <button onClick={onBack} className="flex items-center gap-2 text-white/80 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to lessons
@@ -172,7 +187,10 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
                 <Icon className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">{lesson.title}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-white">{lesson.title}</h2>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${trackBadge[track.id]}`}>{lesson.difficulty}</span>
+                </div>
                 <p className="text-white/80 text-sm">{lesson.description}</p>
               </div>
             </div>
@@ -186,6 +204,8 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
                 { name: 'style.css', language: 'css', content: lesson.starterCode.css ?? '' },
                 { name: 'script.js', language: 'javascript', content: lesson.starterCode.js ?? '' },
               ]}
+              onCodeChange={(files) => setActiveCode(files.map(f => `// ---- ${f.name} ----\n${f.content}`).join('\n\n'))}
+              onPreviewError={(err) => setPreviewErrors(prev => [...prev.slice(-4), err])}
             />
           )}
 
@@ -194,15 +214,15 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
           </div>
         </div>
 
-        <AITutorPanel language={track.title} lessonTitle={lesson.title} />
+        {drawer}
       </div>
     )
   }
 
   if (showScratch) {
     return (
-      <div className="grid xl:grid-cols-[1fr_340px] gap-5 min-h-[calc(100vh-180px)]">
-        <div className="min-h-0 space-y-4 overflow-y-auto">
+      <div className="flex flex-col xl:flex-row gap-5 items-start">
+        <div className="min-w-0 flex-1 space-y-4 overflow-y-auto">
           <div className={`p-5 bg-gradient-to-r ${track.grad} rounded-2xl`}>
             <button onClick={onBack} className="flex items-center gap-2 text-white/80 hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to lessons
@@ -212,7 +232,10 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
                 <Icon className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-white">{lesson.title}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold text-white">{lesson.title}</h2>
+                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${trackBadge[track.id]}`}>{lesson.difficulty}</span>
+                </div>
                 <p className="text-white/80 text-sm">{lesson.description}</p>
               </div>
             </div>
@@ -225,14 +248,14 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
           </div>
         </div>
 
-        <AITutorPanel language={track.title} lessonTitle={lesson.title} />
+        {drawer}
       </div>
     )
   }
 
   return (
-    <div className="grid lg:grid-cols-[1fr_340px] gap-5 h-[calc(100vh-180px)]">
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-y-auto min-h-0">
+    <div className="flex flex-col lg:flex-row gap-5 items-start">
+      <div className="min-w-0 flex-1 bg-white rounded-2xl border border-slate-200 overflow-y-auto">
         <div className={`p-5 bg-gradient-to-r ${track.grad} rounded-t-2xl`}>
           <button onClick={onBack} className="flex items-center gap-2 text-white/80 hover:text-white text-sm mb-4 transition-colors">
             <ArrowLeft className="h-4 w-4" /> Back to lessons
@@ -242,7 +265,10 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
               <Icon className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">{lesson.title}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-white">{lesson.title}</h2>
+                <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${trackBadge[track.id]}`}>{lesson.difficulty}</span>
+              </div>
               <p className="text-white/80 text-sm">{lesson.description}</p>
             </div>
           </div>
@@ -257,13 +283,13 @@ function LessonView({ lesson, track, onBack }: { lesson: Lesson; track: typeof T
               <p className="font-semibold text-amber-800 text-sm">Pro Tip</p>
             </div>
             <p className="text-amber-700 text-sm">
-              Stuck? Use the AI Tutor on the right — ask it to explain anything step by step, or ask for a challenge to test yourself!
+              Stuck? Use the AI tutor on the right — ask it to explain anything step by step, or send it your code for a bug check.
             </p>
           </div>
         </div>
       </div>
 
-      <AITutorPanel language={track.title} lessonTitle={lesson.title} />
+      {drawer}
     </div>
   )
 }

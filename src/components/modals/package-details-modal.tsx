@@ -14,6 +14,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogBody,
 } from '@/components/ui/dialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Package, Edit, Save, X, Plus, Trash2, Users, DollarSign, Calendar, CheckCircle, XCircle } from 'lucide-react'
@@ -234,14 +235,16 @@ export default function PackageDetailsModal({
   if (loading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
+        <DialogContent className="sm:max-w-[700px] bg-gradient-to-br from-white via-blue-50 to-purple-50">
           <DialogHeader>
             <DialogTitle className="edugenius-text-gradient-blue">Loading Package Details</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
-            <span className="ml-3 text-gray-500">Loading package details...</span>
-          </div>
+          <DialogBody className="mt-1">
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+              <span className="ml-3 text-gray-500">Loading package details...</span>
+            </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
     )
@@ -261,9 +264,9 @@ export default function PackageDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
-        <DialogHeader className="sticky top-0 bg-gradient-to-br from-white via-blue-50 to-purple-50 z-10 pb-4">
-          <DialogTitle className="edugenius-text-gradient-blue flex items-center justify-between">
+      <DialogContent className="sm:max-w-[800px] bg-gradient-to-br from-white via-blue-50 to-purple-50">
+          <DialogHeader>
+            <DialogTitle className="edugenius-text-gradient-blue flex items-center justify-between">
             <div className="flex items-center">
               <Package className="w-5 h-5 mr-2" />
               Package Details
@@ -334,7 +337,7 @@ export default function PackageDetailsModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 pb-4">
+        <DialogBody className="space-y-6 mt-1">
           {/* Package Information */}
           <Card className="bg-gradient-to-br from-white/70 to-blue-50/70 backdrop-blur-sm border-0">
             <CardHeader>
@@ -584,7 +587,7 @@ export default function PackageDetailsModal({
               </div>
             </CardContent>
           </Card>
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

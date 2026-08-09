@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -227,7 +227,7 @@ export default function SystemSettingDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CategoryIcon className="w-5 h-5 text-blue-600" />
@@ -235,7 +235,7 @@ export default function SystemSettingDetailsModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <DialogBody className="space-y-6 mt-1">
           {/* Header Info */}
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -408,21 +408,22 @@ export default function SystemSettingDetailsModal({
             </div>
           </div>
 
-          {/* Action Buttons */}
+        </DialogBody>
+        <DialogFooter className="border-t border-slate-100">
           {editing && (
-            <div className="flex justify-end gap-3 pt-4">
+            <>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setEditing(false)}
-                className="edugenius-glass"
+                className="edugenius-glass px-5 py-2.5 text-sm font-medium"
               >
                 Cancel
               </Button>
               <Button
                 onClick={handleUpdate}
                 disabled={loading || !validateValue(formData.value, formData.type)}
-                className="edugenius-button"
+                className="edugenius-button px-5 py-2.5 text-sm font-medium"
               >
                 {loading ? (
                   <>
@@ -436,9 +437,9 @@ export default function SystemSettingDetailsModal({
                   </>
                 )}
               </Button>
-            </div>
+            </>
           )}
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

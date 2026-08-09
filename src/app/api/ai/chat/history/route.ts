@@ -7,8 +7,16 @@ export const GET = route({}, async (req, { user }) => {
     const { searchParams } = new URL(req.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50)
 
+    // AITutorSession.studentId references Student.id, not User.id — resolve the
+    // student record first so history for school students actually loads.
+    const student = await prisma.student.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    })
+    if (!student) return NextResponse.json({ messages: [] })
+
     const sessions = await prisma.aITutorSession.findMany({
-      where: { studentId: user.id },
+      where: { studentId: student.id },
       select: { question: true, response: true, createdAt: true }
     })
 

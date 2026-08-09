@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { 
-  X, 
+  X,
   Upload, 
   FileText,
   Loader2,
@@ -230,25 +231,21 @@ export function UploadCurriculumModal({ isOpen, onClose, onCurriculumUploaded }:
     }
   }
 
-  if (!isOpen) return null
-
   return (
-    <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="max-w-3xl bg-white border-0 shadow-2xl p-0">
+        <DialogHeader className="border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
           <div className="flex items-center space-x-3">
             <Upload className="w-6 h-6 text-blue-600" />
-            <h2 className="text-xl font-semibold text-gray-900">Upload Curriculum</h2>
+            <div>
+              <DialogTitle className="text-xl font-semibold text-gray-900">Upload Curriculum</DialogTitle>
+              <DialogDescription className="text-gray-600">Upload curriculum files and metadata</DialogDescription>
+            </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleClose} disabled={loading}>
-            <X className="w-5 h-5" />
-          </Button>
-        </div>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit}>
-          <div className="overflow-y-auto max-h-96 p-6">
-            <div className="space-y-6">
+        <DialogBody className="space-y-6 mt-1">
+          <form id="upload-curriculum-form" onSubmit={handleSubmit} className="space-y-6">
               {/* Curriculum Information */}
               <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
                 <CardHeader>
@@ -431,34 +428,33 @@ export function UploadCurriculumModal({ isOpen, onClose, onCurriculumUploaded }:
                   )}
                 </CardContent>
               </Card>
-            </div>
-          </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
-            <Button variant="outline" onClick={handleClose} disabled={loading}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit"
-              disabled={loading || uploadedFiles.some(f => f.status === 'uploading')}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Curriculum
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+          </form>
+        </DialogBody>
+        <DialogFooter className="border-t border-gray-200 bg-gray-50">
+          <Button variant="outline" onClick={handleClose} disabled={loading} className="px-5 py-2.5 text-sm font-medium">
+            Cancel
+          </Button>
+          <Button 
+            type="submit"
+            form="upload-curriculum-form"
+            disabled={loading || uploadedFiles.some(f => f.status === 'uploading')}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-5 py-2.5 text-sm font-medium"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Curriculum
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

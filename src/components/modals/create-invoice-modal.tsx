@@ -10,6 +10,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -175,7 +176,8 @@ export function CreateInvoiceModal({
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="create-invoice-form" onSubmit={handleSubmit} className="contents">
+          <DialogBody className="space-y-4 mt-1">
           <div className="space-y-2">
             <Label htmlFor="subscriptionId">Subscription *</Label>
             <Select
@@ -287,16 +289,18 @@ export function CreateInvoiceModal({
             />
           </div>
 
+          </DialogBody>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="px-5 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" form="create-invoice-form" disabled={loading} className="px-5 py-2.5 text-sm font-medium">
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Create Invoice
             </Button>

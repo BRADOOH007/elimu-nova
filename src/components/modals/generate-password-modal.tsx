@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -164,7 +164,6 @@ export default function GeneratePasswordModal({ isOpen, onClose, onSuccess, stud
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl bg-gradient-to-br from-white via-blue-50 to-purple-50 border-0 shadow-2xl">
-        <div className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Key className="w-6 h-6 text-blue-600" />
@@ -175,7 +174,8 @@ export default function GeneratePasswordModal({ isOpen, onClose, onSuccess, stud
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <DialogBody className="space-y-6 mt-1">
+          <form id="generate-password-form" onSubmit={handleSubmit} className="space-y-6">
           {/* Password Input */}
           <div className="space-y-2">
             <Label htmlFor="password" className="text-sm font-medium text-gray-700">
@@ -301,32 +301,32 @@ export default function GeneratePasswordModal({ isOpen, onClose, onSuccess, stud
             </div>
           )}
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={loading || !password || Object.keys(errors).length > 0}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              ) : (
-                <Key className="w-4 h-4 mr-2" />
-              )}
-              {loading ? 'Setting Password...' : 'Set Password'}
-            </Button>
-          </div>
-        </form>
-        </div>
+          </form>
+        </DialogBody>
+        <DialogFooter className="border-t border-gray-200">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleClose}
+            className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90 px-5 py-2.5 text-sm font-medium"
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="generate-password-form"
+            disabled={loading || !password || Object.keys(errors).length > 0}
+            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-5 py-2.5 text-sm font-medium"
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+            ) : (
+              <Key className="w-4 h-4 mr-2" />
+            )}
+            {loading ? 'Setting Password...' : 'Set Password'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

@@ -2,8 +2,8 @@
 
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Upload, FileText, CheckCircle, AlertCircle, Loader2, X, File } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from '@/components/ui/dialog'
+import { Upload, FileText, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react'
 
 interface UploadedDoc {
   name: string
@@ -92,7 +92,7 @@ export default function DocumentUploadButton({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <DialogBody className="space-y-4">
             {/* Upload area */}
             <label className={`flex flex-col items-center justify-center gap-3 p-8 border-2 border-dashed rounded-xl cursor-pointer transition-colors
               ${uploading ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50/50'}`}>
@@ -154,17 +154,17 @@ export default function DocumentUploadButton({
               <ul className="text-xs text-blue-600 space-y-1">
                 <li>• Upload your existing {docType.replace('-', ' ')} document</li>
                 <li>• The AI reads and understands your curriculum structure</li>
-                <li>• When you generate new content, it follows your document's format and topics</li>
+                <li>• When you generate new content, it follows your document&apos;s format and topics</li>
                 <li>• Works great for national curriculum, school schemes, and custom formats</li>
               </ul>
             </div>
+          </DialogBody>
 
-            <div className="flex justify-end">
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
-                {uploaded ? 'Done' : 'Cancel'}
-              </Button>
-            </div>
-          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsOpen(false)} className="px-5 py-2.5 text-sm font-medium">
+              {uploaded ? 'Done' : 'Cancel'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

@@ -12,6 +12,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -59,51 +61,59 @@ export default function CreateReportModal({
               bounceRate: 0,
               conversionRate: 0
             },
-            trends: {
-              userGrowth: { direction: 'stable', percentage: 0 },
-              engagement: { direction: 'stable', percentage: 0 }
-            }
+            trends: [],
+            topPages: [],
+            userSegments: []
           }
         }
       case 'FINANCIAL':
         return {
           financial: {
-            revenue: { total: 0, recurring: 0, oneTime: 0 },
-            expenses: { total: 0, operational: 0, marketing: 0 },
-            breakdown: {}
+            revenue: 0,
+            expenses: 0,
+            profit: 0,
+            transactions: [],
+            paymentMethods: [],
+            monthlyBreakdown: []
           }
         }
       case 'ACADEMIC':
         return {
           academic: {
-            students: { total: 0, active: 0, graduated: 0 },
-            performance: { average: 0, median: 0, improvement: 0 },
-            attendance: { rate: 0, trend: 'stable' },
-            subjects: {}
+            totalStudents: 0,
+            totalTeachers: 0,
+            averageGrade: 0,
+            passRate: 0,
+            topPerformers: [],
+            subjects: []
           }
         }
       case 'USER_ACTIVITY':
         return {
           userActivity: {
-            activeUsers: { total: 0, daily: 0, weekly: 0 },
-            sessions: { total: 0, averageDuration: 0 },
-            activities: []
+            logins: [],
+            actions: [],
+            activeHours: [],
+            roleDistribution: []
           }
         }
       case 'SYSTEM_HEALTH':
         return {
           systemHealth: {
-            uptime: { percentage: 0 },
-            performance: { responseTime: 0, throughput: 0 },
-            errors: { rate: 0, critical: 0 },
-            services: {}
+            uptime: 0,
+            responseTime: 0,
+            errorRate: 0,
+            apiCalls: 0,
+            databaseSize: 0,
+            alerts: []
           }
         }
       default:
         return {
-          summary: 'Report generated successfully',
-          timestamp: new Date().toISOString(),
-          data: {}
+          custom: {
+            sections: [],
+            data: {}
+          }
         }
     }
   }
@@ -122,15 +132,6 @@ export default function CreateReportModal({
 
     setLoading(true)
     try {
-      // Generate appropriate content structure based on report type
-      const content = generateSampleContent(formData.type)
-      
-      // Generate basic filters
-      const filters = {
-        dateRange: 'Last 30 days',
-        generatedAt: new Date().toISOString()
-      }
-
       const response = await fetch('/api/reports', {
         method: 'POST',
         headers: {
@@ -138,16 +139,13 @@ export default function CreateReportModal({
         },
         body: JSON.stringify({
           ...formData,
-          content: JSON.stringify(content),
-          filters: JSON.stringify(filters),
-          scheduledAt: formData.scheduledAt || null,
-          expiresAt: formData.expiresAt || null
+          content: generateSampleContent(formData.type)
         }),
       })
 
       if (response.ok) {
-        const newReport = await response.json()
-        onReportCreated(newReport)
+        const reportData = await response.json()
+        onReportCreated(reportData)
         setFormData({
           title: '',
           description: '',
@@ -158,8 +156,9 @@ export default function CreateReportModal({
         })
         onClose()
         toast({
+          variant: "default",
           title: "Success",
-          description: "Report created successfully. You can now edit it to add your data.",
+          description: "Report created successfully",
         })
       } else {
         const error = await response.json()
@@ -183,7 +182,7 @@ export default function CreateReportModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
+      <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-white via-blue-50 to-purple-50">
         <DialogHeader>
           <DialogTitle className="edugenius-text-gradient-blue flex items-center">
             <Plus className="w-5 h-5 mr-2" />
@@ -194,109 +193,112 @@ export default function CreateReportModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Report Title *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                className="edugenius-glass"
-                placeholder="e.g., Monthly Analytics Report"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="type">Report Type *</Label>
-              <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
-                <SelectTrigger className="edugenius-glass">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ANALYTICS">📊 Analytics Report</SelectItem>
-                  <SelectItem value="FINANCIAL">💰 Financial Report</SelectItem>
-                  <SelectItem value="ACADEMIC">🎓 Academic Report</SelectItem>
-                  <SelectItem value="USER_ACTIVITY">👥 User Activity Report</SelectItem>
-                  <SelectItem value="SYSTEM_HEALTH">🔧 System Health Report</SelectItem>
-                  <SelectItem value="CUSTOM">📋 Custom Report</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              className="edugenius-glass"
-              rows={3}
-              placeholder="Describe what this report contains and its purpose"
-            />
-          </div>
-
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <div className="flex items-start space-x-2">
-              <Info className="w-5 h-5 text-blue-600 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-medium text-blue-900">Report Content</h4>
-                <p className="text-sm text-blue-700 mt-1">
-                  The system will create a template structure based on your selected report type. 
-                  After creation, you can edit the report to add your actual data and customize the content.
-                </p>
+        <form id="create-report-form" onSubmit={handleSubmit} className="contents">
+          <DialogBody className="space-y-6 mt-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Report Title *</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => handleInputChange('title', e.target.value)}
+                  className="edugenius-glass"
+                  placeholder="e.g., Monthly Analytics Report"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="type">Report Type *</Label>
+                <Select value={formData.type} onValueChange={(value) => handleInputChange('type', value)}>
+                  <SelectTrigger className="edugenius-glass">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ANALYTICS">📊 Analytics Report</SelectItem>
+                    <SelectItem value="FINANCIAL">💰 Financial Report</SelectItem>
+                    <SelectItem value="ACADEMIC">🎓 Academic Report</SelectItem>
+                    <SelectItem value="USER_ACTIVITY">👥 User Activity Report</SelectItem>
+                    <SelectItem value="SYSTEM_HEALTH">🔧 System Health Report</SelectItem>
+                    <SelectItem value="CUSTOM">📋 Custom Report</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="scheduledAt">Schedule For (Optional)</Label>
-              <Input
-                id="scheduledAt"
-                type="datetime-local"
-                value={formData.scheduledAt}
-                onChange={(e) => handleInputChange('scheduledAt', e.target.value)}
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
                 className="edugenius-glass"
+                rows={3}
+                placeholder="Describe what this report contains and its purpose"
               />
-              <p className="text-xs text-gray-500">Leave empty for immediate creation</p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="expiresAt">Expires At (Optional)</Label>
-              <Input
-                id="expiresAt"
-                type="datetime-local"
-                value={formData.expiresAt}
-                onChange={(e) => handleInputChange('expiresAt', e.target.value)}
-                className="edugenius-glass"
+
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-start space-x-2">
+                <Info className="w-5 h-5 text-blue-600 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-medium text-blue-900">Report Content</h4>
+                  <p className="text-sm text-blue-700 mt-1">
+                    The system will create a template structure based on your selected report type. 
+                    After creation, you can edit the report to add your actual data and customize the content.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="scheduledAt">Schedule For (Optional)</Label>
+                <Input
+                  id="scheduledAt"
+                  type="datetime-local"
+                  value={formData.scheduledAt}
+                  onChange={(e) => handleInputChange('scheduledAt', e.target.value)}
+                  className="edugenius-glass"
+                />
+                <p className="text-xs text-gray-500">Leave empty for immediate creation</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="expiresAt">Expires At (Optional)</Label>
+                <Input
+                  id="expiresAt"
+                  type="datetime-local"
+                  value={formData.expiresAt}
+                  onChange={(e) => handleInputChange('expiresAt', e.target.value)}
+                  className="edugenius-glass"
+                />
+                <p className="text-xs text-gray-500">Leave empty for no expiration</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="isPublic"
+                checked={formData.isPublic}
+                onCheckedChange={(checked) => handleInputChange('isPublic', checked)}
               />
-              <p className="text-xs text-gray-500">Leave empty for no expiration</p>
+              <Label htmlFor="isPublic">Make this report publicly accessible</Label>
             </div>
-          </div>
+          </DialogBody>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isPublic"
-              checked={formData.isPublic}
-              onCheckedChange={(checked) => handleInputChange('isPublic', checked)}
-            />
-            <Label htmlFor="isPublic">Make this report publicly accessible</Label>
-          </div>
-
-          <div className="flex items-center justify-end space-x-2 pt-4">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="edugenius-glass"
+              className="edugenius-glass px-5 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>
             <Button
               type="submit"
+              form="create-report-form"
               disabled={loading}
-              className="edugenius-button"
+              className="edugenius-button px-5 py-2.5 text-sm font-medium"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -305,7 +307,7 @@ export default function CreateReportModal({
               )}
               Create Report
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

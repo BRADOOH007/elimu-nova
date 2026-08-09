@@ -11,6 +11,8 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -133,8 +135,8 @@ export default function CreatePackageModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50">
-        <DialogHeader className="sticky top-0 bg-gradient-to-br from-white via-blue-50 to-purple-50 z-10 pb-4">
+      <DialogContent className="sm:max-w-[700px] bg-gradient-to-br from-white via-blue-50 to-purple-50">
+        <DialogHeader>
           <DialogTitle className="edugenius-text-gradient-blue flex items-center">
             <Package className="w-5 h-5 mr-2" />
             Create New Package
@@ -144,163 +146,165 @@ export default function CreatePackageModal({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pb-4">
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Package Name *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="Enter package name"
-                required
-                className="edugenius-glass"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">Price (USD) *</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => handleInputChange('price', e.target.value)}
-                placeholder="Enter price"
-                required
-                className="edugenius-glass"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => handleInputChange('description', e.target.value)}
-              placeholder="Enter package description"
-              required
-              className="edugenius-glass"
-              rows={3}
-            />
-          </div>
-
-          {/* Duration and Limits */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="duration">Duration (Days) *</Label>
-              <Input
-                id="duration"
-                type="number"
-                min="1"
-                value={formData.duration}
-                onChange={(e) => handleInputChange('duration', e.target.value)}
-                placeholder="Enter duration"
-                required
-                className="edugenius-glass"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="maxTeachers">Max Teachers *</Label>
-              <Input
-                id="maxTeachers"
-                type="number"
-                min="1"
-                value={formData.maxTeachers}
-                onChange={(e) => handleInputChange('maxTeachers', e.target.value)}
-                placeholder="Enter max teachers"
-                required
-                className="edugenius-glass"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="maxStudents">Max Students *</Label>
-              <Input
-                id="maxStudents"
-                type="number"
-                min="1"
-                value={formData.maxStudents}
-                onChange={(e) => handleInputChange('maxStudents', e.target.value)}
-                placeholder="Enter max students"
-                required
-                className="edugenius-glass"
-              />
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="space-y-2">
-            <Label>Features</Label>
-            <div className="flex gap-2">
-              <Input
-                value={newFeature}
-                onChange={(e) => setNewFeature(e.target.value)}
-                placeholder="Enter a feature"
-                className="edugenius-glass"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    handleAddFeature()
-                  }
-                }}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleAddFeature}
-                disabled={!newFeature.trim()}
-                className="edugenius-glass"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-            {formData.features.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.features.map((feature, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                  >
-                    <span>{feature}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFeature(index)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                ))}
+        <form id="create-package-form" onSubmit={handleSubmit} className="contents">
+          <DialogBody className="space-y-6 mt-1">
+            {/* Basic Information */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Package Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter package name"
+                  required
+                  className="edugenius-glass"
+                />
               </div>
-            )}
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Price (USD) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.price}
+                  onChange={(e) => handleInputChange('price', e.target.value)}
+                  placeholder="Enter price"
+                  required
+                  className="edugenius-glass"
+                />
+              </div>
+            </div>
 
-          {/* Status */}
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isActive"
-              checked={formData.isActive}
-              onCheckedChange={(checked) => handleInputChange('isActive', checked)}
-            />
-            <Label htmlFor="isActive">Active Package</Label>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description *</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Enter package description"
+                required
+                className="edugenius-glass"
+                rows={3}
+              />
+            </div>
 
-          {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-4">
+            {/* Duration and Limits */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duration (Days) *</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  min="1"
+                  value={formData.duration}
+                  onChange={(e) => handleInputChange('duration', e.target.value)}
+                  placeholder="Enter duration"
+                  required
+                  className="edugenius-glass"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxTeachers">Max Teachers *</Label>
+                <Input
+                  id="maxTeachers"
+                  type="number"
+                  min="1"
+                  value={formData.maxTeachers}
+                  onChange={(e) => handleInputChange('maxTeachers', e.target.value)}
+                  placeholder="Enter max teachers"
+                  required
+                  className="edugenius-glass"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="maxStudents">Max Students *</Label>
+                <Input
+                  id="maxStudents"
+                  type="number"
+                  min="1"
+                  value={formData.maxStudents}
+                  onChange={(e) => handleInputChange('maxStudents', e.target.value)}
+                  placeholder="Enter max students"
+                  required
+                  className="edugenius-glass"
+                />
+              </div>
+            </div>
+
+            {/* Features */}
+            <div className="space-y-2">
+              <Label>Features</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newFeature}
+                  onChange={(e) => setNewFeature(e.target.value)}
+                  placeholder="Enter a feature"
+                  className="edugenius-glass"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddFeature()
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddFeature}
+                  disabled={!newFeature.trim()}
+                  className="edugenius-glass"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              {formData.features.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.features.map((feature, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                    >
+                      <span>{feature}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFeature(index)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Status */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="isActive"
+                checked={formData.isActive}
+                onCheckedChange={(checked) => handleInputChange('isActive', checked)}
+              />
+              <Label htmlFor="isActive">Active Package</Label>
+            </div>
+          </DialogBody>
+
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
-              className="edugenius-glass"
+              className="edugenius-glass px-5 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>
             <Button
               type="submit"
+              form="create-package-form"
               disabled={loading}
-              className="edugenius-button"
+              className="edugenius-button px-5 py-2.5 text-sm font-medium"
             >
               {loading ? (
                 <>
@@ -314,7 +318,7 @@ export default function CreatePackageModal({
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

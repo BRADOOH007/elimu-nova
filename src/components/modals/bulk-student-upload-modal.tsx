@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Upload, X, CheckCircle, AlertTriangle, Download, Loader2, Users, Copy } from 'lucide-react'
-import { useToast } from '@/hooks/use-toast'
+import { Upload, CheckCircle, AlertTriangle, Download, Loader2, Users } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog'
 
 interface Props {
   isOpen:   boolean
@@ -29,7 +29,6 @@ export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, cla
   const [response, setResponse]   = useState<UploadResponse | null>(null)
   const [error, setError]         = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
-  const { toast } = useToast()
 
   if (!isOpen) return null
 
@@ -112,25 +111,21 @@ export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, cla
   const reset = () => { setStep('upload'); setParsed([]); setResponse(null); setError(''); if (fileRef.current) fileRef.current.value = '' }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl bg-white border-0 shadow-2xl p-0">
+        <DialogHeader className="border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
               <Users className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h2 className="font-bold text-slate-800">Bulk Student Upload</h2>
-              <p className="text-xs text-slate-400">Import up to 500 students from a CSV file</p>
+              <DialogTitle className="font-bold text-slate-800">Bulk Student Upload</DialogTitle>
+              <DialogDescription className="text-xs text-slate-400">Import up to 500 students from a CSV file</DialogDescription>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-            <X className="h-4 w-4 text-slate-500" />
-          </button>
-        </div>
+        </DialogHeader>
 
-        <div className="p-6">
+        <DialogBody className="mt-1">
           {/* Step 1 — Upload */}
           {step === 'upload' && (
             <div className="space-y-4">
@@ -278,8 +273,8 @@ export default function BulkStudentUploadModal({ isOpen, onClose, onSuccess, cla
               </button>
             </div>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   )
 }

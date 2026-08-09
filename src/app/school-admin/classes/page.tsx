@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, School, Plus, Search, Edit, Trash2, Users, BookOpen, GraduationCap, MoreHorizontal } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -161,7 +161,7 @@ export default function SchoolAdminClassesPage() {
           <DialogHeader>
             <DialogTitle>{editing ? 'Edit Class' : 'Create Class'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <DialogBody className="space-y-4">
             <div><label className="text-sm text-gray-600">Class Name</label><Input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Grade 7A" /></div>
             <div><label className="text-sm text-gray-600">Subject</label><select value={subject} onChange={e => setSubject(e.target.value)} className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select subject</option>{SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
             <div><label className="text-sm text-gray-600">Grade</label><select value={grade} onChange={e => setGrade(e.target.value)} className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"><option value="">Select grade</option>{GRADES.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
@@ -173,11 +173,13 @@ export default function SchoolAdminClassesPage() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-purple-600">
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={handleSave} disabled={saving} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 px-5 py-2.5 text-sm font-medium">
               {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               {editing ? 'Update' : 'Create'} Class
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

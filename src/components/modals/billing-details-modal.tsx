@@ -5,11 +5,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogBody, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { 
   Loader2, CreditCard, Calendar, DollarSign,
-  Edit, Trash2, Save, X, Clock, User, Phone, Mail, MapPin, RefreshCw, Package,
+  Edit, Trash2, Save, Clock, User, Phone, Mail, MapPin, RefreshCw, Package,
   Building2, Tag, Hash, Receipt, CheckCircle, AlertCircle, Ban
 } from "lucide-react"
 import { confirmToast } from '@/lib/confirm-toast'
@@ -167,9 +167,9 @@ export function BillingDetailsModal({ isOpen, onClose, billingId, onBillingUpdat
 
   if (loading) return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto bg-white">
+      <DialogContent className="sm:max-w-[800px] bg-white">
         <DialogHeader><DialogTitle className="text-slate-800 flex items-center gap-2"><Loader2 className="w-5 h-5 animate-spin text-indigo-500" /> Loading</DialogTitle></DialogHeader>
-        <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-slate-300" /></div>
+        <DialogBody className="flex items-center justify-center py-16 mt-1"><Loader2 className="w-8 h-8 animate-spin text-slate-300" /></DialogBody>
       </DialogContent>
     </Dialog>
   )
@@ -197,48 +197,20 @@ export function BillingDetailsModal({ isOpen, onClose, billingId, onBillingUpdat
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] overflow-y-auto bg-white p-0 gap-0">
-        {/* ── Header ── */}
-        <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-sm">
-                <CreditCard className="w-4 h-4" />
-              </div>
-              <div>
-                <DialogTitle className="text-base font-semibold text-slate-800 m-0">Billing Details</DialogTitle>
-                <DialogDescription className="text-xs text-slate-400 m-0">View and manage subscription billing information</DialogDescription>
-              </div>
+      <DialogContent className="sm:max-w-[900px] bg-white">
+        <DialogHeader className="border-b border-slate-200">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-sm">
+              <CreditCard className="w-4 h-4" />
             </div>
-            <div className="flex items-center gap-2">
-              {editing ? (
-                <>
-                  <button onClick={() => setEditing(false)} disabled={saving}
-                    className="flex items-center gap-1.5 px-3.5 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-60">
-                    <X className="w-4 h-4" /> Cancel
-                  </button>
-                  <button onClick={handleSave} disabled={saving}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-60 shadow-sm">
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => setEditing(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">
-                    <Edit className="w-4 h-4" /> Edit
-                  </button>
-                  <button onClick={handleDelete} disabled={deleting}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-60 shadow-sm">
-                    {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />} Delete
-                  </button>
-                </>
-              )}
+            <div>
+              <DialogTitle className="text-base font-semibold text-slate-800">Billing Details</DialogTitle>
+              <DialogDescription className="text-xs text-slate-400">View and manage subscription billing information</DialogDescription>
             </div>
           </div>
-        </div>
+        </DialogHeader>
 
-        <div className="p-6 space-y-6">
+        <DialogBody className="space-y-6 mt-1">
           {/* ── Summary Bar ── */}
           <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
             <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -540,7 +512,32 @@ export function BillingDetailsModal({ isOpen, onClose, billingId, onBillingUpdat
               </div>
             </div>
           </div>
-        </div>
+        </DialogBody>
+        <DialogFooter className="border-t border-slate-200">
+          {editing ? (
+            <>
+              <button type="button" onClick={() => setEditing(false)} disabled={saving}
+                className="px-5 py-2.5 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-60">
+                Cancel
+              </button>
+              <button type="button" onClick={handleSave} disabled={saving}
+                className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-60 shadow-sm">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : <Save className="w-4 h-4 inline mr-2" />} Save
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={handleDelete} disabled={deleting}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-60 shadow-sm">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin inline mr-2" /> : <Trash2 className="w-4 h-4 inline mr-2" />} Delete
+              </button>
+              <button type="button" onClick={() => setEditing(true)}
+                className="px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-medium rounded-lg transition-all shadow-sm">
+                <Edit className="w-4 h-4 inline mr-2" /> Edit
+              </button>
+            </>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

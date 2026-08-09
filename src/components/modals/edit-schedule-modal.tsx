@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -210,7 +211,7 @@ export default function EditScheduleModal({ isOpen, onClose, onScheduleUpdated, 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
+      <DialogContent className="sm:max-w-[600px] bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
         <DialogHeader>
           <DialogTitle className="edugenius-text-gradient-blue">Edit Schedule</DialogTitle>
           <DialogDescription>
@@ -218,7 +219,8 @@ export default function EditScheduleModal({ isOpen, onClose, onScheduleUpdated, 
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form id="edit-schedule-form" onSubmit={handleSubmit} className="contents">
+          <DialogBody className="space-y-4 mt-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Title *</Label>
@@ -419,20 +421,22 @@ export default function EditScheduleModal({ isOpen, onClose, onScheduleUpdated, 
             </p>
           </div>
 
+          </DialogBody>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={handleClose}
               disabled={isLoading}
-              className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90"
+              className="bg-white/70 backdrop-blur-sm border-0 shadow-sm hover:bg-white/90 px-5 py-2.5 text-sm font-medium"
             >
               Cancel
             </Button>
             <Button
               type="submit"
+              form="edit-schedule-form"
               disabled={isLoading}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 px-5 py-2.5 text-sm font-medium"
             >
               {isLoading ? (
                 <>

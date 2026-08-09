@@ -6,7 +6,10 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
   // Get student profile with class information
   const student = await withRetry(() => prisma.student.findUnique({
     where: { userId: user.id },
-    include: {
+    select: {
+      id: true,
+      teacherId: true,
+      classId: true,
       class: {
         select: {
           id: true,
@@ -38,7 +41,7 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
           }
         }
       },
-      {
+      ...(student.teacherId ? [{
         AND: [
           {
             teacherId: student.teacherId
@@ -49,7 +52,7 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
             }
           }
         ]
-      },
+      }] : []),
       ...(student.classId ? [{
         classId: student.classId
       }] : [])

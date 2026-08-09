@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
@@ -146,7 +146,7 @@ export default function SecurityLogDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Activity className="w-5 h-5 text-blue-600" />
@@ -154,7 +154,7 @@ export default function SecurityLogDetailsModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <DialogBody className="space-y-6 mt-1">
           {/* Header Info */}
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -181,25 +181,6 @@ export default function SecurityLogDetailsModal({
               </div>
               <p className="text-gray-600">{log.description}</p>
             </div>
-            {!log.resolved && (
-              <Button
-                onClick={handleResolve}
-                disabled={loading}
-                className="edugenius-button"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Resolving...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Mark as Resolved
-                  </>
-                )}
-              </Button>
-            )}
           </div>
 
           {/* Event Details */}
@@ -307,7 +288,28 @@ export default function SecurityLogDetailsModal({
               </div>
             </div>
           </div>
-        </div>
+        </DialogBody>
+        <DialogFooter className="border-t border-slate-100">
+          {!log.resolved && (
+            <Button
+              onClick={handleResolve}
+              disabled={loading}
+              className="edugenius-button px-5 py-2.5 text-sm font-medium"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Resolving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Mark as Resolved
+                </>
+              )}
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

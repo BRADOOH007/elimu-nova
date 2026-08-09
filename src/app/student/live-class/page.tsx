@@ -2,7 +2,7 @@
 
 import { useToast } from '@/hooks/use-toast'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
 import { useSession } from 'next-auth/react'
 import { useSearchParams } from 'next/navigation'
 import { Radio, MessageSquare, Send, Users, Loader2, Sparkles, Eye, Video, Hand, HandMetal } from 'lucide-react'
@@ -15,7 +15,7 @@ interface LiveSession {
 interface ChatMsg { userId: string; name: string; message: string; ts: string; isAI?: boolean }
 interface Participant { userId: string; name: string; joinedAt: string; handRaised?: boolean }
 
-export default function StudentLiveClass() {
+function StudentLiveClassContent() {
   const { toast } = useToast()
   const { data: session } = useSession()
   const searchParams = useSearchParams()
@@ -298,5 +298,18 @@ export default function StudentLiveClass() {
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Wrapper: Suspense because StudentLiveClassContent uses useSearchParams() ──
+export default function StudentLiveClass() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <StudentLiveClassContent />
+    </Suspense>
   )
 }

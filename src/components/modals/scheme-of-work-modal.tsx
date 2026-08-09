@@ -12,6 +12,8 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogBody,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Select,
@@ -179,7 +181,7 @@ export default function SchemeOfWorkModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>
               {isEditing ? 'Edit Scheme of Work' : 'Create New Scheme of Work'}
@@ -189,7 +191,7 @@ export default function SchemeOfWorkModal({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <DialogBody className="space-y-6 mt-1">
             {/* Basic Information */}
             <Card>
               <CardHeader>
@@ -347,16 +349,15 @@ export default function SchemeOfWorkModal({
               </CardContent>
             </Card>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={loading}>
-                {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
-              </Button>
-            </div>
-          </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose} className="px-5 py-2.5 text-sm font-medium">
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={loading} className="px-5 py-2.5 text-sm font-medium">
+              {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -470,14 +471,14 @@ function TopicModal({ isOpen, onClose, onSave, topic, isEditing }: TopicModalPro
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Edit Topic' : 'Add New Topic'}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody className="space-y-4 mt-1">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium">Topic Title</label>
@@ -634,16 +635,16 @@ function TopicModal({ isOpen, onClose, onSave, topic, isEditing }: TopicModalPro
               rows={2}
             />
           </div>
-        </div>
+        </DialogBody>
 
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} className="px-5 py-2.5 text-sm font-medium">
             Cancel
           </Button>
-          <Button onClick={handleSave}>
+          <Button onClick={handleSave} className="px-5 py-2.5 text-sm font-medium">
             {isEditing ? 'Update' : 'Add'} Topic
           </Button>
-        </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

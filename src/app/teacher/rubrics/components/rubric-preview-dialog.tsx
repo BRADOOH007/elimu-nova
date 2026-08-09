@@ -1,6 +1,6 @@
 'use client'
 
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 interface Rubric {
   id: string
@@ -23,7 +23,7 @@ interface RubricPreviewDialogProps {
 export function RubricPreviewDialog({ open, onOpenChange, rubric }: RubricPreviewDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-gray-900">Rubric Preview</DialogTitle>
           <DialogDescription>
@@ -32,7 +32,7 @@ export function RubricPreviewDialog({ open, onOpenChange, rubric }: RubricPrevie
         </DialogHeader>
 
         {rubric && (
-          <div className="space-y-6">
+          <DialogBody className="space-y-6 mt-1">
             {(() => {
               const rubricData = typeof rubric.content === 'string'
                 ? JSON.parse(rubric.content)
@@ -87,7 +87,7 @@ export function RubricPreviewDialog({ open, onOpenChange, rubric }: RubricPrevie
                 </>
               )
             })()}
-          </div>
+          </DialogBody>
         )}
       </DialogContent>
     </Dialog>

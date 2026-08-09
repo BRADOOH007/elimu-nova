@@ -35,7 +35,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-xl translate-x-[-50%] translate-y-[-50%] gap-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-2xl duration-200 max-h-[88vh] dark:border-slate-800/80 dark:bg-slate-950",
+        "fixed left-[50%] top-[50%] z-50 w-full max-w-xl translate-x-[-50%] translate-y-[-50%] max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl bg-white shadow-xl duration-200 dark:border dark:border-slate-800/80 dark:bg-slate-950",
         className
       )}
       {...props}
@@ -52,7 +52,7 @@ DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col gap-1.5 border-b border-slate-100 p-6 pb-4 sm:p-8 sm:pb-4 dark:border-slate-800/60", className)}
+    className={cn("flex flex-col gap-1.5 p-6 pb-4 border-b border-slate-100 bg-white shrink-0 dark:border-slate-800/60 dark:bg-slate-950", className)}
     {...props}
   />
 )
@@ -84,8 +84,7 @@ DialogDescription.displayName = DialogPrimitive.Description.displayName
 
 const DialogBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("overflow-y-auto px-6 py-4 sm:px-8 space-y-5", className)}
-    style={{ maxHeight: '65vh' }}
+    className={cn("flex-1 overflow-y-auto px-6 py-4 space-y-4", className)}
     {...props}
   />
 )
@@ -94,7 +93,7 @@ DialogBody.displayName = "DialogBody"
 const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex items-center justify-end gap-3 border-t border-slate-100 bg-slate-50/80 px-6 py-4 sm:px-8 rounded-b-2xl mt-4 dark:border-slate-800/60 dark:bg-slate-900/50",
+      "p-4 sm:px-6 border-t border-slate-100 bg-slate-50/80 flex justify-end items-center gap-3 shrink-0 rounded-b-2xl mt-auto dark:border-slate-800/60 dark:bg-slate-900/50",
       className
     )}
     {...props}

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { BookOpen, Clock, FileText, Lightbulb, ListChecks, PenTool, Play, Timer, X } from 'lucide-react'
+import { BookOpen, Clock, FileText, Lightbulb, ListChecks, PenTool, Play, Timer } from 'lucide-react'
 
 interface GuideContentProps {
   type: 'assignment' | 'exam' | 'general'
@@ -167,19 +167,17 @@ export default function AnswerGuide({ type, hasVideo }: GuideContentProps) {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto bg-white border-0 shadow-2xl p-0 gap-0">
-          <DialogHeader className="px-6 pt-6 pb-0">
-            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-              <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
-                  <Icon className="w-4 h-4 text-white" />
-                </div>
-                {guide.title}
-              </DialogTitle>
-            </div>
+        <DialogContent className="max-w-lg bg-white border-0 shadow-2xl p-0">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+                <Icon className="w-4 h-4 text-white" />
+              </div>
+              {guide.title}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="px-6 pb-6 pt-4 space-y-5">
+          <DialogBody className="pb-6 space-y-5">
             {guide.sections.map((section, i) => {
               const SecIcon = section.icon
               return (
@@ -201,7 +199,7 @@ export default function AnswerGuide({ type, hasVideo }: GuideContentProps) {
                 </div>
               )
             })}
-          </div>
+          </DialogBody>
         </DialogContent>
       </Dialog>
     </>

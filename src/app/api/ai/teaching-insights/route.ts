@@ -1,6 +1,6 @@
 /**
  * POST /api/ai/teaching-insights
- * Comprehensive Teaching Insights â€” AI class-wide analysis for teacher
+ * Comprehensive Teaching Insights — AI class-wide analysis for teacher
  */
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
