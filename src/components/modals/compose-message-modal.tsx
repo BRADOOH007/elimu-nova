@@ -10,8 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 interface ComposeMessageModalProps {
   isOpen: boolean
   onClose: () => void
-  onSend: (data: { recipientId?: string; subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' }) => Promise<void>
-  recipientType: 'TEACHER' | 'STUDENT' | 'PARENT'
+  onSend: (data: { recipientId?: string; subject: string; content: string; recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' | 'SUPER_ADMIN' }) => Promise<void>
+  recipientType: 'TEACHER' | 'STUDENT' | 'PARENT' | 'SUPER_ADMIN'
   recipients?: Array<{ id: string; name: string; email?: string }>
   defaultRecipient?: string
   studentRecipients?: Array<{ id: string; name: string; email?: string }>
@@ -28,7 +28,7 @@ export default function ComposeMessageModal({
   showRecipientTypeSelector = false,
   isSchoolStudent = false, assignedTeacher = null
 }: ComposeMessageModalProps) {
-  const [selectedRecipientType, setSelectedRecipientType] = useState<'TEACHER' | 'STUDENT' | 'PARENT'>(recipientType)
+  const [selectedRecipientType, setSelectedRecipientType] = useState<'TEACHER' | 'STUDENT' | 'PARENT' | 'SUPER_ADMIN'>(recipientType)
   const [recipientId, setRecipientId] = useState(defaultRecipient || '')
   const [subject, setSubject] = useState('')
   const [content, setContent] = useState('')
