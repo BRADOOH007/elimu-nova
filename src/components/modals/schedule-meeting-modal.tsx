@@ -45,7 +45,23 @@ export function ScheduleMeetingModal({ isOpen, onClose, onSuccess, meeting }: Sc
       toast({ title: "Error", description: "Please fill in all required fields", variant: "destructive" }); return
     }
     if (formData.meetingType === 'VIRTUAL' && !formData.videoLink) {
-      formData.videoLink = `https://meet.jit.si/${encodeURIComponent(formData.title.replace(/\s+/g, '-'))}-${Date.now().toString(36)}`
+      // Try Zoom first, fallback to Jitsi
+      try {
+        const { createZoomMeeting } = await import('@/lib/zoom-api')
+        const zoom = await createZoomMeeting({
+          topic: formData.title,
+          startTime: `${formData.date}T${formData.time}:00`,
+          duration: parseInt(formData.duration) || 60,
+          agenda: formData.description,
+        })
+        if (zoom?.join_url) {
+          formData.videoLink = zoom.join_url
+        } else {
+          formData.videoLink = `https://meet.jit.si/${encodeURIComponent(formData.title.replace(/\s+/g, '-'))}-${Date.now().toString(36)}`
+        }
+      } catch {
+        formData.videoLink = `https://meet.jit.si/${encodeURIComponent(formData.title.replace(/\s+/g, '-'))}-${Date.now().toString(36)}`
+      }
     }
     setIsLoading(true)
     try {
@@ -109,7 +125,7 @@ export function ScheduleMeetingModal({ isOpen, onClose, onSuccess, meeting }: Sc
               <input id="mt-vlink" type="url" autoComplete="off" placeholder="Leave blank to auto-generate Jitsi room"
                 value={formData.videoLink} onChange={set('videoLink')} className={`${adminInputClass} pl-9`} />
             </div>
-            <p className="text-xs text-slate-400 mt-1">A Jitsi Meet room will be auto-generated if left empty.</p>
+            <p className="text-xs text-slate-400 mt-1">Leave empty to auto-create: Zoom (if configured) or Jitsi Meet room.</p>
           </AdminFormField>
         )}
 
