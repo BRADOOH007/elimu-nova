@@ -1030,9 +1030,9 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <p className="text-slate-500 text-xs">© 2026 Elimu Nova. All rights reserved.</p>
                 <span className="text-slate-700">·</span>
-                <Link href="/contact" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Privacy</Link>
+                <Link href="/privacy" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Privacy</Link>
                 <span className="text-slate-700">·</span>
-                <Link href="/contact" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Terms</Link>
+                <Link href="/terms" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Terms</Link>
               </div>
               <div className="flex items-center gap-2">
                 <Link href="/contact" className="flex items-center gap-1.5 text-slate-500 hover:text-purple-400 text-xs transition-colors">

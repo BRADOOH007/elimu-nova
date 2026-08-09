@@ -90,6 +90,7 @@ export default function ParentBillingPage() {
       ? [{ icon: Smartphone, label: 'M-Pesa Express', detail: 'Paybill 247247 · Auto STK Push', bg: 'bg-emerald-50', text: 'text-emerald-700' }]
       : []),
     { icon: CreditCard, label: 'Credit / Debit Card', detail: 'Visa, Mastercard, Amex via Stripe', bg: 'bg-indigo-50', text: 'text-indigo-700' },
+    { icon: CreditCard, label: 'PayPal', detail: 'Instant checkout via PayPal', bg: 'bg-blue-50', text: 'text-blue-700' },
     ...(isKenya ? [] : [
       { icon: Wallet, label: 'Apple Pay / Google Pay', detail: 'Instant mobile wallet payment', bg: 'bg-slate-50', text: 'text-slate-700' },
       { icon: Building, label: 'ACH Bank Transfer', detail: 'Direct deposit · 1-3 business days', bg: 'bg-amber-50', text: 'text-amber-700' },

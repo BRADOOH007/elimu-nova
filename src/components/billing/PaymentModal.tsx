@@ -3,6 +3,14 @@
 import { useState, useEffect } from 'react'
 import { AdminModal, AdminModalFooter, AdminFormField, adminInputClass } from "@/components/ui/admin-modal"
 import { CreditCard, Smartphone, Building, Wallet, Loader2, CheckCircle } from 'lucide-react'
+
+function PayPalIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797H8.745c-.692 0-1.278.5-1.386 1.188L6.22 20.19c-.1.528-.557.93-1.093.93H2.47l.94-6.48.94 6.48h-2.274v.217h3.923c.537 0 .994-.402 1.094-.93l.953-4.76c.107-.688.693-1.188 1.386-1.188h3.137c4.298 0 7.664-1.747 8.647-6.797.03-.149.054-.294.077-.437.292-1.868-.002-3.137-1.012-4.287C22.536.543 20.528 0 17.958 0h-11.96C5.474 0 5.026.382 4.944.901L1.837 20.597a.641.641 0 0 0 .633.74h4.606v-.217z" />
+    </svg>
+  )
+}
 import { useToast } from "@/hooks/use-toast"
 
 interface PaymentModalProps {
@@ -30,6 +38,7 @@ export default function PaymentModal({ isOpen, onClose, country = 'US', currency
   const cardMethods = [
     { id: 'card', icon: CreditCard, label: 'Credit / Debit Card', bg: 'bg-indigo-50', text: 'text-indigo-700' },
     ...(isKenya ? [{ id: 'mpesa', icon: Smartphone, label: 'M-Pesa Mobile Money', bg: 'bg-emerald-50', text: 'text-emerald-700' }] : []),
+    { id: 'paypal', icon: PayPalIcon, label: 'PayPal', bg: 'bg-blue-50', text: 'text-blue-700' },
     ...(!isKenya ? [{ id: 'applepay', icon: Wallet, label: 'Apple Pay / Google Pay', bg: 'bg-slate-50', text: 'text-slate-700' }] : []),
     ...(!isKenya ? [{ id: 'bank', icon: Building, label: 'Bank Transfer / ACH', bg: 'bg-amber-50', text: 'text-amber-700' }] : []),
   ]
