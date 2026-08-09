@@ -29,7 +29,7 @@ export const POST = route({}, async (request, { user }) => {
       ? previousTopics.map(t => `W${t.weekNumber}L${t.lessonNumber}: ${t.title}`).join('\n')
       : `Recent ${subject} topics for ${grade}`
 
-    const prompt = `You are a Kenyan CBC teacher creating a "Previous Learning Recap" for the start of today's lesson.
+    const prompt = `You are a teacher creating a "Previous Learning Recap" for the start of today's lesson.
 
 Subject: ${subject} | Grade: ${grade}
 TODAY'S LESSON: ${currentStrand || subject} — ${currentSubStrand || 'New Topic'}
@@ -49,11 +49,11 @@ Create an engaging, student-friendly recap in this JSON format:
 
 Use:
 - Simple, friendly language appropriate for ${grade}
-- Kenyan examples and familiar contexts
+- Relatable local examples and familiar contexts
 - Encouraging, enthusiastic tone`
 
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC teacher. Return ONLY valid JSON.' },
+      { role: 'system', content: 'You are a teacher. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 600, temperature: 0.7 })
 

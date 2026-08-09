@@ -51,7 +51,7 @@ export const POST = route({}, async (request, { user }) => {
     const totalStudyMins = student.studySessions.reduce((s: number, ss: any) => s + (ss.duration || 0), 0)
     const name = `${student.user.firstName} ${student.user.lastName}`
 
-    const prompt = `You are an expert educational analyst for Kenyan CBC schools.
+    const prompt = `You are an expert educational analyst for schools.
 
 Student: ${name}
 Average Grade: ${student.analytics?.averageGrade ? Math.round(student.analytics.averageGrade) + '%' : 'N/A'}
@@ -85,7 +85,7 @@ Provide a comprehensive learning progress analysis. Return ONLY valid JSON:
 }`
 
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC educational analyst. Return ONLY valid JSON.' },
+      { role: 'system', content: 'You are an educational analyst. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 1200, temperature: 0.5 })
 

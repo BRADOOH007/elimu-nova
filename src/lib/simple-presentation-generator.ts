@@ -152,7 +152,7 @@ export class SimplePresentationGenerator {
 
     // Footer bar
     slide.addShape('rect', { x: 0, y: 5.2, w: '100%', h: 0.12, fill: { color: '1e3a5f' } })
-    slide.addText('Powered by ElimuNova AI — Kenya CBC Curriculum', {
+    slide.addText('Powered by ElimuNova AI', {
       x: 0.4, y: 5.25, w: 9.2, h: 0.25,
       fontSize: 9, color: '94a3b8', fontFace: 'Arial', align: 'center',
     })
@@ -315,7 +315,7 @@ export class SimplePresentationGenerator {
 
     // Bottom bar
     slide.addShape('rect', { x: 0, y: 5.2, w: '100%', h: 0.12, fill: { color: '1e3a5f' } })
-    slide.addText('Powered by ElimuNova AI — Kenya CBC Curriculum', {
+    slide.addText('Powered by ElimuNova AI', {
       x: 0.4, y: 5.25, w: 9.2, h: 0.25,
       fontSize: 9, color: '94a3b8', fontFace: 'Arial', align: 'center',
     })
@@ -358,7 +358,7 @@ export class SimplePresentationGenerator {
             return
           }
 
-          const enhanced = `Educational diagram or illustration for ${slide.imagePrompt}. Clean, textbook-quality, high-contrast, suitable for Kenyan classroom projection. No watermarks, no text overlays.`
+          const enhanced = `Educational diagram or illustration for ${slide.imagePrompt}. Clean, textbook-quality, high-contrast, suitable for classroom projection. No watermarks, no text overlays.`
           const result = await OpenAIService.generateImage({
             prompt:  enhanced,
             style,

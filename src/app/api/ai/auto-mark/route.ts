@@ -22,7 +22,7 @@ export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, 
 - Organisation (20%): Structure, clarity, logical flow
 - Language (15%): Grammar, vocabulary, expression`
 
-    const prompt = `You are an experienced Kenyan CBC teacher marking a student assignment.
+    const prompt = `You are an experienced teacher marking a student assignment.
 
 Assignment: "${assignmentTitle || 'Assignment'}"
 Total Marks: ${totalMarks}
@@ -51,11 +51,11 @@ Analyse the submission and return ONLY a valid JSON object:
 }
 
 Grading scale: EE=80-100%, ME=60-79%, AE=40-59%, BE=0-39%
-Be encouraging but honest. Use Kenyan educational context.`
+Be encouraging but honest.`
 
     try {
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC teacher. Return ONLY valid JSON.' },
+      { role: 'system', content: 'You are a teacher and examiner. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 1000, temperature: 0.3 })
 

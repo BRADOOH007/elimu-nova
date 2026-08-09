@@ -15,10 +15,10 @@ export const POST = route({}, async (request, { user }) => {
       )
     }
 
-    // Validate curriculum
-    if (!['CBC', 'IGCSE'].includes(curriculum)) {
+    // Validate curriculum is a recognized curriculum id (or a label)
+    if (!curriculum) {
       return NextResponse.json(
-        { error: 'Invalid curriculum. Must be CBC or IGCSE' },
+        { error: 'Missing required fields: topic, grade, curriculum, type' },
         { status: 400 }
       )
     }

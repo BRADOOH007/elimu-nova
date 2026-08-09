@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
+import { getCurriculumProfile } from './curriculum-prompt'
 
 const LOG_DIR = path.join(process.cwd(), 'logs')
 const LOG_FILE = path.join(LOG_DIR, 'ai-safety.jsonl')
@@ -81,7 +82,9 @@ export function hasEducationalContext(messages: Array<{ role: string; content: s
   return keywordCount >= 2
 }
 
-export function buildSafeSystemPrompt(basePrompt: string): string {
+export function buildSafeSystemPrompt(basePrompt: string, curriculum?: string | null, country?: string | null): string {
+  const profile = getCurriculumProfile(curriculum, country)
+  const isCBC = !curriculum || curriculum === 'cbc'
   return `${basePrompt}
 
 RESPONSIBILITY GUIDELINES — You must follow these:
@@ -89,11 +92,15 @@ RESPONSIBILITY GUIDELINES — You must follow these:
 2. If asked something clearly non-educational, politely respond: "I'm designed to help with educational topics. Please ask me something related to teaching, learning, or your school subjects."
 3. Never generate harmful, explicit, or inappropriate content
 4. Never share personal information of real individuals
-5. Stay focused on the Kenyan CBC curriculum and educational context at all times
-6. Always use Kenyan examples, contexts and resources when relevant
-7. Reference CBC core competencies (communication and collaboration, critical thinking and problem solving, creativity and imagination, citizenship, digital literacy, learning to learn)
-8. Reference CBC values (respect, responsibility, love, peace, unity, patriotism, integrity, honesty)
-9. Use KICD format for lesson plans: strand, sub-strand, specific learning outcomes, key inquiry questions, core competencies, values, PCIs, learning resources, assessment methods
+5. Stay focused on the ${profile.name} curriculum and educational context at all times
+6. Always use ${isCBC ? 'Kenyan' : 'local, curriculum-relevant'} examples, contexts and resources when relevant
+7. ${isCBC
+      ? 'Reference CBC core competencies (communication and collaboration, critical thinking and problem solving, creativity and imagination, citizenship, digital literacy, learning to learn)'
+      : `Reference the values of the ${profile.name}: ${profile.valuesGuidance}`}
+8. ${isCBC
+      ? 'Reference CBC values (respect, responsibility, love, peace, unity, patriotism, integrity, honesty)'
+      : `Reference 21st-century competencies: ${profile.competenciesGuidance}`}
+9. Use the curriculum's lesson format conventions for lesson plans: ${profile.strandLabel}s, ${profile.subStrandLabel}s, specific learning outcomes, key inquiry questions, and assessment methods
 10. If a question could have both educational and non-educational interpretations, answer the educational angle`
 }
 

@@ -12,9 +12,11 @@ import {
   CheckCircle,
   Calendar,
   CreditCard,
-  Lock
+  Lock,
+  HelpCircle
 } from 'lucide-react'
 import Link from 'next/link'
+import { signOut } from 'next-auth/react'
 
 interface SubscriptionGuardProps {
   children: React.ReactNode
@@ -27,7 +29,7 @@ export function SubscriptionGuard({
   fallback,
   requiresPremium = true
 }: SubscriptionGuardProps) {
-  const { subscription, loading, hasAccess, error } = useSubscription()
+  const { subscription, loading, hasAccess, error, context } = useSubscription()
 
   if (loading) {
     return <CustomLoader text="Loading subscription status..." />
@@ -48,6 +50,50 @@ export function SubscriptionGuard({
 
   const isExpired = subscription?.isExpired
   const isTrial = subscription?.isTrial
+  const isStudent = context?.userRole === 'STUDENT'
+
+  // Students don't subscribe or renew themselves — the parent or school
+  // administrator manages the plan. Show a student-appropriate lock screen
+  // without pricing / billing actions.
+  if (isStudent) {
+    return (
+      <div className="min-h-[600px] flex items-center justify-center p-6">
+        <Card className="max-w-2xl w-full bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-xl border-0">
+          <CardHeader className="text-center pb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Lock className="w-8 h-8 text-white" />
+            </div>
+
+            <CardTitle className="text-2xl font-bold text-gray-900 flex items-center justify-center gap-2">
+              <AlertTriangle className="w-6 h-6 text-orange-500" />
+              Account Access Paused
+            </CardTitle>
+            <CardDescription className="text-gray-600 text-lg">
+              Your study workspace is currently inactive. Please ask your parent or school administrator to renew your plan.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <div className="p-4 bg-white/70 rounded-lg border border-gray-200">
+              <div className="flex items-center text-sm text-gray-600">
+                <HelpCircle className="w-4 h-4 mr-2" />
+                <span>Need help? Ask your parent or school administrator to renew the subscription.</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+              <Button
+                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                onClick={() => signOut({ callbackUrl: '/auth/signin' })}
+              >
+                Back to Sign In
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-[600px] flex items-center justify-center p-6">

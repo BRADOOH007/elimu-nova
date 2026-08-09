@@ -319,7 +319,7 @@ export default function CreateLessonPlan() {
 
   const getFullTemplate = async () => {
     if (documentContext && documentContext.length > 500) return documentContext
-    const res = await fetch('/api/teacher/template')
+    const res = await fetch(`/api/teacher/template?curriculum=${encodeURIComponent(mode === 'single' ? singleCurriculum : termCurriculum)}&country=${encodeURIComponent(mode === 'single' ? singleCountry : termCountry)}`)
     if (res.ok) {
       const data = await res.json()
       return data.lessonPlanTemplate || documentContext
@@ -338,6 +338,8 @@ export default function CreateLessonPlan() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             mode: 'single', ...formData,
+            curriculum: singleCurriculum,
+            country: singleCountry,
             objectives: formData.objectives.filter(o => o.trim()),
             prerequisites: formData.prerequisites.filter(p => p.trim()),
             documentContext: fullContext,
@@ -353,6 +355,8 @@ export default function CreateLessonPlan() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             mode: 'term',
+            curriculum: termCurriculum,
+            country: termCountry,
             subject: termData.subject,
             grade: termData.grade,
             term: termData.term,

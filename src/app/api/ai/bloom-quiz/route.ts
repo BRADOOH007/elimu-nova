@@ -7,9 +7,10 @@ import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
+import { buildCurriculumAssessmentContext } from '@/lib/curriculum-prompt'
 
 export const POST = route({}, async (request, { user }) => {
-    const { subject, grade, strand, subStrand, topic, concepts = [], numQuestions = 6 } = await request.json()
+    const { subject, grade, strand, subStrand, topic, concepts = [], numQuestions = 6, curriculum, country } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
     const conceptsStr = concepts.length > 0 ? concepts.join(', ') : topic || `${strand} — ${subStrand}`
@@ -21,7 +22,12 @@ export const POST = route({}, async (request, { user }) => {
       ? 'Generate exactly 6 questions — one per Bloom\'s level.'
       : `Generate ${numQ} questions — at least one per Bloom's level, with extra questions distributed across APPLY, ANALYZE, and CREATE levels.`
 
-    const prompt = `You are an expert CBC curriculum assessment designer for Kenyan schools.
+    const curCtx = curriculum && curriculum !== 'cbc'
+      ? buildCurriculumAssessmentContext({ curriculum, country, grade, subject })
+      : null
+
+    const prompt = `You are ${curriculum && curriculum !== 'cbc' ? 'an expert assessment designer aligned to the selected curriculum' : 'an expert CBC curriculum assessment designer for Kenyan schools'}.
+${curCtx || ''}
 ${levelInstructions} Base them on this content:
 
 Subject: ${subject} | Grade: ${grade}
@@ -52,7 +58,7 @@ Return ONLY a valid JSON array of ${numQ} objects:
 ]
 
 Rules:
-- Use Kenya-specific examples and contexts
+- Use ${curriculum && curriculum !== 'cbc' ? 'contexts relevant to the selected country and curriculum (e.g. USD, US states, US cultural references for US curricula)' : 'Kenya-specific examples and contexts'}
 - Language appropriate for ${grade} learners
 - Questions must be based ONLY on the provided content
 - Multiple choice options must be plausible, not obviously wrong
@@ -62,7 +68,7 @@ Rules:
 
 
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC curriculum expert. Return ONLY valid JSON array, no markdown, no LaTeX, no TeX commands.' },
+      { role: 'system', content: 'You are a curriculum expert. Return ONLY valid JSON array, no markdown, no LaTeX, no TeX commands.' },
       { role: 'user', content: prompt },
     ], { maxTokens: Math.min(4000, 2000 + numQ * 200), temperature: 0.6 })
 

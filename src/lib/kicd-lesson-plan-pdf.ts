@@ -169,7 +169,7 @@ export class KICDLessonPlanPDF {
     doc.text('LESSON PLAN', 105, 12, { align: 'center' })
     doc.setFontSize(10)
     doc.setTextColor(220, 230, 245)
-    doc.text('Kenya Competency-Based Curriculum (CBC) - KICD Format', 105, 19, { align: 'center' })
+    doc.text('Curriculum-Aligned Lesson Plan', 105, 19, { align: 'center' })
 
     this.y = 38
     doc.setTextColor(20, 20, 20)

@@ -37,7 +37,7 @@ ${activeCode ? `\nStudent's current code:\n\`\`\`\n${activeCode.slice(0, 3000)}\
 ${errorLogs ? `\nErrors the student is seeing:\n${errorLogs.slice(0, 1500)}` : ''}
 
 Your teaching style:
-- Keep explanations brief and age-appropriate for a Kenyan Grades 4-6 student.
+- Keep explanations brief and age-appropriate for the student's level.
 - Give concrete, runnable examples, but never the whole solution at once.
 - Encourage progress and ask a short follow-up to check understanding.`
 

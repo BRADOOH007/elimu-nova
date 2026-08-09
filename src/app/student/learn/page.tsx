@@ -37,6 +37,7 @@ interface ActiveLessonData {
   topic: string; subject: string; grade: string
   preview: { whatYoullLearn: string; concepts: string[] }
   content: string
+  images?: { sectionTitle: string; imagePrompt: string; imageUrl?: string }[]
   recall: { question: string; type: 'mcq' | 'short' | 'fill'; options?: string[]; answer: string; explanation: string }[]
   generatedAt: string
 }
@@ -519,6 +520,32 @@ function LearnPageContent() {
                   {/* Phase 2: Learn */}
                   {studyPhase === 'learn' && (
                     <div className="space-y-5">
+                      {activeLesson.images && activeLesson.images.length > 0 && (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {activeLesson.images.map((img, i) => (
+                            <figure key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                              <div className="relative aspect-video bg-slate-100">
+                                {img.imageUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img src={img.imageUrl} alt={img.sectionTitle} className="h-full w-full object-cover" loading="lazy" />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-50 to-teal-50 p-4">
+                                    <div className="text-center">
+                                      <span className="text-3xl">🎨</span>
+                                      <p className="mt-2 text-xs font-semibold text-blue-700">{img.sectionTitle}</p>
+                                      <p className="mt-1 line-clamp-2 text-[11px] text-slate-500">{img.imagePrompt}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <figcaption className="border-t border-slate-100 bg-slate-50 px-3 py-2">
+                                <p className="text-xs font-semibold text-slate-700">{img.sectionTitle}</p>
+                                <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{img.imagePrompt}</p>
+                              </figcaption>
+                            </figure>
+                          ))}
+                        </div>
+                      )}
                       <div className="max-h-[450px] overflow-y-auto"><MarkdownRenderer content={activeLesson.content} /></div>
                       <Button onClick={() => { setStudyPhase('recall'); setRecallAnswers(new Array(activeLesson.recall.length).fill(undefined)) }}
                         className="w-full bg-indigo-500 font-semibold text-white hover:bg-indigo-600"><Brain className="mr-2 h-4 w-4" />I'm Ready — {activeLesson.recall.length} Questions</Button>

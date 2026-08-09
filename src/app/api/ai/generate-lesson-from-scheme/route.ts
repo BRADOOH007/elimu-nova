@@ -12,6 +12,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { buildKICDLessonPrompt } from '@/lib/cbc-context'
+import { buildCurriculumLessonContext } from '@/lib/curriculum-prompt'
 import type { KICDRow } from '@/app/api/ai/generate-scheme-structured/route'
 import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
@@ -27,6 +28,8 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
       grade,
       saveToDb = true,
       documentContext,
+      curriculum,
+      country,
     }: {
       schemeId?: string
       row: KICDRow
@@ -34,6 +37,8 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
       grade: string
       saveToDb?: boolean
       documentContext?: string
+      curriculum?: string
+      country?: string
     } = await request.json()
 
     if (!row || !subject || !grade) {
@@ -53,12 +58,14 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
       ? `\n\nA reference lesson plan document was uploaded as a format template. Study its structure, sections, and style, then generate the lesson plan in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
       : ''
 
-    const kicdContext = buildKICDLessonPrompt(grade, subject)
-    const systemPrompt = `You are a Kenyan CBC/CBE curriculum expert creating detailed lesson plans in the official KICD format.${templateBlock}
+    const kicdContext = curriculum && curriculum !== 'cbc'
+      ? buildCurriculumLessonContext({ curriculum, country, grade, subject })
+      : buildKICDLessonPrompt(grade, subject)
+    const systemPrompt = `You are ${curriculum && curriculum !== 'cbc' ? 'an expert educator creating detailed lesson plans aligned to the selected curriculum' : 'a Kenyan CBC/CBE curriculum expert creating detailed lesson plans in the official KICD format'}.${templateBlock}
 ${kicdContext}
 The lesson plan must match exactly what is in the scheme of work row provided.
 
-Return a JSON object EXACTLY matching this KICD 11-section structure:
+Return a JSON object EXACTLY matching this 11-section structure:
 {
   "title": string,
   "duration": number (minutes),
@@ -74,13 +81,13 @@ Return a JSON object EXACTLY matching this KICD 11-section structure:
     "duration": number,
     "enrolment": number
   },
-  "strand": "string (exact from KICD curriculum design)",
-  "subStrand": "string (exact from KICD curriculum design)",
+  "strand": "string",
+  "subStrand": "string",
   "specificLearningOutcomes": ["SLO1 - knowledge", "SLO2 - skill", "SLO3 - attitude"],
   "keyInquiryQuestions": ["open-ended question"],
-  "coreCompetencies": ["pick 2-3 from the 7 CBC competencies"],
-  "values": ["pick 1-2 from KICD values list"],
-  "pcis": ["pick 1-2 Pertinent and Contemporary Issues"],
+  "coreCompetencies": ["pick 2-3 relevant to this curriculum"],
+  "values": ["pick 1-2 from the curriculum values"],
+  "pcis": ["pick 1-2 relevant contemporary/cross-curricular issues"],
   "learningResources": ["resource with page numbers"],
   "organisationOfLearning": {
     "introduction": { "duration": 5, "teacherActivity": "string", "learnerActivity": "string" },
@@ -124,7 +131,7 @@ ${Array.isArray(row.learningResources) && row.learningResources.length
 Assessment Method:
 ${row.assessment || 'Oral questions and written exercises'}
 
-Make this lesson plan practical, engaging, and specifically tailored for Kenyan ${grade} students.
+Make this lesson plan practical, engaging, and specifically tailored for ${curriculum && curriculum !== 'cbc' ? 'students in the selected curriculum' : `Kenyan ${grade} students`}.
 Use local examples. Each activity should have clear timing and instructions.`
 
     const raw = await OpenAIService.generateLongContent(

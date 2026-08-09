@@ -25,7 +25,7 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN', 'SCHOOL_ADMIN'] }, 
       ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the marking scheme in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
       : ''
 
-    const prompt = `You are a senior Kenyan CBC examiner creating a detailed marking scheme.${templateBlock}
+    const prompt = `You are a senior examiner creating a detailed marking scheme.${templateBlock}
 
 Subject: ${subject || 'General'} | Grade: ${grade || 'Secondary'} | Total: ${totalMarks} marks
 
@@ -72,7 +72,7 @@ Rules:
 
     try {
     const raw = await OpenAIService.generateLongContent([
-      { role: 'system', content: 'You are a CBC examiner. Return ONLY valid JSON.' },
+      { role: 'system', content: 'You are an examiner. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 3000, temperature: 0.3 })
 

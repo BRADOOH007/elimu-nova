@@ -105,7 +105,7 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
   }
 
   // Get AI feedback on the writing
-  const feedbackPrompt = `You are an expert Kenyan English writing coach. Analyse this student's writing and provide detailed, constructive feedback.
+  const feedbackPrompt = `You are an expert English writing coach. Analyse this student's writing and provide detailed, constructive feedback.
 
 WRITING TOPIC: ${topic}
 SUBJECT: ${subject}
@@ -145,7 +145,7 @@ Provide feedback in this JSON format:
   "tips": ["tip 1", "tip 2", "tip 3"]
 }
 
-Be encouraging but honest. Reference Kenyan English standards and CBC writing expectations.`
+Be encouraging but honest. Reference standard English language expectations for the student's grade level.`
 
   let feedback = null
   let score = null

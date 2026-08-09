@@ -26,7 +26,7 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN', 'SCHOOL_ADMIN'] }, 
 
     const versionLabels = ['A', 'B', 'C', 'D'].slice(0, Math.min(versionsCount, 4))
 
-    const prompt = `You are an experienced Kenyan exam setter. Create ${versionLabels.length} versions of this exam to prevent cheating.${templateBlock}
+    const prompt = `You are an experienced exam setter. Create ${versionLabels.length} versions of this exam to prevent cheating.${templateBlock}
 
 ORIGINAL EXAM:
 """
@@ -55,7 +55,7 @@ Return ONLY a valid JSON object:
 }`
 
     const raw = await OpenAIService.generateLongContent([
-      { role: 'system', content: 'You are a CBC exam setter. Return ONLY valid JSON.' },
+      { role: 'system', content: 'You are an exam setter. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 4000, temperature: 0.5 })
 

@@ -16,7 +16,7 @@ export const POST = route({}, async (req, { user }) => {
 
     const response = await callAI({
       messages: [
-        { role: 'system', content: `You are a Voice AI Tutor for Kenyan students. ${subjectHint} ${topicHint} ${langHint} Since this will be read aloud via TTS, keep responses brief and conversational. Use simple vocabulary suitable for the student's level.` },
+        { role: 'system', content: `You are a Voice AI Tutor for students. ${subjectHint} ${topicHint} ${langHint} Since this will be read aloud via TTS, keep responses brief and conversational. Use simple vocabulary suitable for the student's level.` },
         { role: 'user', content: message },
       ],
       maxTokens: 300,

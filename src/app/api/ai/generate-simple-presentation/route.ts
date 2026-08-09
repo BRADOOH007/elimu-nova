@@ -68,7 +68,7 @@ export const POST = route({}, async (request, { user }) => {
       : ''
 
     // ── Build AI prompt (same structure as TutorBot generate-lesson-slides) ──
-    const systemPrompt = `You are an expert Kenyan teacher creating a PowerPoint presentation for CBC curriculum.${templateBlock}
+    const systemPrompt = `You are an expert educator creating a PowerPoint presentation for ${grade} students following the selected curriculum.${templateBlock}
 Return ONLY valid JSON — no markdown fences, no explanation.
 Use section values strictly: introduction, body, conclusion.
 Do NOT use asterisks (*) in content or speaker notes.
@@ -83,7 +83,7 @@ ${customInstructions ? `\nTeacher instructions: ${customInstructions}` : ''}
 
 Structure:
 - Slides 1-2: INTRODUCTION — title/hook with engaging scenario
-- Slides 3-${slideCount - 2}: BODY — progressive content, 3-4 bullet points, Kenyan examples
+- Slides 3-${slideCount - 2}: BODY — progressive content, 3-4 bullet points, relatable local examples
 - Slides ${slideCount - 1}-${slideCount}: CONCLUSION — summary + assessment questions
 
 For EACH slide return:

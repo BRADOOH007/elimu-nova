@@ -23,7 +23,7 @@ Rules:
 
     const content = await OpenAIService.generateLongContent(
       [
-        { role: 'system', content: 'You are an AI exam grader for CBC curriculum. Return ONLY valid JSON.' },
+        { role: 'system', content: 'You are an AI exam grader. Return ONLY valid JSON.' },
         { role: 'user', content: prompt },
       ],
       { maxTokens: 2000, temperature: 0.3 }

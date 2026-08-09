@@ -305,7 +305,7 @@ function buildSchemeHTML(scheme: any, rows: any[], teacherName: string, schoolNa
     <!-- ── Cover header ──────────────────────────────────────────── -->
     <div class="cover">
       <div class="cover-title">Scheme of Work</div>
-      <div class="cover-subtitle">Kenya Competency-Based Curriculum (CBC) — KICD Format</div>
+      <div class="cover-subtitle">Curriculum-Aligned Scheme of Work</div>
       <div class="cover-meta">
         ${schoolName ? `<div class="meta-item"><span class="meta-label">School:</span><span class="meta-value">${esc(schoolName)}</span></div>` : ''}
         <div class="meta-item"><span class="meta-label">Subject:</span><span class="meta-value">${esc(scheme.subject)}</span></div>

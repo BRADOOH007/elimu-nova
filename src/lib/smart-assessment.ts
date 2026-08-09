@@ -5,6 +5,7 @@
  */
 import { prisma } from '@/lib/prisma'
 import { buildKICDSchemePrompt } from '@/lib/cbc-context'
+import { buildCurriculumAssessmentContext } from '@/lib/curriculum-prompt'
 
 export interface StructuredQuestion {
   id: number | string
@@ -110,8 +111,12 @@ export function buildAssessmentSystemPrompt(opts: {
   topic?: string
   outcomes?: string[]
   templateText?: string | null
+  curriculum?: string
+  country?: string
 }): string {
-  const cbc = buildKICDSchemePrompt(opts.grade, opts.subject)
+  const cbc = opts.curriculum && opts.curriculum !== 'cbc'
+    ? buildCurriculumAssessmentContext({ curriculum: opts.curriculum, country: opts.country, grade: opts.grade, subject: opts.subject })
+    : buildKICDSchemePrompt(opts.grade, opts.subject)
   const outcomesBlock = opts.outcomes && opts.outcomes.length > 0
     ? `\nCURRICULUM LEARNING OUTCOMES (assess these — do not invent unrelated content):\n${opts.outcomes.map((o, i) => `${i + 1}. ${o}`).join('\n')}\n`
     : ''
@@ -120,13 +125,13 @@ export function buildAssessmentSystemPrompt(opts: {
     : ''
   const isKiswahili = /kiswahili/i.test(opts.subject)
 
-  return `You are a senior Kenyan CBC examiner and assessment designer for ElimuNova AI.
+  return `You are ${opts.curriculum && opts.curriculum !== 'cbc' ? 'a senior assessment designer and subject expert aligned to the selected curriculum' : 'a senior Kenyan CBC examiner and assessment designer'} for ElimuNova AI.
 ${cbc}
 ${outcomesBlock}${templateBlock}
 RULES:
 - Language: ${isKiswahili ? 'Kiswahili throughout' : 'English throughout (unless subject is Kiswahili)'}
 - Age-appropriate for ${opts.grade}
-- Use Kenyan contexts (KES, counties, local names, real-life scenarios)
+- ${opts.curriculum && opts.curriculum !== 'cbc' ? 'Use contexts relevant to the selected country and curriculum (e.g. USD, US states, US cultural references for US curricula)' : 'Use Kenyan contexts (KES, counties, local names, real-life scenarios)'}
 - NO LaTeX/TeX/MathJax — plain text math only (1/2, x^2, _____)
 - Questions must test understanding, application and analysis — not trivial recall only
 - Exactly one correct answer for every MCQ
@@ -238,7 +243,7 @@ export function buildFallbackAssignment(opts: {
     `Which statement best describes ${topic}?`,
     `A learner is studying ${topic}. What is the most accurate conclusion?`,
     `In the context of ${topic}, which option is correct?`,
-    `Why is ${topic} important in everyday life in Kenya?`,
+    `Why is ${topic} important in everyday life?`,
     `Which example correctly applies ${topic}?`,
     `What is a common mistake learners make when learning ${topic}?`,
     `Which step comes first when solving a problem involving ${topic}?`,
@@ -344,7 +349,7 @@ export function buildFallbackExam(opts: {
     questions.push({
       id,
       type: 'short_answer',
-      text: `Explain ${outcome} in your own words. Give one Kenyan example.`,
+      text: `Explain ${outcome} in your own words. Give one local example.`,
       marks: shortMarks,
       correctAnswer: `A clear explanation of ${outcome} with a relevant local example.`,
       section: 'B',

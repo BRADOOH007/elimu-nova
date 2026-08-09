@@ -15,6 +15,7 @@ import { type AIMessage, callAI } from '@/lib/ai-provider'
 import { buildKICDSchemePrompt, CBC_SUBJECT_LESSON_ALLOCATION } from '@/lib/cbc-context'
 import { route } from '@/lib/api-middleware'
 import { buildFullGenerationContext } from '@/lib/curriculum-intelligence'
+import { buildCurriculumSchemeContext } from '@/lib/curriculum-prompt'
 
 export interface KICDRow {
   week: number; lesson: number; strand: string; subStrand: string
@@ -230,7 +231,7 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
 
     const {
       title, subject, grade, term = 'Term 1', weeksCount = 13, lessonsPerWeek = 5,
-      selectedTopics = [], saveToDb = true, documentContext,
+      selectedTopics = [], saveToDb = true, documentContext, curriculum, country,
     } = await request.json()
 
     if (!subject || !grade) {
@@ -256,7 +257,9 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
       ? `\n\nReference document (use this format/style):\n${templateText.slice(0, 5000)}\n---\n`
       : ''
 
-    const kicdCtx = buildKICDSchemePrompt(grade, subject)
+    const kicdCtx = curriculum && curriculum !== 'cbc'
+      ? buildCurriculumSchemeContext({ curriculum, country, grade, subject })
+      : buildKICDSchemePrompt(grade, subject)
 
     // Fetch curriculum intelligence — official outcomes + teacher examples + RAG
     const { curriculumSection, examplesSection, ragContext } = await buildFullGenerationContext(
@@ -274,13 +277,13 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
     if (weeksCount <= CHUNK_SIZE) {
       // Small scheme — single call
       try {
-        const systemPrompt = `You are a Kenyan CBC/CBE education expert creating official KICD schemes of work.${templateBlock}${kicdCtx}
+        const systemPrompt = `You are ${curriculum && curriculum !== 'cbc' ? 'an expert education curriculum developer creating schemes of work for the selected curriculum' : 'a Kenyan CBC/CBE education expert creating official KICD schemes of work'}.${templateBlock}${kicdCtx}
 ${curriculumSection}
 ${ragContext}
 ${examplesSection}
 Return ONLY a raw JSON array. First char [ last char ]. No markdown. No explanation.
-Each object: {"week":<1-${weeksCount}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"By the end of the lesson, the learner should be able to...","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":40}
-CBC-aligned. Kenya-specific examples. ${grade} ${subject}. Distribute topics: ${topicsStr} across ${weeksCount} weeks. Exactly ${effectiveLpw} lessons per week. Return exactly ${totalLessons} objects.`
+Each object: {"week":<1-${weeksCount}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"${curriculum && curriculum !== 'cbc' ? 'Students will be able to...' : 'By the end of the lesson, the learner should be able to...'}","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":40}
+${curriculum && curriculum !== 'cbc' ? 'Aligned to the selected curriculum. US/local examples.' : 'CBC-aligned. Kenya-specific examples.'} ${grade} ${subject}. Distribute topics: ${topicsStr} across ${weeksCount} weeks. Exactly ${effectiveLpw} lessons per week. Return exactly ${totalLessons} objects.`
         const userPrompt = `${weeksCount}-week ${subject} scheme ${grade} ${term}. ${effectiveLpw} lessons/week. Total: ${totalLessons} lessons.\nTopics:\n${topicsStr}`
         const raw = await generateAIChunk(systemPrompt, userPrompt)
         aiRows = raw.map((r, i) => normaliseRow(r, Math.floor(i / effectiveLpw) + 1, (i % effectiveLpw) + 1))
@@ -309,13 +312,13 @@ CBC-aligned. Kenya-specific examples. ${grade} ${subject}. Distribute topics: ${
         const chunkTopicsStr = chunkTopics.map(t => `- ${t.strand} → ${t.subStrand}`).join('\n')
 
         try {
-          const systemPrompt = `You are a Kenyan CBC/CBE education expert creating official KICD schemes of work.${kicdCtx}
+          const systemPrompt = `You are ${curriculum && curriculum !== 'cbc' ? 'an expert education curriculum developer creating schemes of work for the selected curriculum' : 'a Kenyan CBC/CBE education expert creating official KICD schemes of work'}.${kicdCtx}
 ${curriculumSection}
 ${ragContext}
 ${examplesSection}
 Return ONLY a raw JSON array. First char [ last char ]. No markdown. No explanation.
-Each object: {"week":<${startWeek}-${startWeek + chunkWeeks - 1}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"By the end of the lesson, the learner should be able to...","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":40}
-CBC-aligned. Kenya-specific. ${grade} ${subject}. Topics: ${chunkTopicsStr}. ${chunkWeeks} weeks × ${effectiveLpw} lessons = ${chunkLessons} rows.`
+Each object: {"week":<${startWeek}-${startWeek + chunkWeeks - 1}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"${curriculum && curriculum !== 'cbc' ? 'Students will be able to...' : 'By the end of the lesson, the learner should be able to...'}","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":40}
+${curriculum && curriculum !== 'cbc' ? 'Aligned to the selected curriculum. US/local examples.' : 'CBC-aligned. Kenya-specific.'} ${grade} ${subject}. Topics: ${chunkTopicsStr}. ${chunkWeeks} weeks × ${effectiveLpw} lessons = ${chunkLessons} rows.`
           const userPrompt = `Weeks ${startWeek}-${startWeek + chunkWeeks - 1} of ${subject} ${grade} ${term}. ${effectiveLpw} lessons/week.\nTopics:\n${chunkTopicsStr}`
           const raw = await generateAIChunk(systemPrompt, userPrompt)
           const chunkRows = raw.map((r, i) => normaliseRow(r, Math.floor(i / effectiveLpw) + startWeek, (i % effectiveLpw) + 1))

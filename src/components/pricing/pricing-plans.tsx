@@ -3,10 +3,70 @@
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Check, Star, Crown, Zap, Loader2, Users, GraduationCap, Sparkles, ArrowRight } from "lucide-react"
+import { Check, Star, Crown, Zap, Loader2, Users, GraduationCap, Sparkles, ArrowRight, Building2, Home } from "lucide-react"
 import { useSubscription } from '@/hooks/use-subscription'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+
+type Audience = 'schools' | 'parents'
+type Currency = 'kes' | 'usd'
+
+interface PricingPlan {
+  key: string
+  name: string
+  tagline: string
+  match: string
+  kesPrice: number | null
+  usdPrice: number | null
+  custom?: boolean
+  teachers?: number | string
+  students?: number | string
+  children?: number | string
+  features: string[]
+  popular?: boolean
+}
+
+const SCHOOL_PLANS: PricingPlan[] = [
+  {
+    key: 'school_basic', name: 'Basic School Plan', match: 'basic',
+    tagline: 'Perfect for small schools getting started with AI.',
+    kesPrice: 5000, usdPrice: 49,
+    teachers: 5, students: 100,
+    features: ['Core AI Tutoring', 'Class Progress Tracking', 'Standard Analytics', 'Email Support'],
+  },
+  {
+    key: 'school_growth', name: 'Growth School Plan', match: 'growth',
+    tagline: 'For medium schools scaling AI-powered learning.',
+    kesPrice: 15000, usdPrice: 149,
+    teachers: 20, students: 500, popular: true,
+    features: ['Advanced AI Tutoring', 'Personalized Learning Paths', 'Real-Time Analytics', 'Priority Support', 'Custom Curriculum Alignment'],
+  },
+  {
+    key: 'school_enterprise', name: 'Enterprise School Plan', match: 'enterprise',
+    tagline: 'For large school networks and districts.',
+    kesPrice: null, usdPrice: null, custom: true,
+    teachers: 'Unlimited', students: 'Unlimited',
+    features: ['Multi-campus Admin Controls', 'Dedicated Database Tenant', 'LMS Integration', 'Dedicated Account Manager'],
+  },
+]
+
+const PARENT_PLANS: PricingPlan[] = [
+  {
+    key: 'parent_single', name: 'Single Child Plan', match: 'single',
+    tagline: 'A personal AI tutor for one child.',
+    kesPrice: 1000, usdPrice: 20,
+    children: 1,
+    features: ['24/7 Personal AI Tutor', 'Instant Homework Explanations', 'Weakness Identification', 'Curriculum Practice'],
+  },
+  {
+    key: 'parent_family', name: 'Family Plan', match: 'family',
+    tagline: 'Full AI access for up to 3 children.',
+    kesPrice: 1800, usdPrice: 35,
+    children: 'Up to 3', popular: true,
+    features: ['Full AI Access for up to 3 Children', 'Unified Parent Dashboard', 'Individual Progress Reports'],
+  },
+]
 
 interface PackagePlan {
   id: string
@@ -19,48 +79,25 @@ interface PackagePlan {
   duration: number
 }
 
-const FALLBACK_PLANS: PackagePlan[] = [
-  {
-    id: 'starter', name: 'Starter School Plan',
-    description: 'Perfect for small schools starting with AI learning.',
-    price: 10, maxTeachers: 5, maxStudents: 100, duration: 1,
-    features: ['Basic AI tutoring (All subjects)', 'AI-generated notes', 'Progress tracking', 'Weekly student reports', 'Email support'],
-  },
-  {
-    id: 'growth', name: 'Growth Plan',
-    description: 'Great for developing schools that need more automation.',
-    price: 25, maxTeachers: 20, maxStudents: 500, duration: 1,
-    features: ['All Starter features', 'Advanced AI tutoring', 'Real-time analytics dashboard', 'AI-generated lesson plans', 'AI-generated schemes of work', 'AI assignments (unlimited)', 'AI notes generator (enhanced)', 'Basic AI presentations', 'Homework help assistant'],
-  },
-  {
-    id: 'excellence', name: 'Excellence Plan',
-    description: 'A powerful package designed for full school automation.',
-    price: 50, maxTeachers: 50, maxStudents: 2000, duration: 1,
-    features: ['All Growth Plan features', 'AI-generated professional presentations (PPT style)', 'AI exam paper generation', 'AI rubric creator for marking', 'AI grading assistant with analytics', 'Voice learning mode', 'Teacher training & AI teaching tools', 'Student performance predictions'],
-  },
-]
-
 export function PricingPlans() {
   const { data: session } = useSession()
-  const { subscription, hasAccess, isTrialEligible, startTrial, createCheckout } = useSubscription()
+  const router = useRouter()
+  const { subscription, isTrialEligible, startTrial, createCheckout } = useSubscription()
   const [loading, setLoading] = useState<string | null>(null)
-  const [plans, setPlans] = useState<PackagePlan[]>(FALLBACK_PLANS)
-  const [fetching, setFetching] = useState(true)
-  const [currency, setCurrency] = useState<'usd' | 'kes'>('kes')
+  const [dbPackages, setDbPackages] = useState<PackagePlan[]>([])
+  const [currency, setCurrency] = useState<Currency>('kes')
+
+  const role = session?.user?.role as string | undefined
+  const [audience, setAudience] = useState<Audience>(role === 'PARENT' ? 'parents' : 'schools')
 
   useEffect(() => {
     fetch('/api/packages/public')
       .then(r => r.json())
       .then(data => {
-        if (data?.packages?.length > 0) {
-          setPlans(data.packages)
-        }
+        if (data?.packages?.length > 0) setDbPackages(data.packages)
       })
       .catch(() => {})
-      .finally(() => setFetching(false))
   }, [])
-
-  const usd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n)
 
   const gradients = [
     { card: "from-blue-500/10 via-purple-500/5 to-transparent", border: "from-blue-500 to-purple-600", icon: "from-blue-500 to-purple-600", btn: "from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700", accent: "text-blue-400" },
@@ -68,33 +105,70 @@ export function PricingPlans() {
     { card: "from-pink-500/10 via-rose-500/5 to-transparent", border: "from-pink-500 to-rose-600", icon: "from-pink-500 to-rose-600", btn: "from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700", accent: "text-pink-400" },
   ] as const
 
+  const activePlans = audience === 'schools' ? SCHOOL_PLANS : PARENT_PLANS
+
   const handleStartTrial = async () => {
-    if (!session) { window.location.href = '/auth/signin'; return }
+    if (!session) { router.push('/auth/signin'); return }
     setLoading('trial')
-    try { const success = await startTrial(); if (success) window.location.href = '/teacher/dashboard' }
+    try { const success = await startTrial(); if (success) router.push('/teacher/dashboard') }
     catch (error) { console.error('Failed to start trial:', error) }
     finally { setLoading(null) }
   }
 
-  const handleUpgrade = async (planId: string) => {
-    if (!session) { window.location.href = '/auth/signin'; return }
-    setLoading(planId)
-    try { await createCheckout(planId, currency) }
-    catch (error) { console.error('Failed to create checkout:', error) }
+  const handleUpgrade = async (plan: PricingPlan, method: 'stripe' | 'paypal' = 'stripe') => {
+    if (plan.custom) { router.push('/contact'); return }
+    if (!session) { router.push('/auth/signin'); return }
+
+    if (audience === 'schools' && isTrialEligible) {
+      handleStartTrial()
+      return
+    }
+
+    // Prefer an existing DB package that matches this plan; otherwise send the plan key
+    // so the backend can resolve/find-or-create it.
+    const match = dbPackages.find(p => p.name.toLowerCase().includes(plan.match))
+    setLoading(`${plan.key}:${method}`)
+    try {
+      if (method === 'paypal') {
+        const res = await fetch('/api/subscription/paypal/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packageId: match ? match.id : plan.key, currency }),
+        })
+        const data = await res.json()
+        if (data.approvalUrl) {
+          router.push(data.approvalUrl)
+        } else {
+          console.error('Failed to create PayPal order:', data)
+        }
+      } else {
+        await createCheckout(match ? match.id : plan.key, currency)
+      }
+    } catch (error) { console.error('Failed to create checkout:', error) }
     finally { setLoading(null) }
   }
 
-  const formatPrice = (price: number) => {
-    if (currency === 'kes') return `KES ${(price * 150).toLocaleString()}`
-    return usd(price)
+  const formatPrice = (plan: PricingPlan) => {
+    if (plan.custom) return 'Custom Pricing'
+    if (plan.kesPrice == null || plan.usdPrice == null) return 'Custom Pricing'
+    return currency === 'kes' ? `KES ${plan.kesPrice.toLocaleString()}` : `$${plan.usdPrice} USD`
   }
 
-  const currentPlanName = subscription?.packageName || ''
+  const priceSuffix = (plan: PricingPlan) => {
+    if (plan.custom) return ''
+    if (audience === 'parents' && plan.key === 'parent_single') return '/child /month'
+    return '/month'
+  }
+
+  const isCurrentPlan = (plan: PricingPlan) => {
+    if (!subscription?.packageName) return false
+    return subscription.packageName.toLowerCase().includes(plan.match)
+  }
 
   return (
     <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
       {/* Header */}
-      <div className="text-center mb-16">
+      <div className="text-center mb-14">
         <div className="inline-flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
           <Sparkles className="w-3 h-3" />
           Simple, transparent pricing
@@ -106,7 +180,9 @@ export function PricingPlans() {
           </span>
         </h2>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-          Start with a 10-day free trial. No credit card required. Cancel anytime.
+          {audience === 'schools'
+            ? 'Flexible school & institutional plans. Start with a 14-day full access trial.'
+            : 'Affordable AI tutoring for your child — at a fraction of private tuition.'}
         </p>
 
         {session && subscription && (
@@ -128,6 +204,30 @@ export function PricingPlans() {
             )}
           </div>
         )}
+
+        {/* Audience Toggle */}
+        <div className="mt-8 inline-flex items-center gap-1 p-1 bg-slate-800/60 rounded-full border border-slate-700/40">
+          <button
+            type="button"
+            onClick={() => setAudience('schools')}
+            className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+              audience === 'schools' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            School &amp; Institutional Plans
+          </button>
+          <button
+            type="button"
+            onClick={() => setAudience('parents')}
+            className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+              audience === 'parents' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            Independent Parent Plans
+          </button>
+        </div>
 
         {/* Currency Toggle */}
         <div className="mt-6 inline-flex items-center gap-1 p-1 bg-slate-800/60 rounded-full border border-slate-700/40">
@@ -153,136 +253,185 @@ export function PricingPlans() {
       </div>
 
       {/* Pricing Cards */}
-      {fetching ? (
-        <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-16 items-start">
-          {plans.map((plan, index) => {
-            const g = gradients[index] || gradients[0]
-            const current = currentPlanName.toLowerCase().includes(plan.name.toLowerCase().split(' ')[0])
-            const popular = index === 1
-            return (
-              <div key={plan.id} className="relative group">
-                <div
-                  className={`relative h-full rounded-2xl border backdrop-blur-sm transition-all duration-500 flex flex-col opacity-0 animate-card-fade-in card-stagger-${(index % 6) + 1} ${
-                    current
-                      ? 'border-purple-500/60 bg-slate-800/90 shadow-xl shadow-purple-500/15'
-                      : popular
-                      ? 'border-purple-500/40 bg-slate-800/80 shadow-xl shadow-purple-500/10 hover:shadow-2xl hover:shadow-purple-500/15 hover:-translate-y-1'
-                      : 'border-slate-700/40 bg-slate-800/50 shadow-md hover:shadow-lg hover:-translate-y-0.5'
-                  } hover:border-slate-500/80`}
-                >
-                  <div className={`absolute inset-0 rounded-2xl bg-gradient-to-b ${g.card} animate-gradient-shift opacity-60 pointer-events-none`} />
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${audience === 'schools' ? 'lg:grid-cols-3' : 'lg:grid-cols-2 max-w-4xl mx-auto'} gap-6 lg:gap-8 mb-14 items-start`}>
+        {activePlans.map((plan, index) => {
+          const g = gradients[index] || gradients[0]
+          const current = isCurrentPlan(plan)
+          const popular = plan.popular || false
+          return (
+            <div key={plan.key} className="relative group">
+              <div
+                className={`relative h-full rounded-2xl border backdrop-blur-sm transition-all duration-500 flex flex-col opacity-0 animate-card-fade-in card-stagger-${(index % 6) + 1} ${
+                  current
+                    ? 'border-purple-500/60 bg-slate-800/90 shadow-xl shadow-purple-500/15'
+                    : popular
+                    ? 'border-purple-500/40 bg-slate-800/80 shadow-xl shadow-purple-500/10 hover:shadow-2xl hover:shadow-purple-500/15 hover:-translate-y-1'
+                    : 'border-slate-700/40 bg-slate-800/50 shadow-md hover:shadow-lg hover:-translate-y-0.5'
+                } hover:border-slate-500/80`}
+              >
+                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-b ${g.card} animate-gradient-shift opacity-60 pointer-events-none`} />
 
-                  <div className="relative z-10 p-8 flex flex-col h-full">
-                    {popular && (
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                        <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-1.5 text-xs font-bold shadow-lg shadow-purple-500/20 border-0">
-                          <Star className="w-3 h-3 mr-1.5 fill-current" />
-                          Most Popular
-                        </Badge>
-                      </div>
-                    )}
-
-                    {current && (
-                      <div className="absolute -top-3 right-6">
-                        <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-3 py-1 text-xs font-bold border-0 shadow-lg shadow-emerald-500/20">
-                          <Crown className="w-3 h-3 mr-1" />
-                          Active
-                        </Badge>
-                      </div>
-                    )}
-
-                    <div className="text-center mb-5">
-                      <div className={`w-14 h-14 mx-auto mb-4 rounded-xl bg-gradient-to-br ${g.icon} flex items-center justify-center shadow-lg animate-icon-glow ${popular ? 'scale-110' : ''}`}>
-                        <Crown className="w-7 h-7 text-white" />
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
-                      <p className="text-sm text-slate-400 leading-relaxed">{plan.description}</p>
+                <div className="relative z-10 p-8 flex flex-col h-full">
+                  {popular && (
+                    <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-1.5 text-xs font-bold shadow-lg shadow-purple-500/20 border-0">
+                        <Star className="w-3 h-3 mr-1.5 fill-current" />
+                        Most Popular
+                      </Badge>
                     </div>
+                  )}
 
-                    <div className="text-center mb-6">
-                      <div className="flex items-baseline justify-center gap-1">
-                        <span className={`font-extrabold tracking-tight ${
-                          popular
-                            ? 'text-5xl bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent'
-                            : 'text-4xl text-white'
+                  {current && (
+                    <div className="absolute -top-3 right-6">
+                      <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-3 py-1 text-xs font-bold border-0 shadow-lg shadow-emerald-500/20">
+                        <Crown className="w-3 h-3 mr-1" />
+                        Active
+                      </Badge>
+                    </div>
+                  )}
+
+                  <div className="text-center mb-5">
+                    <div className={`w-14 h-14 mx-auto mb-4 rounded-xl bg-gradient-to-br ${g.icon} flex items-center justify-center shadow-lg animate-icon-glow ${popular ? 'scale-110' : ''}`}>
+                      <Crown className="w-7 h-7 text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-1">{plan.name}</h3>
+                    <p className="text-sm text-slate-400 leading-relaxed">{plan.tagline}</p>
+                  </div>
+
+                  <div className="text-center mb-6">
+                    <div className="flex items-baseline justify-center gap-1">
+                      <span className={`font-extrabold tracking-tight ${
+                        popular
+                          ? 'text-5xl bg-gradient-to-r from-purple-300 to-pink-300 bg-clip-text text-transparent'
+                          : 'text-4xl text-white'
+                      }`}>
+                        {formatPrice(plan)}
+                      </span>
+                      <span className={`${popular ? 'text-slate-400' : 'text-slate-500'} text-sm`}>{priceSuffix(plan)}</span>
+                    </div>
+                    {popular && <p className="text-xs text-purple-300/70 mt-1">best value</p>}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {audience === 'schools' ? (
+                      <>
+                        <div className={`rounded-xl p-3.5 text-center ${
+                          popular ? 'bg-purple-900/30 border border-purple-500/25' : 'bg-slate-900/60 border border-slate-700/50'
                         }`}>
-                          {formatPrice(plan.price)}
-                        </span>
-                        <span className={`${popular ? 'text-slate-400' : 'text-slate-500'} text-sm`}>/month</span>
-                      </div>
-                      {popular && <p className="text-xs text-purple-300/70 mt-1">best value</p>}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                      <div className={`rounded-xl p-3.5 text-center ${
+                          <Users className={`w-4 h-4 mx-auto mb-1.5 ${g.accent}`} />
+                          <div className="text-lg font-bold text-white">{plan.teachers}</div>
+                          <div className="text-xs text-slate-400">Teachers</div>
+                        </div>
+                        <div className={`rounded-xl p-3.5 text-center ${
+                          popular ? 'bg-purple-900/30 border border-purple-500/25' : 'bg-slate-900/60 border border-slate-700/50'
+                        }`}>
+                          <GraduationCap className={`w-4 h-4 mx-auto mb-1.5 ${g.accent}`} />
+                          <div className="text-lg font-bold text-white">{plan.students}</div>
+                          <div className="text-xs text-slate-400">Students</div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className={`col-span-2 rounded-xl p-3.5 text-center ${
                         popular ? 'bg-purple-900/30 border border-purple-500/25' : 'bg-slate-900/60 border border-slate-700/50'
                       }`}>
                         <Users className={`w-4 h-4 mx-auto mb-1.5 ${g.accent}`} />
-                        <div className="text-lg font-bold text-white">{plan.maxTeachers}</div>
-                        <div className="text-xs text-slate-400">Teachers</div>
+                        <div className="text-lg font-bold text-white">{plan.children}</div>
+                        <div className="text-xs text-slate-400">Children</div>
                       </div>
-                      <div className={`rounded-xl p-3.5 text-center ${
-                        popular ? 'bg-purple-900/30 border border-purple-500/25' : 'bg-slate-900/60 border border-slate-700/50'
-                      }`}>
-                        <GraduationCap className={`w-4 h-4 mx-auto mb-1.5 ${g.accent}`} />
-                        <div className="text-lg font-bold text-white">{plan.maxStudents}</div>
-                        <div className="text-xs text-slate-400">Students</div>
-                      </div>
-                    </div>
-
-                    <div className="mb-8 flex-1">
-                      <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Features included:</h4>
-                      <ul className="space-y-3">
-                        {plan.features.map((feature, fi) => (
-                          <li key={fi} className="flex items-start gap-3">
-                            <Check className={`w-4 h-4 mt-0.5 shrink-0 ${g.accent}`} />
-                            <span className="text-sm text-slate-300 leading-relaxed">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <Button
-                      onClick={current ? () => {} : !session ? () => window.location.href = '/auth/signin' : isTrialEligible ? handleStartTrial : () => handleUpgrade(plan.id)}
-                      disabled={loading === plan.id || loading === 'trial' || current}
-                      className={`w-full py-3 text-sm font-semibold transition-all duration-300 rounded-xl ${
-                        current
-                          ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed border border-slate-600/50'
-                          : popular
-                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 hover:-translate-y-0.5'
-                          : `bg-gradient-to-r ${g.btn} text-white shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20 hover:-translate-y-0.5`
-                      }`}
-                    >
-                      {loading === plan.id || loading === 'trial' ? (
-                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
-                      ) : (
-                        <span className="flex items-center justify-center gap-2">
-                          {current ? 'Current Plan' : !session ? 'Get Started' : isTrialEligible ? 'Start Free Trial' : 'Upgrade Now'}
-                          {!current && <ArrowRight className="w-3.5 h-3.5" />}
-                        </span>
-                      )}
-                    </Button>
-
-                    {popular && !current && (
-                      <div className="mt-3 text-center">
-                        <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-1.5 text-xs font-bold shadow-lg shadow-purple-500/20 border-0">
-                          <Star className="w-3 h-3 mr-1.5 fill-current" /> Most Popular
-                        </Badge>
-                      </div>
-                    )}
-
-                    {isTrialEligible && !session && (
-                      <p className="mt-3 text-center text-xs text-slate-500">Sign in to start your free trial</p>
                     )}
                   </div>
+
+                  <div className="mb-8 flex-1">
+                    <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Features included:</h4>
+                    <ul className="space-y-3">
+                      {plan.features.map((feature, fi) => (
+                        <li key={fi} className="flex items-start gap-3">
+                          <Check className={`w-4 h-4 mt-0.5 shrink-0 ${g.accent}`} />
+                          <span className="text-sm text-slate-300 leading-relaxed">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <Button
+                    onClick={current ? () => {} : plan.custom ? () => { router.push('/contact') } : !session ? () => router.push('/auth/signin') : audience === 'schools' && isTrialEligible ? handleStartTrial : () => handleUpgrade(plan, 'stripe')}
+                    disabled={loading === `${plan.key}:stripe` || loading === `${plan.key}:paypal` || loading === 'trial' || current}
+                    className={`w-full py-3 text-sm font-semibold transition-all duration-300 rounded-xl ${
+                      current
+                        ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed border border-slate-600/50'
+                        : popular
+                        ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 hover:-translate-y-0.5'
+                        : `bg-gradient-to-r ${g.btn} text-white shadow-lg shadow-purple-500/10 hover:shadow-purple-500/20 hover:-translate-y-0.5`
+                    }`}
+                  >
+                    {loading === `${plan.key}:stripe` || loading === `${plan.key}:paypal` || loading === 'trial' ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
+                    ) : (
+                      <span className="flex items-center justify-center gap-2">
+                        {current ? 'Current Plan' : plan.custom ? 'Contact Sales' : !session ? 'Get Started' : audience === 'schools' && isTrialEligible ? 'Start Free Trial' : 'Pay with Card'}
+                        {!current && <ArrowRight className="w-3.5 h-3.5" />}
+                      </span>
+                    )}
+                  </Button>
+
+                  {!current && !plan.custom && session && !(audience === 'schools' && isTrialEligible) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => handleUpgrade(plan, 'paypal')}
+                      disabled={loading === `${plan.key}:stripe` || loading === `${plan.key}:paypal` || loading === 'trial'}
+                      className="w-full mt-3 py-3 text-sm font-semibold rounded-xl border-slate-600 text-slate-300 hover:bg-slate-700/40 hover:text-white hover:border-slate-500 transition-all"
+                    >
+                      {loading === `${plan.key}:paypal` ? (
+                        <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Processing...</>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">Pay with PayPal</span>
+                      )}
+                    </Button>
+                  )}
+
+                  {popular && !current && (
+                    <div className="mt-3 text-center">
+                      <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-5 py-1.5 text-xs font-bold shadow-lg shadow-purple-500/20 border-0">
+                        <Star className="w-3 h-3 mr-1.5 fill-current" /> Most Popular
+                      </Badge>
+                    </div>
+                  )}
+
+                  {audience === 'schools' && isTrialEligible && !session && (
+                    <p className="mt-3 text-center text-xs text-slate-500">Sign in to start your free trial</p>
+                  )}
                 </div>
               </div>
-            )
-          })}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Value Proposition Banner */}
+      <div className="mb-16">
+        <div className="relative bg-gradient-to-br from-blue-900/40 via-slate-800/80 to-purple-900/60 backdrop-blur-sm rounded-2xl p-8 sm:p-10 border border-blue-500/20 overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+                {audience === 'schools' ? 'Start free, scale when you are ready.' : 'Premium tutoring without the premium price.'}
+              </h3>
+              <p className="text-slate-300 max-w-xl mx-auto sm:mx-0">
+                {audience === 'schools'
+                  ? 'Starts with a 14-day full access trial. All plans include automated CBC & STEM curriculum tools.'
+                  : '24/7 AI tutoring at a fraction of the cost of traditional private tutoring (avg. KES 15,000/mo).'}
+              </p>
+            </div>
+            <Link href={audience === 'schools' ? '/contact' : '/auth/signup'}>
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30">
+                {audience === 'schools' ? 'Talk to Sales' : 'Get Started'}
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Bottom CTA */}
       <div className="text-center">
@@ -292,7 +441,9 @@ export function PricingPlans() {
           <div className="relative z-10">
             <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3">Still have questions?</h3>
             <p className="text-slate-300 mb-6 max-w-lg mx-auto">
-              All plans include a 10-day free trial. No credit card required. Cancel anytime.
+              {audience === 'schools'
+                ? 'All school plans include a 14-day full access trial. No credit card required. Cancel anytime.'
+                : 'No hidden fees. Start with your first child today and add more anytime.'}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/contact">

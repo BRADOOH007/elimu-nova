@@ -61,6 +61,7 @@ class EmailService {
       'invoice.html',
       'subscription-renewal.html',
       'trial-ending.html',
+      'incident-alert.html',
     ]
 
     for (const file of templateFiles) {
@@ -219,6 +220,26 @@ class EmailService {
         daysRemaining,
         trialEndDate,
         billingUrl,
+      },
+    })
+  }
+
+  async sendIncidentAlertEmail(
+    to: string,
+    firstName: string,
+    incidentTitle: string,
+    incidentMessage: string,
+    severity: string
+  ) {
+    return this.sendEmail({
+      to,
+      subject: `[${severity}] Incident Alert: ${incidentTitle}`,
+      template: 'incident-alert',
+      data: {
+        firstName,
+        incidentTitle,
+        incidentMessage,
+        severity,
       },
     })
   }

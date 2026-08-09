@@ -158,7 +158,7 @@ export const GET = route({ auth: 'STUDENT' }, async (req, { user }) => {
 
 export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
   const body = await req.json()
-  const { subject, topic, grade, difficulty, learningStyle } = body
+  const { subject, topic, grade, difficulty, learningStyle, curriculum, country } = body
 
   if (!topic || !subject) {
     return NextResponse.json({ error: 'Topic and subject required' }, { status: 400 })
@@ -171,7 +171,9 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
       topic,
       grade || 'Grade 8',
       difficulty || 'intermediate',
-      learningStyle || 'reading'
+      learningStyle || 'reading',
+      curriculum,
+      country
     )
 
     aiLesson = {

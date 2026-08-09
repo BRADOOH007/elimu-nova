@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import type { Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,27 +13,26 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req) => {
   const page = parseInt(url.searchParams.get('page') || '1', 10)
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50', 10), 100)
 
-  const where: any = {}
-  if (status) where.status = status
-  if (category) where.category = category
-  if (severity) where.severity = severity
+  const where: Prisma.SystemIncidentWhereInput = {}
+  if (status) where.status = status as Prisma.EnumIncidentStatusFilter
+  if (category) where.category = category as Prisma.EnumIncidentCategoryFilter
+  if (severity) where.severity = severity as Prisma.EnumIncidentSeverityFilter
 
   const [incidents, total, counts] = await Promise.all([
-    (prisma as any).systemIncident.findMany({
+    prisma.systemIncident.findMany({
       where,
       orderBy: [{ lastSeen: 'desc' }],
       skip: (page - 1) * limit,
       take: limit,
     }),
-    (prisma as any).systemIncident.count({ where }),
-    (prisma as any).systemIncident.groupBy({
+    prisma.systemIncident.count({ where }),
+    prisma.systemIncident.groupBy({
       by: ['status'],
       _count: { _all: true },
     }),
   ])
 
   const statusCounts = Object.fromEntries(counts.map(c => [c.status, c._count._all]))
-
   return NextResponse.json({ incidents, total, page, limit, pages: Math.ceil(total / limit), statusCounts })
 })
 
