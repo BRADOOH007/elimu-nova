@@ -19,6 +19,7 @@ import { FocusTimer } from '@/components/student/focus-timer'
 import { AIStudyBuddy } from '@/components/student/ai-study-buddy'
 import { HopeAITutorDrawer } from '@/components/ai-tutor-drawer'
 import { FloatingNotesWidget } from '@/components/student/floating-notes-widget'
+import { LearningJourneyBanner } from '@/components/student/learning-journey-banner'
 import { useAITutor } from '@/components/ai-tutor-provider'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
 import { getGameState, updateStreak, awardXP, persistGameState, getLevelName, getXpToNextLevel, XP_REWARDS } from '@/lib/gamification'
@@ -60,11 +61,11 @@ function useCurriculumSubjects() {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await fetch('/api/user-profile')
+        const res = await fetch('/api/user-preferences')
         if (res.ok) {
           const p = await res.json()
           setCurriculum(p.curriculum || 'cbc')
-          setDefaultGrade(p.grade || 'Grade 4')
+          setDefaultGrade((p.tourCompletion && (p.tourCompletion as any)?.grade) || p.grade || 'Grade 4')
         }
       } catch { /* use defaults */ }
     }
@@ -389,79 +390,16 @@ function LearnPageContent() {
     <div className="min-h-screen bg-slate-50 pb-28">
 
       {/* ═══ HERO ═══ */}
-      <header className="relative overflow-hidden bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-700 text-white">
-        <div className="absolute -top-24 -right-16 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -bottom-24 -left-16 h-72 w-72 rounded-full bg-fuchsia-400/25 blur-3xl" />
-        <div className="absolute top-1/2 left-1/3 h-40 w-40 rounded-full bg-cyan-300/20 blur-3xl" />
-
-        <div className="relative mx-auto max-w-5xl px-4 py-8 sm:px-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="mb-1 text-[11px] font-bold uppercase tracking-[0.3em] text-indigo-200">Learning Studio</p>
-              <h1 className="text-2xl font-extrabold sm:text-3xl">Your Learning Journey</h1>
-              <p className="mt-1 text-sm text-indigo-100/90">Study a topic, take a quiz, beat your streak</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Badge className="gap-1.5 border border-white/20 bg-white/15 px-3 py-1.5 text-white backdrop-blur">
-                <Flame className="h-4 w-4 text-amber-300" />
-                {gameState.streak}d streak
-              </Badge>
-              <Badge className="gap-1.5 border border-white/20 bg-white/15 px-3 py-1.5 text-white backdrop-blur">
-                <Zap className="h-4 w-4 text-yellow-300" />
-                Lv.{gameState.level}
-              </Badge>
-              {getMistakeCount().unreviewed > 0 && (
-                <button
-                  onClick={() => { setMistakeMode(true); setMistakeIdx(0) }}
-                  className="flex items-center gap-1.5 rounded-full border border-red-300/40 bg-red-500/25 px-3 py-1.5 text-sm font-semibold backdrop-blur transition-colors hover:bg-red-500/35"
-                >
-                  <AlertCircle className="h-4 w-4 text-red-200" />
-                  {getMistakeCount().unreviewed}
-                </button>
-              )}
-              <button
-                onClick={() => openAITutor(undefined, studySubject, studyTopic || undefined)}
-                className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-sm font-semibold backdrop-blur transition-colors hover:bg-white/25"
-              >
-                <MessageSquare className="h-4 w-4 text-white" />
-                Ask Hope
-              </button>
-            </div>
-          </div>
-
-          {/* XP Progress Bar */}
-          <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-amber-300" />
-                <span className="text-sm font-bold">{levelName}</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm font-bold text-amber-200">
-                <Star className="h-4 w-4 fill-amber-300 text-amber-300" />
-                {gameState.xp} XP
-              </div>
-            </div>
-            <div className="h-2.5 overflow-hidden rounded-full bg-white/20">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-300 to-orange-400 transition-all duration-500"
-                style={{ width: `${xpProgress.progress}%` }}
-              />
-            </div>
-            <div className="mt-1.5 flex justify-between text-[11px] text-indigo-100/80">
-              <span>{levelName}</span>
-              <span>Next: {getLevelName(gameState.level + 1)}</span>
-            </div>
-          </div>
-
-          {/* XP Gain Toast */}
-          {showXpGain.visible && (
-            <div className="mt-3 inline-flex animate-bounce items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-1.5 text-sm font-bold shadow-lg">
-              <Zap className="h-4 w-4" />+{showXpGain.amount} XP!
-            </div>
-          )}
-        </div>
-      </header>
+      <LearningJourneyBanner
+        gameState={gameState}
+        levelName={levelName}
+        xpProgress={xpProgress}
+        showXpGain={showXpGain}
+        mistakeCount={getMistakeCount().unreviewed}
+        onOpenMistakes={() => { setMistakeMode(true); setMistakeIdx(0) }}
+        onAskHope={() => openAITutor(undefined, studySubject, studyTopic || undefined)}
+        getLevelName={getLevelName}
+      />
 
       {/* ═══ BODY ═══ */}
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
