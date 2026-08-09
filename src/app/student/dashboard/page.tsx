@@ -16,7 +16,7 @@ import { useAITutor } from "@/components/ai-tutor-provider"
 import {
   Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
   Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Plus, MessageSquare,
-  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette
+  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette, Home, School
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
@@ -168,6 +168,7 @@ export default function StudentDashboard() {
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{greeting}, {firstName}</h1>
             <div className="flex items-center gap-4 mt-2 text-sm">
+              {isIndependent && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-400/20 text-emerald-100 border border-emerald-400/30"><Home className="w-3 h-3" />Self-Paced</span>}
               <div className="flex items-center gap-1"><Zap className="h-4 w-4 text-amber-300" /><span className="font-bold">{gameState.xp} XP</span></div>
               <div className="flex items-center gap-1"><Flame className="h-4 w-4 text-orange-300" /><span className="font-bold">{gameState.streak}d streak</span></div>
               {mistakes.length > 0 && <Link href="/student/learn" className="flex items-center gap-1 text-red-200 hover:text-red-100"><AlertCircle className="h-4 w-4" />{mistakes.length} to review</Link>}
