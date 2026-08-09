@@ -90,19 +90,11 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
       : recentActivities > 0 ? 100 : 0
 
     // Get subscription info for plan limits
-    let subscription = await prisma.subscription.findFirst({
+    const subscription = await prisma.subscription.findFirst({
       where: { schoolId },
       include: { package: true },
       orderBy: { createdAt: 'desc' }
     })
-
-    // Detect freemium and ensure it's marked as active
-    const isFreemium = subscription?.isFreemium === true || subscription?.package?.price === 0 ||
-      (!subscription?.endDate && subscription?.status === 'TRIAL')
-
-    if (subscription && isFreemium) {
-      subscription = { ...subscription, status: 'ACTIVE', isFreemium: true } as any
-    }
 
     // Get recent invoices (real records if they exist, otherwise a sensible empty list)
     let invoices: any[] = []
