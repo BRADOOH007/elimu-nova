@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { buildCurriculumSchemeContext } from '@/lib/curriculum-prompt'
 
 export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const body = await request.json()
-    const { subject, grade, topic, duration, lessonsPerWeek, prerequisites, language = 'english', topics: requestTopics, documentContext } = body
+    const { subject, grade, topic, duration, lessonsPerWeek, prerequisites, language = 'english', topics: requestTopics, documentContext, curriculum, country } = body
 
     // Use topics array if provided, otherwise fall back to single topic
     const topicsList = requestTopics && requestTopics.length > 0 ? requestTopics : (topic ? [topic] : [])
@@ -119,7 +120,9 @@ CRITICAL REQUIREMENTS:
         role: 'system' as const,
         content: isKiswahili 
           ? "You are an expert curriculum developer specializing in creating comprehensive schemes of work in Swahili language. You have deep knowledge of Kiswahili curriculum, Swahili teaching methods, and East African education systems. Focus on progressive learning, clear objectives, and practical implementation strategies. CRITICAL: Always respond entirely in Swahili language for Kiswahili subjects. IMPORTANT: You MUST cover ALL topics provided in the request - never skip any topic."
-          : "You are an expert curriculum developer specializing in creating comprehensive schemes of work. Focus on progressive learning, clear objectives, and practical implementation strategies. Create well-structured schemes that teachers can easily follow and implement. CRITICAL: Always respond entirely in English language for all subjects except Kiswahili. IMPORTANT: You MUST cover ALL topics provided in the request - never skip any topic, ensure each topic gets dedicated lesson content."
+          : curriculum && curriculum !== 'cbc'
+            ? `You are an expert curriculum developer specializing in creating comprehensive schemes of work for the selected curriculum. Focus on progressive learning, clear objectives, and practical implementation strategies. Create well-structured schemes that teachers can easily follow and implement. IMPORTANT: You MUST cover ALL topics provided in the request - never skip any topic, ensure each topic gets dedicated lesson content.\n\n${buildCurriculumSchemeContext({ curriculum, country, grade, subject })}`
+            : "You are an expert curriculum developer specializing in creating comprehensive schemes of work. Focus on progressive learning, clear objectives, and practical implementation strategies. Create well-structured schemes that teachers can easily follow and implement. CRITICAL: Always respond entirely in English language for all subjects except Kiswahili. IMPORTANT: You MUST cover ALL topics provided in the request - never skip any topic, ensure each topic gets dedicated lesson content."
       },
       {
         role: 'user' as const,

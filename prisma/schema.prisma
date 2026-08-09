@@ -609,6 +609,67 @@ model SecurityLog {
   @@map("security_logs")
 }
 
+model SystemIncident {
+  id          String            @id @default(cuid())
+  severity    IncidentSeverity  @default(MEDIUM)
+  category    IncidentCategory  @default(OTHER)
+  status      IncidentStatus    @default(OPEN)
+  title       String
+  description String
+  source      String? // Route path, service name, or component
+  dedupeKey   String // Stable key for deduping repeat occurrences of the same issue
+  count       Int               @default(1)
+  firstSeen   DateTime          @default(now())
+  lastSeen    DateTime          @default(now())
+  metadata    Json?
+  resolvedBy  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([dedupeKey, status])
+  @@map("system_incidents")
+}
+
+model ApiLog {
+  id         String   @id @default(cuid())
+  method     String
+  path       String
+  status     Int
+  durationMs Int?
+  userId     String?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([status, createdAt])
+  @@map("api_logs")
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentCategory {
+  DATABASE
+  AI_SERVICE
+  API_ERROR
+  ROUTE_404
+  RATE_LIMIT
+  SECURITY
+  PAYMENT
+  PERFORMANCE
+  OTHER
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
 model SecurityPolicy {
   id          String             @id @default(cuid())
   name        String
@@ -1448,6 +1509,23 @@ model AIImageUsage {
   user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("ai_image_usage")
+}
+
+// Cached AI-generated lessons so repeat requests for the same subject/topic/grade
+// are served instantly instead of regenerating (saves cost and latency).
+model LessonCache {
+  id        String   @id @default(cuid())
+  subject   String
+  topic     String // Canonical (normalized) topic used as the cache key
+  grade     String
+  content   Json // Full ActiveLesson object incl. durable image URLs
+  aliases   String[] @default([]) // Alternate phrasings that mapped to this row
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subject, topic, grade])
+  @@map("lesson_cache")
 }
 
 enum ResourceType {

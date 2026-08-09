@@ -67,7 +67,7 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
     contextParts.push(`Recent study topics: ${recentSessions.map(s => s.topic).filter(Boolean).join(', ')}`)
   }
 
-  const prompt = `Generate a comprehensive course challenge quiz for a Kenyan student.
+  const prompt = `Generate a comprehensive course challenge quiz for a student.
 
 CONTEXT:
 ${contextParts.join('\n')}
@@ -76,7 +76,7 @@ REQUIREMENTS:
 1. Generate exactly 10 questions covering ALL major concepts in "${unitName}" (${subject})
 2. Mix of question types: 6 multiple choice (4 options A-D), 2 true/false, 2 open-ended
 3. Questions should range from easy to hard (Bloom's taxonomy levels)
-4. Include practical Kenyan examples and contexts
+4. Include practical local examples and contexts
 5. Each question needs: question, type, options (for MCQ), correct_answer index, model_answer (for open-ended), explanation
 6. Label each MCQ option as A, B, C, D
 
@@ -97,7 +97,7 @@ Return JSON:
   try {
     const response = await OpenAIService.generateText(
       [
-        { role: 'system', content: 'You are an expert Kenyan curriculum assessment designer. Always respond with valid JSON only.' },
+        { role: 'system', content: 'You are an expert curriculum assessment designer. Always respond with valid JSON only.' },
         { role: 'user', content: prompt },
       ],
       { maxTokens: 4000, temperature: 0.7 }

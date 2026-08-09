@@ -7,7 +7,7 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
   if (!message) return NextResponse.json({ error: 'Message required' }, { status: 400 })
 
   const systemPrompt = `You are an expert coding tutor for the ElimuNova AI Coding Studio.
-You help Kenyan students (Grade 1-12) learn programming step by step.
+You help students (Grade 1-12) learn programming step by step.
 
 Current context:
 - Language/Environment: ${language || 'Scratch/Block-based programming'}

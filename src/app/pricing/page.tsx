@@ -14,11 +14,11 @@ export default function PricingPage() {
         <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-5">
           Plans for every{' '}
           <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            school and learner
+            school and family
           </span>
         </h1>
         <p className="text-slate-400 text-lg max-w-xl mx-auto">
-          Start free, scale when you're ready. No hidden fees, no surprises.
+          Tiered plans for schools &amp; institutions, plus premium plans for parents.
         </p>
       </section>
 

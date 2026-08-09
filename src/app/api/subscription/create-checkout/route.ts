@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createCheckoutSession } from '@/lib/subscription-service'
+import { createCheckoutSession, resolveCheckoutPackage } from '@/lib/subscription-service'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
@@ -14,23 +14,7 @@ export const POST = route({}, async (req, { user }) => {
     )
   }
 
-  let packageInfo = await prisma.package.findUnique({
-    where: { id: packageId }
-  })
-
-  if (!packageInfo) {
-    const nameMap: Record<string, string> = {
-      starter: 'Starter School Plan',
-      growth: 'Growth Plan',
-      excellence: 'Excellence Plan',
-    }
-    const planName = nameMap[packageId]
-    if (planName) {
-      packageInfo = await prisma.package.findFirst({
-        where: { name: planName, isActive: true },
-      })
-    }
-  }
+  const packageInfo = await resolveCheckoutPackage(packageId)
 
   if (!packageInfo) {
     return NextResponse.json({ error: 'Package not found' }, { status: 404 })

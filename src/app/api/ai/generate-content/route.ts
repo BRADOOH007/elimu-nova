@@ -16,7 +16,7 @@ import {
 } from '@/lib/smart-assessment';
 
 export const POST = route({}, async (req, { user }) => {
-    const { type, subject, grade, topic, duration, objectives, requirements, difficulty, format, title, description, lessonPlanId, documentContext, numQuestions } = await req.json();
+    const { type, subject, grade, topic, duration, objectives, requirements, difficulty, format, title, description, lessonPlanId, documentContext, numQuestions, curriculum, country } = await req.json();
 
     if (!type || !subject || !grade) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -112,6 +112,8 @@ Make it engaging, visually appealing, and appropriate for the grade level. Inclu
           topic,
           outcomes: assignmentOutcomes,
           templateText,
+          curriculum,
+          country,
         });
 
         prompt = `Create an assignment worksheet for ${grade} ${subject} students on "${topic}".
@@ -130,7 +132,7 @@ RULES:
 - The EXAMPLE/EXPLANATION must be practical and show real working, not theoretical lecture
 - All ${qCount} questions must be MULTIPLE CHOICE — no short answer, no essay, no fill-in-blank
 - Questions must be age-appropriate for ${grade}
-- Use Kenyan contexts and examples (KES, Kenyan names, local scenarios)
+- Use ${curriculum && curriculum !== 'cbc' ? 'contexts relevant to the selected country and curriculum (e.g. USD, US states, US cultural references for US curricula)' : 'Kenyan contexts and examples (KES, Kenyan names, local scenarios)'}
 - Do NOT use LaTeX — write math in plain text (use "/" for fractions, "^2" for powers)
 - Keep the tone clear and straightforward — this is a worksheet, not a motivational speech
 - Do NOT add extra sections beyond the 3 listed above
@@ -152,6 +154,8 @@ ${assignmentOutcomes.length ? `\nCURRICULUM OUTCOMES TO ASSESS:\n${assignmentOut
           topic,
           outcomes: examOutcomes,
           templateText,
+          curriculum,
+          country,
         });
 
         const curriculumText = format === 'cbc'
@@ -228,6 +232,8 @@ Make it engaging, hands-on, and relevant to real-world applications.`;
       difficulty,
       requirements,
       templateText,
+      curriculum,
+      country,
     });
 
     const { stripLatex } = await import('@/lib/clean-ai-text')
@@ -319,6 +325,7 @@ async function generateAIContentWithOpenAI(
     subject: string; grade: string; topic: string; title: string;
     description?: string; lessonPlanId?: string; duration?: number;
     difficulty?: string; requirements?: string; templateText?: string | null;
+    curriculum?: string; country?: string;
   }
 ): Promise<string> {
   try {
@@ -333,6 +340,8 @@ async function generateAIContentWithOpenAI(
         topic: context.topic,
         outcomes,
         templateText: context.templateText,
+        curriculum: context.curriculum,
+        country: context.country,
       })
 
       const content = await OpenAIService.generateLongContent(
@@ -348,9 +357,9 @@ async function generateAIContentWithOpenAI(
     const templateBlock = context.templateText
       ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the content in the same format:\n\n${context.templateText.slice(0, 6000)}\n\n---\n`
       : ''
-    const systemPrompt = `You are an expert educational content creator for Kenyan schools.${templateBlock}
-Generate high-quality, CBC-aligned ${type} content for ${context.grade} ${context.subject} students.
-Topic: ${context.topic}. Be practical, engaging, and age-appropriate.
+    const systemPrompt = `You are ${context.curriculum && context.curriculum !== 'cbc' ? 'an expert educational content creator aligned to the selected curriculum' : 'an expert educational content creator for Kenyan schools'}.${templateBlock}
+Generate high-quality, ${context.curriculum && context.curriculum !== 'cbc' ? 'curriculum-aligned' : 'CBC-aligned'} ${type} content for ${context.grade} ${context.subject} students.
+Topic: ${context.topic}. Be practical, engaging, and age-appropriate. Use ${context.curriculum && context.curriculum !== 'cbc' ? 'contexts relevant to the selected country and curriculum' : 'Kenyan examples and contexts'}.
 Format with clear markdown headings and sections.
 IMPORTANT: Do NOT use LaTeX, TeX or MathJax. Write maths in plain text: use "/" for fractions, "_____" for blanks, "^2" for powers.`
 

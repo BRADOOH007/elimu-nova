@@ -9,7 +9,7 @@ import { OpenAIService } from './openai-service'
 export interface DiagramRequest {
   topic: string
   grade: string
-  curriculum: 'CBC' | 'IGCSE'
+  curriculum: string
   type: 'biology' | 'geography' | 'physics' | 'chemistry' | 'mathematics' | 'general'
   size?: '512x512' | '1024x1024' | '1536x1024' | '1024x1536'
   quality?: 'standard' | 'hd'
@@ -142,7 +142,7 @@ export class EducationalDiagramService {
    * Create artwork prompt (Step 1) - NO TEXT
    */
   private static createArtworkPrompt(request: DiagramRequest): string {
-    const basePrompt = `Create a clean vector diagram of ${request.topic} for ${request.grade} ${request.curriculum} curriculum.`
+    const basePrompt = `Create a clean vector diagram of ${request.topic} for ${request.grade} students following the ${request.curriculum} curriculum.`
     
     const styleRequirements = [
       'NO TEXT OR WORDS anywhere in the image',
@@ -166,7 +166,6 @@ export class EducationalDiagramService {
    */
   private static createLabelsPrompt(request: DiagramRequest): string {
     return `Generate 6-10 important labels for a ${request.topic} diagram for ${request.grade} students following ${request.curriculum} curriculum in ${request.type}.
-
 Requirements:
 - Return ONLY a JSON array of strings
 - Each label should be 1-3 words maximum

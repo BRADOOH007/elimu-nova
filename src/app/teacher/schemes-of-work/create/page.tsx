@@ -140,7 +140,7 @@ export default function CreateSchemePage() {
       const res  = await fetch('/api/ai/generate-scheme-structured', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, subject, grade, term, weeksCount, lessonsPerWeek, selectedTopics, documentContext }),
+        body: JSON.stringify({ title, subject, grade, term, weeksCount, lessonsPerWeek, selectedTopics, documentContext, curriculum: schemeCurriculum, country: schemeCountry }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Generation failed')
@@ -160,7 +160,7 @@ export default function CreateSchemePage() {
       const res  = await fetch('/api/ai/generate-lesson-from-scheme', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schemeId, row, subject, grade }),
+        body: JSON.stringify({ schemeId, row, subject, grade, curriculum: schemeCurriculum, country: schemeCountry }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -185,7 +185,7 @@ export default function CreateSchemePage() {
         const res = await fetch('/api/ai/generate-lesson-from-scheme', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ schemeId, row: teachingRows[i], subject, grade }),
+          body: JSON.stringify({ schemeId, row: teachingRows[i], subject, grade, curriculum: schemeCurriculum, country: schemeCountry }),
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)

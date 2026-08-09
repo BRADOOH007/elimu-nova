@@ -382,7 +382,7 @@ function buildLessonPlanHTML(
 
   <!-- ── Page title ──────────────────────────────────────────────── -->
   <div class="page-title">Lesson Plan</div>
-  <div class="subtitle">Kenya Competency-Based Curriculum (CBC) — KICD Format</div>
+  <div class="subtitle">Curriculum-Aligned Lesson Plan</div>
 
   <!-- ── Meta information table ────────────────────────────────── -->
   <table class="meta-table">

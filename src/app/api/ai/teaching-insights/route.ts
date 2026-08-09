@@ -70,7 +70,7 @@ export const POST = route({ auth: ['TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, 
 
     const className = teacher.classes[0]?.name || 'Class'
 
-    const prompt = `You are a school academic analyst. Provide comprehensive teaching insights for a Kenyan CBC teacher.
+    const prompt = `You are a school academic analyst. Provide comprehensive teaching insights for a teacher.
 
 Class: ${className} | Students: ${students.length}
 Class Average: ${classAvg !== null ? classAvg+'%' : 'No data'}
@@ -105,7 +105,7 @@ Provide actionable teaching insights. Return ONLY valid JSON:
 }`
 
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC academic analyst. Return ONLY valid JSON.' },
+      { role: 'system', content: 'You are an academic analyst. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 1500, temperature: 0.5 })
 

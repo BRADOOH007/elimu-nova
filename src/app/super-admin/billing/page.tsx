@@ -504,6 +504,177 @@ function MpesaConfigPanel() {
   )
 }
 
+/* ── PayPal Configuration Panel ── */
+function PayPalConfigPanel() {
+  const { toast } = useToast()
+  const [config, setConfig]       = useState({ paypal_client_id: '', paypal_client_secret: '', paypal_environment: 'sandbox' })
+  const [isConfigured, setIsConfigured] = useState(false)
+  const [loading, setLoading]     = useState(true)
+  const [saving, setSaving]       = useState(false)
+  const [testing, setTesting]     = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null)
+  const [showSecrets, setShowSecrets] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/super-admin/paypal-config')
+      .then(r => r.json())
+      .then(d => {
+        if (d.config) setConfig(prev => ({ ...prev, ...d.config }))
+        setIsConfigured(d.isConfigured)
+      }).catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      const res  = await fetch('/api/super-admin/paypal-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(config),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        toast({ title: 'PayPal config saved', description: `Updated: ${data.updated?.join(', ') || 'all'}` })
+        setIsConfigured(true)
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: data.error || 'Failed to save' })
+      }
+    } catch { toast({ variant: 'destructive', title: 'Error', description: 'Failed to save config' }) }
+    finally { setSaving(false) }
+  }
+
+  const test = async () => {
+    setTesting(true); setTestResult(null)
+    try {
+      const res = await fetch('/api/super-admin/paypal-config', { method: 'PUT' })
+      const data = await res.json()
+      setTestResult(data)
+      toast({
+        title:       data.success ? 'PayPal Connected!' : 'Connection Failed',
+        description: data.message || data.error,
+        variant:     data.success ? 'default' : 'destructive',
+      })
+    } catch { setTestResult({ success: false, error: 'Connection failed' }) }
+    finally { setTesting(false) }
+  }
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-indigo-400" /></div>
+
+  return (
+    <div className="space-y-6 max-w-4xl">
+      {/* Status banner */}
+      <div className={`flex items-center gap-4 p-5 rounded-2xl border shadow-sm ${isConfigured ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200' : 'bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200'}`}>
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isConfigured ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+          {isConfigured ? <Globe className="h-5 w-5 text-emerald-600" /> : <AlertCircle className="h-5 w-5 text-amber-600" />}
+        </div>
+        <div className="flex-1">
+          <p className={`font-semibold text-sm ${isConfigured ? 'text-emerald-800' : 'text-amber-800'}`}>
+            {isConfigured ? 'PayPal Configured' : 'PayPal Not Configured'}
+          </p>
+          <p className={`text-xs mt-0.5 ${isConfigured ? 'text-emerald-600' : 'text-amber-600'}`}>
+            {isConfigured ? `Environment: ${config.paypal_environment}` : 'Add your PayPal REST API credentials below'}
+          </p>
+        </div>
+        <button onClick={test} disabled={testing}
+          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-all disabled:opacity-60 shadow-sm">
+          {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+          {testing ? 'Testing...' : 'Test'}
+        </button>
+      </div>
+
+      {testResult && (
+        <div className={`flex items-center gap-3 p-4 rounded-xl border text-sm ${testResult.success ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+          {testResult.success ? <CheckCircle className="h-4 w-4 shrink-0" /> : <XCircle className="h-4 w-4 shrink-0" />}
+          {testResult.message || testResult.error}
+        </div>
+      )}
+
+      {/* Credentials */}
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-blue-600" />
+            <h3 className="font-semibold text-slate-800 text-sm">PayPal REST API Credentials</h3>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">Enter your PayPal developer app credentials (Client ID & Secret) from the PayPal Developer Dashboard</p>
+        </div>
+        <div className="px-6 py-5 space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Client ID</label>
+              <input type={showSecrets ? 'text' : 'password'}
+                value={config.paypal_client_id}
+                onChange={e => setConfig(p => ({ ...p, paypal_client_id: e.target.value }))}
+                placeholder="Axxxxxxxxxxxxxxxxxxxxx"
+                className="w-full h-10 px-4 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono placeholder:text-slate-300" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Client Secret</label>
+              <input type={showSecrets ? 'text' : 'password'}
+                value={config.paypal_client_secret}
+                onChange={e => setConfig(p => ({ ...p, paypal_client_secret: e.target.value }))}
+                placeholder="xxxxxxxxxxxxxxxxxxxxxxxx"
+                className="w-full h-10 px-4 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono placeholder:text-slate-300" />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2 block">Environment</label>
+            <div className="flex gap-3">
+              {(['sandbox', 'live'] as const).map(env => (
+                <button key={env} type="button"
+                  onClick={() => setConfig(p => ({ ...p, paypal_environment: env }))}
+                  className={`px-5 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                    config.paypal_environment === env
+                      ? env === 'live'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                        : 'bg-slate-800 text-white border-slate-800 shadow-sm'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-300'
+                  }`}>
+                  {env === 'live' ? 'Live' : 'Sandbox'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <label className="flex items-center gap-2 text-sm text-slate-500 cursor-pointer hover:text-slate-700">
+              <input type="checkbox" checked={showSecrets} onChange={e => setShowSecrets(e.target.checked)} className="rounded border-slate-300" />
+              Show secrets
+            </label>
+            <button onClick={save} disabled={saving}
+              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-sm font-semibold rounded-xl disabled:opacity-60 transition-all shadow-sm">
+              {saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
+              {saving ? 'Saving...' : 'Save Configuration'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Callback URLs */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+            <ExternalLink className="h-4 w-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="font-medium text-sm text-blue-900">PayPal Return URL</p>
+            <p className="text-xs text-blue-700 mt-0.5">Set this as the return URL on your PayPal App to complete subscriptions</p>
+            <div className="mt-2 flex items-center gap-2">
+              <code className="text-xs bg-white/80 px-3 py-2 rounded-lg border border-blue-200 font-mono text-blue-800 flex-1">
+                {typeof window !== 'undefined' ? `${window.location.origin}/api/subscription/paypal/complete` : 'https://yourdomain.com/api/subscription/paypal/complete'}
+              </code>
+              <button onClick={() => { navigator.clipboard.writeText(typeof window !== 'undefined' ? `${window.location.origin}/api/subscription/paypal/complete` : 'https://yourdomain.com/api/subscription/paypal/complete'); toast({ title: 'Copied!' }) }}
+                className="p-2 rounded-lg bg-white border border-blue-200 hover:bg-blue-50 transition-colors">
+                <Copy className="h-4 w-4 text-blue-600" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ── Utility ── */
 function getStatusColor(status: string) {
   switch (status) {
@@ -778,6 +949,7 @@ export default function BillingPage() {
             { id: 'invoices', label: 'Invoices', icon: Receipt },
             { id: 'stripe-config', label: 'Stripe', icon: Globe },
             { id: 'mpesa-config', label: 'M-Pesa', icon: Smartphone },
+            { id: 'paypal-config', label: 'PayPal', icon: Globe },
           ].map(tab => (
             <TabsTrigger key={tab.id} value={tab.id}
               className="flex-1 flex items-center justify-center gap-2 py-2.5 px-3 text-sm font-medium rounded-xl data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm text-slate-500 transition-all">
@@ -1095,6 +1267,7 @@ export default function BillingPage() {
         {/* ── Config Tabs ── */}
         <TabsContent value="stripe-config" className="mt-6"><StripeConfigPanel /></TabsContent>
         <TabsContent value="mpesa-config" className="mt-6"><MpesaConfigPanel /></TabsContent>
+        <TabsContent value="paypal-config" className="mt-6"><PayPalConfigPanel /></TabsContent>
       </Tabs>
 
       {/* Modals */}

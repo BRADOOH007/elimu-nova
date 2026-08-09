@@ -223,6 +223,91 @@ export async function startFreeTrial(userId?: string, schoolId?: string): Promis
   })
 }
 
+const CHECKOUT_PACKAGE_CATALOG: Record<string, { name: string; description: string; price: number; maxTeachers: number; maxStudents: number; features: string[] }> = {
+  school_basic: {
+    name: 'Basic School Plan',
+    description: 'Perfect for small schools getting started with AI.',
+    price: 49,
+    maxTeachers: 5,
+    maxStudents: 100,
+    features: ['Core AI Tutoring', 'Class Progress Tracking', 'Standard Analytics', 'Email Support'],
+  },
+  school_growth: {
+    name: 'Growth School Plan',
+    description: 'For medium schools scaling AI-powered learning.',
+    price: 149,
+    maxTeachers: 20,
+    maxStudents: 500,
+    features: ['Advanced AI Tutoring', 'Personalized Learning Paths', 'Real-Time Analytics', 'Priority Support', 'Custom Curriculum Alignment'],
+  },
+  school_enterprise: {
+    name: 'Enterprise School Plan',
+    description: 'For large school networks and districts.',
+    price: 0,
+    maxTeachers: 9999,
+    maxStudents: 99999,
+    features: ['Multi-campus Admin Controls', 'Dedicated Database Tenant', 'LMS Integration', 'Dedicated Account Manager'],
+  },
+  parent_single: {
+    name: 'Single Child Plan',
+    description: 'A personal AI tutor for one child.',
+    price: 20,
+    maxTeachers: 0,
+    maxStudents: 1,
+    features: ['24/7 Personal AI Tutor', 'Instant Homework Explanations', 'Weakness Identification', 'Curriculum Practice'],
+  },
+  parent_family: {
+    name: 'Family Plan',
+    description: 'Full AI access for up to 3 children.',
+    price: 35,
+    maxTeachers: 0,
+    maxStudents: 3,
+    features: ['Full AI Access for up to 3 Children', 'Unified Parent Dashboard', 'Individual Progress Reports'],
+  },
+}
+
+const CHECKOUT_PACKAGE_NAMES: Record<string, string> = {
+  starter: 'Starter School Plan',
+  growth: 'Growth Plan',
+  excellence: 'Excellence Plan',
+  school_basic: 'Basic School Plan',
+  school_growth: 'Growth School Plan',
+  school_enterprise: 'Enterprise School Plan',
+  parent_single: 'Single Child Plan',
+  parent_family: 'Family Plan',
+}
+
+/**
+ * Resolve a checkout package by id, falling back to a known plan name or the
+ * built-in catalog (find-or-create). Shared by Stripe and PayPal checkout so
+ * both processors stay in sync.
+ */
+export async function resolveCheckoutPackage(packageId: string): Promise<{ id: string; name: string; price: number; duration: number } | null> {
+  let pkg = await prisma.package.findUnique({ where: { id: packageId } })
+
+  if (!pkg) {
+    const planName = CHECKOUT_PACKAGE_NAMES[packageId]
+    if (planName) {
+      pkg = await prisma.package.findFirst({ where: { name: planName, isActive: true } })
+    }
+  }
+
+  if (!pkg) {
+    const entry = CHECKOUT_PACKAGE_CATALOG[packageId]
+    if (entry) {
+      const existing = await prisma.package.findFirst({ where: { name: entry.name, isActive: true } })
+      if (existing) {
+        pkg = existing
+      } else {
+        pkg = await prisma.package.create({ data: { ...entry, duration: 30, isActive: true } })
+      }
+    }
+  }
+
+  if (!pkg) return null
+  return { id: pkg.id, name: pkg.name, price: pkg.price, duration: pkg.duration }
+}
+
 export async function hasAccess(userId?: string, schoolId?: string): Promise<boolean> {
   const cacheKey = `sub:access:${userId || 'u'}:${schoolId || 's'}`
 

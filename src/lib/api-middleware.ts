@@ -8,6 +8,7 @@ import { checkRateLimit, getClientIdentifier, rateLimitAPI, rateLimitAI } from '
 import { cache } from '@/lib/redis'
 import { prisma } from '@/lib/prisma'
 import { checkAIUsageAllowed, recordAIUsage } from '@/lib/ai-usage'
+import { recordApiLog } from '@/lib/incident-service'
 
 type Role = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
 type UserInfo = { id: string; email: string; role: string; name: string; avatar?: string | null; studentId?: string; teacherId?: string; schoolAdminId?: string }
@@ -55,6 +56,13 @@ function auditLog(method: string, path: string, userId: string | undefined, stat
   if (status >= 500) console.error('[AUDIT]', JSON.stringify(entry))
   else if (status >= 400) console.warn('[AUDIT]', JSON.stringify(entry))
   else console.log('[AUDIT]', JSON.stringify(entry))
+
+  // Persist failed/slow requests so the health agent can detect anomalies
+  if (status >= 400 || durationMs > 3000) {
+    try {
+      recordApiLog({ method, path, status, durationMs, userId }).catch(() => {})
+    } catch { /* ignore */ }
+  }
 }
 
 const SUBSCRIPTION_EXEMPT_PREFIXES = [

@@ -3,6 +3,8 @@ import { getSubscriptionStatus } from '@/lib/subscription-service'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
+const CHILD_TRIAL_DAYS = 14
+
 export const GET = route({}, async (req, { user }) => {
   console.log(`Subscription status request for user: ${user.id} (${user.role})`)
 
@@ -24,7 +26,16 @@ export const GET = route({}, async (req, { user }) => {
   } else if (user.role === 'STUDENT') {
     const student = await prisma.student.findUnique({
       where: { userId: user.id },
-      include: { teacher: true }
+      include: {
+        teacher: true,
+        parents: {
+          include: {
+            parent: {
+              include: { students: { select: { student: { select: { schoolId: true } } } } }
+            }
+          }
+        }
+      }
     })
     
     console.log(`Student record found:`, student ? { id: student.id, schoolId: student.schoolId, teacherId: student.teacherId } : 'null')
@@ -33,6 +44,44 @@ export const GET = route({}, async (req, { user }) => {
       schoolId = student.schoolId
     } else if (student?.teacher && !student.teacher.schoolId) {
       userId = student.teacher.userId
+    } else if (student?.parents && student.parents.length > 0) {
+      // Home-schooled / parent-enrolled child: inherit the linked parent's
+      // subscription. Resolve the parent's effective context the same way the
+      // PARENT branch does — school-managed parents inherit school access,
+      // otherwise their own subscription (parent_single / parent_family).
+      const link = student.parents[0]
+      const parent = link.parent
+      const linkedSchoolId = parent.students.find(s => s.student.schoolId)?.student.schoolId
+      if (linkedSchoolId) {
+        schoolId = linkedSchoolId
+      } else if ((await getSubscriptionStatus(parent.userId)).isActive) {
+        userId = parent.userId
+      } else {
+        // Independent parent without an active plan: the child gets a 14-day
+        // trial measured from the enrollment date. Once it lapses, access
+        // stops until the parent subscribes.
+        const trialEndsAt = new Date(link.createdAt.getTime() + CHILD_TRIAL_DAYS * 24 * 60 * 60 * 1000)
+        const now = new Date()
+        const isExpired = trialEndsAt < now
+        const daysRemaining = Math.max(0, Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+        return NextResponse.json({
+          subscription: {
+            isActive: !isExpired,
+            isTrial: true,
+            isExpired,
+            daysRemaining,
+            status: isExpired ? 'TRIAL_EXPIRED' : 'TRIAL',
+            packageName: 'Child Trial',
+            trialEndsAt,
+            endDate: trialEndsAt
+          },
+          context: {
+            userId: user.id,
+            schoolId: undefined,
+            userRole: user.role
+          }
+        })
+      }
     } else {
       userId = user.id
     }

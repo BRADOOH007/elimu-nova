@@ -13,7 +13,7 @@ export const POST = route({}, async (request, { user }) => {
 
     const isWrong = selectedAnswer !== undefined && correctAnswer !== undefined && selectedAnswer !== correctAnswer
 
-    const prompt = `You are a patient, encouraging Kenyan ${subject || 'subject'} teacher helping a ${grade || 'secondary school'} student.
+    const prompt = `You are a patient, encouraging ${subject || 'subject'} teacher helping a ${grade || 'secondary school'} student.
 
 The student ${isWrong ? `answered INCORRECTLY. They chose "${selectedAnswer}" but the correct answer is "${correctAnswer}".` : 'wants to understand this question better.'}
 
@@ -26,7 +26,7 @@ Provide a clear, step-by-step explanation in this JSON format:
   "summary": "One sentence — what concept this tests",
   "correctAnswer": "${correctAnswer || 'See steps'}",
   "steps": [
-    { "step": 1, "title": "Step title", "explanation": "Clear explanation using Kenyan examples" },
+    { "step": 1, "title": "Step title", "explanation": "Clear explanation using relatable local examples" },
     { "step": 2, "title": "Step title", "explanation": "..." }
   ],
   "whyWrong": ${isWrong ? '"Explain why the selected answer is wrong (gentle, encouraging)"' : 'null'},
@@ -38,11 +38,11 @@ Provide a clear, step-by-step explanation in this JSON format:
 Rules:
 - Use simple language appropriate for ${grade || 'the grade level'}
 - Be encouraging, never discouraging
-- Use Kenyan context (shillings, local places, familiar examples)
+- Use relatable local context (currency, local places, familiar examples)
 - Steps should be logical and build on each other`
 
     const raw = await OpenAIService.generateText([
-      { role: 'system', content: 'You are a CBC teacher. Return ONLY valid JSON.' },
+      { role: 'system', content: 'You are a teacher. Return ONLY valid JSON.' },
       { role: 'user', content: prompt },
     ], { maxTokens: 800, temperature: 0.5 })
 

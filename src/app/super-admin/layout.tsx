@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
-import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, ShieldAlert, Globe, MessageSquare, Inbox, Activity, ScrollText, Package, UploadCloud, Database, MessageCircle } from 'lucide-react'
+import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, ShieldAlert, Globe, MessageSquare, Inbox, Activity, ScrollText, Package, UploadCloud, Database, MessageCircle, Siren } from 'lucide-react'
 import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -38,6 +38,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { icon: UploadCloud,   label: "Bulk Import", href: "/super-admin/bulk-import"     },
     { icon: Activity,      label: "API Usage",  href: "/super-admin/api-usage"       },
     { icon: ScrollText,    label: "Audit Log",   href: "/super-admin/audit-log"       },
+    { icon: Siren,         label: "Incidents",   href: "/super-admin/incidents"       },
     { icon: Database,      label: "System Health", href: "/super-admin/system-health" },
   ]
 

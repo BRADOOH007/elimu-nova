@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
@@ -87,7 +88,7 @@ export const POST = route({}, async (req, { user }) => {
   const cached = await intelligentCacheLookup(subject, topic, gradeStr)
   if (cached) {
     return NextResponse.json({
-      ...(cached.content as any as ActiveLesson),
+      ...(cached.content as unknown as ActiveLesson),
       fromCache: true,
       matchedVia: cached.matchedVia,
       canonicalTopic: cached.canonicalTopic ?? null,
@@ -219,7 +220,7 @@ RULES:
       })
     )
 
-    await intelligentCacheSave(subject, topic, gradeStr, lesson as any)
+    await intelligentCacheSave(subject, topic, gradeStr, lesson as unknown as Prisma.InputJsonValue)
 
     return NextResponse.json({ ...lesson, fromCache: false, matchedVia: 'generated' })
 

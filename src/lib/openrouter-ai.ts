@@ -1,4 +1,5 @@
 import { OpenAIService } from './openai-service'
+import { getCurriculumProfile } from './curriculum-prompt'
 
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant'
@@ -7,6 +8,15 @@ interface OpenAIMessage {
 
 interface OpenAIResponse {
   choices: Array<{ message: { content: string } }>
+}
+
+/** Builds a curriculum-aware context block (falls back to Kenyan CBC default). */
+function curriculumBlock(curriculum?: string | null, country?: string | null): string {
+  if (!curriculum || curriculum === 'cbc') {
+    return 'Curriculum: Kenyan CBC (Competency-Based Curriculum). Use Kenyan examples and contexts, CBC core competencies, and CBC values.'
+  }
+  const p = getCurriculumProfile(curriculum, country)
+  return `Curriculum: ${p.name} (${p.country}). ${p.contextNote} Objectives use the stem "${p.objectiveStem}". ${p.valuesGuidance}`
 }
 
 export class OpenAIAI {
@@ -18,18 +28,17 @@ export class OpenAIAI {
     return OpenAIService.generateText(messages, { maxTokens: 2000, temperature: 0.7 })
   }
 
-  static async generateLessonContent(lessonPlan: any, studentLevel: string, learningStyle: string): Promise<string> {
-    const systemPrompt = `You are an AI tutor for the Kenyan CBC curriculum. Your role is to create personalized, engaging lesson content based on teacher lesson plans and student profiles.
+  static async generateLessonContent(lessonPlan: any, studentLevel: string, learningStyle: string, curriculum?: string, country?: string): Promise<string> {
+    const systemPrompt = `You are an AI tutor creating personalized, engaging lesson content based on teacher lesson plans and student profiles.
+${curriculumBlock(curriculum, country)}
 
 Key principles:
 - Adapt content to the student's learning level (${studentLevel})
 - Use the student's preferred learning style (${learningStyle})
 - Make content interactive and engaging
-- Include clear CBC learning objectives
-- Provide practical examples and exercises using Kenyan contexts
+- Include clear learning objectives
+- Provide practical examples and exercises using local contexts
 - Use appropriate language for the grade level
-- Reference CBC core competencies (communication and collaboration, critical thinking and problem solving, creativity and imagination, citizenship, digital literacy, learning to learn)
-- Include CBC values (respect, responsibility, love, peace, unity, patriotism, integrity, honesty)
 
 Learning Styles:
 - Visual: Use diagrams, charts, visual examples, and structured layouts
@@ -67,18 +76,18 @@ Format the response in markdown with clear headings and structure.`
     return await this.makeRequest(messages)
   }
 
-  static async generateAILesson(subject: string, topic: string, grade: string, difficulty: string, learningStyle: string): Promise<any> {
-    const systemPrompt = `You are an AI tutor for the Kenyan CBC curriculum. Create a comprehensive AI-generated lesson that adapts to the student's learning style and level.
+  static async generateAILesson(subject: string, topic: string, grade: string, difficulty: string, learningStyle: string, curriculum?: string, country?: string): Promise<any> {
+    const systemPrompt = `You are an AI tutor creating a comprehensive lesson that adapts to the student's learning style and level.
+${curriculumBlock(curriculum, country)}
 
 Key requirements:
-- Create engaging, educational content aligned to CBC core competencies
+- Create engaging, educational content aligned to the curriculum
 - Adapt to learning style: ${learningStyle}
 - Match difficulty level: ${difficulty}
 - Appropriate for grade: ${grade}
-- Include CBC learning objectives (using "By the end of the lesson, the learner should be able to...")
-- Include activities, assessments and Kenyan examples
+- Include learning objectives (using the curriculum's objective stem)
+- Include activities, assessments and local examples
 - Make it interactive and personalized
-- Reference CBC values (respect, responsibility, love, peace, unity, patriotism, integrity, honesty)
 
 Return your response as a JSON object with this structure:
 {

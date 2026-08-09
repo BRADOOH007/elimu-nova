@@ -36,7 +36,7 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, 
     // Load curriculum outcomes for CBC grounding
     const outcomes = await loadCurriculumOutcomes(examData.gradeLevel, examData.subject, examData.topics)
 
-    // Build smart system prompt with CBC context
+    // Build smart system prompt with curriculum context
     const systemPrompt = buildAssessmentSystemPrompt({
       kind: 'exam',
       grade: examData.gradeLevel,
@@ -44,6 +44,8 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, 
       topic: examData.topics,
       outcomes,
       templateText,
+      curriculum: examData.curriculum,
+      country: examData.country,
     })
 
     const userPrompt = `Generate a complete ${examData.curriculum || 'CBC'} exam as structured JSON with this schema:

@@ -5,10 +5,11 @@ import { buildKICDLessonPrompt } from '@/lib/cbc-context'
 import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
 import { buildFullGenerationContext } from '@/lib/curriculum-intelligence'
+import { buildCurriculumLessonContext, getCurriculumProfile } from '@/lib/curriculum-prompt'
 
 export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
     const body = await request.json()
-    const { mode = 'single', subject, grade, topic, duration, objectives, prerequisites, documentContext, term, weeksCount, lessonsPerWeek, topics: requestTopics } = body
+    const { mode = 'single', subject, grade, topic, duration, objectives, prerequisites, documentContext, term, weeksCount, lessonsPerWeek, topics: requestTopics, curriculum, country } = body
 
     if (!subject || !grade) {
       return NextResponse.json({ error: 'Subject and grade are required' }, { status: 400 })
@@ -47,21 +48,23 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN'] }, async (request, 
       ? `\n\nA reference lesson plan document was uploaded. Study its structure, sections, and style, then generate in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
       : ''
 
-    const kicdContext = buildKICDLessonPrompt(grade, subject)
+    const kicdContext = curriculum && curriculum !== 'cbc'
+      ? buildCurriculumLessonContext({ curriculum, country, grade, subject })
+      : buildKICDLessonPrompt(grade, subject)
 
     // Fetch curriculum intelligence — official outcomes + teacher examples + RAG
     const { curriculumSection, examplesSection, ragContext } = await buildFullGenerationContext(
       grade, subject as string, { generationType: 'lesson_plan', topic: topic as string }
     )
 
-    const systemPrompt = `You are a Kenyan CBC/CBE curriculum expert creating detailed lesson plans in the official KICD format.${templateBlock}
+    const systemPrompt = `You are ${curriculum && curriculum !== 'cbc' ? `an expert educator creating detailed lesson plans for the ${getCurriculumProfile(curriculum, country).name} curriculum` : 'a Kenyan CBC/CBE curriculum expert creating detailed lesson plans in the official KICD format'}.${templateBlock}
 ${kicdContext}
 
 ${curriculumSection}
 ${ragContext}
 ${examplesSection}
 
-Return a JSON object EXACTLY matching this KICD 11-section structure:
+Return a JSON object EXACTLY matching this 11-section structure (field names are fixed; adapt the terminology inside them to the curriculum, e.g. "strand" = ${curriculum && curriculum !== 'cbc' ? getCurriculumProfile(curriculum, country).strandLabel : 'Strand'}):
 {
   "title": string,
   "duration": number (minutes),
@@ -77,13 +80,13 @@ Return a JSON object EXACTLY matching this KICD 11-section structure:
     "duration": number,
     "enrolment": number
   },
-  "strand": "string (exact from KICD curriculum design)",
-  "subStrand": "string (exact from KICD curriculum design)",
+  "strand": "string (${curriculum && curriculum !== 'cbc' ? getCurriculumProfile(curriculum, country).strandLabel : 'exact from KICD curriculum design'})",
+  "subStrand": "string (${curriculum && curriculum !== 'cbc' ? getCurriculumProfile(curriculum, country).subStrandLabel : 'exact from KICD curriculum design'})",
   "specificLearningOutcomes": ["SLO1 - knowledge", "SLO2 - skill", "SLO3 - attitude"],
   "keyInquiryQuestions": ["open-ended question"],
-  "coreCompetencies": ["pick 2-3 from the 7 CBC competencies"],
-  "values": ["pick 1-2 from KICD values list"],
-  "pcis": ["pick 1-2 Pertinent and Contemporary Issues"],
+  "coreCompetencies": ["pick 2-3 relevant to this curriculum"],
+  "values": ["pick 1-2 from the curriculum values"],
+  "pcis": ["pick 1-2 relevant contemporary/cross-curricular issues"],
   "learningResources": ["resource with page numbers"],
   "organisationOfLearning": {
     "introduction": { "duration": 5, "teacherActivity": "string", "learnerActivity": "string" },
@@ -113,7 +116,7 @@ ${languageInstruction}
 Learning Objectives: ${filteredObjectives.join(', ')}
 Prerequisites: ${filteredPrerequisites.length > 0 ? filteredPrerequisites.join(', ') : 'None specified'}
 
-Make this lesson plan practical, engaging, and specifically tailored for Kenyan ${grade} students.
+Make this lesson plan practical, engaging, and specifically tailored for ${curriculum && curriculum !== 'cbc' ? `${getCurriculumProfile(curriculum, country).name} ${grade} students in the United States` : `Kenyan ${grade} students`}.
 Use local examples. Each activity should have clear timing and instructions.`
 
       const raw = await OpenAIService.generateLongContent(
