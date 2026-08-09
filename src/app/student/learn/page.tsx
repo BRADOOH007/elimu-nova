@@ -25,6 +25,7 @@ import { addMistake, getMistakeCount, markMistakeReviewed, getUnreviewedMistakes
 import { evaluateAnswer } from '@/lib/answer-evaluator'
 import { trackQuizSubmission, trackPracticeAttempt } from '@/lib/telemetry'
 import { useSession } from 'next-auth/react'
+import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
 
 // Types & constants (keep from original)
 interface QuizQ {
@@ -47,13 +48,42 @@ interface ChatMsg { role: 'user' | 'ai'; content: string }
 
 import { getAllCBCSubjects, getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
 
-const ALL_SUBJECTS = getAllCBCSubjects()
+// Dynamic subjects based on curriculum
+function useCurriculumSubjects() {
+  const { data: session } = useSession()
+  const [subjects, setSubjects] = useState<string[]>(getAllCBCSubjects())
+  const [curriculum, setCurriculum] = useState('cbc')
+  const [defaultGrade, setDefaultGrade] = useState('Grade 4')
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetch('/api/user-profile')
+        if (res.ok) {
+          const p = await res.json()
+          setCurriculum(p.curriculum || 'cbc')
+          setDefaultGrade(p.grade || 'Grade 4')
+        }
+      } catch { /* use defaults */ }
+    }
+    load()
+  }, [session])
+
+  useEffect(() => {
+    setSubjects(getSubjectsForCurriculum(curriculum, defaultGrade))
+  }, [curriculum, defaultGrade])
+
+  return { subjects, curriculum, defaultGrade, setDefaultGrade }
+}
+
+const ALL_SUBJECTS_FALLBACK = getAllCBCSubjects()
 
 function LearnPageContent() {
   const { toast } = useToast()
   const { data: session } = useSession()
   const { openAITutor } = useAITutor()
   const searchParams = useSearchParams()
+  const { subjects, curriculum, defaultGrade } = useCurriculumSubjects()
 
   // Core study state — initialized from URL params if present
   const [studySubject, setStudySubject] = useState(() => {
@@ -63,7 +93,7 @@ function LearnPageContent() {
   const [studyTopic,   setStudyTopic]   = useState('')
   const [studyGrade,   setStudyGrade]   = useState(() => {
     const g = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('grade') : null
-    return g || 'Grade 4'
+    return g || defaultGrade || 'Grade 4'
   })
   const [studying,     setStudying]     = useState(false)
   const [lessonMd,     setLessonMd]     = useState('')
