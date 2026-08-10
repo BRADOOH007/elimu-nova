@@ -19,12 +19,13 @@ const LOCK_DURATION_MS = 15 * 60 * 1000
 
 async function resolveUser(identifier: string) {
   const trimmed = identifier.trim().toLowerCase()
-  let user = await prisma.user.findUnique({ where: { username: trimmed } })
+  const select = { id: true, role: true, isActive: true, lockedUntil: true, loginAttempts: true, password: true, email: true, firstName: true, lastName: true, username: true, avatar: true } as const
+  let user = await prisma.user.findUnique({ where: { username: trimmed }, select })
   if (!user) {
-    user = await prisma.user.findUnique({ where: { email: trimmed } })
+    user = await prisma.user.findUnique({ where: { email: trimmed }, select })
   }
   if (!user && !trimmed.includes('@')) {
-    user = await prisma.user.findUnique({ where: { email: `${trimmed}@student.local` } })
+    user = await prisma.user.findUnique({ where: { email: `${trimmed}@student.local` }, select })
   }
   return user
 }
@@ -99,24 +100,26 @@ export const authOptions: NextAuthOptions = {
         const rateResult = await checkRateLimit(`auth:${user.id}`, rateLimitAuth)
         if (!rateResult.allowed) {
           logger.warn('Rate limit hit for:', { userId: user.id })
-          await logSecurityEvent({
+          logSecurityEvent({
             eventType: 'BRUTE_FORCE_ATTEMPT',
             severity: 'HIGH',
             description: `Rate limit exceeded for ${identifier} — ${rateResult.resetInSec}s remaining`,
             metadata: JSON.stringify({ identifier, userId: user.id }),
-          })
+          }).catch(() => {})
           throw new Error('Too many login attempts. Please try again later.')
         }
 
+        // Only fetch the role relation the user actually has — skip 4 dead LEFT JOINs
+        const roleIncludeMap: Record<string, any> = {
+          STUDENT:      { student: { include: { school: true, teacher: { include: { user: true } } } } },
+          TEACHER:      { teacher: { include: { school: true } } },
+          SCHOOL_ADMIN: { schoolAdmin: { include: { school: true } } },
+          SUPER_ADMIN:  { superAdmin: true },
+          PARENT:       { parent: true },
+        }
         const fullUser = await prisma.user.findUnique({
           where: { id: user.id },
-          include: {
-            schoolAdmin: { include: { school: true } },
-            teacher: { include: { school: true } },
-            student: { include: { school: true, teacher: { include: { user: true } } } },
-            superAdmin: true,
-            parent: true,
-          },
+          include: roleIncludeMap[user.role] || {},
         })
 
         if (!fullUser) {
@@ -126,23 +129,23 @@ export const authOptions: NextAuthOptions = {
 
         if (!fullUser.isActive) {
           logger.warn('User inactive:', { userId: fullUser.id })
-          await logSecurityEvent({
+          logSecurityEvent({
             eventType: 'LOGIN_FAILED',
             severity: 'MEDIUM',
             description: `Inactive account login attempt for ${fullUser.username} (${fullUser.email})`,
             userId: fullUser.id,
-          })
+          }).catch(() => {})
           return null
         }
 
         if (fullUser.lockedUntil && fullUser.lockedUntil > new Date()) {
           logger.warn('Account locked:', { userId: fullUser.id })
-          await logSecurityEvent({
+          logSecurityEvent({
             eventType: 'ACCOUNT_LOCKED',
             severity: 'HIGH',
             description: `Login attempt on locked account ${fullUser.username} (locked until ${fullUser.lockedUntil.toISOString()})`,
             userId: fullUser.id,
-          })
+          }).catch(() => {})
           throw new Error('Account temporarily locked due to too many failed attempts. Try again in 15 minutes.')
         }
 
@@ -168,25 +171,25 @@ export const authOptions: NextAuthOptions = {
 
           await prisma.user.update({ where: { id: fullUser.id }, data: updateData })
 
-          await logSecurityEvent({
+          logSecurityEvent({
             eventType: 'LOGIN_FAILED',
             severity: newAttempts >= LOCK_THRESHOLD ? 'CRITICAL' : 'MEDIUM',
             description: `Failed login for ${fullUser.username} (attempt ${newAttempts}/${LOCK_THRESHOLD})`,
             userId: fullUser.id,
-          })
+          }).catch(() => {})
 
           if (newAttempts >= LOCK_THRESHOLD) {
-            await logSecurityEvent({
+            logSecurityEvent({
               eventType: 'ACCOUNT_LOCKED',
               severity: 'CRITICAL',
               description: `Account locked for ${fullUser.username} after ${LOCK_THRESHOLD} failed attempts`,
               userId: fullUser.id,
-            })
+            }).catch(() => {})
 
-            await notifySuperAdmins(
+            notifySuperAdmins(
               '🔒 Account Locked',
               `User ${fullUser.firstName} ${fullUser.lastName} (@${fullUser.username}, ${fullUser.role}) has been locked after ${LOCK_THRESHOLD} failed login attempts.`
-            )
+            ).catch(() => {})
           }
 
           return null
@@ -197,12 +200,12 @@ export const authOptions: NextAuthOptions = {
           data: { loginAttempts: 0, lockedUntil: null },
         })
 
-        await logSecurityEvent({
+        logSecurityEvent({
           eventType: 'LOGIN_SUCCESS',
           severity: 'LOW',
           description: `Successful login for ${fullUser.username}`,
           userId: fullUser.id,
-        })
+        }).catch(() => {})
 
         logger.info('Authentication successful:', { userId: fullUser.id, role: fullUser.role })
 
