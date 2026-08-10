@@ -121,34 +121,34 @@ class DeadlineRedis implements CacheClient {
     return /ECONNREFUSED|ENOTFOUND|ETIMEDOUT|timeout|connect/i.test(msg)
   }
 
-  async get(key: string) {
+  async get(key: string): Promise<string | null> {
     return this.cmd(() => this.client.get(key).then(v => v ?? null), () => this.fallback.get(key))
   }
 
-  async set(key: string, value: string, ttlSeconds?: number) {
+  async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
     return this.cmd(
-      () => ttlSeconds ? this.client.set(key, value, 'EX', ttlSeconds) : this.client.set(key, value),
+      () => (ttlSeconds ? this.client.set(key, value, 'EX', ttlSeconds) : this.client.set(key, value)).then(() => {}),
       () => this.fallback.set(key, value, ttlSeconds),
     )
   }
 
-  async del(key: string) {
-    return this.cmd(() => this.client.del(key), () => this.fallback.del(key))
+  async del(key: string): Promise<void> {
+    return this.cmd(() => this.client.del(key).then(() => {}), () => this.fallback.del(key))
   }
 
-  async incr(key: string) {
+  async incr(key: string): Promise<number> {
     return this.cmd(() => this.client.incr(key), () => this.fallback.incr(key))
   }
 
-  async expire(key: string, ttlSeconds: number) {
-    return this.cmd(() => this.client.expire(key, ttlSeconds), () => this.fallback.expire(key, ttlSeconds))
+  async expire(key: string, ttlSeconds: number): Promise<void> {
+    return this.cmd(() => this.client.expire(key, ttlSeconds).then(() => {}), () => this.fallback.expire(key, ttlSeconds))
   }
 
-  async ttl(key: string) {
+  async ttl(key: string): Promise<number> {
     return this.cmd(() => this.client.ttl(key), () => this.fallback.ttl(key))
   }
 
-  async ping() {
+  async ping(): Promise<string> {
     return this.cmd(() => this.client.ping(), () => 'FALLBACK')
   }
 }
