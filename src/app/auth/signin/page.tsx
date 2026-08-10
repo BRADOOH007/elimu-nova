@@ -56,52 +56,55 @@ export default function SignInPage() {
     )
 
     const doSignIn = async () => {
-      // Authenticate via next-auth credentials provider
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,  // handle routing ourselves
+        redirect: false,
       })
 
       if (result?.error) {
         setError('Invalid email or password')
-        setIsLoading(false)
         return
       }
 
-      if (result?.ok) {
-        const session = await getSession()
-
-        if (session?.user?.role) {
-          // Verify the user's role matches the active role tab
-          const roleToTab: Record<string, Role | null> = {
-            STUDENT:      'STUDENT',
-            TEACHER:      'TEACHER',
-            PARENT:       'PARENT',
-            SCHOOL_ADMIN: null,  // SCHOOL_ADMIN / SUPER_ADMIN must use admin-signin page
-            SUPER_ADMIN:  null,
-          }
-          const expectedTab = roleToTab[session.user.role]
-
-          if (expectedTab && expectedTab !== activeRole) {
-            const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
-            setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
-            setIsLoading(false)
-            return
-          }
-
-          const dashboardRoutes: Record<string, string> = {
-            SUPER_ADMIN:  '/super-admin/dashboard',
-            SCHOOL_ADMIN: '/school-admin/dashboard',
-            TEACHER:      '/teacher/dashboard',
-            STUDENT:      '/student/dashboard',
-            PARENT:       '/parent/dashboard',
-          }
-          router.push(dashboardRoutes[session.user.role] || '/dashboard')
-        } else {
-          router.push('/dashboard')
-        }
+      if (!result?.ok) {
+        setError('Unable to sign in. Please try again.')
+        return
       }
+
+      const session = await getSession()
+
+      if (!session?.user?.role) {
+        setError('Could not retrieve your account. Please try again.')
+        return
+      }
+
+      const roleToTab: Record<string, Role | null> = {
+        STUDENT:      'STUDENT',
+        TEACHER:      'TEACHER',
+        PARENT:       'PARENT',
+        SCHOOL_ADMIN: null,
+        SUPER_ADMIN:  null,
+      }
+      const expectedTab = roleToTab[session.user.role]
+
+      if (expectedTab && expectedTab !== activeRole) {
+        const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
+        setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
+        return
+      }
+
+      const dashboardRoutes: Record<string, string> = {
+        SUPER_ADMIN:  '/super-admin/dashboard',
+        SCHOOL_ADMIN: '/school-admin/dashboard',
+        TEACHER:      '/teacher/dashboard',
+        STUDENT:      '/student/dashboard',
+        PARENT:       '/parent/dashboard',
+      }
+      const target = dashboardRoutes[session.user.role] || '/dashboard'
+      // Stop the spinner before navigation so if routing hangs, the button resets
+      setIsLoading(false)
+      router.push(target)
     }
 
     try {
@@ -112,6 +115,7 @@ export default function SignInPage() {
       } else {
         setError('An error occurred. Please try again.')
       }
+    } finally {
       setIsLoading(false)
     }
   }
