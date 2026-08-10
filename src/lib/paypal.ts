@@ -8,6 +8,8 @@
  * Never throws at build/import time — only at runtime when actually used.
  */
 
+import { fetchWithTimeout, TIMEOUTS } from './fetch-utils'
+
 const SANDBOX_BASE = 'https://api-m.sandbox.paypal.com'
 const PRODUCTION_BASE = 'https://api-m.paypal.com'
 
@@ -86,14 +88,14 @@ export async function getAccessToken(): Promise<string> {
   }
 
   const auth = Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64')
-  const res = await fetch(`${getBaseUrl(config.environment)}/v1/oauth2/token`, {
+  const res = await fetchWithTimeout(`${getBaseUrl(config.environment)}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${auth}`,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: 'grant_type=client_credentials',
-  })
+  }, TIMEOUTS.PAYMENT)
 
   if (!res.ok) {
     const text = await res.text()
@@ -150,14 +152,14 @@ export async function createOrder(input: CreateOrderInput): Promise<{ orderId: s
     },
   }
 
-  const res = await fetch(`${getBaseUrl(config.environment)}/v2/checkout/orders`, {
+  const res = await fetchWithTimeout(`${getBaseUrl(config.environment)}/v2/checkout/orders`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-  })
+  }, TIMEOUTS.PAYMENT)
 
   if (!res.ok) {
     const text = await res.text()
@@ -181,13 +183,13 @@ export async function captureOrder(orderId: string): Promise<PayPalCaptureResult
   const config = await loadConfig()
   const token = await getAccessToken()
 
-  const res = await fetch(`${getBaseUrl(config.environment)}/v2/checkout/orders/${orderId}/capture`, {
+  const res = await fetchWithTimeout(`${getBaseUrl(config.environment)}/v2/checkout/orders/${orderId}/capture`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-  })
+  }, TIMEOUTS.PAYMENT)
 
   if (!res.ok) {
     const text = await res.text()

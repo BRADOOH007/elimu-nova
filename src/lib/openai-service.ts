@@ -6,6 +6,7 @@
 
 import { callAI, getKey, type AIMessage } from '@/lib/ai-provider'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
+import { fetchWithTimeout, TIMEOUTS } from './fetch-utils'
 
 export interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant'
@@ -352,11 +353,11 @@ ${curCtx ? '' : '- Use examples and references appropriate for the student\'s gr
         formData.append('aspect_ratio', '1:1')
         formData.append('output_format', 'png')
         formData.append('mode', 'text-to-image')
-        const resp = await fetch('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
+        const resp = await fetchWithTimeout('https://api.stability.ai/v2beta/stable-image/generate/sd3', {
           method: 'POST',
           headers: { Authorization: `Bearer ${stabilityKey}` },
           body: formData,
-        })
+        }, TIMEOUTS.IMAGE)
         if (resp.ok) {
           const buf = Buffer.from(await resp.arrayBuffer())
           const url = `data:image/png;base64,${buf.toString('base64')}`
@@ -431,12 +432,9 @@ No markdown fences, no explanations — just the SVG.`,
       const groqKey = await getKey('GROQ_API_KEY')
       if (!groqKey) return null
 
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${groqKey}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: opts?.model || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
           messages: [
@@ -459,7 +457,7 @@ No markdown fences, no explanations — just the SVG.`,
           max_tokens: 2048,
           temperature: 0.4,
         }),
-      })
+      }, TIMEOUTS.AI)
       if (!res.ok) {
         console.warn(`[AI] Groq SVG failed: ${res.status}`)
         return null

@@ -6,6 +6,8 @@
  *   2. Wikimedia Commons — keyless public API, always available as fallback
  */
 
+import { fetchWithTimeout, TIMEOUTS } from './fetch-utils'
+
 export interface StockImage {
   id: string
   url: string
@@ -36,9 +38,9 @@ async function searchUnsplash(query: string, limit: number): Promise<StockImage[
     url.searchParams.set('query', query)
     url.searchParams.set('per_page', String(limit))
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithTimeout(url.toString(), {
       headers: { Authorization: `Client-ID ${key}` },
-    })
+    }, TIMEOUTS.IMAGE)
     if (!res.ok) {
       console.warn('[StockImage] Unsplash search failed:', res.status)
       return null
@@ -81,7 +83,7 @@ async function searchWikimedia(query: string, limit: number): Promise<StockImage
   url.searchParams.set('iiprop', 'url|mime|extmetadata')
   url.searchParams.set('iiurlwidth', '480')
 
-  const res = await fetch(url.toString())
+  const res = await fetchWithTimeout(url.toString(), {}, TIMEOUTS.IMAGE)
   if (!res.ok) throw new Error(`Wikimedia search failed: ${res.status}`)
 
   const data = await res.json()

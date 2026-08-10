@@ -8,6 +8,8 @@
  * Never throws at build/import time — only at runtime when actually used.
  */
 
+import { fetchWithTimeout, TIMEOUTS } from './fetch-utils'
+
 const SANDBOX_BASE = 'https://sandbox.safaricom.co.ke'
 const PRODUCTION_BASE = 'https://api.safaricom.co.ke'
 
@@ -104,10 +106,10 @@ function getBaseUrl(env: 'sandbox' | 'production'): string {
 
 async function getAuthToken(config: MpesaConfig): Promise<string> {
   const auth = Buffer.from(`${config.consumerKey}:${config.consumerSecret}`).toString('base64')
-  const res = await fetch(`${getBaseUrl(config.environment)}/oauth/v1/generate?grant_type=client_credentials`, {
+  const res = await fetchWithTimeout(`${getBaseUrl(config.environment)}/oauth/v1/generate?grant_type=client_credentials`, {
     method: 'GET',
     headers: { Authorization: `Basic ${auth}` },
-  })
+  }, TIMEOUTS.PAYMENT)
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`Daraja auth failed (${res.status}): ${text}`)
@@ -170,14 +172,14 @@ export async function stkPush(
     TransactionDesc: transactionDesc.slice(0, 13),
   }
 
-  const res = await fetch(`${getBaseUrl(config.environment)}/mpesa/stkpush/v1/processrequest`, {
+  const res = await fetchWithTimeout(`${getBaseUrl(config.environment)}/mpesa/stkpush/v1/processrequest`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-  })
+  }, TIMEOUTS.PAYMENT)
 
   if (!res.ok) {
     const text = await res.text()
@@ -212,14 +214,14 @@ export async function queryStatus(checkoutRequestId: string): Promise<StkQueryRe
     CheckoutRequestID: checkoutRequestId,
   }
 
-  const res = await fetch(`${getBaseUrl(config.environment)}/mpesa/stkpushquery/v1/query`, {
+  const res = await fetchWithTimeout(`${getBaseUrl(config.environment)}/mpesa/stkpushquery/v1/query`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(body),
-  })
+  }, TIMEOUTS.PAYMENT)
 
   if (!res.ok) {
     const text = await res.text()

@@ -137,6 +137,8 @@ export interface AICallResult {
 
 const DEEPSEEK_URL   = 'https://api.deepseek.com/chat/completions'
 const GEMINI_URL     = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+import { fetchWithTimeout, TIMEOUTS } from './fetch-utils'
+
 const GROQ_URL       = 'https://api.groq.com/openai/v1/chat/completions'
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions'
@@ -150,7 +152,7 @@ async function callHTTP(
   let lastError: string = ''
   for (const key of keys) {
     try {
-      const res = await fetch(url, {
+      const res = await fetchWithTimeout(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${key}`,
@@ -159,7 +161,7 @@ async function callHTTP(
           'X-Title': 'ElimuNova AI',
         },
         body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
-      })
+      }, TIMEOUTS.AI)
       if (!res.ok) {
         lastError = `${url} ${res.status}`
         continue // try next key
