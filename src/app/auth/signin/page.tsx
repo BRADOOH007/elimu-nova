@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn, getSession, signOut } from 'next-auth/react'
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import { Button } from '@/components/ui/button'
@@ -50,7 +50,12 @@ export default function SignInPage() {
     setIsLoading(true)
     setError('')
 
-    try {
+    // 20s hard deadline — if anything hangs, show an error instead of infinite spinner
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT')), 20_000)
+    )
+
+    const doSignIn = async () => {
       // Authenticate via next-auth credentials provider
       const result = await signIn('credentials', {
         email,
@@ -65,8 +70,6 @@ export default function SignInPage() {
       }
 
       if (result?.ok) {
-        // Small delay so the session token propagates
-        await new Promise(resolve => setTimeout(resolve, 500))
         const session = await getSession()
 
         if (session?.user?.role) {
@@ -81,14 +84,12 @@ export default function SignInPage() {
           const expectedTab = roleToTab[session.user.role]
 
           if (expectedTab && expectedTab !== activeRole) {
-            // Role mismatch — tell the user to select the correct tab
             const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
             setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
             setIsLoading(false)
             return
           }
 
-          // Route to the correct dashboard based on role
           const dashboardRoutes: Record<string, string> = {
             SUPER_ADMIN:  '/super-admin/dashboard',
             SCHOOL_ADMIN: '/school-admin/dashboard',
@@ -101,8 +102,16 @@ export default function SignInPage() {
           router.push('/dashboard')
         }
       }
-    } catch {
-      setError('An error occurred. Please try again.')
+    }
+
+    try {
+      await Promise.race([doSignIn(), timeout])
+    } catch (err: any) {
+      if (err?.message === 'TIMEOUT') {
+        setError('Login is taking too long. Please try again. If this persists, contact support.')
+      } else {
+        setError('An error occurred. Please try again.')
+      }
       setIsLoading(false)
     }
   }
