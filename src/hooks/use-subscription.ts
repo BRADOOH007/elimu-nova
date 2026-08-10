@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 
 interface SubscriptionInfo {
@@ -26,6 +26,8 @@ export function useSubscription() {
   const [context, setContext] = useState<SubscriptionContext | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const mountedRef = useRef(true)
 
   const fetchSubscription = async () => {
     if (!session?.user?.id) {
@@ -33,15 +35,25 @@ export function useSubscription() {
       return
     }
 
+    // Cancel any in-flight request
+    if (abortRef.current) {
+      abortRef.current.abort(new DOMException('superseded', 'AbortError'))
+    }
+
+    const controller = new AbortController()
+    abortRef.current = controller
+    const timeout = setTimeout(() => {
+      controller.abort(new DOMException('timeout', 'AbortError'))
+    }, 8_000)
+
     try {
       setLoading(true)
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 8_000)
       const response = await fetch('/api/subscription/status', {
         signal: controller.signal,
       })
       clearTimeout(timeout)
 
+      if (!mountedRef.current) return
       if (!response.ok) {
         throw new Error('Failed to fetch subscription status')
       }
@@ -51,11 +63,13 @@ export function useSubscription() {
       setContext(data.context)
       setError(null)
     } catch (err) {
+      if (!mountedRef.current) return
+      if (err instanceof DOMException && err.name === 'AbortError') return
       const message = err instanceof Error ? err.message : 'Unknown error'
       setError(message)
       console.error('Error fetching subscription:', err)
     } finally {
-      setLoading(false)
+      if (mountedRef.current) setLoading(false)
     }
   }
 
@@ -112,7 +126,15 @@ export function useSubscription() {
   }
 
   useEffect(() => {
+    mountedRef.current = true
     fetchSubscription()
+    return () => {
+      mountedRef.current = false
+      if (abortRef.current) {
+        abortRef.current.abort(new DOMException('unmounted', 'AbortError'))
+        abortRef.current = null
+      }
+    }
   }, [session?.user?.id])
 
   return {
