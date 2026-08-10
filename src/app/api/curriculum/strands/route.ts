@@ -10,13 +10,15 @@ export const GET = route({}, async (req, { user, params }) => {
     const { searchParams } = new URL(req.url)
     const grade = searchParams.get('grade')
     const subject = searchParams.get('subject')
+    const curriculum = searchParams.get('curriculum') || 'cbc'
     const term = searchParams.get('term') ? parseInt(searchParams.get('term')!) : undefined
 
     if (!grade || !subject) {
       return NextResponse.json({ error: 'grade and subject are required' }, { status: 400 })
     }
 
-    const where: any = { type: 'CBC', grade, subject: { contains: subject, mode: 'insensitive' }, isActive: true }
+    const curriculumType = curriculum === 'cbc' ? 'CBC' : 'OTHER'
+    const where: any = { type: curriculumType, grade, subject: { contains: subject, mode: 'insensitive' }, isActive: true }
     if (term !== undefined) where.term = term
 
     const curriculums = await prisma.curriculum.findMany({

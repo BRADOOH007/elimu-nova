@@ -351,17 +351,6 @@ export function ProfessionalDashboardLayout({
           sidebarCollapsed ? 'w-16' : 'w-64'
         } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
       >
-        {/* Brand strip */}
-        <div className={`flex items-center gap-3 px-3 py-3 sm:py-4 border-b border-white/5 ${sidebarCollapsed ? 'justify-center' : ''}`}>
-          {!sidebarCollapsed ? (
-            <Link href="/" className="shrink-0"><Logo size="sm" variant="white" /></Link>
-          ) : (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <span className="text-white font-bold text-xs">EN</span>
-            </div>
-          )}
-        </div>
-
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 sm:py-4 px-2">
           {!sidebarCollapsed && (

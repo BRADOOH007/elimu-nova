@@ -1,108 +1,119 @@
-"use client"
+'use client'
 
-import { Badge } from '@/components/ui/badge'
-import { Flame, Zap, Star, Sparkles, MessageSquare, AlertCircle, Trophy, ArrowUp } from 'lucide-react'
+import { Star, Zap, Flame, Trophy, Sparkles, MessageSquare, AlertCircle } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 interface LearningJourneyBannerProps {
-  gameState: { streak: number; level: number; xp: number }
+  gameState: { xp: number; level: number; streak: number }
   levelName: string
   xpProgress: { progress: number }
   showXpGain: { amount: number; visible: boolean }
   mistakeCount: number
+  onStartLearning: () => void
+  onOpenDailyChallenge: () => void
   onOpenMistakes: () => void
-  onAskHope: () => void
-  getLevelName: (level: number) => string
+  onOpenHope: () => void
 }
 
 export function LearningJourneyBanner({
-  gameState, levelName, xpProgress, showXpGain,
-  mistakeCount, onOpenMistakes, onAskHope, getLevelName,
+  gameState, levelName, xpProgress, showXpGain, mistakeCount,
+  onStartLearning, onOpenDailyChallenge, onOpenMistakes, onOpenHope,
 }: LearningJourneyBannerProps) {
-  return (
-    <header className="relative overflow-hidden bg-slate-950 text-white">
-      {/* Ambient gradient orbs */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 -right-20 h-[28rem] w-[28rem] rounded-full bg-gradient-to-br from-indigo-500/20 via-violet-500/15 to-fuchsia-500/10 blur-[80px]" />
-        <div className="absolute -bottom-40 -left-20 h-[24rem] w-[24rem] rounded-full bg-gradient-to-tr from-cyan-500/15 via-emerald-500/10 to-teal-500/10 blur-[80px]" />
-        <div className="absolute left-1/2 top-1/4 h-48 w-48 -translate-x-1/2 rounded-full bg-violet-400/10 blur-[60px]" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMiI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMSIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
-      </div>
+  const nextLevel = levelName === 'Beginner' ? 'Learner' : levelName === 'Learner' ? 'Scholar' : 'Master'
 
-      <div className="relative mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:py-8">
-        {/* Header Row */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-violet-300/80">Learning Studio</p>
-            <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl lg:text-4xl">Your Learning Journey</h1>
-            <p className="text-sm text-slate-300/80">Study a topic, take a quiz, beat your streak</p>
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-slate-950 p-6 sm:p-8 border border-white/10 shadow-2xl">
+      {/* Ambient orbs */}
+      <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-indigo-500/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-10 -left-20 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute right-1/3 top-0 h-40 w-40 rounded-full bg-fuchsia-500/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-10 right-1/4 h-48 w-48 rounded-full bg-cyan-500/5 blur-3xl" />
+
+      {/* Subtle dot grid texture */}
+      <div className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+
+      <div className="relative z-10">
+        {/* Top Row */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+          <div>
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300/80">Learning Studio</p>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Your Learning Journey</h1>
+            <p className="mt-1 text-sm text-slate-400">Study a topic, take a quiz, beat your streak</p>
           </div>
 
+          {/* Glass pill badges */}
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="gap-1.5 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1.5 text-white backdrop-blur-sm transition-all hover:bg-amber-400/15">
-              <Flame className="h-3.5 w-3.5 text-amber-400" />
-              <span className="text-xs font-bold">{gameState.streak}d streak</span>
-            </Badge>
-            <Badge className="gap-1.5 rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1.5 text-white backdrop-blur-sm">
-              <Zap className="h-3.5 w-3.5 text-yellow-400" />
-              <span className="text-xs font-bold">Lv.{gameState.level}</span>
-            </Badge>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-white/20 transition">
+              <Flame className="h-3.5 w-3.5 text-orange-400" />
+              {gameState.streak}d streak
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl px-3 py-1.5 text-xs font-semibold text-slate-300">
+              <Zap className="h-3.5 w-3.5 text-amber-400" />Lv.{gameState.level}
+            </span>
             {mistakeCount > 0 && (
-              <button onClick={onOpenMistakes}
-                className="group flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-500/20 px-3 py-1.5 text-xs font-bold text-red-200 backdrop-blur-sm transition-all hover:bg-red-500/30 hover:text-white">
-                <AlertCircle className="h-3.5 w-3.5 text-red-400" />
-                {mistakeCount}
+              <button onClick={onOpenMistakes} className="inline-flex items-center gap-1.5 rounded-full border border-red-500/20 bg-red-500/5 backdrop-blur-xl px-3 py-1.5 text-xs font-semibold text-red-300 hover:border-red-500/40 transition">
+                <AlertCircle className="h-3.5 w-3.5 text-red-400" />{mistakeCount} to review
               </button>
             )}
-            <button onClick={onAskHope}
-              className="group flex items-center gap-1.5 rounded-full border border-white/15 bg-white/8 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm transition-all hover:bg-white/15 hover:shadow-lg hover:shadow-indigo-500/25">
-              <Sparkles className="h-3.5 w-3.5 text-violet-400 group-hover:text-violet-300" />
-              Ask Hope
+            <button onClick={onOpenHope}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl px-3 py-1.5 text-xs font-semibold text-slate-300 hover:border-violet-400/30 hover:text-violet-200 transition">
+              <Sparkles className="h-3.5 w-3.5 text-violet-400" />Ask Hope
             </button>
           </div>
         </div>
 
         {/* Progress Card Inlay */}
-        <div className="mt-6 overflow-hidden rounded-3xl border border-white/8 bg-white/5 p-4 backdrop-blur-xl sm:p-5 lg:p-6">
-          <div className="flex items-center justify-between gap-4">
+        <div className="rounded-2xl border border-white/8 bg-white/5 backdrop-blur-xl p-5">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/20">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/20">
                 <Trophy className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-sm font-bold tracking-tight text-white">{levelName}</p>
-                <p className="text-[11px] text-slate-400">{gameState.xp} XP</p>
+                <p className="text-sm font-bold text-white">{levelName}</p>
+                <div className="flex items-center gap-2 text-xs text-slate-400">
+                  <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                  {gameState.xp} XP
+                </div>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-[11px] font-medium text-slate-400">Next: {getLevelName(gameState.level + 1)}</span>
+              <p className="text-xs text-slate-500">Next Level</p>
+              <p className="text-sm font-bold text-slate-300">{nextLevel}</p>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/10">
+          <div className="mb-4 h-2.5 overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 transition-all duration-700 ease-out"
+              className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 transition-all duration-700"
               style={{ width: `${xpProgress.progress}%` }}
             />
           </div>
-          <div className="mt-2 flex justify-between text-[10px] font-medium text-slate-500">
-            <span>{levelName}</span>
-            <span>{xpProgress.progress}%</span>
+
+          <div className="flex items-center justify-between">
+            <button onClick={onStartLearning}
+              className="inline-flex items-center gap-2 rounded-xl bg-white/10 border border-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/15 transition shadow-sm">
+              <Sparkles className="h-4 w-4" />Start Learning
+            </button>
+            {!levelName.includes('Master') && (
+              <p className="text-xs text-slate-500">Keep going to unlock more features</p>
+            )}
           </div>
         </div>
 
         {/* XP Gain Toast */}
         {showXpGain.visible && (
           <div className="mt-4 flex justify-center">
-            <div className="inline-flex animate-bounce items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2 text-sm font-bold text-slate-900 shadow-xl shadow-amber-500/25">
-              <ArrowUp className="h-4 w-4" />+{showXpGain.amount} XP
+            <div className="inline-flex animate-bounce items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2 text-sm font-bold text-slate-900 shadow-lg shadow-amber-500/30">
+              <Zap className="h-4 w-4" />+{showXpGain.amount} XP!
             </div>
           </div>
         )}
       </div>
 
       {/* Bottom edge fade */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-slate-50 to-transparent" />
-    </header>
+      <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-slate-950 to-transparent" />
+    </div>
   )
 }

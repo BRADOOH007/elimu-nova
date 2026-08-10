@@ -3,7 +3,7 @@ import { OpenAIService } from '@/lib/openai-service'
 import { stripLatex } from '@/lib/clean-ai-text'
 import { route } from '@/lib/api-middleware'
 
-export const POST = route({}, async (req) => {
+export const POST = route({ skipSubscriptionCheck: true }, async (req) => {
     const body = await req.json()
     const { lesson, learningOutcomes, studentLevel, learningStyle } = body
 

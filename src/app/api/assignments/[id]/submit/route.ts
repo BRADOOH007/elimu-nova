@@ -298,13 +298,22 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user, params }) => 
 
     if (!grading) {
       const rubricData = await findBestRubricForAssignment(submission.assignment)
+      // Get student's curriculum for curriculum-aware grading
+      const studentPrefs = await prisma.userPreference.findUnique({
+        where: { userId: student.userId },
+        select: { curriculum: true, country: true }
+      })
       grading = await OpenAIService.gradeSubmission({
         assignmentTitle: submission.assignment.title,
         assignmentInstructions: submission.assignment.description || '',
         submissionContent: content,
         rubric: rubricData ? JSON.stringify(rubricData) : undefined,
         answerKey: assignment.answerKey || undefined,
-        maxPoints: 100
+        maxPoints: 100,
+        subject: assignment.subject || '',
+        grade: assignment.grade || '',
+        curriculum: studentPrefs?.curriculum || '',
+        country: studentPrefs?.country || ''
       })
 
       // File-only / placeholder submissions can't be read accurately — flag it.
@@ -339,12 +348,20 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user, params }) => 
     // One retry before giving up — grading must not silently fail.
     console.error('AI grading failed, retrying once:', e)
     try {
+      const studentPrefs = await prisma.userPreference.findUnique({
+        where: { userId: student.userId },
+        select: { curriculum: true, country: true }
+      })
       const grading = await OpenAIService.gradeSubmission({
         assignmentTitle: submission.assignment.title,
         assignmentInstructions: submission.assignment.description || '',
         submissionContent: content,
         answerKey: assignment.answerKey || undefined,
-        maxPoints: 100
+        maxPoints: 100,
+        subject: assignment.subject || '',
+        grade: assignment.grade || '',
+        curriculum: studentPrefs?.curriculum || '',
+        country: studentPrefs?.country || ''
       })
       updatedSubmission = await prisma.submission.update({
         where: { id: submission.id },

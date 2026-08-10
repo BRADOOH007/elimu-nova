@@ -226,29 +226,43 @@ Remember: Be warm, encouraging, and make the student feel supported!`
    * Falls back to an AI-generated SVG diagram via the text waterfall when DALL-E unavailable.
    * This mirrors TutorBot's approach: OpenAI gpt-image-1 → DALL-E 3 → SVG via Gemini/AI.
    */
-  /**
-   * Grade a student submission using AI.
-   */
-  static async gradeSubmission(input: {
-    assignmentTitle: string
-    assignmentInstructions?: string | null
-    submissionContent: string
-    rubric?: string
-    answerKey?: string
-    maxPoints?: number
-  }): Promise<{
-    grade: number
-    feedback: string
-    confidence?: number
-    questionScores?: any
-    needsRevision?: boolean
-    revisionNotes?: string
-  }> {
-    const systemPrompt = `You are a warm, encouraging expert teacher. Grade student work fairly and consistently. Always be kind and motivating in your feedback. Return only strict JSON.`
+   /**
+    * Grade a student submission using AI.
+    */
+   static async gradeSubmission(input: {
+     assignmentTitle: string
+     assignmentInstructions?: string | null
+     submissionContent: string
+     rubric?: string
+     answerKey?: string
+     maxPoints?: number
+     subject?: string
+     grade?: string
+     curriculum?: string
+     country?: string
+   }): Promise<{
+     grade: number
+     feedback: string
+     confidence?: number
+     questionScores?: any
+     needsRevision?: boolean
+     revisionNotes?: string
+   }> {
+     const { buildCurriculumAssessmentContext } = await import('@/lib/curriculum-prompt')
+     const curCtx = input.curriculum && input.curriculum !== 'cbc'
+       ? buildCurriculumAssessmentContext({ curriculum: input.curriculum, country: input.country, grade: input.grade || '', subject: input.subject || '' })
+       : null
 
-    const userPrompt = `Grade the following student's submission.
+     const gradeLabel = input.curriculum && input.curriculum !== 'cbc'
+       ? 'Use a standard percentage score (0-100) and letter grade equivalent (A=90-100, B=80-89, C=70-79, D=60-69, F=below 60).'
+       : 'Use a standard percentage score (0-100).'
 
+     const systemPrompt = `You are a warm, encouraging expert teacher${input.subject ? ` specializing in ${input.subject}` : ''}${input.grade ? ` teaching ${input.grade} students` : ''}. Grade student work fairly and consistently. Always be kind and motivating in your feedback. Return only strict JSON.`
+
+     const userPrompt = `Grade the following student's submission.
+${curCtx ? `Context: ${curCtx}` : ''}
 Assignment: ${input.assignmentTitle}
+Subject: ${input.subject || 'N/A'} | Grade: ${input.grade || 'N/A'}
 Instructions: ${input.assignmentInstructions || 'N/A'}
 ${input.rubric ? `Rubric: ${input.rubric.slice(0, 4000)}` : ''}
 ${input.answerKey ? `Answer Key: ${input.answerKey.slice(0, 2000)}` : ''}
@@ -259,12 +273,15 @@ ${input.submissionContent.slice(0, 6000)}
 
 Return JSON with shape { "grade": 0-100, "feedback": "string", "confidence": 0-1, "questionScores": {}, "needsRevision": false, "revisionNotes": "string" }.
 
+Grading: ${gradeLabel}
+
 Feedback rules:
 - Always open by acknowledging the student's effort.
 - Mention at least one specific thing they did well.
 - Give 1-2 kind, concrete suggestions for improvement.
 - End with an encouraging, motivating sentence.
-- Be fair but never harsh. Even low-scoring work should feel supported.`
+- Be fair but never harsh. Even low-scoring work should feel supported.
+${curCtx ? '' : '- Use examples and references appropriate for the student\'s grade level and region.'}`
 
     const response = await this.generateWithReasoning([
       { role: 'system', content: systemPrompt },

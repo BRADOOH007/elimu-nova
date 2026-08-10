@@ -286,7 +286,7 @@ export function buildFallbackAssignment(opts: {
 
 Study this carefully before answering.
 
-1. Read the definition of **${topic}** and connect it to something you see every day in Kenya (market, home, school, farm, or transport).
+1. Read the definition of **${topic}** and connect it to something you see every day (school, home, community, or nature).
 2. Work one short example step by step — write each step in plain language.
 3. Check your understanding: Can you explain ${topic} to a classmate in two sentences?
 

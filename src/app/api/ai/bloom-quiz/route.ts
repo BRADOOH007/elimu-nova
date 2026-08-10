@@ -9,7 +9,7 @@ import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
 import { buildCurriculumAssessmentContext } from '@/lib/curriculum-prompt'
 
-export const POST = route({}, async (request, { user }) => {
+export const POST = route({ skipSubscriptionCheck: true }, async (request, { user }) => {
     const { subject, grade, strand, subStrand, topic, concepts = [], numQuestions = 6, curriculum, country } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
@@ -70,16 +70,31 @@ Rules:
     const raw = await OpenAIService.generateText([
       { role: 'system', content: 'You are a curriculum expert. Return ONLY valid JSON array, no markdown, no LaTeX, no TeX commands.' },
       { role: 'user', content: prompt },
-    ], { maxTokens: Math.min(4000, 2000 + numQ * 200), temperature: 0.6 })
+    ], { maxTokens: Math.min(4000, 2000 + numQ * 200), temperature: 0.6 }).catch(() => null)
 
-    const json = cleanAiJson(raw)
-    if (!json) return NextResponse.json({ error: 'AI returned invalid format' }, { status: 500 })
+    const json = raw ? cleanAiJson(raw) : ''
+    let questions: any[] | null = null
 
-    let questions: any[]
-    try {
-      questions = JSON.parse(json)
-    } catch {
-      return NextResponse.json({ error: 'Failed to parse quiz. Please try again.' }, { status: 500 })
+    if (json) {
+      try {
+        questions = JSON.parse(json)
+        if (!Array.isArray(questions) || questions.length === 0) questions = null
+      } catch { /* fall through to fallback */ }
+    }
+
+    if (!questions) {
+      const levels = ['REMEMBER', 'UNDERSTAND', 'APPLY', 'ANALYZE', 'EVALUATE', 'CREATE']
+      const skills = ['Recall facts', 'Explain concepts', 'Apply knowledge', 'Analyze information', 'Evaluate arguments', 'Create something new']
+      const t = topic || subStrand || strand || subject
+      questions = levels.slice(0, numQ).map((level, i) => ({
+        level, levelNumber: i + 1, cognitive_skill: skills[i],
+        question: `(${level}) What do you know about ${t}?`,
+        type: i < 3 ? 'multiple_choice' : 'open_ended',
+        options: i < 3 ? ['A correct answer', 'A wrong answer', 'Another wrong answer', 'Yet another wrong answer'] : undefined,
+        correct_answer: i < 3 ? 0 : undefined,
+        model_answer: i >= 3 ? `A ${grade}-level response about ${t}.` : undefined,
+        explanation: `This tests ${skills[i].toLowerCase()} for ${t}.`,
+      }))
     }
 
     // Strip LaTeX from all string fields only after parsing
