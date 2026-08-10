@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { BookOpen, ChevronRight, ChevronDown, ExternalLink, Loader2, Play, CheckCircle2, RefreshCw } from 'lucide-react'
 import { getKECWorkbook, getKECCategoryUrl } from '@/data/kec-workbooks'
-import { getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
+import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
 
 interface Strand {
   id: string
@@ -23,12 +23,13 @@ interface CurriculumBrowserProps {
   onSelectTopic: (subject: string, topic: string, learningOutcomes?: string[]) => void
   defaultSubject?: string
   defaultGrade?: string
+  curriculum?: string
 }
 
 const GRADES = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9','Grade 10','Grade 11','Grade 12']
 
-function getSubjectsForGrade(grade: string): string[] {
-  return getSubjectsForStudent(grade)
+function getSubjectsForGrade(curriculum: string, grade: string): string[] {
+  return getSubjectsForCurriculum(curriculum, grade)
 }
 
 const getFallbackTopics = (subj: string): string[] => {
@@ -51,17 +52,17 @@ const getFallbackTopics = (subj: string): string[] => {
   return map[subj] || ['General']
 }
 
-export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade }: CurriculumBrowserProps) {
+export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade, curriculum = 'cbc' }: CurriculumBrowserProps) {
   const [grade, setGrade] = useState(defaultGrade || 'Grade 4')
   const [subject, setSubject] = useState(defaultSubject || 'Mathematics')
-  const currentSubjects = useMemo(() => getSubjectsForGrade(grade), [grade])
+  const currentSubjects = useMemo(() => getSubjectsForGrade(curriculum, grade), [curriculum, grade])
 
   // Auto-reset subject when grade changes to an incompatible subject
   useEffect(() => {
     if (!currentSubjects.includes(subject)) {
       setSubject(currentSubjects[0] || 'Mathematics')
     }
-  }, [grade, subject, currentSubjects])
+  }, [grade, subject, currentSubjects, curriculum])
   const [strands, setStrands] = useState<Strand[]>([])
   const [expandedStrand, setExpandedStrand] = useState<string | null>(null)
   const [substrands, setSubstrands] = useState<Record<string, Substrand[]>>({})
@@ -113,7 +114,7 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
     setExpandedStrand(null)
     setSubstrands({})
     try {
-      const res = await fetch(`/api/curriculum/strands?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`)
+      const res = await fetch(`/api/curriculum/strands?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`)
       if (res.ok) {
         const data = await res.json()
         const strandsArr = data.strands || []
@@ -132,7 +133,7 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
       setStrands(fallback.map((t, i) => ({ id: `fb-${i}`, name: t, order: i })))
     }
     setLoading(false)
-  }, [grade, subject])
+  }, [grade, subject, curriculum])
 
   // Re-fetch strands + statuses whenever BOTH the grade and subject change
   // (either from the in-component dropdowns or the parent's selectedSubject/selectedGrade).
@@ -190,7 +191,7 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
           <label className="text-xs font-semibold text-slate-600 mb-1 block">Subject</label>
           <select value={subject} onChange={e => setSubject(e.target.value)}
             className="w-full h-9 px-3 border border-slate-200 rounded-2xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-500">
-            {getSubjectsForGrade(grade).map(s => <option key={s}>{s}</option>)}
+            {currentSubjects.map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
       </div>
@@ -200,7 +201,7 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade 
           {strands.length > 0 ? `${strands.length} strands available` : ''}
         </p>
         <div className="flex gap-2">
-          {(() => {
+          {curriculum === 'cbc' && (() => {
             const kec = getKECWorkbook(grade, subject)
             const catUrl = getKECCategoryUrl(grade)
             if (kec?.pageUrl || kec?.courseUrl) {

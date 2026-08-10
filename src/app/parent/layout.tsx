@@ -1,6 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { useSchoolInfo } from '@/hooks/use-school-info'
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
@@ -13,11 +14,15 @@ import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
 export default function ParentLayout({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession()
+  const pathname = usePathname()
   const { schoolInfo } = useSchoolInfo()
   const { totalUnread } = useUnreadMessages()
 
   const isSchoolParent = !!schoolInfo?.school?.id || !!session?.user?.schoolId
   const isIndependent = !isSchoolParent
+
+  // Billing and pricing pages should be accessible even without an active subscription
+  const isBillingPath = pathname?.startsWith('/parent/billing') || pathname === '/pricing'
 
   const sidebarItems = [
     { icon: BarChart3,     label: 'Overview',    href: '/parent/dashboard', tourId: 'parent-dashboard' },
@@ -38,17 +43,21 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
 
   if (!session) return null
 
+  const content = (
+    <ProfessionalDashboardLayout
+      userRole="PARENT"
+      userName={session.user?.name || 'Parent'}
+      userEmail={session.user?.email || ''}
+      schoolName={isSchoolParent ? (schoolInfo?.school?.name || 'Your School') : 'Independent · Home School'}
+      sidebarItems={sidebarItems}
+    >
+      {children}
+    </ProfessionalDashboardLayout>
+  )
+
   return (
     <DashboardSessionGate>
-      <ProfessionalDashboardLayout
-        userRole="PARENT"
-        userName={session.user?.name || 'Parent'}
-        userEmail={session.user?.email || ''}
-        schoolName={isSchoolParent ? (schoolInfo?.school?.name || 'Your School') : 'Independent · Home School'}
-        sidebarItems={sidebarItems}
-      >
-        <SubscriptionGuard>{children}</SubscriptionGuard>
-      </ProfessionalDashboardLayout>
+      {isBillingPath ? content : <SubscriptionGuard>{content}</SubscriptionGuard>}
     </DashboardSessionGate>
   )
 }

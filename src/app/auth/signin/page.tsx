@@ -85,7 +85,6 @@ export default function SignInPage() {
             const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
             setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
             setIsLoading(false)
-            await signOut({ redirect: false })
             return
           }
 

@@ -8,9 +8,18 @@ import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
 
-export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN', 'SCHOOL_ADMIN'] }, async (request, { user }) => {
-    const { examContent, subject, grade, totalMarks = 100, documentContext } = await request.json()
+export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN', 'SCHOOL_ADMIN'], skipSubscriptionCheck: true }, async (request, { user }) => {
+    const { examContent, subject, grade, totalMarks = 100, documentContext, curriculum, country } = await request.json()
     if (!examContent) return NextResponse.json({ error: 'examContent required' }, { status: 400 })
+
+    const { buildCurriculumAssessmentContext } = await import('@/lib/curriculum-prompt')
+    const curCtx = curriculum && curriculum !== 'cbc'
+      ? buildCurriculumAssessmentContext({ curriculum, country, grade: grade || '', subject: subject || '' })
+      : null
+
+    const gradeBoundaries = curriculum && curriculum !== 'cbc'
+      ? { A: `${Math.round(totalMarks * 0.9)}-${totalMarks}`, B: `${Math.round(totalMarks * 0.8)}-${Math.round(totalMarks * 0.89)}`, C: `${Math.round(totalMarks * 0.7)}-${Math.round(totalMarks * 0.79)}`, D: `${Math.round(totalMarks * 0.6)}-${Math.round(totalMarks * 0.69)}`, F: `0-${Math.round(totalMarks * 0.59)}` }
+      : { EE: `${Math.round(totalMarks * 0.8)}-${totalMarks}`, ME: `${Math.round(totalMarks * 0.6)}-${Math.round(totalMarks * 0.79)}`, AE: `${Math.round(totalMarks * 0.4)}-${Math.round(totalMarks * 0.59)}`, BE: `0-${Math.round(totalMarks * 0.39)}` }
 
     // Fetch teacher's exam template as marking scheme format reference
     let templateText = documentContext
@@ -25,8 +34,9 @@ export const POST = route({ auth: ['TEACHER', 'SUPER_ADMIN', 'SCHOOL_ADMIN'] }, 
       ? `\n\nA reference document was uploaded as a format template. Study its structure, sections, and style, then generate the marking scheme in the same format:\n\n${templateText.slice(0, 6000)}\n\n---\n`
       : ''
 
-    const prompt = `You are a senior examiner creating a detailed marking scheme.${templateBlock}
-
+    const prompt = `You are a senior examiner${subject ? ` specializing in ${subject}` : ''}${grade ? ` for ${grade} students` : ''}.
+${curCtx ? `\nCurriculum Context: ${curCtx}` : ''}
+${templateBlock}
 Subject: ${subject || 'General'} | Grade: ${grade || 'Secondary'} | Total: ${totalMarks} marks
 
 EXAM:
@@ -56,19 +66,15 @@ Generate a comprehensive marking scheme. Return ONLY a valid JSON object:
     }
   ],
   "generalNotes": ["Note 1 for markers", "Note 2"],
-  "gradeBoundaries": {
-    "EE": "${Math.round(totalMarks * 0.8)}-${totalMarks}",
-    "ME": "${Math.round(totalMarks * 0.6)}-${Math.round(totalMarks * 0.79)}",
-    "AE": "${Math.round(totalMarks * 0.4)}-${Math.round(totalMarks * 0.59)}",
-    "BE": "0-${Math.round(totalMarks * 0.39)}"
-  }
+  "gradeBoundaries": ${JSON.stringify(gradeBoundaries)}
 }
 
 Rules:
 - For MCQ: state the correct letter (A/B/C/D) and why
 - For calculations: show working steps with marks per step
 - For essays: list key marking points with marks allocated
-- Mark allocation must add up to ${totalMarks}`
+- Mark allocation must add up to ${totalMarks}
+- Use examples and references appropriate for the student's grade level and region`
 
     try {
     const raw = await OpenAIService.generateLongContent([
@@ -115,6 +121,7 @@ function buildMarkingSchemeHTML(scheme: any, subject: string, grade: string): st
       </table>
     </div>`).join('')
 
+  const boundariesHtml = Object.entries(scheme.gradeBoundaries || {}).map(([k, v]) => `${esc(k)} (${esc(v)})`).join(' | ')
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Marking Scheme</title>
 <style>
   body { font-family: Arial; font-size: 9.5pt; margin: 15mm; color: #111; }
@@ -135,7 +142,7 @@ function buildMarkingSchemeHTML(scheme: any, subject: string, grade: string): st
 <p><strong>Markers' Instructions:</strong> ${esc(scheme.instructions)}</p>
 ${sectionsHtml}
 <div class="boundaries">
-  <strong>Grade Boundaries:</strong> EE (${esc(scheme.gradeBoundaries?.EE)}) | ME (${esc(scheme.gradeBoundaries?.ME)}) | AE (${esc(scheme.gradeBoundaries?.AE)}) | BE (${esc(scheme.gradeBoundaries?.BE)})
+  <strong>Grade Boundaries:</strong> ${boundariesHtml}
 </div>
 <script>if(new URLSearchParams(window.location.search).get('print')==='1')window.addEventListener('load',()=>setTimeout(()=>window.print(),400));</script>
 </body></html>`

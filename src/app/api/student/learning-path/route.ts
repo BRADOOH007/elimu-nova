@@ -37,14 +37,14 @@ const SUBJECT_ALIASES: Record<string, string[]> = {
   'Computer Studies': ['Computer Studies', 'Pretechnical Studies Activities'],
 }
 
-async function findCurriculum(grade: string, subject: string, type: 'CBC' | 'OTHER') {
-  const exact = await prisma.curriculum.findFirst({ where: { type: type as any, grade, subject, isActive: true }, select: { id: true } })
+async function findCurriculum(grade: string, subject: string) {
+  const exact = await prisma.curriculum.findFirst({ where: { type: 'CBC', grade, subject, isActive: true }, select: { id: true } })
   if (exact) return exact.id
 
   const aliases = SUBJECT_ALIASES[subject] || []
   if (aliases.length > 0) {
     const viaAlias = await prisma.curriculum.findFirst({
-      where: { type: type as any, grade, subject: { in: aliases }, isActive: true },
+      where: { type: 'CBC', grade, subject: { in: aliases }, isActive: true },
       select: { id: true },
     })
     if (viaAlias) return viaAlias.id
@@ -52,16 +52,15 @@ async function findCurriculum(grade: string, subject: string, type: 'CBC' | 'OTH
 
   // Fuzzy: subject contains (handles "Science and Technology Activities" vs "Science & Technology Activities")
   const fuzzy = await prisma.curriculum.findFirst({
-    where: { type: type as any, grade, isActive: true, subject: { contains: subject } },
+    where: { type: 'CBC', grade, isActive: true, subject: { contains: subject } },
     select: { id: true },
   })
   return fuzzy?.id || null
 }
 
-async function getOrderedPath(grade: string, subject: string, curriculum?: string) {
-  // Try DB-backed curriculum first (strands + substrands in order)
-  const type = curriculum && curriculum !== 'cbc' ? 'OTHER' : 'CBC'
-  const curriculumId = await findCurriculum(grade, subject, type)
+async function getOrderedPath(grade: string, subject: string) {
+  // Try DB-backed curriculum first (strands → substrands in order)
+  const curriculumId = await findCurriculum(grade, subject)
 
   if (curriculumId) {
     const strands = await prisma.curriculumStrand.findMany({
@@ -102,12 +101,11 @@ export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
   const { searchParams } = new URL(request.url)
   const grade   = searchParams.get('grade')   || 'Grade 4'
   const subject = searchParams.get('subject') || 'Mathematics'
-  const curriculum = searchParams.get('curriculum') || undefined
 
   const student = await prisma.student.findUnique({ where: { userId: user.id } })
   if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
 
-  const path = await getOrderedPath(grade, subject, curriculum)
+  const path = await getOrderedPath(grade, subject)
 
   const progress = await prisma.topicProgress.findMany({
     where: { studentId: student.id, grade, subject },
