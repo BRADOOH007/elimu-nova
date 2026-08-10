@@ -35,7 +35,12 @@ export function useSubscription() {
 
     try {
       setLoading(true)
-      const response = await fetch('/api/subscription/status')
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 8_000)
+      const response = await fetch('/api/subscription/status', {
+        signal: controller.signal,
+      })
+      clearTimeout(timeout)
 
       if (!response.ok) {
         throw new Error('Failed to fetch subscription status')
@@ -46,7 +51,8 @@ export function useSubscription() {
       setContext(data.context)
       setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      setError(message)
       console.error('Error fetching subscription:', err)
     } finally {
       setLoading(false)
