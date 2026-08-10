@@ -3,15 +3,14 @@
  *
  * Sources (in priority order):
  *   1. Unsplash API   — used when UNSPLASH_ACCESS_KEY is set in .env.local
- *   2. Pinterest API  — used when PINTEREST_API_KEY is set in .env.local
- *   3. Wikimedia Commons — keyless public API, always available as fallback
+ *   2. Wikimedia Commons — keyless public API, always available as fallback
  */
 
 export interface StockImage {
   id: string
-  url: string          // full-resolution image URL (for embedding)
-  thumbnailUrl: string // small thumbnail URL (for the grid)
-  source: 'unsplash' | 'wikimedia' | 'pinterest'
+  url: string
+  thumbnailUrl: string
+  source: 'unsplash' | 'wikimedia'
   license: string
   attribution: string
   pageUrl?: string
@@ -117,45 +116,8 @@ async function searchWikimedia(query: string, limit: number): Promise<StockImage
 }
 
 /**
- * Search Pinterest for images matching the query.
- * Returns null when no API key is configured or the request fails.
- */
-async function searchPinterest(query: string, limit: number): Promise<StockImage[] | null> {
-  const key = process.env.PINTEREST_API_KEY
-  if (!key) return null
-
-  try {
-    const url = new URL('https://api.pinterest.com/v5/search/pins')
-    url.searchParams.set('query', query)
-    url.searchParams.set('page_size', String(Math.min(limit, 25)))
-
-    const res = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(10000),
-    })
-
-    if (!res.ok) return null
-
-    const data = await res.json()
-    const items: any[] = data?.items || []
-
-    return items.slice(0, limit).map((item: any) => ({
-      id: `pin-${item.id}`,
-      url: item.media?.images?.originals?.url || item.media?.images?.large?.url || item.image?.large?.url || '',
-      thumbnailUrl: item.media?.images?.small?.url || item.image?.small?.url || '',
-      source: 'pinterest' as const,
-      license: 'Pinterest',
-      attribution: item.title || query,
-      pageUrl: `https://pinterest.com/pin/${item.id}`,
-    }))
-  } catch {
-    return null
-  }
-}
-
-/**
  * Search stock images across available sources.
- * Unsplash (if configured) is tried first, then Pinterest, then Wikimedia Commons.
+ * Unsplash (if configured) is tried first, then Wikimedia Commons.
  */
 export async function searchStockImages(query: string, limit = 12): Promise<SearchResult> {
   const trimmed = query.trim()
@@ -164,11 +126,6 @@ export async function searchStockImages(query: string, limit = 12): Promise<Sear
   const unsplash = await searchUnsplash(trimmed, limit)
   if (unsplash && unsplash.length > 0) {
     return { images: unsplash, source: 'unsplash' }
-  }
-
-  const pinterest = await searchPinterest(trimmed, limit)
-  if (pinterest && pinterest.length > 0) {
-    return { images: pinterest, source: 'pinterest' }
   }
 
   try {
