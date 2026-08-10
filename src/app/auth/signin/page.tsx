@@ -68,8 +68,6 @@ export default function SignInPage() {
       setIsLoading(false)
     }
   }
-    }
-  }
 
   return (
     <div className="min-h-screen flex">
