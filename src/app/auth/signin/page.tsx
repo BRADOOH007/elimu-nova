@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn, getSession, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import { Logo } from '@/components/ui/logo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,7 +41,6 @@ export default function SignInPage() {
   const [isLoading, setIsLoading]       = useState(false)
   const [error, setError]               = useState('')
   const [activeRole, setActiveRole]     = useState<Role>('STUDENT')
-  const router = useRouter()
 
   // ── Handle sign-in form submission ──
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,59 +49,25 @@ export default function SignInPage() {
     setError('')
 
     try {
-      // Authenticate via next-auth credentials provider
-      const result = await signIn('credentials', {
+      const dashboardRoutes: Record<string, string> = {
+        SUPER_ADMIN:  '/super-admin/dashboard',
+        SCHOOL_ADMIN: '/school-admin/dashboard',
+        TEACHER:      '/teacher/dashboard',
+        STUDENT:      '/student/dashboard',
+        PARENT:       '/parent/dashboard',
+      }
+      // Use full-page redirect so the browser stores the session cookie
+      await signIn('credentials', {
         email,
         password,
-        redirect: false,  // handle routing ourselves
+        redirect: true,
+        callbackUrl: dashboardRoutes[activeRole] || '/dashboard',
       })
-
-      if (result?.error) {
-        setError('Invalid email or password')
-        setIsLoading(false)
-        return
-      }
-
-      if (result?.ok) {
-        // Small delay so the session token propagates
-        await new Promise(resolve => setTimeout(resolve, 500))
-        const session = await getSession()
-
-        if (session?.user?.role) {
-          // Verify the user's role matches the active role tab
-          const roleToTab: Record<string, Role | null> = {
-            STUDENT:      'STUDENT',
-            TEACHER:      'TEACHER',
-            PARENT:       'PARENT',
-            SCHOOL_ADMIN: null,  // SCHOOL_ADMIN / SUPER_ADMIN must use admin-signin page
-            SUPER_ADMIN:  null,
-          }
-          const expectedTab = roleToTab[session.user.role]
-
-          if (expectedTab && expectedTab !== activeRole) {
-            // Role mismatch — tell the user to select the correct tab
-            const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
-            setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
-            setIsLoading(false)
-            return
-          }
-
-          // Route to the correct dashboard based on role
-          const dashboardRoutes: Record<string, string> = {
-            SUPER_ADMIN:  '/super-admin/dashboard',
-            SCHOOL_ADMIN: '/school-admin/dashboard',
-            TEACHER:      '/teacher/dashboard',
-            STUDENT:      '/student/dashboard',
-            PARENT:       '/parent/dashboard',
-          }
-          router.push(dashboardRoutes[session.user.role] || '/dashboard')
-        } else {
-          router.push('/dashboard')
-        }
-      }
     } catch {
       setError('An error occurred. Please try again.')
       setIsLoading(false)
+    }
+  }
     }
   }
 
