@@ -21,7 +21,7 @@ function buildDatabaseUrl(): string {
 
   // pgbouncer=true is required for Neon / PgBouncer pooled connections
   const extras = url.includes('neon.tech') ? `&pgbouncer=true&sslmode=require` : ''
-  return `${url}${separator}connection_limit=${limit}&pool_timeout=30&connect_timeout=15${extras}`
+  return `${url}${separator}connection_limit=${limit}&pool_timeout=30&connect_timeout=15&statement_timeout=30000${extras}`
 }
 
 function createClient() {
