@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signIn, getSession } from 'next-auth/react'
+import { signIn, getSession, signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/ui/logo'
 import { Button } from '@/components/ui/button'
@@ -50,72 +50,59 @@ export default function SignInPage() {
     setIsLoading(true)
     setError('')
 
-    // 20s hard deadline — if anything hangs, show an error instead of infinite spinner
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT')), 20_000)
-    )
-
-    const doSignIn = async () => {
+    try {
+      // Authenticate via next-auth credentials provider
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,
+        redirect: false,  // handle routing ourselves
       })
 
       if (result?.error) {
         setError('Invalid email or password')
+        setIsLoading(false)
         return
       }
 
-      if (!result?.ok) {
-        setError('Unable to sign in. Please try again.')
-        return
-      }
+      if (result?.ok) {
+        // Small delay so the session token propagates
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const session = await getSession()
 
-      const session = await getSession()
+        if (session?.user?.role) {
+          // Verify the user's role matches the active role tab
+          const roleToTab: Record<string, Role | null> = {
+            STUDENT:      'STUDENT',
+            TEACHER:      'TEACHER',
+            PARENT:       'PARENT',
+            SCHOOL_ADMIN: null,  // SCHOOL_ADMIN / SUPER_ADMIN must use admin-signin page
+            SUPER_ADMIN:  null,
+          }
+          const expectedTab = roleToTab[session.user.role]
 
-      if (!session?.user?.role) {
-        setError('Could not retrieve your account. Please try again.')
-        return
-      }
+          if (expectedTab && expectedTab !== activeRole) {
+            // Role mismatch — tell the user to select the correct tab
+            const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
+            setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
+            setIsLoading(false)
+            return
+          }
 
-      const roleToTab: Record<string, Role | null> = {
-        STUDENT:      'STUDENT',
-        TEACHER:      'TEACHER',
-        PARENT:       'PARENT',
-        SCHOOL_ADMIN: null,
-        SUPER_ADMIN:  null,
+          // Route to the correct dashboard based on role
+          const dashboardRoutes: Record<string, string> = {
+            SUPER_ADMIN:  '/super-admin/dashboard',
+            SCHOOL_ADMIN: '/school-admin/dashboard',
+            TEACHER:      '/teacher/dashboard',
+            STUDENT:      '/student/dashboard',
+            PARENT:       '/parent/dashboard',
+          }
+          router.push(dashboardRoutes[session.user.role] || '/dashboard')
+        } else {
+          router.push('/dashboard')
+        }
       }
-      const expectedTab = roleToTab[session.user.role]
-
-      if (expectedTab && expectedTab !== activeRole) {
-        const tabLabel = ROLE_TABS.find(t => t.id === expectedTab)?.label || expectedTab
-        setError(`This account is a ${tabLabel} account. Please select the "${tabLabel}" tab and try again.`)
-        return
-      }
-
-      const dashboardRoutes: Record<string, string> = {
-        SUPER_ADMIN:  '/super-admin/dashboard',
-        SCHOOL_ADMIN: '/school-admin/dashboard',
-        TEACHER:      '/teacher/dashboard',
-        STUDENT:      '/student/dashboard',
-        PARENT:       '/parent/dashboard',
-      }
-      const target = dashboardRoutes[session.user.role] || '/dashboard'
-      // Stop the spinner before navigation so if routing hangs, the button resets
-      setIsLoading(false)
-      router.push(target)
-    }
-
-    try {
-      await Promise.race([doSignIn(), timeout])
-    } catch (err: any) {
-      if (err?.message === 'TIMEOUT') {
-        setError('Login is taking too long. Please try again. If this persists, contact support.')
-      } else {
-        setError('An error occurred. Please try again.')
-      }
-    } finally {
+    } catch {
+      setError('An error occurred. Please try again.')
       setIsLoading(false)
     }
   }
