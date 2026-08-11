@@ -32,8 +32,9 @@ export function SubscriptionAlert() {
   const billingPath = useBillingPath()
   const [dismissed, setDismissed] = useState(false)
 
-  // Students never see subscription alerts — parent/school manages it
-  if (context?.userRole === 'STUDENT') return null
+  // Students with a school never see subscription alerts — the school pays
+  // Independent students see their own trial/billing
+  if (context?.userRole === 'STUDENT' && context?.schoolId) return null
   if (dismissed) return null
   if (!subscription) return null
   if (subscription.status === 'SCHOOL_MANAGED') return null

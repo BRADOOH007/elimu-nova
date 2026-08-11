@@ -31,8 +31,9 @@ export function SubscriptionGuard({
 }: SubscriptionGuardProps) {
   const { subscription, loading, hasAccess, error, context } = useSubscription()
 
-  // Students never go through subscription checks — parent/school manages the plan
-  if (context?.userRole === 'STUDENT') return <>{children}</>
+  // Students with a school never see subscription — the school pays
+  // Independent students (no school) go through normal subscription flow
+  if (context?.userRole === 'STUDENT' && context?.schoolId) return <>{children}</>
 
   if (loading) {
     return <CustomLoader text="Loading subscription status..." />
