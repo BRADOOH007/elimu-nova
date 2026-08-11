@@ -87,7 +87,7 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
 
   // Fast path: serve an existing lesson for this subject/topic/grade from cache.
   // Matches exact keys, canonical curriculum topics, and near-duplicate phrasings.
-  const cached = await intelligentCacheLookup(subject, topic, gradeStr)
+  const cached = await intelligentCacheLookup(subject, topic, gradeStr, curriculum)
   if (cached) {
     return NextResponse.json({
       ...(cached.content as unknown as ActiveLesson),
@@ -225,7 +225,7 @@ RULES:
     )
     lesson.images = rawImages.filter(Boolean) as unknown as ActiveLessonImage[]
 
-    await intelligentCacheSave(subject, topic, gradeStr, lesson as unknown as Prisma.InputJsonValue)
+    await intelligentCacheSave(subject, topic, gradeStr, lesson as unknown as Prisma.InputJsonValue, curriculum)
 
     return NextResponse.json({ ...lesson, fromCache: false, matchedVia: 'generated' })
 

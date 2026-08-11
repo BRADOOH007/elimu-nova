@@ -63,8 +63,9 @@ export function normalizeText(s: string): string {
     .join(' ')
 }
 
-export function normalizeKey(subject: string, topic: string, grade: string): string {
-  return [normalizeText(subject), normalizeText(topic), normalizeText(grade)].join('|')
+export function normalizeKey(subject: string, topic: string, grade: string, curriculum?: string): string {
+  const cur = (curriculum || 'cbc').toLowerCase()
+  return `${cur}:${normalizeText(subject)}:${normalizeText(topic)}:${normalizeText(grade)}`
 }
 
 /* ── similarity ─────────────────────────────────────────────────────────── */
@@ -196,9 +197,11 @@ export async function intelligentCacheLookup(
   subject: string,
   topic: string,
   grade: string,
+  curriculum?: string,
 ): Promise<LessonCacheHit | null> {
   const normSubject = normalizeText(subject)
-  const normTopic = normalizeText(topic)
+  const rawTopic = normalizeText(topic)
+  const normTopic = curriculumPrefixed(rawTopic, curriculum)
   const normGrade = normalizeText(grade)
 
   // 1) Exact normalized match (also matches previously learned aliases stored in topic field)
@@ -214,8 +217,9 @@ export async function intelligentCacheLookup(
     canonicalTopic = await resolveCanonicalTopic(grade, subject, topic)
   } catch { /* curriculum lookup is best-effort */ }
 
-  if (canonicalTopic && normalizeText(canonicalTopic) !== normTopic) {
-    const canonicalRow = await findRow(normSubject, normalizeText(canonicalTopic), normGrade)
+  if (canonicalTopic && normalizeText(canonicalTopic) !== rawTopic) {
+    const canonPrefixed = curriculumPrefixed(normalizeText(canonicalTopic), curriculum)
+    const canonicalRow = await findRow(normSubject, canonPrefixed, normGrade)
     if (canonicalRow) {
       await bumpHits(canonicalRow.id)
       await recordAlias(canonicalRow.id, normTopic)
@@ -260,6 +264,12 @@ async function findRow(subject: string, topic: string, grade: string) {
   })
 }
 
+/** Prefix non-CBC topic keys with curriculum so each curriculum has its own cache */
+function curriculumPrefixed(topic: string, curriculum?: string): string {
+  const cid = (curriculum || 'cbc').toLowerCase()
+  return cid === 'cbc' ? topic : `${cid}:${topic}`
+}
+
 async function bumpHits(id: string): Promise<void> {
   try {
     await prisma.lessonCache.update({ where: { id }, data: { hits: { increment: 1 } } })
@@ -289,17 +299,18 @@ export async function intelligentCacheSave(
   topic: string,
   grade: string,
   content: Prisma.InputJsonValue,
+  curriculum?: string,
 ): Promise<void> {
   const normSubject = normalizeText(subject)
   const normGrade = normalizeText(grade)
-  const normTopic = normalizeText(topic)
+  const rawTopic = normalizeText(topic)
 
   let canonicalTopic: string | null = null
   try {
     canonicalTopic = await resolveCanonicalTopic(grade, subject, topic)
   } catch { /* best-effort */ }
 
-  const keyTopic = canonicalTopic ? normalizeText(canonicalTopic) : normTopic
+  const keyTopic = curriculumPrefixed(canonicalTopic ? normalizeText(canonicalTopic) : rawTopic, curriculum)
 
   try {
     await prisma.lessonCache.upsert({
