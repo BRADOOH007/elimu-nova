@@ -53,7 +53,8 @@ import {
   Music,
   Activity,
   Lock,
-  ArrowRight
+  ArrowRight,
+  AlertCircle
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -198,7 +199,7 @@ export default function StudentLessonPlansPage() {
         if (recResponse.ok) {
           const recData = await recResponse.json()
           // Store recommendations for use in the Recommendations tab
-          setAiInsights(prev => prev ? { ...prev, ...recData } : recData)
+          setAiInsights((prev: any) => prev ? { ...prev, ...recData } : recData)
         }
 
         // Fetch available subjects
