@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
+import { buildCurriculumAssessmentContext } from '@/lib/curriculum-prompt'
 
 /** Fallback quiz generator when AI fails — always returns valid questions */
 function generateFallbackQuiz(subject: string, grade: string, topic: string): any[] {
@@ -21,11 +22,13 @@ function generateFallbackQuiz(subject: string, grade: string, topic: string): an
 }
 
 export const POST = route({ skipSubscriptionCheck: true }, async (request, { user }) => {
-    const { lessonTitle, subject, grade, learningOutcomes, content, topic, subStrand } = await request.json()
+    const { lessonTitle, subject, grade, learningOutcomes, content, topic, subStrand, curriculum } = await request.json()
     if (!subject || !grade) return NextResponse.json({ error: 'subject and grade required' }, { status: 400 })
 
-    const prompt = `Generate 10 multiple-choice checkpoint quiz questions for end of lesson.
+    const curCtx = curriculum && curriculum !== 'cbc' ? buildCurriculumAssessmentContext({ curriculum, grade, subject }) : ''
 
+    const prompt = `Generate 10 multiple-choice checkpoint quiz questions for end of lesson.
+${curCtx}
 Lesson: ${lessonTitle || topic || subject}
 Subject: ${subject} | Grade: ${grade}
 Topic: ${subStrand || topic || lessonTitle || subject}

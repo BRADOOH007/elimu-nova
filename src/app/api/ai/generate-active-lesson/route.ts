@@ -4,6 +4,7 @@ import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
 import { CloudinaryStorage } from '@/lib/cloudinary-storage'
 import { intelligentCacheLookup, intelligentCacheSave } from '@/lib/lesson-cache'
+import { buildCurriculumLessonContext } from '@/lib/curriculum-prompt'
 
 interface ActiveLessonImage {
   sectionTitle: string
@@ -74,13 +75,14 @@ function cleanJson(raw: string): string {
 
 export const POST = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
   const body = await req.json()
-  const { subject, topic, grade } = body
+  const { subject, topic, grade, curriculum } = body
 
   if (!subject || !topic) {
     return NextResponse.json({ error: 'Subject and topic are required' }, { status: 400 })
   }
 
   const gradeStr = grade || 'Grade 8'
+  const curCtx = curriculum && curriculum !== 'cbc' ? buildCurriculumLessonContext({ curriculum, grade }) : ''
   const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
   // Fast path: serve an existing lesson for this subject/topic/grade from cache.
@@ -96,9 +98,8 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
   }
 
   const prompt = `Create a study lesson for a ${gradeStr} student learning ${subject} about "${topic}".
-
+${curCtx}
 You MUST return valid JSON. Escape all double quotes inside strings with backslash.
-Use relatable local examples where natural.
 
 {
   "preview": {
