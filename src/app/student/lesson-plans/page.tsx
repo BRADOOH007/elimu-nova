@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { useToast } from '@/hooks/use-toast'
 import { useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import CustomLessonModal from '@/components/custom-lesson-modal'
 import { useAITutor } from '@/components/ai-tutor-provider'
+import { StudentQuiz } from '@/components/student/student-quiz'
 import { 
   BookOpen, 
   Search,
@@ -150,6 +152,11 @@ export default function StudentLessonPlansPage() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiInsights, setAiInsights] = useState<any>(null)
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([])
+  const { data: session } = useSession()
+  const [quizSubject, setQuizSubject] = useState('Mathematics')
+  const [quizGrade, setQuizGrade] = useState('Grade 4')
+  const [quizTopic, setQuizTopic] = useState('')
+  const [activeQuiz, setActiveQuiz] = useState(false)
 
   // Fetch data on component mount
   useEffect(() => {
@@ -909,46 +916,71 @@ export default function StudentLessonPlansPage() {
       )}
       {activeTab === 'quizzes' && (
         <div className="space-y-6">
-          <Card className="bg-gradient-to-br from-white via-amber-50 to-orange-50 shadow-lg backdrop-blur-sm border-0">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="w-5 h-5 text-amber-600" /> Topic Quizzes
-              </CardTitle>
-              <CardDescription>Test your knowledge after completing each topic on the Learn page</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {['Place Value','Fractions','Algebra Basics','Geometry Intro'].map(topic => {
-                  const completed = Math.random() > 0.4
-                  return (
-                    <div key={topic} className={`rounded-xl border p-4 ${completed ? 'border-amber-200 bg-white' : 'border-slate-200 bg-slate-50/50'}`}>
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="text-sm font-semibold text-slate-800">{topic}</h3>
-                          <p className="text-xs text-slate-500 mt-0.5">10 questions · ~5 min</p>
+          {activeQuiz && quizTopic ? (
+            <StudentQuiz subject={quizSubject} grade={quizGrade} topic={quizTopic} onClose={() => setActiveQuiz(false)} />
+          ) : (
+            <>
+              <Card className="bg-gradient-to-br from-white via-amber-50 to-orange-50 shadow-lg backdrop-blur-sm border-0">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="w-5 h-5 text-amber-600" /> Topic Quizzes
+                  </CardTitle>
+                  <CardDescription>Test your knowledge on any topic — no need to complete the lesson first. Earn XP and track your progress.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-3 mb-6">
+                    <select value={quizSubject} onChange={e => setQuizSubject(e.target.value)} className="h-10 rounded-xl border-slate-200 bg-white px-3 text-sm">
+                      {['Mathematics', 'English', 'Science', 'Social Studies', 'History', 'Geography', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Art', 'Music'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <select value={quizGrade} onChange={e => setQuizGrade(e.target.value)} className="h-10 rounded-xl border-slate-200 bg-white px-3 text-sm">
+                      {Array.from({length:13}, (_,i) => i === 0 ? 'Kindergarten' : `Grade ${i}`).map(g => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                    <Input
+                      placeholder="Enter topic (e.g. Fractions)..."
+                      value={quizTopic}
+                      onChange={e => setQuizTopic(e.target.value)}
+                      className="h-10 rounded-xl flex-1 min-w-[200px]"
+                      onKeyDown={e => { if (e.key === 'Enter' && quizTopic.trim()) setActiveQuiz(true) }}
+                    />
+                    <Button onClick={() => quizTopic.trim() && setActiveQuiz(true)} disabled={!quizTopic.trim()} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white">
+                      Start Quiz <ArrowRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      {topic:'Fractions', subject:'Mathematics'},
+                      {topic:'Place Value', subject:'Mathematics'},
+                      {topic:'Algebra Basics', subject:'Mathematics'},
+                      {topic:'Geometry', subject:'Mathematics'},
+                      {topic:'Cells', subject:'Science'},
+                      {topic:'The Water Cycle', subject:'Science'},
+                      {topic:'Parts of Speech', subject:'English'},
+                      {topic:'World War II', subject:'History'}
+                    ].map(({topic, subject}) => (
+                      <button key={topic}
+                        onClick={() => { setQuizSubject(subject); setQuizTopic(topic); setActiveQuiz(true) }}
+                        className="rounded-xl border border-amber-200 bg-white p-4 text-left transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-amber-400 group">
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <h3 className="text-sm font-semibold text-slate-800 group-hover:text-amber-700 transition-colors">{topic}</h3>
+                            <p className="text-xs text-slate-500 mt-0.5">{subject} · 10 questions · ~5 min</p>
+                          </div>
+                          <Target className="w-5 h-5 text-amber-400 group-hover:text-amber-600 transition-colors" />
                         </div>
-                        {completed ? <Target className="w-5 h-5 text-amber-500" /> : <Lock className="w-5 h-5 text-slate-400" />}
-                      </div>
-                      {completed ? (
-                        <Link href={`/student/learn?topic=${encodeURIComponent(topic)}&subject=Mathematics&grade=Grade 4`}>
-                          <Button className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white">
-                            Start Quiz <ArrowRight className="w-4 h-4 ml-1" />
-                          </Button>
-                        </Link>
-                      ) : (
-                        <div className="space-y-2">
-                          <p className="text-xs text-slate-400 flex items-center gap-1"><Lock className="w-3 h-3" /> Complete &quot;{topic}&quot; on the Learn page first</p>
-                          <Link href={`/student/learn?topic=${encodeURIComponent(topic)}`}>
-                            <Button variant="outline" size="sm" className="w-full text-xs">Go to Topic</Button>
-                          </Link>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+                        <span className="inline-flex items-center text-xs font-medium text-amber-600 group-hover:text-amber-700">
+                          Start Quiz <ArrowRight className="ml-1 h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       )}
 

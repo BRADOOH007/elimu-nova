@@ -49,11 +49,39 @@ function isPlaceholderContent(content: string): boolean {
   return /^\(?see attached file\)?$/i.test(c) || /^\[attached(?: file)?\]$/i.test(c) || c === '—' || c === '-'
 }
 
+// Resolve a student/answer-key value for MCQ questions to the actual option text.
+// Handles three value formats: numeric option index ("0", "2"), option text
+// ("Ten Thousands"), and letter ("B"). Returns "" if it cannot be resolved.
+function resolveMcqOption(q: any, value: string): string {
+  const v = String(value ?? '').trim()
+  const options = Array.isArray(q.options) ? q.options : []
+  if (!v || options.length === 0) return v
+  if (/^\d+$/.test(v)) {
+    const idx = parseInt(v, 10)
+    return idx >= 0 && idx < options.length ? String(options[idx]) : ''
+  }
+  const nv = normalizeAnswer(v)
+  const byText = options.find((o: any) => normalizeAnswer(String(o)) === nv)
+  if (byText !== undefined) return String(byText)
+  if (/^[a-z]$/i.test(v)) {
+    const idx = v.toUpperCase().charCodeAt(0) - 65
+    if (idx >= 0 && idx < options.length) return String(options[idx])
+  }
+  const byFirst = options.find((o: any) => normalizeAnswer(String(o)).charAt(0) === nv.charAt(0))
+  return byFirst !== undefined ? String(byFirst) : v
+}
+
 function gradeObjective(q: any, studentAnswer: string, correctAnswer: string): boolean | null {
   const s = normalizeAnswer(studentAnswer)
   const c = normalizeAnswer(correctAnswer)
   if (!s || !c) return null
-  if (q.type === 'multiple_choice' || q.type === 'true_false') {
+  if (q.type === 'multiple_choice') {
+    const studentOpt = resolveMcqOption(q, studentAnswer)
+    const correctOpt = resolveMcqOption(q, correctAnswer)
+    if (!studentOpt || !correctOpt) return null
+    return normalizeAnswer(studentOpt) === normalizeAnswer(correctOpt)
+  }
+  if (q.type === 'true_false') {
     return s.charAt(0) === c.charAt(0)
   }
   if (q.type === 'short_answer') {
@@ -102,7 +130,9 @@ async function tryDeterministicGrade(assignment: any, content: string): Promise<
     gradedCount++
     const awarded = correct ? marks : 0
     earned += awarded
-    questionScores[id] = { correct, marks: awarded, studentAnswer, correctAnswer: correctAnswer || '' }
+    const readableStudent = q.type === 'multiple_choice' ? (resolveMcqOption(q, studentAnswer) || studentAnswer) : studentAnswer
+    const readableCorrect = q.type === 'multiple_choice' ? (resolveMcqOption(q, correctAnswer) || correctAnswer) : correctAnswer
+    questionScores[id] = { correct, marks: awarded, studentAnswer: readableStudent, correctAnswer: readableCorrect || '' }
   }
 
   if (gradedCount === 0) return null
