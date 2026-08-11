@@ -3,20 +3,26 @@ import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
 const FALLBACK_TOPICS: Record<string, string[]> = {
-  Mathematics: ['Whole Numbers','Fractions','Decimals','Measurement','Geometry','Algebra','Data Handling'],
+  Mathematics: ['Whole Numbers','Fractions','Decimals','Measurement','Geometry','Algebra','Data Handling','Statistics'],
   English: ['Reading Comprehension','Grammar','Writing','Vocabulary','Poetry'],
+  'English Language Arts': ['Reading Comprehension','Grammar & Mechanics','Writing Process','Vocabulary','Literature','Speaking & Listening'],
   Kiswahili: ['Sarufi','Msamiati','Ufahamu','Insha','Fasihi'],
   Science: ['Living Things','Environment','Matter','Force & Energy','Earth & Space'],
-  'Social Studies': ['Our Country','Environment','Resources','Transport','Government'],
+  'Social Studies': ['Communities','Geography','Government','Economics','History','Culture'],
   Physics: ['Forces','Motion','Energy','Waves','Light','Electricity','Magnetism'],
   Chemistry: ['States of Matter','Mixtures','Chemical Reactions','Acids & Bases'],
   Biology: ['Cells','Classification','Nutrition','Respiration','Reproduction','Ecology'],
-  History: ['Early Man','Trade','Colonial Administration','Independence'],
-  Geography: ['Map Work','Weather & Climate','Vegetation','Population'],
-  Agriculture: ['Conserving Agricultural Environment','Crop Production','Animal Production','Agriculture & Technology'],
-  'Business Studies': ['Business Environment','Entrepreneurship','Money & Banking'],
-  'Computer Studies': ['Computer Basics','Programming','Internet','Data Security'],
+  History: ['Ancient Civilizations','World History','Modern History','Government & Civics'],
+  Geography: ['Map Skills','Physical Geography','Human Geography','Climate & Environment'],
+  Agriculture: ['Crop Production','Animal Production','Soil Management','Agricultural Economics'],
+  'Business Studies': ['Business Environment','Entrepreneurship','Money & Banking','Marketing'],
+  'Computer Studies': ['Computer Basics','Programming Fundamentals','Internet & Web','Data & Security'],
+  'Computer Science': ['Algorithms','Programming','Data Structures','Networks','Cybersecurity','Artificial Intelligence'],
   CRE: ['Creation','The Bible','Jesus Christ','Christian Values'],
+  Art: ['Drawing','Painting','Sculpture','Art History','Digital Art'],
+  Music: ['Rhythm & Notation','Instruments','Music History','Performance','Composition'],
+  'Physical Education': ['Fitness','Team Sports','Individual Sports','Health & Wellness'],
+  'Foreign Languages': ['Vocabulary','Grammar','Conversation','Culture'],
 }
 
 // Map app-level short subject names to DB CBC subject names (with variations)
@@ -37,30 +43,30 @@ const SUBJECT_ALIASES: Record<string, string[]> = {
   'Computer Studies': ['Computer Studies', 'Pretechnical Studies Activities'],
 }
 
-async function findCurriculum(grade: string, subject: string) {
-  const exact = await prisma.curriculum.findFirst({ where: { type: 'CBC', grade, subject, isActive: true }, select: { id: true } })
+async function findCurriculum(grade: string, subject: string, curriculumType: string = 'CBC') {
+  const exact = await prisma.curriculum.findFirst({ where: { type: curriculumType, grade, subject, isActive: true }, select: { id: true } })
   if (exact) return exact.id
 
   const aliases = SUBJECT_ALIASES[subject] || []
   if (aliases.length > 0) {
     const viaAlias = await prisma.curriculum.findFirst({
-      where: { type: 'CBC', grade, subject: { in: aliases }, isActive: true },
+      where: { type: curriculumType, grade, subject: { in: aliases }, isActive: true },
       select: { id: true },
     })
     if (viaAlias) return viaAlias.id
   }
 
-  // Fuzzy: subject contains (handles "Science and Technology Activities" vs "Science & Technology Activities")
+  // Fuzzy: subject contains
   const fuzzy = await prisma.curriculum.findFirst({
-    where: { type: 'CBC', grade, isActive: true, subject: { contains: subject } },
+    where: { type: curriculumType, grade, isActive: true, subject: { contains: subject } },
     select: { id: true },
   })
   return fuzzy?.id || null
 }
 
-async function getOrderedPath(grade: string, subject: string) {
+async function getOrderedPath(grade: string, subject: string, curriculumType: string = 'CBC') {
   // Try DB-backed curriculum first (strands → substrands in order)
-  const curriculumId = await findCurriculum(grade, subject)
+  const curriculumId = await findCurriculum(grade, subject, curriculumType)
 
   if (curriculumId) {
     const strands = await prisma.curriculumStrand.findMany({
@@ -99,13 +105,24 @@ async function getOrderedPath(grade: string, subject: string) {
 // the resume topic (in-progress, or next to start), and totals.
 export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
   const { searchParams } = new URL(request.url)
-  const grade   = searchParams.get('grade')   || 'Grade 4'
-  const subject = searchParams.get('subject') || 'Mathematics'
+  const grade      = searchParams.get('grade')      || 'Grade 4'
+  const subject    = searchParams.get('subject')    || 'Mathematics'
+  const curriculum = searchParams.get('curriculum') || ''
+
+  // Map curriculum id to DB curriculum type
+  const curriculumTypeMap: Record<string, string> = {
+    cbc: 'CBC', '8-4-4': '8-4-4', 'common-core': 'COMMON_CORE', ngss: 'NGSS', teks: 'TEKS',
+    'florida-best': 'FLORIDA_BEST', california: 'CALIFORNIA', 'ny-state': 'NY_STATE',
+    ap: 'AP', 'ged-hiset': 'GED_HISET', 'us-homeschool': 'US_HOMESCHOOL',
+    cambridge: 'CAMBRIDGE', gcse: 'GCSE', 'a-level': 'A_LEVEL', caps: 'CAPS', ieb: 'IEB',
+    waec: 'WAEC', cbse: 'CBSE', icse: 'ICSE', ib: 'IB', general: 'GENERAL',
+  }
+  const curriculumType = curriculumTypeMap[curriculum] || 'CBC'
 
   const student = await prisma.student.findUnique({ where: { userId: user.id } })
   if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
 
-  const path = await getOrderedPath(grade, subject)
+  const path = await getOrderedPath(grade, subject, curriculumType)
 
   const progress = await prisma.topicProgress.findMany({
     where: { studentId: student.id, grade, subject },
