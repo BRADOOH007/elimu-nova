@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { stripLatex } from '@/lib/clean-ai-text'
 import { route } from '@/lib/api-middleware'
+import { buildCurriculumLessonContext } from '@/lib/curriculum-prompt'
 
 export const POST = route({ skipSubscriptionCheck: true }, async (req) => {
     const body = await req.json()
-    const { lesson, learningOutcomes, studentLevel, learningStyle } = body
+    const { lesson, learningOutcomes, studentLevel, learningStyle, curriculum } = body
 
     const lessonTitle   = lesson?.title   || lesson?.topic   || 'lesson'
     const lessonSubject = lesson?.subject || 'General'
@@ -17,10 +18,13 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req) => {
       ? learningOutcomes
       : []
 
+    const curCtx = curriculum && curriculum !== 'cbc' ? buildCurriculumLessonContext({ curriculum, grade: lessonGrade }) : ''
+
     const content = await OpenAIService.generateLongContent([
       {
         role: 'system',
         content: `You are an AI tutor creating clear, well-structured study content for ${lessonGrade} ${lessonSubject} students.
+${curCtx}
 Adapt to ${studentLevel || 'intermediate'} level and ${learningStyle || 'visual'} learning style.
 Make it easy to understand and study from.
 IMPORTANT: Do NOT use LaTeX, TeX or MathJax. Write all maths in plain text — use "/" for fractions, "^2" for powers, "_____" for blanks.`

@@ -157,6 +157,14 @@ export default function StudentLessonPlansPage() {
   const [quizGrade, setQuizGrade] = useState('Grade 4')
   const [quizTopic, setQuizTopic] = useState('')
   const [activeQuiz, setActiveQuiz] = useState(false)
+  const [quizCurriculum, setQuizCurriculum] = useState('')
+
+  useEffect(() => {
+    if (!session?.user?.id) return
+    fetch('/api/user-preferences').then(r => r.json()).then(d => {
+      if (d?.curriculum) setQuizCurriculum(d.curriculum)
+    }).catch(() => {})
+  }, [session?.user?.id])
 
   // Fetch data on component mount
   useEffect(() => {
@@ -917,7 +925,7 @@ export default function StudentLessonPlansPage() {
       {activeTab === 'quizzes' && (
         <div className="space-y-6">
           {activeQuiz && quizTopic ? (
-            <StudentQuiz subject={quizSubject} grade={quizGrade} topic={quizTopic} onClose={() => setActiveQuiz(false)} />
+            <StudentQuiz subject={quizSubject} grade={quizGrade} topic={quizTopic} curriculum={quizCurriculum} onClose={() => setActiveQuiz(false)} />
           ) : (
             <>
               <Card className="bg-gradient-to-br from-white via-amber-50 to-orange-50 shadow-lg backdrop-blur-sm border-0">

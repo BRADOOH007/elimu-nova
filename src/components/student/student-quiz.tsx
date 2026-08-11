@@ -20,13 +20,14 @@ interface StudentQuizProps {
   subject: string
   grade: string
   topic: string
+  curriculum?: string
   onClose?: () => void
 }
 
 const XP_PER_CORRECT = 20
 const QUIZ_BONUS = 30
 
-export function StudentQuiz({ subject, grade, topic, onClose }: StudentQuizProps) {
+export function StudentQuiz({ subject, grade, topic, curriculum, onClose }: StudentQuizProps) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [loading, setLoading] = useState(false)
   const [qIndex, setQIndex] = useState(0)
@@ -43,7 +44,7 @@ export function StudentQuiz({ subject, grade, topic, onClose }: StudentQuizProps
       const res = await fetch('/api/ai/checkpoint-quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, topic, grade, count: 10 })
+        body: JSON.stringify({ subject, topic, grade, count: 10, curriculum })
       })
       if (res.ok) {
         const data = await res.json()

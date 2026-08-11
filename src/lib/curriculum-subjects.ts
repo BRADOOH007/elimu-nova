@@ -46,6 +46,8 @@ export function getSubjectsForCurriculum(curriculumId: string, _grade?: string |
     return [...curriculum.subjects]
   }
 
-  // Fallback to CBC
-  return getKICDSubjectsForGrade(_grade)
+  // Fallback to general/international curriculum — NEVER fall back to CBC Kenya
+  const general = CURRICULA.find(c => c.id === 'general')
+  if (general) return [...general.subjects]
+  return ['Mathematics', 'English', 'Science', 'Social Studies']
 }
