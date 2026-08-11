@@ -162,6 +162,17 @@ export const authOptions: NextAuthOptions = {
         if (!isPasswordValid) {
           logger.warn('Invalid password:', { userId: fullUser.id })
 
+          // Super admins are never locked out — log and reject, but don't count attempts
+          if (fullUser.role === 'SUPER_ADMIN') {
+            logSecurityEvent({
+              eventType: 'LOGIN_FAILED',
+              severity: 'MEDIUM',
+              description: `Failed SUPER_ADMIN login for ${fullUser.username}`,
+              userId: fullUser.id,
+            }).catch(() => {})
+            return null
+          }
+
           const newAttempts = fullUser.loginAttempts + 1
           const updateData: any = { loginAttempts: newAttempts }
 
@@ -227,17 +238,6 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
-      },
-    },
   },
   callbacks: {
     async jwt({ token, user }) {
