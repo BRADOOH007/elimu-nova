@@ -28,11 +28,12 @@ function useBillingPath() {
 }
 
 export function SubscriptionAlert() {
-  const { subscription, hasAccess } = useSubscription()
+  const { subscription, hasAccess, context } = useSubscription()
   const billingPath = useBillingPath()
   const [dismissed, setDismissed] = useState(false)
 
-  // Never show to: dismissed, school-managed users, or fully active non-trial users
+  // Students never see subscription alerts — parent/school manages it
+  if (context?.userRole === 'STUDENT') return null
   if (dismissed) return null
   if (!subscription) return null
   if (subscription.status === 'SCHOOL_MANAGED') return null
