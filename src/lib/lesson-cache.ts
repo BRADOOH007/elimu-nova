@@ -320,7 +320,7 @@ export async function intelligentCacheSave(
         topic: keyTopic,
         grade: normGrade,
         content,
-        aliases: canonicalTopic ? [normTopic] : [],
+        aliases: canonicalTopic ? [rawTopic] : [],
       },
       update: { content },
     })
