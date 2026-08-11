@@ -16,7 +16,7 @@ import { useAITutor } from "@/components/ai-tutor-provider"
 import {
   Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
   Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Plus, MessageSquare,
-  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette, Home, School
+  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette, Home, School, Music, Activity, Users
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
@@ -42,13 +42,95 @@ const fallbackData: DashboardData = {
 }
 
 import { getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
+import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
 import { formatTeacherName, formatDate, formatDuration, formatTime } from '@/lib/utils/formatters'
 
-function getSubjectCards(grade: string) {
-  const subjects = getSubjectsForStudent(grade)
+const SUBJECT_ICONS: Record<string, LucideIcon> = {
+  Mathematics: Calculator, Math: Calculator, 'Advanced Mathematics': Calculator,
+  English: BookOpen, 'English Language Arts': BookOpen, 'English Language': BookOpen, 'English Literature': BookOpen,
+  Kiswahili: Languages, 'Kiswahili / KSL': Languages, French: Languages, Spanish: Languages, German: Languages, 'Foreign Languages': Languages, 'World Languages': Languages, 'Languages Other Than English': Languages,
+  'Science & Technology': FlaskConical, 'Integrated Science': FlaskConical, Science: FlaskConical, 'Physical Science': FlaskConical, 'Life Science': FlaskConical, 'Earth & Space Science': FlaskConical, 'Environmental Science': FlaskConical, 'Combined Science': FlaskConical,
+  Physics: Zap, Chemistry: FlaskConical, Biology: Leaf,
+  'Social Studies': Globe, History: Globe, Geography: Globe, 'History-Social Science': Globe, Economics: TrendingUp, 'Business Studies': TrendingUp, Accounting: Calculator,
+  'Religious Education': Church, 'Religious Studies': Church,
+  'Creative Arts': Palette, 'Creative Arts & Sports': Palette, 'Art & Design': Palette, 'Visual & Performing Arts': Palette, 'Fine Arts': Palette, Art: Palette, Music: Music,
+  'Agriculture & Nutrition': Leaf, Agriculture: Leaf,
+  'Pre-Technical Studies': Brain, 'Computer Science': Brain, 'Computer Studies': Brain, 'Technology Applications': Brain, 'Career & Technical Education': Brain, 'Engineering Design': Brain,
+  'Physical Education': Activity, 'Health & PE': Activity, 'Health Education': Activity, 'Health & Physical Education': Activity, Health: Activity,
+  'Community Service Learning': Users,
+  'Indigenous Language': Languages,
+  'Environmental Activities': Leaf,
+  'Life Skills': BookOpen,
+  'Science & Engineering Practices': FlaskConical, 'Crosscutting Concepts': Brain,
+}
+const SUBJECT_COLORS: Record<string, string[]> = {
+  Mathematics: ['text-blue-600','bg-blue-50','bg-blue-500'],
+  Math: ['text-blue-600','bg-blue-50','bg-blue-500'],
+  'Advanced Mathematics': ['text-blue-600','bg-blue-50','bg-blue-500'],
+  English: ['text-emerald-600','bg-emerald-50','bg-emerald-500'],
+  'English Language Arts': ['text-emerald-600','bg-emerald-50','bg-emerald-500'],
+  'English Language': ['text-emerald-600','bg-emerald-50','bg-emerald-500'],
+  'English Literature': ['text-emerald-600','bg-emerald-50','bg-emerald-500'],
+  'English Language Arts & Reading': ['text-emerald-600','bg-emerald-50','bg-emerald-500'],
+  Kiswahili: ['text-amber-600','bg-amber-50','bg-amber-500'],
+  'Kiswahili / KSL': ['text-amber-600','bg-amber-50','bg-amber-500'],
+  'Science & Technology': ['text-cyan-600','bg-cyan-50','bg-cyan-500'],
+  'Integrated Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'],
+  Science: ['text-cyan-600','bg-cyan-50','bg-cyan-500'],
+  'Physical Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'],
+  'Life Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'],
+  'Earth & Space Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'],
+  'Environmental Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'],
+  'Combined Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'],
+  'Social Studies': ['text-orange-600','bg-orange-50','bg-orange-500'],
+  'History-Social Science': ['text-orange-600','bg-orange-50','bg-orange-500'],
+  'Religious Education': ['text-purple-600','bg-purple-50','bg-purple-500'],
+  'Religious Studies': ['text-purple-600','bg-purple-50','bg-purple-500'],
+  'Creative Arts': ['text-pink-600','bg-pink-50','bg-pink-500'],
+  'Creative Arts & Sports': ['text-pink-600','bg-pink-50','bg-pink-500'],
+  'Agriculture & Nutrition': ['text-green-600','bg-green-50','bg-green-500'],
+  Agriculture: ['text-green-600','bg-green-50','bg-green-500'],
+  'Pre-Technical Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'],
+  'Business Studies': ['text-orange-600','bg-orange-50','bg-orange-500'],
+  'Computer Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'],
+  'Computer Science': ['text-indigo-600','bg-indigo-50','bg-indigo-500'],
+  'Career & Technical Education': ['text-indigo-600','bg-indigo-50','bg-indigo-500'],
+  'Technology Applications': ['text-indigo-600','bg-indigo-50','bg-indigo-500'],
+  'Engineering Design': ['text-indigo-600','bg-indigo-50','bg-indigo-500'],
+  'Physical Education': ['text-lime-600','bg-lime-50','bg-lime-500'],
+  'Health & PE': ['text-lime-600','bg-lime-50','bg-lime-500'],
+  'Health Education': ['text-lime-600','bg-lime-50','bg-lime-500'],
+  'Health & Physical Education': ['text-lime-600','bg-lime-50','bg-lime-500'],
+  Health: ['text-lime-600','bg-lime-50','bg-lime-500'],
+  'Visual & Performing Arts': ['text-pink-600','bg-pink-50','bg-pink-500'],
+  'Fine Arts': ['text-pink-600','bg-pink-50','bg-pink-500'],
+  Art: ['text-pink-600','bg-pink-50','bg-pink-500'],
+  Music: ['text-violet-600','bg-violet-50','bg-violet-500'],
+  Physics: ['text-sky-600','bg-sky-50','bg-sky-500'],
+  Chemistry: ['text-teal-600','bg-teal-50','bg-teal-500'],
+  Biology: ['text-green-600','bg-green-50','bg-green-500'],
+  History: ['text-amber-600','bg-amber-50','bg-amber-500'],
+  Geography: ['text-blue-600','bg-blue-50','bg-blue-500'],
+  Economics: ['text-rose-600','bg-rose-50','bg-rose-500'],
+  'World Languages': ['text-fuchsia-600','bg-fuchsia-50','bg-fuchsia-500'],
+  'Foreign Languages': ['text-fuchsia-600','bg-fuchsia-50','bg-fuchsia-500'],
+  'Languages Other Than English': ['text-fuchsia-600','bg-fuchsia-50','bg-fuchsia-500'],
+  French: ['text-indigo-600','bg-indigo-50','bg-indigo-500'],
+  Spanish: ['text-orange-600','bg-orange-50','bg-orange-500'],
+  German: ['text-slate-600','bg-slate-50','bg-slate-500'],
+  'Life Skills': ['text-rose-600','bg-rose-50','bg-rose-500'],
+  'Community Service Learning': ['text-teal-600','bg-teal-50','bg-teal-500'],
+  'Indigenous Language': ['text-brown-600','bg-brown-50','bg-brown-500'],
+  'Environmental Activities': ['text-green-600','bg-green-50','bg-green-500'],
+}
+
+function getSubjectCards(grade: string, curriculumId?: string | null) {
+  const subjects = curriculumId && curriculumId !== 'cbc'
+    ? getSubjectsForCurriculum(curriculumId, grade)
+    : getSubjectsForStudent(grade)
   return subjects.slice(0, 8).map(name => {
-    const iconMap: Record<string, LucideIcon> = { Mathematics: Calculator, English: BookOpen, Kiswahili: Languages, 'Kiswahili / KSL': Languages, 'Science & Technology': FlaskConical, 'Integrated Science': FlaskConical, 'Social Studies': Globe, 'Religious Education': Church, 'Creative Arts': Palette, 'Creative Arts & Sports': Palette, 'Agriculture & Nutrition': Leaf, 'Pre-Technical Studies': Brain, 'Agriculture': Leaf, 'Business Studies': TrendingUp, 'Computer Studies': Brain }
-    const colorMap: Record<string, string[]> = { Mathematics: ['text-blue-600','bg-blue-50','bg-blue-500'], English: ['text-emerald-600','bg-emerald-50','bg-emerald-500'], Kiswahili: ['text-amber-600','bg-amber-50','bg-amber-500'], 'Kiswahili / KSL': ['text-amber-600','bg-amber-50','bg-amber-500'], 'Science & Technology': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Integrated Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Social Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Religious Education': ['text-purple-600','bg-purple-50','bg-purple-500'], 'Creative Arts': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Creative Arts & Sports': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Agriculture & Nutrition': ['text-green-600','bg-green-50','bg-green-500'], 'Agriculture': ['text-green-600','bg-green-50','bg-green-500'], 'Pre-Technical Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Business Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Computer Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'] }
+    const iconMap = SUBJECT_ICONS
+    const colorMap = SUBJECT_COLORS
     const c = colorMap[name] || ['text-slate-600','bg-slate-50','bg-slate-500']
     return { name, icon: iconMap[name] || Brain, color: c[0], bg: c[1], bar: c[2] }
   })
@@ -63,6 +145,15 @@ export default function StudentDashboard() {
   const { data: session } = useSession()
   const { schoolInfo, loading: schoolInfoLoading } = useSchoolInfo()
   const isIndependent = !schoolInfo?.school?.id && !session?.user?.schoolId
+  const [userCurriculum, setUserCurriculum] = useState<string | null>(null)
+
+  // Fetch user's curriculum preference
+  useEffect(() => {
+    if (!session?.user?.id) return
+    fetch('/api/user-preferences').then(r => r.json()).then(d => {
+      if (d?.curriculum) setUserCurriculum(d.curriculum)
+    }).catch(() => {})
+  }, [session?.user?.id])
 
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [, setShowNotifs] = useState(false)
@@ -258,7 +349,7 @@ export default function StudentDashboard() {
               <Link href="/student/learn" className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">View all <ArrowRight className="h-3 w-3" /></Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {getSubjectCards(d.student.class || 'Grade 4').map((subject) => (
+              {getSubjectCards(d.student.class || 'Grade 4', userCurriculum).map((subject) => (
                 <Link key={subject.name} href={`/student/learn?subject=${encodeURIComponent(subject.name.toLowerCase())}`}
                   className={`${subject.bg} rounded-xl p-3 border border-slate-100 hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group`}>
                   <div className="flex items-center gap-2 mb-2">
