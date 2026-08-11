@@ -144,7 +144,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 40,
+        zIndex: 60,
         opacity,
         // CRITICAL: once fading out, disable ALL pointer events immediately
         pointerEvents: opacity < 1 ? 'none' : 'auto',
