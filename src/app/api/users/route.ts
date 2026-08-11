@@ -80,6 +80,9 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req) => {
         },
         parent: {
           select: { schoolId: true }
+        },
+        preferences: {
+          select: { country: true, curriculum: true }
         }
       }
     }),

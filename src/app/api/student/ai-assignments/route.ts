@@ -36,6 +36,9 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
     const fallbackTeacher = await prisma.teacher.findFirst({ select: { id: true } })
     assignmentTeacherId = fallbackTeacher?.id ?? ''
   }
+  if (!assignmentTeacherId) {
+    return NextResponse.json({ error: 'No teacher available to assign this work. Please contact support.' }, { status: 400 })
+  }
 
   // Generate AI assignment content
   let aiAssignment: any
@@ -71,8 +74,10 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
     data: {
       title,
       description: assignmentDescription,
-      instructions,
-      content: aiAssignment?.content || '',
+      content: JSON.stringify({
+        generatedContent: aiAssignment?.content || '',
+        instructions: instructions,
+      }),
       dueDate: new Date(Date.now() + finalDuration * 24 * 60 * 60 * 1000),
       status: 'PENDING',
       teacherId: assignmentTeacherId,
@@ -111,7 +116,7 @@ export const POST = route({ auth: 'STUDENT' }, async (req, { user }) => {
       id: assignment.id,
       title: assignment.title,
       description: assignment.description,
-      instructions: (assignment as any).instructions,
+      instructions: instructions,
       dueDate: assignment.dueDate,
       subject: finalSubject,
       topic: finalTopic,
