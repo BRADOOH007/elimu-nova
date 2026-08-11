@@ -183,7 +183,7 @@ function LearnPageContent() {
     try {
       const s = subj || studySubject
       const g = grade || studyGrade
-      const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(g)}&subject=${encodeURIComponent(s)}`)
+      const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(g)}&subject=${encodeURIComponent(s)}&curriculum=${encodeURIComponent(curriculum)}`)
       if (res.ok) setPathData(await res.json())
     } catch { /* ignore */ }
     finally { setPathLoading(false) }
