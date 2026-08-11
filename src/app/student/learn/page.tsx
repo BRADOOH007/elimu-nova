@@ -189,7 +189,7 @@ function LearnPageContent() {
     finally { setPathLoading(false) }
   }
 
-  useEffect(() => { fetchLearningPath() }, [studySubject, studyGrade])
+  useEffect(() => { fetchLearningPath() }, [studySubject, studyGrade, curriculum])
 
   // ── Lesson Generation ─────────────────────────────────────
   const generateLesson = async (subjectArg?: string, topicArg?: string) => {
