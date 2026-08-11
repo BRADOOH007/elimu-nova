@@ -193,6 +193,14 @@ export default function StudentLessonPlansPage() {
           setAiInsights(insightsData)
         }
 
+        // Fetch recommendations
+        const recResponse = await fetch('/api/student/recommendations')
+        if (recResponse.ok) {
+          const recData = await recResponse.json()
+          // Store recommendations for use in the Recommendations tab
+          setAiInsights(prev => prev ? { ...prev, ...recData } : recData)
+        }
+
         // Fetch available subjects
         const subjectsResponse = await fetch('/api/subjects')
         if (subjectsResponse.ok) {
@@ -202,6 +210,7 @@ export default function StudentLessonPlansPage() {
 
       } catch (error) {
         console.error('Error fetching data:', error)
+        toast({ variant: 'destructive', title: 'Failed to load data', description: 'Please check your connection and try again.' })
       } finally {
         setLoading(false)
       }
@@ -898,26 +907,71 @@ export default function StudentLessonPlansPage() {
 
       {activeTab === 'recommended' && (
         <div className="space-y-6">
-          {/* Recommended Lessons based on AI insights */}
           <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Lightbulb className="w-16 h-16 text-gray-400 mb-4" />
-              <h3 className="text-xl font-semibold text-gray-600 mb-2">AI Recommendations</h3>
-              <p className="text-gray-500 text-center mb-4">
-                AI is analyzing your learning patterns to recommend personalized lessons.
-              </p>
-              <Button 
-                onClick={() => handleGenerateAILesson('Mathematics', 'Algebra')}
-                disabled={isGenerating}
-                className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
-              >
-                {isGenerating ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                ) : (
-                  <Lightbulb className="w-4 h-4 mr-2" />
-                )}
-                Get AI Recommendations
-              </Button>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-purple-600" /> AI Recommendations
+              </CardTitle>
+              <CardDescription>Personalised suggestions based on your learning patterns</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(aiInsights?.recommendations && aiInsights.recommendations.length > 0) ? (
+                <div className="space-y-3">
+                  {aiInsights.recommendations.map((rec: any, i: number) => (
+                    <div key={i} className={`rounded-xl border p-4 ${
+                      rec.type === 'danger' ? 'border-red-200 bg-red-50/50' :
+                      rec.type === 'warning' ? 'border-amber-200 bg-amber-50/50' :
+                      rec.type === 'success' ? 'border-green-200 bg-green-50/50' :
+                      'border-blue-200 bg-blue-50/50'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                          rec.type === 'danger' ? 'bg-red-100 text-red-600' :
+                          rec.type === 'warning' ? 'bg-amber-100 text-amber-600' :
+                          rec.type === 'success' ? 'bg-green-100 text-green-600' :
+                          'bg-blue-100 text-blue-600'
+                        }`}>
+                          {rec.type === 'danger' ? <AlertCircle className="h-5 w-5" /> :
+                           rec.type === 'success' ? <CheckCircle className="h-5 w-5" /> :
+                           <Lightbulb className="h-5 w-5" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-sm font-semibold text-slate-800">{rec.title}</h3>
+                          <p className="text-xs text-slate-600 mt-1">{rec.description}</p>
+                          {rec.action && (
+                            <Button
+                              size="sm"
+                              className="mt-2"
+                              variant={rec.type === 'danger' ? 'destructive' : 'outline'}
+                              onClick={() => {
+                                if (rec.subject) handleGenerateAILesson(rec.subject, rec.title)
+                                else if (rec.href) window.location.href = rec.href
+                              }}
+                            >
+                              {rec.action}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Lightbulb className="w-12 h-12 text-gray-400 mb-3" />
+                  <p className="text-sm text-gray-500 text-center">
+                    Complete some lessons and quizzes to get personalised recommendations.
+                  </p>
+                  <Button
+                    onClick={() => handleGenerateAILesson('Mathematics', 'Algebra')}
+                    disabled={isGenerating}
+                    className="mt-4 bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700"
+                  >
+                    {isGenerating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Lightbulb className="w-4 h-4 mr-2" />}
+                    Generate AI Lesson
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
