@@ -5,7 +5,7 @@ import { HopeAITutorDrawer } from '@/components/ai-tutor-drawer'
 
 interface AITutorContextValue {
   isOpen: boolean
-  openAITutor: (initialPrompt?: string, contextSubject?: string, contextTopic?: string) => void
+  openAITutor: (initialPrompt?: string, contextSubject?: string, contextTopic?: string, contextCurriculum?: string) => void
   closeAITutor: () => void
 }
 
@@ -17,11 +17,13 @@ export function AITutorProvider({ children }: { children: ReactNode }) {
   const [initialPrompt, setInitialPrompt] = useState<string | undefined>()
   const [contextSubject, setContextSubject] = useState<string | undefined>()
   const [contextTopic, setContextTopic] = useState<string | undefined>()
+  const [contextCurriculum, setContextCurriculum] = useState<string | undefined>()
 
-  const openAITutor = useCallback((prompt?: string, subject?: string, topic?: string) => {
+  const openAITutor = useCallback((prompt?: string, subject?: string, topic?: string, curriculum?: string) => {
     setInitialPrompt(prompt)
     setContextSubject(subject)
     setContextTopic(topic)
+    setContextCurriculum(curriculum)
     setSessionKey(k => k + 1)
     setIsOpen(true)
   }, [])
@@ -45,6 +47,7 @@ export function AITutorProvider({ children }: { children: ReactNode }) {
         initialPrompt={initialPrompt}
         currentSubject={contextSubject}
         currentTopic={contextTopic}
+        currentCurriculum={contextCurriculum}
       />
     </AITutorContext.Provider>
   )

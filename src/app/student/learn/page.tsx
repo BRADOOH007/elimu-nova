@@ -201,7 +201,7 @@ function LearnPageContent() {
     try {
       const r = await fetch('/api/ai/generate-active-lesson', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ subject, topic, grade: studyGrade })
+        body: JSON.stringify({ subject, topic, grade: studyGrade, curriculum })
       })
       const d = await r.json()
       if (r.ok) { setActiveLesson(d); setLessonMd(d.content || ''); markTopicStarted(subject, topic) }
@@ -327,7 +327,7 @@ function LearnPageContent() {
     try {
       const res = await fetch('/api/ai/checkpoint-quiz', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ subject: studySubject, topic: studyTopic, grade: studyGrade, count: 10 })
+        body: JSON.stringify({ subject: studySubject, topic: studyTopic, grade: studyGrade, count: 10, curriculum })
       })
       if (res.ok) { const data = await res.json(); setQuizQuestions(data.questions || data); setQuickQuizOpen(true) }
       else toast({ variant:'destructive', title:'Could not load quiz' })
@@ -415,7 +415,7 @@ function LearnPageContent() {
                 </button>
               )}
               <button
-                onClick={() => openAITutor(undefined, studySubject, studyTopic || undefined)}
+                onClick={() => openAITutor(undefined, studySubject, studyTopic || undefined, curriculum)}
                 className="flex items-center gap-1.5 rounded-full border border-white/20 bg-white/15 px-3 py-1.5 text-sm font-semibold backdrop-blur transition-colors hover:bg-white/25"
               >
                 <MessageSquare className="h-4 w-4 text-white" />
@@ -729,7 +729,7 @@ function LearnPageContent() {
                         <p className="text-sm text-indigo-600">{quizScore >= 80 ? 'Great job!' : quizScore >= 50 ? 'Good effort!' : 'Keep practicing!'}</p>
                       </div>
                       {quizScore < 80 && (
-                        <Button onClick={() => openAITutor('Can you help me understand where I went wrong on this topic?', studySubject, studyTopic)}
+                        <Button onClick={() => openAITutor('Can you help me understand where I went wrong on this topic?', studySubject, studyTopic, curriculum)}
                           className="w-full bg-indigo-500 font-semibold text-white hover:bg-indigo-600">
                           <MessageSquare className="mr-2 h-4 w-4" />Chat with AI Tutor
                         </Button>

@@ -6,9 +6,10 @@ import { OpenAIService } from '@/lib/openai-service'
 import { stripLatex } from '@/lib/clean-ai-text'
 import { route } from '@/lib/api-middleware'
 import { buildStudentContext, extractAndStoreMemory } from '@/lib/student-memory'
+import { buildCurriculumLessonContext } from '@/lib/curriculum-prompt'
 
 export const POST = route({ auth: 'none' }, async (request) => {
-    const { message, context, lessonContext, schemeContext, assignmentsContext, autoTeach, lessonContent, subject, topic, messages, studentName, grade } = await request.json()
+    const { message, context, lessonContext, schemeContext, assignmentsContext, autoTeach, lessonContent, subject, topic, messages, studentName, grade, curriculum } = await request.json()
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 })
@@ -18,7 +19,11 @@ export const POST = route({ auth: 'none' }, async (request) => {
     const subj = subject || 'your studies'
     const gradeStr = grade ? ` at ${grade} level` : ''
 
-    let systemPrompt = `You are Hope, an encouraging and patient AI learning assistant for ${name}. Always address ${name} naturally by name, encourage their progress, simplify complex concepts, and align explanations with${gradeStr} their learning level. You are warm, supportive, and make learning enjoyable. Use relatable local examples where natural. Always respond in a helpful, concise way — keep explanations clear but not too long.`
+    let systemPrompt = `You are Hope, an encouraging and patient AI learning assistant for ${name}. Always address ${name} naturally by name, encourage their progress, simplify complex concepts, and align explanations with${gradeStr} their learning level. You are warm, supportive, and make learning enjoyable.`
+
+    const curCtx = curriculum && curriculum !== 'cbc' ? buildCurriculumLessonContext({ curriculum, grade }) : ''
+    if (curCtx) systemPrompt += `\n\n${curCtx}`
+    systemPrompt += ` Always respond in a helpful, concise way — keep explanations clear but not too long.`
 
     // Add current learning context so Hope knows what the student is working on
     if (context === 'student_tutor' && (subject || topic)) {
