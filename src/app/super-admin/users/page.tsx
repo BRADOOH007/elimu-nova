@@ -10,7 +10,7 @@ import { useDeleteConfirmation } from "@/components/ui/delete-confirmation-dialo
 import {
   Search, Plus, Users, User, School, GraduationCap, Shield, Mail, Phone,
   Eye, Trash2, Loader2, ChevronLeft, ChevronRight, RefreshCw, X,
-  Calendar, Sparkles, Building2, Home
+  Calendar, Sparkles, Building2, Home, Globe, BookOpen
 } from "lucide-react"
 
 interface User {
@@ -21,6 +21,7 @@ interface User {
   teacher?: { school: { id: string; name: string } }
   student?: { school: { id: string; name: string } }
   parent?: { schoolId: string | null }
+  preferences?: { country?: string; curriculum?: string }
 }
 
 interface UserStats {
@@ -136,6 +137,17 @@ export default function UsersPage() {
     if (user.role === 'TEACHER') return !user.teacher?.school?.id && !schoolName(user)
     if (user.role === 'STUDENT') return !user.student?.school?.id && !schoolName(user)
     return false
+  }
+
+  const COUNTRY_LABELS: Record<string, string> = {
+    KE: 'Kenya', GB: 'UK', US: 'USA', ZA: 'South Africa', NG: 'Nigeria', IN: 'India', INT: 'International'
+  }
+  const CURRICULUM_LABELS: Record<string, string> = {
+    cbc: 'CBC', '8-4-4': '8-4-4', cambridge: 'Cambridge', gcse: 'GCSE',
+    'a-level': 'A-Levels', 'common-core': 'Common Core', ngss: 'NGSS', teks: 'TEKS',
+    'florida-best': 'Florida BEST', california: 'California', 'ny-state': 'NY State',
+    ap: 'AP', 'ged-hiset': 'GED/HiSET', 'us-homeschool': 'Homeschool', caps: 'CAPS',
+    ieb: 'IEB', waec: 'WAEC', cbse: 'CBSE', icse: 'ICSE', ib: 'IB'
   }
 
   const roleCfg = (role: string) => (ROLE_CONFIG as any)[role] || ROLE_CONFIG.PARENT
@@ -354,6 +366,18 @@ export default function UsersPage() {
                       <span className="inline-flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
                         <Home className="w-3 h-3" />
                         Independent
+                      </span>
+                    )}
+                    {user.preferences?.country && (
+                      <span className="inline-flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                        <Globe className="w-3 h-3" />
+                        {COUNTRY_LABELS[user.preferences.country] || user.preferences.country}
+                      </span>
+                    )}
+                    {user.preferences?.curriculum && (
+                      <span className="inline-flex items-center gap-1 text-xs text-purple-600 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                        <BookOpen className="w-3 h-3" />
+                        {CURRICULUM_LABELS[user.preferences.curriculum] || user.preferences.curriculum.toUpperCase()}
                       </span>
                     )}
                   </div>
