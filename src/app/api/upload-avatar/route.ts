@@ -5,7 +5,7 @@ import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import crypto from 'crypto'
 
-export const POST = route({ auth: ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] }, async (req, { user }) => {
+export const POST = route({ auth: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] }, async (req, { user }) => {
   try {
     const formData = await req.formData()
     const file = formData.get('file') as File | null
