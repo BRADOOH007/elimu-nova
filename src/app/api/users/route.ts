@@ -61,6 +61,7 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req) => {
         role: true,
         isActive: true,
         createdAt: true,
+        avatar: true,
         address: true,
         schoolAdmin: {
           include: {
