@@ -8,7 +8,7 @@ import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
 import {
   BarChart3, Users, ClipboardList, BookOpen,
-  MessageSquare, Settings, CreditCard
+  MessageSquare, Settings, CreditCard, Bell, FileText, Calendar, GraduationCap
 } from 'lucide-react'
 import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
@@ -31,6 +31,10 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
       { icon: ClipboardList, label: 'School Life', href: '/parent/schedule', tourId: 'parent-schedule' },
     ] : []),
     { icon: BookOpen,      label: 'Progress',    href: '/parent/progress',  tourId: 'parent-progress'  },
+    { icon: FileText,      label: 'Assignments', href: '/parent/assignments', tourId: 'parent-assignments' },
+    { icon: GraduationCap, label: 'Grades',      href: '/parent/grades',      tourId: 'parent-grades' },
+    { icon: Bell,          label: 'Alerts',      href: '/parent/alerts',       tourId: 'parent-alerts' },
+    { icon: Calendar,      label: 'Meetings',    href: '/parent/meetings',    tourId: 'parent-meetings' },
     ...(isSchoolParent ? [{
       icon: MessageSquare, label: 'Messages', href: '/parent/messages',
       badge: totalUnread > 0 ? totalUnread : undefined, tourId: 'parent-messages',
