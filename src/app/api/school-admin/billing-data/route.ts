@@ -106,34 +106,12 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
       })
     }
     if (invoices.length === 0) {
-      invoices = [
-        {
-          id: '1',
-          date: new Date().toISOString(),
-          amount: subscription?.package?.price || 299.99,
-          status: 'paid',
-          period: new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-        },
-        {
-          id: '2',
-          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-          amount: subscription?.package?.price || 299.99,
-          status: 'paid',
-          period: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-        }
-      ]
+      invoices = []
     }
 
     // Get payment method (mock data - would integrate with Stripe)
-    const mockPaymentMethod = {
-      id: '1',
-      type: 'card',
-      brand: 'visa',
-      last4: '4242',
-      expiryMonth: 12,
-      expiryYear: 2025,
-      isPrimary: true
-    }
+    // Payment methods from DB or null (no fake data)
+    const paymentMethod = paymentMethods.length > 0 ? paymentMethods[0] : null
 
     // Get available packages for upgrade options
     const availablePackages = await prisma.package.findMany({
@@ -184,7 +162,7 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
       },
       analytics: {
         engagement: `${engagementRate}%`,
-        satisfaction: '4.8/5', // Mock data - would calculate from feedback
+        satisfaction: null,
         activeUsers: activeUsers.length,
         totalUsers
       },
@@ -197,7 +175,7 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
         features: upgradePackage.features
       } : null,
       invoices,
-      paymentMethod: mockPaymentMethod
+      paymentMethod,
     }
 
     return NextResponse.json({ success: true, data: billingData })
