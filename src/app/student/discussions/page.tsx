@@ -35,7 +35,7 @@ export default function StudentDiscussions() {
     try {
       const res = await fetch('/api/discussions?status=all')
       const data = await res.json()
-      setDiscussions((data.discussions || []).filter((d: Discussion) => d.status === 'approved'))
+      setDiscussions((data.discussions || []).filter((d: Discussion) => d.status === 'approved').reverse())
     } catch { /* ignore */ }
     finally { setLoading(false) }
   }
