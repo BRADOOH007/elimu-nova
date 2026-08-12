@@ -15,17 +15,6 @@ interface Discussion {
 const TOPICS = ['General', 'Question', 'Help', 'Resource', 'Other']
 const EMOJIS = ['😊','👍','🎉','💡','📚','🔥','❤️','✅','🤔','👋','🙌','✨','😂','😍','🥳','🙏','💪','🌟','📖','💬']
 
-const PARTICIPANTS = [
-  { name: 'Jane Student', color: 'from-blue-500 to-purple-600' },
-  { name: 'Mike M.', color: 'from-teal-500 to-emerald-600' },
-  { name: 'Alice K.', color: 'from-amber-500 to-orange-600' },
-  { name: 'David O.', color: 'from-pink-500 to-rose-600' },
-  { name: 'Sarah W.', color: 'from-indigo-500 to-violet-600' },
-  { name: 'Brian N.', color: 'from-cyan-500 to-blue-600' },
-  { name: 'Faith C.', color: 'from-purple-500 to-pink-600' },
-  { name: 'Tom L.', color: 'from-green-500 to-teal-600' },
-]
-
 export default function StudentDiscussions() {
   const { data: session } = useSession()
   const [discussions, setDiscussions] = useState<Discussion[]>([])
@@ -36,7 +25,7 @@ export default function StudentDiscussions() {
   const [showEmoji, setShowEmoji] = useState(false)
   const [flagged, setFlagged] = useState(false)
   const [profanityWarning, setProfanityWarning] = useState(false)
-  const [onlineCount, setOnlineCount] = useState(8)
+  const [onlineCount, setOnlineCount] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const currentUserId = session?.user?.id || ''
@@ -114,19 +103,9 @@ export default function StudentDiscussions() {
           </div>
         </div>
 
-        {/* Active participants row */}
+        {/* Discussion stats */}
         <div className="flex items-center gap-3 mt-3">
-          <div className="flex -space-x-2 overflow-hidden">
-            {PARTICIPANTS.slice(0, 5).map((p, i) => (
-              <div key={i} className={`w-8 h-8 rounded-full bg-gradient-to-br ${p.color} ring-2 ring-white flex items-center justify-center border border-white`} title={p.name}>
-                <span className="text-[10px] font-bold text-white">{getInitials(p.name)}</span>
-              </div>
-            ))}
-            <div className="w-8 h-8 rounded-full bg-slate-200 ring-2 ring-white flex items-center justify-center">
-              <span className="text-[10px] font-bold text-slate-500">+{onlineCount - 5}</span>
-            </div>
-          </div>
-          <span className="text-xs text-slate-500">Active now</span>
+          <span className="text-xs text-slate-500">{discussions.length} discussion{discussions.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
