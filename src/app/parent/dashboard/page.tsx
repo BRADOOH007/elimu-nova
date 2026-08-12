@@ -251,7 +251,7 @@ export default function ParentDashboard() {
             <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-xl border border-cyan-100 shadow-sm p-5 flex flex-col justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-3">Billing & Subscription</h3>
-                <p className="text-2xl font-bold text-slate-900">{fmt(0)}</p>
+                <p className="text-2xl font-bold text-slate-900">{fmt((subscription as any)?.amount || 0)}</p>
                 {subscription ? (
                   <p className="text-xs text-slate-500 mt-1">{subscription.isTrial ? `${subscription.daysRemaining}-day free trial` : subscription.isActive ? 'Active subscription' : 'Subscription needed'} · {currency === "KES" ? "KES" : "USD"} billing</p>
                 ) : (

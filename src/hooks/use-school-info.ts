@@ -60,6 +60,9 @@ export function useSchoolInfo() {
     case 'STUDENT':
       endpoint = '/api/student/school-info'
       break
+    case 'PARENT':
+      endpoint = '/api/parent/school-info'
+      break
     default:
       endpoint = null
   }
