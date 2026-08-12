@@ -44,13 +44,14 @@ const SUBJECT_ALIASES: Record<string, string[]> = {
 }
 
 async function findCurriculum(grade: string, subject: string, curriculumType: string = 'CBC') {
-  const exact = await prisma.curriculum.findFirst({ where: { type: curriculumType, grade, subject, isActive: true }, select: { id: true } })
+  const ct = curriculumType as any
+  const exact = await prisma.curriculum.findFirst({ where: { type: ct, grade, subject, isActive: true }, select: { id: true } })
   if (exact) return exact.id
 
   const aliases = SUBJECT_ALIASES[subject] || []
   if (aliases.length > 0) {
     const viaAlias = await prisma.curriculum.findFirst({
-      where: { type: curriculumType, grade, subject: { in: aliases }, isActive: true },
+      where: { type: ct, grade, subject: { in: aliases }, isActive: true },
       select: { id: true },
     })
     if (viaAlias) return viaAlias.id
@@ -58,7 +59,7 @@ async function findCurriculum(grade: string, subject: string, curriculumType: st
 
   // Fuzzy: subject contains
   const fuzzy = await prisma.curriculum.findFirst({
-    where: { type: curriculumType, grade, isActive: true, subject: { contains: subject } },
+    where: { type: ct, grade, isActive: true, subject: { contains: subject } },
     select: { id: true },
   })
   return fuzzy?.id || null
