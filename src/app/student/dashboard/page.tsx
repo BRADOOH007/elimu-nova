@@ -161,10 +161,16 @@ export default function StudentDashboard() {
 
   const { openAITutor } = useAITutor()
 
-  // Gamification
+  // Gamification — use API progress when available, localStorage as fallback
   const [gameState] = useState(() => updateStreak(getGameState()))
-  const levelName = getLevelName(gameState.level)
-  const xpProgress = getXpToNextLevel(gameState.xp)
+  const dProgress = dashboardData?.progress as any
+  const displayXp = dProgress?.xp ?? gameState.xp
+  const displayStreak = dProgress?.streak ?? gameState.streak
+  const displayLevel = dProgress?.masteryScore
+    ? Math.min(15, Math.floor((dProgress.masteryScore || 0) / 100 * 15) + 1)
+    : gameState.level
+  const levelName = getLevelName(displayLevel)
+  const xpProgress = dProgress ? (dProgress.xp || 0) % 100 : getXpToNextLevel(gameState.xp)
   const mistakes = getUnreviewedMistakes()
 
   const fetcher = (url: string) => fetch(url).then(r => {
@@ -260,8 +266,8 @@ export default function StudentDashboard() {
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">{greeting}, {firstName}</h1>
             <div className="flex items-center gap-4 mt-2 text-sm">
               {isIndependent && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-400/20 text-emerald-100 border border-emerald-400/30"><Home className="w-3 h-3" />Self-Paced</span>}
-              <div className="flex items-center gap-1"><Zap className="h-4 w-4 text-amber-300" /><span className="font-bold">{gameState.xp} XP</span></div>
-              <div className="flex items-center gap-1"><Flame className="h-4 w-4 text-orange-300" /><span className="font-bold">{gameState.streak}d streak</span></div>
+              <div className="flex items-center gap-1"><Zap className="h-4 w-4 text-amber-300" /><span className="font-bold">{displayXp} XP</span></div>
+              <div className="flex items-center gap-1"><Flame className="h-4 w-4 text-orange-300" /><span className="font-bold">{displayStreak}d streak</span></div>
               {mistakes.length > 0 && <Link href="/student/learn" className="flex items-center gap-1 text-red-200 hover:text-red-100"><AlertCircle className="h-4 w-4" />{mistakes.length} to review</Link>}
             </div>
           </div>
@@ -289,7 +295,7 @@ export default function StudentDashboard() {
             { icon: Clock, label: 'Study Time', value: fmtTime(d.analytics.totalStudyTime || d.stats.studyTime), color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', from: 'from-blue-50', to: 'to-indigo-50', empty: true, emptyLabel: 'Start a 5-min lesson', emptyHref: '/student/learn' },
             { icon: ClipboardList, label: 'Assignments', value: (d.stats.completedAssignments + d.stats.activeAssignments) > 0 ? `${d.stats.completedAssignments}/${d.stats.completedAssignments + d.stats.activeAssignments} done` : '0', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', from: 'from-emerald-50', to: 'to-teal-50', empty: (d.stats.completedAssignments + d.stats.activeAssignments) === 0, emptyLabel: 'View assignments', emptyHref: '/student/assignments' },
             { icon: Star, label: 'Avg Grade', value: d.stats.averageGrade ? `${Math.round(d.stats.averageGrade)}%` : '--', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', from: 'from-amber-50', to: 'to-orange-50', empty: !d.stats.averageGrade, emptyLabel: 'Take a quick quiz', emptyHref: '/student/lesson-plans?tab=quizzes' },
-            { icon: Trophy, label: 'Topics', value: d.analytics.completedAssignments > 0 ? `${d.analytics.completedAssignments} mastered` : '0', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50', empty: d.analytics.completedAssignments === 0, emptyLabel: 'Study a topic', emptyHref: '/student/learn' },
+            { icon: Trophy, label: 'Assignments', value: d.analytics.completedAssignments > 0 ? `${d.analytics.completedAssignments} done` : '0', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-200', from: 'from-purple-50', to: 'to-pink-50', empty: d.analytics.completedAssignments === 0, emptyLabel: 'Study a topic', emptyHref: '/student/learn' },
           ].map((stat, i) => (
             <Card key={i} className={`border-0 shadow-sm hover:shadow-md transition-shadow bg-gradient-to-br ${stat.from} ${stat.to} ${stat.border}`}>
               <CardContent className="p-4 flex items-center gap-3">
@@ -380,7 +386,7 @@ export default function StudentDashboard() {
               <div className="space-y-2.5">
                 {upcomingEvents!.slice(0, 4).map((event, i) => (
                   <div key={i} className="flex items-start gap-2.5 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: event.type === 'exam' ? '#ef4444' : event.type === 'live' ? 'LIVE' : '#3b82f6' }} />
+                    <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: event.type === 'exam' ? '#ef4444' : event.type === 'live' ? '#22c55e' : '#3b82f6' }} />
                     <div className="min-w-0">
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{event.type === 'live' ? 'LIVE' : event.type === 'assignment' ? 'ASSIGNMENT' : 'CLASS'}</p>
                       <p className="font-medium text-slate-700 truncate text-xs">{event.title}</p>
