@@ -31,6 +31,7 @@ interface DashboardData {
   upcomingLessons: Array<{ id: string; title: string; subject: string; time: string; teacher: string; location?: string }>
   studySessions: Array<{ id: string; subject: string; topic: string; duration: number; startTime: string; endTime?: string; notes?: string }>
   analytics: { totalStudyTime: number; averageGrade: number | null; completedAssignments: number; pendingAssignments: number; overdueAssignments: number; lastActiveDate: string | null; streakDays: number; longestStreak: number; weeklyGoal: number; monthlyGoal: number }
+  progress?: { xp?: number; streak?: number; masteryScore?: number }
   unreadNotificationCount?: number
 }
 
@@ -161,18 +162,6 @@ export default function StudentDashboard() {
 
   const { openAITutor } = useAITutor()
 
-  // Gamification — use API progress when available, localStorage as fallback
-  const [gameState] = useState(() => updateStreak(getGameState()))
-  const dProgress = dashboardData?.progress as any
-  const displayXp = dProgress?.xp ?? gameState.xp
-  const displayStreak = dProgress?.streak ?? gameState.streak
-  const displayLevel = dProgress?.masteryScore
-    ? Math.min(15, Math.floor((dProgress.masteryScore || 0) / 100 * 15) + 1)
-    : gameState.level
-  const levelName = getLevelName(displayLevel)
-  const xpProgress = dProgress ? (dProgress.xp || 0) % 100 : getXpToNextLevel(gameState.xp)
-  const mistakes = getUnreviewedMistakes()
-
   const fetcher = (url: string) => fetch(url).then(r => {
     if (!r.ok) return null
     return r.json()
@@ -185,6 +174,18 @@ export default function StudentDashboard() {
     "/api/student/dashboard",
     fetcher,
   )
+
+  // Gamification — use API progress when available, localStorage as fallback
+  const [gameState] = useState(() => updateStreak(getGameState()))
+  const dProgress = dashboardData?.progress
+  const displayXp = dProgress?.xp ?? gameState.xp
+  const displayStreak = dProgress?.streak ?? gameState.streak
+  const displayLevel = dProgress?.masteryScore
+    ? Math.min(15, Math.floor((dProgress.masteryScore || 0) / 100 * 15) + 1)
+    : gameState.level
+  const levelName = getLevelName(displayLevel)
+  const xpProgress = dProgress ? (dProgress.xp || 0) % 100 : getXpToNextLevel(gameState.xp).progress
+  const mistakes = getUnreviewedMistakes()
 
   // Learning path for Continue CTA
   const { data: pathData } = useSWR<{ resumeTopic?: { subject: string; topicName: string } }>(
@@ -283,7 +284,7 @@ export default function StudentDashboard() {
             </div>
             <div className="hidden sm:block w-48">
               <div className="flex justify-between text-xs text-violet-200 mb-1"><span>{levelName}</span><span>{getLevelName(gameState.level + 1)}</span></div>
-              <div className="bg-white/20 rounded-full h-1.5 overflow-hidden"><div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${xpProgress.progress}%` }} /></div>
+              <div className="bg-white/20 rounded-full h-1.5 overflow-hidden"><div className="h-full bg-white rounded-full transition-all duration-500" style={{ width: `${xpProgress}%` }} /></div>
             </div>
           </div>
         </CardContent>
