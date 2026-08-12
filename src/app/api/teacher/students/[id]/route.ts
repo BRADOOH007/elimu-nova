@@ -3,6 +3,42 @@ import { prisma, withRetry } from '@/lib/prisma'
 import { stripPasswordFromAddress } from '@/lib/password-encryption'
 import { route } from '@/lib/api-middleware'
 
+export const GET = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
+  const { id } = params
+  const teacher = await withRetry(() => prisma.teacher.findUnique({ where: { userId: user.id } }))
+  if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
+
+  const student = await prisma.student.findFirst({
+    where: { id, teacherId: teacher.id, deletedAt: null },
+    include: {
+      user: { select: { firstName: true, lastName: true, email: true, phone: true, isActive: true, createdAt: true } },
+      class: { select: { id: true, name: true, subject: true, grade: true } },
+      analytics: true,
+    }
+  })
+  if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })
+
+  return NextResponse.json({
+    id: student.id,
+    firstName: student.user.firstName,
+    lastName: student.user.lastName,
+    email: student.user.email,
+    phone: student.user.phone,
+    isActive: student.user.isActive,
+    joinDate: student.user.createdAt,
+    className: student.class?.name || null,
+    grade: student.class?.grade || null,
+    subjects: student.subjects,
+    analytics: student.analytics ? {
+      averageGrade: student.analytics.averageGrade,
+      completedAssignments: student.analytics.completedAssignments,
+      pendingAssignments: student.analytics.pendingAssignments,
+      streakDays: student.analytics.streakDays,
+      totalStudyTime: student.analytics.totalStudyTime,
+    } : null,
+  })
+})
+
 export const PUT = route({ auth: 'TEACHER' }, async (req, { user, params }) => {
   const { id } = params
   const teacher = await withRetry(() => prisma.teacher.findUnique({ where: { userId: user.id } }))
