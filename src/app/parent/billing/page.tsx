@@ -79,11 +79,9 @@ export default function ParentBillingPage() {
   const nextDue = invoices.find(i => i.status !== 'PAID')
   const planName = billing?.planName || 'Free Plan'
 
-  const feeLineItems = [
-    { label: 'Tuition Fees', amount: isKenya ? 15000 : 299.99, status: 'PAID' },
-    { label: 'Activity & Technology Fee', amount: isKenya ? 2500 : 49.99, status: 'PENDING' },
-    { label: 'Learning Resources & AI Pass', amount: isKenya ? 3000 : 79.99, status: 'PENDING' },
-  ]
+  const feeLineItems = invoices.length > 0
+    ? invoices.map(i => ({ label: i.description || 'Fee', amount: i.amount, status: i.status }))
+    : []
 
   const paymentMethods = [
     ...(isKenya
