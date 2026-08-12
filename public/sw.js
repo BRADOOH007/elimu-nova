@@ -1,3 +1,4 @@
+/* eslint-disable */
 const CACHE_NAME = 'elimunova-v2'
 const STATIC_ASSETS = [
   '/',

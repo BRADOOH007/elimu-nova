@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { PrismaClient, ResourceType } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 

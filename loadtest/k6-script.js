@@ -1,3 +1,4 @@
+/* eslint-disable */
 // k6 load test — ElimuNova API
 // Run: k6 run loadtest/k6-script.js
 import http from 'k6/http'
