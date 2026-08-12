@@ -208,7 +208,7 @@ function LearnPageContent() {
       else {
         const fb = await fetch('/api/ai/generate-lesson-content', {
           method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ lesson:{ title:topic, subject, grade:studyGrade }, studentLevel:'intermediate', learningStyle:'visual' })
+          body: JSON.stringify({ lesson:{ title:topic, subject, grade:studyGrade }, studentLevel:'intermediate', learningStyle:'visual', curriculum })
         })
         if (fb.ok) { const fbData = await fb.json(); setLessonMd(fbData.content || ''); setActiveLesson(null) }
         else throw new Error(d.error || 'Could not generate lesson')
