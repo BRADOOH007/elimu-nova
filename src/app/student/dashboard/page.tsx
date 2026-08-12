@@ -16,7 +16,7 @@ import { useAITutor } from "@/components/ai-tutor-provider"
 import {
   Zap, Flame, Target, Clock, BookOpen, GraduationCap, Brain, ClipboardList, ArrowRight,
   Sparkles, Star, TrendingUp, Play, Repeat, AlertCircle, Trophy, CheckCircle, Plus, MessageSquare,
-  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette, Home, School
+  Calculator, FlaskConical, Globe, Languages, Church, Leaf, Palette, Home, School, Music, Activity
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { getGameState, updateStreak, getLevelName, getXpToNextLevel } from '@/lib/gamification'
