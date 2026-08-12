@@ -59,7 +59,7 @@ export function StudentQuiz({ subject, grade, topic, curriculum, onClose }: Stud
       }
     } catch {}
     finally { setLoading(false) }
-  }, [subject, topic, grade])
+  }, [subject, topic, grade, curriculum])
 
   const selectAnswer = (optIdx: number) => {
     const next = { ...answersRef.current, [qIndex]: optIdx }
