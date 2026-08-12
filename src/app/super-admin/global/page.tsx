@@ -14,7 +14,7 @@ import {
   Monitor, BookOpen, Zap, Search, Video,
   ChevronLeft, ChevronRight, Eye, Lock, Settings,
   ShieldCheck, AlertCircle, CheckCircle, XCircle, ExternalLink,
-  Wrench, Info
+  Wrench, Info, KeyRound
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -684,8 +684,9 @@ function MaintenanceModeCard() {
 /* ── Zoom Integration Section ── */
 function ZoomConfigSection() {
   const { toast } = useToast()
-  const [config, setConfig] = useState({ zoom_sdk_key: '', zoom_sdk_secret: '' })
+  const [config, setConfig] = useState({ zoom_sdk_key: '', zoom_sdk_secret: '', zoom_account_id: '', zoom_client_id: '', zoom_client_secret: '' })
   const [isConfigured, setIsConfigured] = useState(false)
+  const [isOAuthConfigured, setIsOAuthConfigured] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -698,6 +699,7 @@ function ZoomConfigSection() {
       .then(d => {
         if (d.config) setConfig(prev => ({ ...prev, ...d.config }))
         setIsConfigured(d.isConfigured)
+        setIsOAuthConfigured(d.isOAuthConfigured)
       }).catch(console.error)
       .finally(() => setLoading(false))
   }, [])
@@ -825,6 +827,93 @@ function ZoomConfigSection() {
               <li>Add your app domain to the allowlist: <code className="bg-white/80 px-1 rounded text-xs">{typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}</code></li>
               <li>Paste them here and click Save</li>
             </ol>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Server-to-Server OAuth — auto-create/manage meetings */}
+      <Card className={`border-0 ${isOAuthConfigured ? 'bg-gradient-to-r from-green-50 to-emerald-50' : 'bg-gradient-to-r from-amber-50 to-yellow-50'}`}>
+        <CardContent className="p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {isOAuthConfigured ? <ShieldCheck className="w-6 h-6 text-green-600" /> : <AlertCircle className="w-6 h-6 text-amber-600" />}
+            <div>
+              <p className="font-medium">{isOAuthConfigured ? 'Server-to-Server OAuth configured' : 'Server-to-Server OAuth not configured'}</p>
+              <p className="text-sm text-gray-500">
+                {isOAuthConfigured ? 'Ready to auto-create and manage Zoom meetings' : 'Required for automatic meeting creation (Live Class, meetings scheduler)'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-purple-600" />
+            Zoom Server-to-Server OAuth Credentials
+          </CardTitle>
+          <CardDescription>
+            Required for automatic meeting creation. Get these from the Zoom Marketplace &rarr; Build App &rarr; Server-to-Server OAuth.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label>Account ID</Label>
+              <Input
+                value={config.zoom_account_id}
+                onChange={e => setConfig(p => ({ ...p, zoom_account_id: e.target.value }))}
+                placeholder="Account ID"
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Client ID</Label>
+              <Input
+                value={config.zoom_client_id}
+                onChange={e => setConfig(p => ({ ...p, zoom_client_id: e.target.value }))}
+                placeholder="Client ID"
+                className="font-mono text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Client Secret</Label>
+              <Input
+                type={showSecrets ? 'text' : 'password'}
+                value={config.zoom_client_secret}
+                onChange={e => setConfig(p => ({ ...p, zoom_client_secret: e.target.value }))}
+                placeholder="Client Secret"
+                className="font-mono text-sm"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={save} disabled={saving} className="bg-gradient-to-r from-purple-600 to-indigo-600">
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save OAuth Credentials
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-0 bg-gradient-to-r from-purple-50 to-indigo-50">
+        <CardContent className="p-4 flex items-start gap-3">
+          <KeyRound className="w-5 h-5 text-purple-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-sm text-purple-900">How to get Server-to-Server OAuth credentials</p>
+            <ol className="text-xs text-purple-700 mt-2 list-decimal list-inside space-y-1">
+              <li>Go to the <a href="https://marketplace.zoom.us/" target="_blank" rel="noopener noreferrer" className="underline">Zoom Marketplace</a> and sign in</li>
+              <li>Click <strong>Develop &rarr; Build App</strong></li>
+              <li>Choose <strong>Server-to-Server OAuth</strong> (not OAuth, not SDK)</li>
+              <li>Name your app (e.g. "ElimuNova") and click Create</li>
+              <li>Copy the <strong>Account ID</strong>, <strong>Client ID</strong>, and <strong>Client Secret</strong> from the App Credentials page</li>
+              <li>Under <strong>Scopes</strong>, add: <code className="bg-white/80 px-1 rounded text-xs">meeting:write:admin</code> and <code className="bg-white/80 px-1 rounded text-xs">meeting:read:admin</code></li>
+              <li>Click <strong>Activate your app</strong> (must be activated or token requests fail)</li>
+              <li>Paste the three values here and click Save</li>
+            </ol>
+            <p className="text-xs text-purple-600 mt-2">
+              Note: The Account ID is found at the top of the App Credentials page, and the Client ID/Secret are just below it.
+            </p>
           </div>
         </CardContent>
       </Card>
