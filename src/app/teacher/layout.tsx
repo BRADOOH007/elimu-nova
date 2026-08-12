@@ -7,7 +7,7 @@ import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import { SubscriptionGuard } from '@/components/subscription/subscription-guard'
 import {
   BarChart3, Users, BookOpen, ClipboardList,
-  Wand2, Radio, Mail, CreditCard, Calendar, Brain, Activity
+  Wand2, Radio, Mail, CreditCard, Calendar, Brain, Activity, FileText
 } from 'lucide-react'
 import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
@@ -24,6 +24,7 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { icon: BookOpen,      label: 'Planning',       href: '/teacher/lesson-plans', tourId: 'teacher-schedule'     },
     { icon: ClipboardList, label: 'Assignments',    href: '/teacher/assignments',  tourId: 'teacher-assignments'  },
     { icon: BarChart3,     label: 'Gradebook',      href: '/teacher/gradebook',    tourId: 'teacher-gradebook'    },
+    { icon: FileText,      label: 'Report Cards',   href: '/teacher/report-cards', tourId: 'teacher-report-cards' },
     { icon: BarChart3,     label: 'Analytics',      href: '/teacher/analytics',    tourId: 'teacher-analytics'    },
     { icon: Activity,      label: 'Activity Log',   href: '/teacher/activity-log', tourId: 'teacher-activity-log' },
     { icon: Wand2,         label: 'AI Tools',       href: '/teacher/ai-tools',     tourId: 'teacher-ai-tools'     },
