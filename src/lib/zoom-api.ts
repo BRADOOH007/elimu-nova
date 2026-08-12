@@ -1,8 +1,28 @@
 import { z } from 'zod'
 
-const ZOOM_ACCOUNT_ID = process.env.ZOOM_ACCOUNT_ID
-const ZOOM_CLIENT_ID = process.env.ZOOM_CLIENT_ID
-const ZOOM_CLIENT_SECRET = process.env.ZOOM_CLIENT_SECRET
+// Server-to-Server OAuth credentials — read from DB (super-admin config) first,
+// then fall back to environment variables.
+async function loadOAuthConfig(): Promise<{ accountId: string; clientId: string; clientSecret: string }> {
+  try {
+    const { prisma } = await import('@/lib/prisma')
+    const { decryptPassword } = await import('./password-encryption')
+    const keys = ['zoom_account_id', 'zoom_client_id', 'zoom_client_secret']
+    const rows = await (prisma as any).systemSettings.findMany({ where: { key: { in: keys } } })
+    const map: Record<string, string> = {}
+    for (const r of rows) map[r.key] = r.value ? (decryptPassword(r.value) || r.value) : ''
+    return {
+      accountId: map.zoom_account_id || process.env.ZOOM_ACCOUNT_ID || '',
+      clientId: map.zoom_client_id || process.env.ZOOM_CLIENT_ID || '',
+      clientSecret: map.zoom_client_secret || process.env.ZOOM_CLIENT_SECRET || '',
+    }
+  } catch {
+    return {
+      accountId: process.env.ZOOM_ACCOUNT_ID || '',
+      clientId: process.env.ZOOM_CLIENT_ID || '',
+      clientSecret: process.env.ZOOM_CLIENT_SECRET || '',
+    }
+  }
+}
 
 const log = (level: 'info' | 'warn' | 'error', msg: string, meta?: Record<string, unknown>) => {
   const entry = { ts: new Date().toISOString(), scope: 'zoom-api', level, msg, ...meta }
@@ -58,12 +78,13 @@ async function getAccessToken(): Promise<string> {
     return cachedToken.accessToken
   }
 
-  if (!ZOOM_ACCOUNT_ID || !ZOOM_CLIENT_ID || !ZOOM_CLIENT_SECRET) {
+  const oauth = await loadOAuthConfig()
+  if (!oauth.accountId || !oauth.clientId || !oauth.clientSecret) {
     throw new Error('Zoom Server-to-Server OAuth credentials not configured')
   }
 
   const tokenUrl = 'https://zoom.us/oauth/token'
-  const auth = Buffer.from(`${ZOOM_CLIENT_ID}:${ZOOM_CLIENT_SECRET}`).toString('base64')
+  const auth = Buffer.from(`${oauth.clientId}:${oauth.clientSecret}`).toString('base64')
 
   let lastError: Error | null = null
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -73,7 +94,7 @@ async function getAccessToken(): Promise<string> {
       await sleep(backoff)
     }
     try {
-      const res = await fetch(`${tokenUrl}?grant_type=account_credentials&account_id=${ZOOM_ACCOUNT_ID}`, {
+      const res = await fetch(`${tokenUrl}?grant_type=account_credentials&account_id=${oauth.accountId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${auth}`,
@@ -298,7 +319,7 @@ export async function getMeetingRecordings(meetingId: string): Promise<Array<{
 }
 
 export function isZoomConfigured(): boolean {
-  return !!(ZOOM_ACCOUNT_ID && ZOOM_CLIENT_ID && ZOOM_CLIENT_SECRET)
+  return !!(process.env.ZOOM_ACCOUNT_ID && process.env.ZOOM_CLIENT_ID && process.env.ZOOM_CLIENT_SECRET)
 }
 
 export { CreateMeetingSchema, UpdateMeetingSchema }
