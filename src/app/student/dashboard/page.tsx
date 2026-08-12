@@ -392,7 +392,7 @@ export default function StudentDashboard() {
                       <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{event.type === 'live' ? 'LIVE' : event.type === 'assignment' ? 'ASSIGNMENT' : 'CLASS'}</p>
                       <p className="font-medium text-slate-700 truncate text-xs">{event.title}</p>
                       <p className="text-[10px] text-slate-400">
-                        {event.teacherName ? `${formatTeacherName(event.teacherName)} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· ` : ''}
+                        {event.teacherName ? `${formatTeacherName(event.teacherName)} ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â� ` : ''}
                         {event.dueDate ? `Due ${formatDate(event.dueDate)}` : `${formatTime(event.startTime)}`}
                       </p>
                     </div>
@@ -464,7 +464,7 @@ export default function StudentDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate group-hover:text-indigo-600 transition-colors">{a.title}</p>
-                  <p className="text-xs text-slate-400">{a.subject} Â· {new Date(a.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                  <p className="text-xs text-slate-400">{a.subject} Â� {new Date(a.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
                 </div>
                 <span className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${
                   a.status === 'Submitted' ? 'bg-blue-50 text-blue-700' :
