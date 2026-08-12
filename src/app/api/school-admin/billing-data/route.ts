@@ -111,7 +111,7 @@ export const GET = route({ auth: 'SCHOOL_ADMIN' }, async (req, { user }) => {
 
     // Get payment method (mock data - would integrate with Stripe)
     // Payment methods from DB or null (no fake data)
-    const paymentMethod = paymentMethods.length > 0 ? paymentMethods[0] : null
+    const paymentMethod = null
 
     // Get available packages for upgrade options
     const availablePackages = await prisma.package.findMany({
