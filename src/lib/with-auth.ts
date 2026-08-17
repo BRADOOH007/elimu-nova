@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { AuthenticationError, AuthorizationError } from '@/lib/api-errors'
 
-type Role = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
+type Role = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'SENIOR_STUDENT' | 'SENIOR_TEACHER'
 
 export async function requireAuth(): Promise<{ id: string; email: string; role: string; name: string }> {
   const session = await getServerSession(authOptions)

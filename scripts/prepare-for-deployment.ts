@@ -105,7 +105,7 @@ async function prepareForDeployment() {
   console.log('\n📋 Environment Variables for Vercel:');
   console.log('Make sure these are set in your Vercel project settings:');
   console.log('• OPENROUTER_API_KEY=sk-or-v1-...');
-  console.log('• STABILITY_API_KEY=sk-zAdfNrf3e2wPDpSjSmXQSjk8JiF424F1ddNUYX2mdfjwvJBR');
+  console.log('• STABILITY_API_KEY=sk-YOUR_STABILITY_KEY');
   console.log('• NEXTAUTH_SECRET=your-secret-key');
   console.log('• DATABASE_URL=your-database-url');
   console.log('• NEXTAUTH_URL=https://your-vercel-domain.vercel.app');

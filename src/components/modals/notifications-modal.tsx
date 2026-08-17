@@ -50,7 +50,7 @@ interface NotificationsModalProps {
   isOpen: boolean
   onClose: () => void
   userId: string
-  role?: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
+  role?: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'SENIOR_STUDENT' | 'SENIOR_TEACHER'
   onUnreadChanged?: () => void
 }
 

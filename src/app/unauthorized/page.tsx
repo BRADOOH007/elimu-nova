@@ -14,6 +14,8 @@ const DASHBOARD_ROUTES: Record<string, string> = {
   TEACHER:      '/teacher/dashboard',
   STUDENT:      '/student/dashboard',
   PARENT:       '/parent/dashboard',
+  SENIOR_STUDENT: '/senior-student/dashboard',
+  SENIOR_TEACHER: '/senior-teacher/dashboard',
 }
 
 export default function UnauthorizedPage() {

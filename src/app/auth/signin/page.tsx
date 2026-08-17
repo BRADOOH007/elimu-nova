@@ -19,6 +19,8 @@ import {
 } from 'lucide-react'
 
 // ── Role tabs shown on the sign-in form ──
+// Note: senior students use "Student" and senior instructors use "Teacher" —
+// the redirect is determined by the actual role, not the selected tab.
 type Role = 'STUDENT' | 'TEACHER' | 'PARENT'
 
 const ROLE_TABS: { id: Role; label: string; icon: React.ComponentType<any> }[] = [
@@ -49,19 +51,14 @@ export default function SignInPage() {
     setError('')
 
     try {
-      const dashboardRoutes: Record<string, string> = {
-        SUPER_ADMIN:  '/super-admin/dashboard',
-        SCHOOL_ADMIN: '/school-admin/dashboard',
-        TEACHER:      '/teacher/dashboard',
-        STUDENT:      '/student/dashboard',
-        PARENT:       '/parent/dashboard',
-      }
-      // Use full-page redirect so the browser stores the session cookie
+      // Use the role-agnostic /dashboard router so the user always lands on the
+      // correct dashboard for their ACTUAL role — avoids a brief /unauthorized flash
+      // when the selected tab doesn't match the signed-in account's role.
       await signIn('credentials', {
         email,
         password,
         redirect: true,
-        callbackUrl: dashboardRoutes[activeRole] || '/dashboard',
+        callbackUrl: '/dashboard',
       })
     } catch {
       setError('An error occurred. Please try again.')

@@ -22,6 +22,7 @@ interface HopeDrawerProps {
   currentGrade?: string
   currentCurriculum?: string
   initialPrompt?: string
+  context?: string
 }
 
 const QUICK_CHIPS = [
@@ -31,7 +32,7 @@ const QUICK_CHIPS = [
   { label: 'Step-by-step breakdown', icon: '🚀' },
 ]
 
-export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, currentTopic, currentGrade, currentCurriculum, initialPrompt }: HopeDrawerProps) {
+export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, currentTopic, currentGrade, currentCurriculum, initialPrompt, context }: HopeDrawerProps) {
   const { data: session } = useSession()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -127,7 +128,7 @@ export function HopeAITutorDrawer({ open, onClose, studentName, currentSubject, 
         body: JSON.stringify({
           message: text,
           history: messagesRef.current.map(m => ({ role: m.role, content: m.content })),
-          context: 'student_tutor',
+          context: context || 'student_tutor',
           studentName: name,
           subject,
           topic,

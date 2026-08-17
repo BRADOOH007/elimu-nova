@@ -30,6 +30,15 @@ export default function DashboardRedirect() {
       case 'STUDENT':
         router.push('/student/dashboard')
         break
+      case 'PARENT':
+        router.push('/parent/dashboard')
+        break
+      case 'SENIOR_STUDENT':
+        router.push('/senior-student/dashboard')
+        break
+      case 'SENIOR_TEACHER':
+        router.push('/senior-teacher/dashboard')
+        break
       default:
         router.push('/auth/signin')
     }

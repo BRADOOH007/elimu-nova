@@ -39,6 +39,7 @@ export default function LiveClassPage() {
   const [title, setTitle] = useState('Live Class')
   const [subject, setSubject] = useState('')
   const [meetingLink, setMeetingLink] = useState('')
+  const [audience, setAudience] = useState<'K12' | 'ADULT'>('K12')
   const [liveSession, setLiveSession] = useState<LiveSession | null>(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -109,7 +110,7 @@ export default function LiveClassPage() {
       const res = await fetch('/api/live-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, classId: selectedClass, subject, meetingLink: link }),
+        body: JSON.stringify({ title, classId: selectedClass, subject, meetingLink: link, audience }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Failed to start session' }))
@@ -311,6 +312,17 @@ export default function LiveClassPage() {
             <option value="">Select class (optional)</option>
             {classes.map(c => <option key={c.id} value={c.id}>{c.name} — {c.grade}</option>)}
           </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Audience</label>
+          <select value={audience} onChange={e => setAudience(e.target.value as 'K12' | 'ADULT')}
+            className="w-full h-10 px-3 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="K12">School students (K-12)</option>
+            <option value="ADULT">Adult learners (GED / Senior)</option>
+          </select>
+          {audience === 'ADULT' && (
+            <p className="text-xs text-emerald-600 mt-1">This session will be visible to senior students in their Live Lessons page.</p>
+          )}
         </div>
         <button onClick={startSession} disabled={loading || !title.trim()}
           className="w-full h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold rounded-xl disabled:opacity-60 transition-all">

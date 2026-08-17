@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
-import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, ShieldAlert, Globe, MessageSquare, Inbox, Activity, ScrollText, Package, UploadCloud, Database, MessageCircle, Siren } from 'lucide-react'
+import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, ShieldAlert, Globe, MessageSquare, Inbox, Activity, ScrollText, Package, UploadCloud, Database, MessageCircle, Siren, Award } from 'lucide-react'
 import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +23,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { icon: BarChart3,  label: "Overview",    href: "/super-admin/dashboard"      },
     { icon: School,     label: "Schools",     href: "/super-admin/schools"        },
     { icon: Users,      label: "Users",       href: "/super-admin/users"          },
+    { icon: Award,      label: "Senior Students", href: "/super-admin/senior-students" },
     { icon: CreditCard, label: "Billing",     href: "/super-admin/billing"        },
     { icon: Brain,        label: "AI Config",   href: "/super-admin/ai-config"      },
     { icon: FlaskConical, label: "AI Test Lab",  href: "/super-admin/ai-test"        },

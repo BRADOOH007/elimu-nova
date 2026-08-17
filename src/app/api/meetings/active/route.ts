@@ -47,7 +47,7 @@ export async function GET() {
   const allMeetings = await (prisma as any).meeting.findMany({
     where: {
       schoolId,
-      status: { in: ['SCHEDULED', 'LIVE'] },
+      status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
       date: { gte: today, lt: tomorrow },
     },
     orderBy: { date: 'asc' },

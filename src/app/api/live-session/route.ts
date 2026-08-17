@@ -67,19 +67,44 @@ export const GET = route({ skipSubscriptionCheck: true }, async (req, { user }) 
       return NextResponse.json({ sessions })
     }
 
+    // Senior students: see live sessions targeted at adult learners
+    if (role === 'SENIOR_STUDENT') {
+      const sessions = await prisma.schedule.findMany({
+        where: {
+          type: 'CLASS',
+          status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
+          audience: 'ADULT',
+        },
+        include: { teacher: { include: { user: true } }, seniorTeacher: { include: { user: true } }, class: true },
+        orderBy: { startTime: 'desc' },
+        take: 20,
+      })
+      return NextResponse.json({ sessions })
+    }
+
+    // Senior teachers: see their own adult live sessions
+    if (role === 'SENIOR_TEACHER') {
+      const seniorTeacher = await prisma.seniorTeacher.findUnique({ where: { userId: user.id } })
+      if (!seniorTeacher) return NextResponse.json({ sessions: [] })
+      const sessions = await prisma.schedule.findMany({
+        where: {
+          seniorTeacherId: seniorTeacher.id,
+          type: 'CLASS',
+          status: { in: ['SCHEDULED', 'IN_PROGRESS'] },
+        },
+        orderBy: { startTime: 'desc' },
+        take: 20,
+      })
+      return NextResponse.json({ sessions })
+    }
+
     return NextResponse.json({ sessions: [] })
 })
 
-// POST — teacher starts a new live session
-export const POST = route({ auth: 'TEACHER', skipSubscriptionCheck: true }, async (req, { user }) => {
+// POST — teacher or senior teacher starts a new live session
+export const POST = route({ auth: ['TEACHER', 'SENIOR_TEACHER'], skipSubscriptionCheck: true }, async (req, { user }) => {
 
-    const teacher = await prisma.teacher.findUnique({
-      where: { userId: user.id },
-      include: { classes: true },
-    })
-    if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
-
-    const { title, classId, subject, description, meetingLink } = await req.json()
+    const { title, classId, subject, description, meetingLink, audience } = await req.json()
 
     const now = new Date()
     const end = new Date(now.getTime() + 60 * 60 * 1000) // 1 hour default
@@ -92,11 +117,51 @@ export const POST = route({ auth: 'TEACHER', skipSubscriptionCheck: true }, asyn
       finalMeetingLink = `https://meet.jit.si/${slug}`
     }
 
+    // Senior teacher → always an adult (GED) session, no school/class
+    if (user.role === 'SENIOR_TEACHER') {
+      const seniorTeacher = await prisma.seniorTeacher.findUnique({ where: { userId: user.id } })
+      if (!seniorTeacher) return NextResponse.json({ error: 'Senior teacher not found' }, { status: 404 })
+
+      const liveSession = await prisma.schedule.create({
+        data: {
+          schoolId: null,
+          teacherId: null,
+          seniorTeacherId: seniorTeacher.id,
+          classId: null,
+          audience: 'ADULT',
+          title: title || 'Live Lesson',
+          description: description || '',
+          subject: subject || '',
+          startTime: now,
+          endTime: end,
+          type: 'CLASS',
+          status: 'IN_PROGRESS',
+          metadata: {
+            boardContent: '',
+            chat: [],
+            participants: [],
+            startedAt: now.toISOString(),
+            sessionCode,
+            meetingLink: finalMeetingLink,
+          },
+        },
+      })
+      return NextResponse.json({ session: liveSession })
+    }
+
+    const teacher = await prisma.teacher.findUnique({
+      where: { userId: user.id },
+      include: { classes: true },
+    })
+    if (!teacher) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 })
+
+    const isAdult = audience === 'ADULT'
     const liveSession = await prisma.schedule.create({
       data: {
-        schoolId:    teacher.schoolId || '',
+        schoolId:    isAdult ? null : (teacher.schoolId || null),
         teacherId:   teacher.id,
-        classId:     classId || teacher.classes[0]?.id || null,
+        classId:     isAdult ? null : (classId || teacher.classes[0]?.id || null),
+        audience:    isAdult ? 'ADULT' : 'K12',
         title:       title || 'Live Class',
         description: description || '',
         subject:     subject || '',

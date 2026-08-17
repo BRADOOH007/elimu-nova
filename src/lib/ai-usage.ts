@@ -65,7 +65,7 @@ export async function getUsageLimits(userId: string): Promise<AIUsageLimits> {
 
     // Find active subscription
     let subscription: any = null
-    if (user.role === 'TEACHER' || user.role === 'STUDENT' || user.role === 'PARENT') {
+    if (user.role === 'TEACHER' || user.role === 'STUDENT' || user.role === 'PARENT' || user.role === 'SENIOR_STUDENT' || user.role === 'SENIOR_TEACHER') {
       const teacher = await prisma.teacher.findUnique({ where: { userId }, select: { schoolId: true } }).catch(() => null)
       const student = await prisma.student.findUnique({ where: { userId }, select: { schoolId: true } }).catch(() => null)
       const schoolId = teacher?.schoolId || student?.schoolId

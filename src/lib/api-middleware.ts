@@ -10,8 +10,8 @@ import { prisma } from '@/lib/prisma'
 import { checkAIUsageAllowed, recordAIUsage } from '@/lib/ai-usage'
 import { recordApiLog } from '@/lib/incident-service'
 
-type Role = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
-type UserInfo = { id: string; email: string; role: string; name: string; avatar?: string | null; studentId?: string; teacherId?: string; schoolAdminId?: string }
+type Role = 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'SENIOR_STUDENT' | 'SENIOR_TEACHER'
+type UserInfo = { id: string; email: string; role: string; name: string; avatar?: string | null; studentId?: string; teacherId?: string; schoolAdminId?: string; seniorStudentId?: string; seniorTeacherId?: string }
 
 type Handler<T = unknown> = (
   request: NextRequest,
@@ -131,6 +131,12 @@ async function checkSubscriptionAccess(user: UserInfo, path: string): Promise<{ 
       } else {
         userId = user.id
       }
+    } else if (user.role === 'SENIOR_STUDENT') {
+      // Adult learners are always independent — resolve to their own subscription
+      userId = user.id
+    } else if (user.role === 'SENIOR_TEACHER') {
+      // Adult-education instructors are independent — resolve to their own subscription
+      userId = user.id
     } else {
       userId = user.id
     }

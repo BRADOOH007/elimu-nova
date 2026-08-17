@@ -69,6 +69,14 @@ export default withAuth(
       if (userRole !== "PARENT") return NextResponse.redirect(new URL("/unauthorized", req.url))
     }
 
+    if (pathname.startsWith("/senior-student")) {
+      if (userRole !== "SENIOR_STUDENT") return NextResponse.redirect(new URL("/unauthorized", req.url))
+    }
+
+    if (pathname.startsWith("/senior-teacher")) {
+      if (userRole !== "SENIOR_TEACHER") return NextResponse.redirect(new URL("/unauthorized", req.url))
+    }
+
     return NextResponse.next()
   },
   {
@@ -85,6 +93,8 @@ export const config = {
     "/teacher/:path*",
     "/student/:path*",
     "/parent/:path*",
+    "/senior-student/:path*",
+    "/senior-teacher/:path*",
     "/dashboard/:path*",
   ]
 }

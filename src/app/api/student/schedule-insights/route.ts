@@ -102,7 +102,7 @@ export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
     totalUpcoming: upcomingSchedules.length,
     classTypes: [...new Set(upcomingSchedules.map(s => s.type))],
     subjects: [...new Set(upcomingSchedules.map(s => s.subject).filter(Boolean))],
-    teachers: [...new Set(upcomingSchedules.map(s => s.teacher.user.firstName + ' ' + s.teacher.user.lastName))]
+    teachers: [...new Set(upcomingSchedules.map(s => s.teacher ? s.teacher.user.firstName + ' ' + s.teacher.user.lastName : 'Unassigned'))]
   }
 
   const insights = {
@@ -121,8 +121,8 @@ export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
       status: schedule.status,
       recurring: schedule.recurring,
       teacher: {
-        name: `${schedule.teacher.user.firstName} ${schedule.teacher.user.lastName}`,
-        email: schedule.teacher.user.email
+        name: schedule.teacher ? `${schedule.teacher.user.firstName} ${schedule.teacher.user.lastName}` : 'Unassigned',
+        email: schedule.teacher?.user.email || ''
       },
       class: schedule.class
     })),

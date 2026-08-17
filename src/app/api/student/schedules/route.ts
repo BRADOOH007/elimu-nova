@@ -119,8 +119,8 @@ export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
     metadata: schedule.metadata,
     class: schedule.class,
     teacher: {
-      name: `${schedule.teacher.user.firstName} ${schedule.teacher.user.lastName}`,
-      email: schedule.teacher.user.email
+      name: schedule.teacher ? `${schedule.teacher.user.firstName} ${schedule.teacher.user.lastName}` : 'Unassigned',
+      email: schedule.teacher?.user.email || ''
     },
     createdAt: schedule.createdAt.toISOString(),
     updatedAt: schedule.updatedAt.toISOString()

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const GET = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'PARENT'], skipSubscriptionCheck: true }, async (req, { user }) => {
+export const GET = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'PARENT', 'SENIOR_STUDENT'], skipSubscriptionCheck: true }, async (req, { user }) => {
   const { searchParams } = new URL(req.url)
   const userId = searchParams.get('userId')
 
@@ -39,7 +39,7 @@ export const GET = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_A
   return NextResponse.json(foundUser)
 })
 
-export const PATCH = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'PARENT'], skipSubscriptionCheck: true }, async (req, { user }) => {
+export const PATCH = route({ auth: ['TEACHER', 'STUDENT', 'SCHOOL_ADMIN', 'SUPER_ADMIN', 'PARENT', 'SENIOR_STUDENT'], skipSubscriptionCheck: true }, async (req, { user }) => {
   const body = await req.json()
   const { userId, firstName, lastName, avatar, phone, address } = body
 

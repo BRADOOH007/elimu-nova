@@ -34,7 +34,7 @@ echo 4. Verify environment variables are set
 echo.
 echo 📋 Required Vercel Environment Variables:
 echo • OPENROUTER_API_KEY=sk-or-v1-...
-echo • STABILITY_API_KEY=sk-zAdfNrf3e2wPDpSjSmXQSjk8JiF424F1ddNUYX2mdfjwvJBR
+echo • STABILITY_API_KEY=sk-YOUR_STABILITY_KEY
 echo • NEXTAUTH_SECRET=your-secret-key
 echo • DATABASE_URL=your-database-url
 echo • NEXTAUTH_URL=https://your-vercel-domain.vercel.app

@@ -15,7 +15,7 @@ async function uniqueUsername(first: string, last: string): Promise<string> {
   return u
 }
 
-const PUBLIC_SIGNUP_ROLES = ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT'] as const
+const PUBLIC_SIGNUP_ROLES = ['SCHOOL_ADMIN', 'TEACHER', 'STUDENT', 'PARENT', 'SENIOR_STUDENT', 'SENIOR_TEACHER'] as const
 
 export const POST = route({ auth: 'none' }, async (req) => {
   const body = await req.json()
@@ -104,12 +104,15 @@ export const POST = route({ auth: 'none' }, async (req) => {
       }
     })
 
-    // Store learning preferences for independent users
-    if (country || curriculum || grade) {
+    // Store learning preferences for independent users.
+    // Senior students default to the US General Education Diploma (GED).
+    const effectiveCurriculum = role === 'SENIOR_STUDENT' ? (curriculum || 'ged-hiset') : curriculum
+    const effectiveCountry = role === 'SENIOR_STUDENT' ? (country || 'US') : country
+    if (effectiveCountry || effectiveCurriculum || grade) {
       await (prisma as any).userPreference.upsert({
         where: { userId: user.id },
-        update: { country: country || '', curriculum: curriculum || '', language: 'en' },
-        create: { userId: user.id, country: country || '', curriculum: curriculum || '', language: 'en' },
+        update: { country: effectiveCountry || '', curriculum: effectiveCurriculum || '', language: 'en' },
+        create: { userId: user.id, country: effectiveCountry || '', curriculum: effectiveCurriculum || '', language: 'en' },
       })
     }
 
@@ -120,12 +123,30 @@ export const POST = route({ auth: 'none' }, async (req) => {
       await (prisma as any).student.upsert({ where: { userId: user.id }, update: { subjects: [] }, create: { userId: user.id, subjects: [] } })
     } else if (role === 'PARENT') {
       await (prisma as any).parent.upsert({ where: { userId: user.id }, update: {}, create: { userId: user.id } })
+    } else if (role === 'SENIOR_STUDENT') {
+      await (prisma as any).seniorStudent.upsert({
+        where: { userId: user.id },
+        update: { selectedGEDSubjects: [] },
+        create: { userId: user.id, selectedGEDSubjects: [], approvalStatus: 'PENDING' },
+      })
+    } else if (role === 'SENIOR_TEACHER') {
+      await (prisma as any).seniorTeacher.upsert({
+        where: { userId: user.id },
+        update: { specialties: [] },
+        create: { userId: user.id, specialties: [] },
+      })
     }
 
-    await autoCreateTrial(user.id, undefined)
+    // Senior students require Super Admin approval before gaining access —
+    // no free trial is auto-created for them.
+    if (role !== 'SENIOR_STUDENT') {
+      await autoCreateTrial(user.id, undefined)
+    }
 
     return NextResponse.json({
-      message: 'Account created successfully.'
+      message: role === 'SENIOR_STUDENT'
+        ? 'Account created successfully. Your access will be activated once an administrator approves it.'
+        : 'Account created successfully.'
     })
   }
 })
