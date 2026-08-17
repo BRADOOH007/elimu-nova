@@ -65,6 +65,8 @@ export default function AdminSignInPage() {
             TEACHER:      '/teacher/dashboard',
             STUDENT:      '/student/dashboard',
             PARENT:       '/parent/dashboard',
+            SENIOR_STUDENT: '/senior-student/dashboard',
+            SENIOR_TEACHER: '/senior-teacher/dashboard',
           }
           router.push(dashboardRoutes[session.user.role] || '/dashboard')
         } else {

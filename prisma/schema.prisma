@@ -25,6 +25,8 @@ enum UserRole {
   TEACHER
   STUDENT
   PARENT
+  SENIOR_STUDENT
+  SENIOR_TEACHER
 }
 
 enum SubscriptionStatus {
@@ -73,27 +75,29 @@ enum ReportStatus {
 // address field may contain encrypted initial password after '---' separator.
 
 model User {
-  id              String    @id @default(cuid())
-  username        String   @unique
-  email           String    @unique
-  password        String
-  firstName       String
-  lastName        String
-  role            UserRole
-  avatar          String?
-  phone           String?
-  address         String?
-  isActive        Boolean   @default(true)
-  loginAttempts   Int       @default(0)
-  lockedUntil     DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  username      String    @unique
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  role          UserRole
+  avatar        String?
+  phone         String?
+  address       String?
+  isActive      Boolean   @default(true)
+  loginAttempts Int       @default(0)
+  lockedUntil   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Relationships
   schoolAdmin             SchoolAdmin?
   teacher                 Teacher?
   student                 Student?
   parent                  Parent?
+  seniorStudent           SeniorStudent?
+  seniorTeacher           SeniorTeacher?
   superAdmin              SuperAdmin?
   notifications           Notification[]   @relation("NotificationUser")
   sentNotifications       Notification[]   @relation("NotificationSender")
@@ -143,13 +147,13 @@ model District {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  schools   School[]
+  schools School[]
 
   @@map("districts")
 }
 
 model School {
-  id         String    @id @default(cuid())
+  id         String   @id @default(cuid())
   name       String
   address    String
   phone      String?
@@ -157,28 +161,28 @@ model School {
   website    String?
   logo       String?
   districtId String?
-  isActive   Boolean   @default(true)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  district   District? @relation(fields: [districtId], references: [id])
+  district District? @relation(fields: [districtId], references: [id])
 
   // Relationships
-  schoolAdmin   SchoolAdmin?
-  teachers      Teacher[]
-  students      Student[]
-  classes       Class[]
-  subscriptions Subscription[]
-  packages      Package[]
-  reports       Report[]
-  securityLogs  SecurityLog[]        @relation("SecurityLogSchool")
-  activities    Activity[]
-  meetings      Meeting[]
-  schedules     Schedule[]
+  schoolAdmin       SchoolAdmin?
+  teachers          Teacher[]
+  students          Student[]
+  classes           Class[]
+  subscriptions     Subscription[]
+  packages          Package[]
+  reports           Report[]
+  securityLogs      SecurityLog[]        @relation("SecurityLogSchool")
+  activities        Activity[]
+  meetings          Meeting[]
+  schedules         Schedule[]
   academicCalendars AcademicCalendar[]
-  settings      SchoolSettings[]
-  schemesOfWork SchemeOfWork[]
-  sharedSchemes SharedSchemeOfWork[]
+  settings          SchoolSettings[]
+  schemesOfWork     SchemeOfWork[]
+  sharedSchemes     SharedSchemeOfWork[]
 
   // Curricula & Courses
   curriculums   Curriculum[]
@@ -213,18 +217,18 @@ model SchoolAdmin {
 // Soft-deletable via deletedAt.
 
 model Teacher {
-  id       String   @id @default(cuid())
-  userId   String   @unique
+  id       String  @id @default(cuid())
+  userId   String  @unique
   schoolId String?
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  school   School?  @relation(fields: [schoolId], references: [id])
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school   School? @relation(fields: [schoolId], references: [id])
 
   // Template text for AI-generated content
-  lessonPlanTemplate    String?
+  lessonPlanTemplate   String?
   schemeOfWorkTemplate String?
-  examTemplate          String?
-  assignmentTemplate    String?
-  curriculumTemplate    String?
+  examTemplate         String?
+  assignmentTemplate   String?
+  curriculumTemplate   String?
 
   // Relationships
   students           Student[]
@@ -273,10 +277,10 @@ model Teacher {
 //   TeacherSubjectAssignment → Class → Students
 
 model TeacherSubjectAssignment {
-  id        String  @id @default(cuid())
+  id        String @id @default(cuid())
   teacherId String
   classId   String
-  subject   String  // e.g. "Mathematics", "Integrated Science"
+  subject   String // e.g. "Mathematics", "Integrated Science"
 
   teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
@@ -290,7 +294,7 @@ model TeacherSubjectAssignment {
 // Soft-deletable via deletedAt.
 
 model Class {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
   subject     String
@@ -302,12 +306,12 @@ model Class {
   updatedAt   DateTime @updatedAt
 
   // Relationships
-  school          School?                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacher         Teacher                    @relation(fields: [teacherId], references: [id])
-  students        Student[]
-  assignments     Assignment[]
-  sharedAIContent SharedAIContentWithClass[]
-  schedules       Schedule[]
+  school                    School?                    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher                   Teacher                    @relation(fields: [teacherId], references: [id])
+  students                  Student[]
+  assignments               Assignment[]
+  sharedAIContent           SharedAIContentWithClass[]
+  schedules                 Schedule[]
   teacherSubjectAssignments TeacherSubjectAssignment[]
 
   // AI Generated Images
@@ -342,9 +346,9 @@ model Student {
   subjects String[] @default([])
 
   // Senior School pathway selection (Grade 10-12)
-  pathway             String?   // STEM | TVET | SOCIAL_SCIENCES | ARTS_AND_SPORTS
-  tvetSpecialization  String?   // e.g. "electrical_electronics"
-  stemTrack           String?   // e.g. "TECHNICAL_ENGINEERING"
+  pathway            String? // STEM | TVET | SOCIAL_SCIENCES | ARTS_AND_SPORTS
+  tvetSpecialization String? // e.g. "electrical_electronics"
+  stemTrack          String? // e.g. "TECHNICAL_ENGINEERING"
 
   // Relationships
   assignments       Assignment[]
@@ -372,10 +376,10 @@ model Student {
   examSessions ExamSession[]
 
   // Mastery & Spaced Repetition
-  unitMasteries    UnitMastery[]
-  reviewSchedules  ReviewSchedule[]
-  topicProgress    TopicProgress[]
-  courseChallenges CourseChallenge[]
+  unitMasteries      UnitMastery[]
+  reviewSchedules    ReviewSchedule[]
+  topicProgress      TopicProgress[]
+  courseChallenges   CourseChallenge[]
   writingSubmissions WritingSubmission[]
 
   // Persistent AI memory
@@ -392,9 +396,9 @@ model Student {
 // Parent schoolId was added via migration for meeting access scoping.
 
 model Parent {
-  id     String  @id @default(cuid())
-  userId String  @unique
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String  @id @default(cuid())
+  userId   String  @unique
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   schoolId String?
 
   school School? @relation(fields: [schoolId], references: [id])
@@ -424,6 +428,116 @@ model ParentStudent {
 
   @@unique([parentId, studentId])
   @@map("parent_students")
+}
+
+// ── Senior Student (Adult Learner / GED) ──────────────────────────
+// Parallel to Student, but for adult learners pursuing the US General
+// Education Diploma (GED). School-less by design — no schoolId/teacherId/
+// classId. Owns GED subject progress, supplemental course enrollments,
+// and any issued GED preparation certificates.
+
+model SeniorStudent {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  ageBracket          String? // e.g. "16-19" | "20-29" | "30-49" | "50+"
+  priorEducation      String? // e.g. "None" | "Some Primary" | "Some Secondary"
+  englishLevel        String? // e.g. "Beginner" | "Intermediate" | "Advanced" | "Native"
+  goals               String[] @default([])
+  selectedGEDSubjects String[] @default([]) // subset of the 4 GED subjects
+  isGEDReady          Boolean  @default(false)
+
+  // Account access — controlled by Super Admin. PENDING = awaiting approval,
+  // FREEMIUM = approved with free limited access, LOCKED = dashboard locked
+  // (student sees the subscribe screen).
+  approvalStatus String    @default("PENDING") // PENDING | FREEMIUM | LOCKED
+  approvedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relationships
+  gedSubjectProgress GEDSubjectProgress[]
+  courseEnrollments  SeniorCourseEnrollment[]
+  certificates       GEDCertificate[]
+
+  @@map("senior_students")
+}
+
+// Per-subject GED progress (4 subjects, 100–200 official score scale)
+model GEDSubjectProgress {
+  id                 String   @id @default(cuid())
+  seniorStudentId    String
+  subject            String // Mathematical Reasoning | Reasoning Through Language Arts | Science | Social Studies
+  completedLessons   Int      @default(0)
+  completedLessonIds String[] @default([])
+  totalLessons       Int      @default(0)
+  practiceScore      Int? // 100–200 scale from practice tests
+  mastery            Int      @default(0) // 0–100 derived mastery
+  isReady            Boolean  @default(false) // mastery >= GED-ready threshold
+  updatedAt          DateTime @updatedAt
+
+  seniorStudent SeniorStudent @relation(fields: [seniorStudentId], references: [id], onDelete: Cascade)
+
+  @@unique([seniorStudentId, subject])
+  @@map("ged_subject_progress")
+}
+
+// Enrollment of a senior student in a supplemental course (computer literacy,
+// AI literacy, etc.) — parallels CourseEnrollment but scoped to adults.
+model SeniorCourseEnrollment {
+  id                 String   @id @default(cuid())
+  seniorStudentId    String
+  courseId           String
+  enrolledAt         DateTime @default(now())
+  progress           Int      @default(0) // 0-100
+  completedLessonIds String[] @default([])
+  status             String   @default("ACTIVE") // ACTIVE, COMPLETED, DROPPED
+
+  seniorStudent SeniorStudent @relation(fields: [seniorStudentId], references: [id], onDelete: Cascade)
+  course        Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([seniorStudentId, courseId])
+  @@map("senior_course_enrollments")
+}
+
+// GED Preparation Certificate of Completion — issued when a senior student
+// reaches GED-ready across all four subjects. Documents mastery of the prep
+// program (not an official GED Testing Service credential).
+model GEDCertificate {
+  id              String   @id @default(cuid())
+  seniorStudentId String
+  certNumber      String   @unique
+  awardedAt       DateTime @default(now())
+  subjectScores   Json?
+  pdfUrl          String?
+  status          String   @default("ISSUED") // ISSUED, REVOKED
+  createdAt       DateTime @default(now())
+
+  seniorStudent SeniorStudent @relation(fields: [seniorStudentId], references: [id], onDelete: Cascade)
+
+  @@map("ged_certificates")
+}
+
+// ── Senior Teacher (Adult Education Instructor) ────────────────────
+// Separate from Teacher so adult-education instructors can be onboarded
+// independently. Conducts live lessons for senior (GED) students.
+
+model SeniorTeacher {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  specialties String[] @default([]) // e.g. "Mathematical Reasoning", "Computer Literacy"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  schedules Schedule[]
+
+  @@map("senior_teachers")
 }
 
 model Package {
@@ -610,22 +724,22 @@ model SecurityLog {
 }
 
 model SystemIncident {
-  id          String            @id @default(cuid())
-  severity    IncidentSeverity  @default(MEDIUM)
-  category    IncidentCategory  @default(OTHER)
-  status      IncidentStatus    @default(OPEN)
+  id          String           @id @default(cuid())
+  severity    IncidentSeverity @default(MEDIUM)
+  category    IncidentCategory @default(OTHER)
+  status      IncidentStatus   @default(OPEN)
   title       String
   description String
   source      String? // Route path, service name, or component
   dedupeKey   String // Stable key for deduping repeat occurrences of the same issue
-  count       Int               @default(1)
-  firstSeen   DateTime          @default(now())
-  lastSeen    DateTime          @default(now())
+  count       Int              @default(1)
+  firstSeen   DateTime         @default(now())
+  lastSeen    DateTime         @default(now())
   metadata    Json?
   resolvedBy  String?
   resolvedAt  DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@unique([dedupeKey, status])
   @@map("system_incidents")
@@ -820,11 +934,11 @@ model LessonPlan {
 }
 
 model SharedLessonPlan {
-  id           String   @id @default(cuid())
-  lessonPlanId String
-  studentId    String
-  teacherId    String
-  sharedAt     DateTime @default(now())
+  id            String    @id @default(cuid())
+  lessonPlanId  String
+  studentId     String
+  teacherId     String
+  sharedAt      DateTime  @default(now())
   isActive      Boolean   @default(true)
   loginAttempts Int       @default(0)
   lockedUntil   DateTime?
@@ -841,37 +955,37 @@ model SharedLessonPlan {
 }
 
 model Assignment {
-  id           String           @id @default(cuid())
-  title        String
-  description  String
-  content      String // JSON content
-  dueDate      DateTime
-  status       AssignmentStatus @default(PENDING)
-  teacherId    String
-  lessonPlanId String?
+  id            String           @id @default(cuid())
+  title         String
+  description   String
+  content       String // JSON content
+  dueDate       DateTime
+  status        AssignmentStatus @default(PENDING)
+  teacherId     String
+  lessonPlanId  String?
   // Timed exam fields
-  isTimed      Boolean          @default(false)
-  timeLimit    Int? // In minutes
-  startTime    DateTime? // When the exam becomes available
+  isTimed       Boolean          @default(false)
+  timeLimit     Int? // In minutes
+  startTime     DateTime? // When the exam becomes available
   // AI grading fields
-  rubricId     String? // Link to rubric for AI grading
-  aiGradeable  Boolean          @default(false)
-  answerKey    String? // JSON with correct answers for automatic grading
+  rubricId      String? // Link to rubric for AI grading
+  aiGradeable   Boolean          @default(false)
+  answerKey     String? // JSON with correct answers for automatic grading
   // Metadata
-  classId      String? // Which class this assignment is for
-  subject      String?
-  grade        String?
-  schoolId     String?
+  classId       String? // Which class this assignment is for
+  subject       String?
+  grade         String?
+  schoolId      String?
   // Video assignment fields
   videoUrl      String? // URL of the uploaded or linked video
   videoProvider String? // "youtube", "vimeo", or "upload"
   videoDuration Int? // Video duration in seconds
   // Exam bank + structured exam data
-  metadata     Json? // exam bank flags, term/type/savedAt
-  questions    Json? // structured question array
-  totalMarks   Int? // total possible marks
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  metadata      Json? // exam bank flags, term/type/savedAt
+  questions     Json? // structured question array
+  totalMarks    Int? // total possible marks
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   // Relationships
   teacher     Teacher      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
@@ -947,9 +1061,9 @@ model StudentProgress {
   updatedAt DateTime @updatedAt
 
   // Relationships
-  teacher       Teacher         @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  student       Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  skillMastery  SkillMastery[]
+  teacher      Teacher        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  student      Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  skillMastery SkillMastery[]
 
   @@index([studentId, subject])
   @@index([classId, subject])
@@ -962,16 +1076,16 @@ model StudentProgress {
 // concept rather than whole-topic modes.
 
 model SkillMastery {
-  id              String        @id @default(cuid())
+  id              String    @id @default(cuid())
   progressId      String
-  skillName       String      // e.g. "Photosynthesis equation", "Cell division phases"
-  skillCategory   String      // "knowledge", "comprehension", "application" (Bloom's)
-  masteryScore    Int         @default(0) // 0-100 per skill
-  timesCorrect    Int         @default(0)
-  timesTested     Int         @default(0)
+  skillName       String // e.g. "Photosynthesis equation", "Cell division phases"
+  skillCategory   String // "knowledge", "comprehension", "application" (Bloom's)
+  masteryScore    Int       @default(0) // 0-100 per skill
+  timesCorrect    Int       @default(0)
+  timesTested     Int       @default(0)
   lastPracticedAt DateTime?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   // Relationships
   progress StudentProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
@@ -1057,16 +1171,16 @@ model AITutorSession {
 model WellnessCheckIn {
   id        String   @id @default(cuid())
   studentId String
-  mood      Int      // 1-5
-  energy    Int      // 1-5
-  stress    Int      // 1-5
-  sleep     Int      // 1-5
-  social    Int      // 1-5
-  openness  Int      // 1-5
-  concerns  String?  // Optional open-ended response
-  score     Int      // 0-100 wellbeing score
+  mood      Int // 1-5
+  energy    Int // 1-5
+  stress    Int // 1-5
+  sleep     Int // 1-5
+  social    Int // 1-5
+  openness  Int // 1-5
+  concerns  String? // Optional open-ended response
+  score     Int // 0-100 wellbeing score
   flags     String[] // e.g. ["LOW_MOOD", "HIGH_STRESS"]
-  aiInsight String?  // AI-generated encouraging response
+  aiInsight String? // AI-generated encouraging response
   createdAt DateTime @default(now())
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
@@ -1207,36 +1321,36 @@ model SearchHistory {
 }
 
 model Meeting {
-  id          String        @id @default(cuid())
+  id          String   @id @default(cuid())
   schoolId    String
   createdBy   String // User ID who created the meeting
   title       String
   description String?
   date        DateTime
   time        String // Store time as string (HH:MM format)
-  duration    Int           @default(60) // Duration in minutes
+  duration    Int      @default(60) // Duration in minutes
   location    String?
 
   // Zoom auto-creation fields
   zoomMeetingId        String?
   zoomMeetingPassword  String?
   zoomJoinUrl          String?
-  zoomProvider         String   @default("manual") // "auto" (via API) or "manual"
+  zoomProvider         String  @default("manual") // "auto" (via API) or "manual"
   zoomMeetingRecording String? // JSON array of recording files from webhook
 
   // Meeting type and video conferencing
-  meetingType String   @default("IN_PERSON") // IN_PERSON or VIRTUAL
-  videoLink   String?  // Google Meet / Jitsi / Zoom / WebRTC room link
+  meetingType String  @default("IN_PERSON") // IN_PERSON or VIRTUAL
+  videoLink   String? // Google Meet / Jitsi / Zoom / WebRTC room link
 
   // Targeting — control who sees this meeting
   targetRoles   String[] @default([]) // TEACHER, STUDENT, PARENT — empty = everyone
   targetGrades  String[] @default([]) // e.g. ["Grade 4", "Grade 5"] — empty = all grades
   targetUserIds String[] @default([]) // Specific user IDs to invite — empty = based on roles/grades
 
-  status      MeetingStatus @default(SCHEDULED)
-  attendees   Json? // Store attendee information as JSON
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  status    MeetingStatus @default(SCHEDULED)
+  attendees Json? // Store attendee information as JSON
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   // Relationships
   school  School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
@@ -1247,16 +1361,16 @@ model Meeting {
 
 // ── TimetableSlot — parsed from uploaded Excel schedules ─────────
 model TimetableSlot {
-  id       String  @id @default(cuid())
-  schoolId String
-  grade    String  // e.g. "Grade 4"
-  stream   String? // e.g. "Blue", "East"
-  teacherId String?
-  dayOfWeek String // MON, TUE, WED, THU, FRI
-  startTime String // "08:10"
-  endTime   String // "08:50"
+  id          String  @id @default(cuid())
+  schoolId    String
+  grade       String // e.g. "Grade 4"
+  stream      String? // e.g. "Blue", "East"
+  teacherId   String?
+  dayOfWeek   String // MON, TUE, WED, THU, FRI
+  startTime   String // "08:10"
+  endTime     String // "08:50"
   subjectName String
-  room      String?
+  room        String?
 
   @@index([schoolId, grade, dayOfWeek])
   @@map("timetable_slots")
@@ -1271,7 +1385,7 @@ model AcademicCalendarEvent {
   startDate      DateTime
   endDate        DateTime
   targetAudience String   @default("ALL") // ALL, TEACHERS, STUDENTS, PARENTS, GRADE_SPECIFIC
-  targetGrade    String?  // e.g. "Grade 4", "Grade 4-6"
+  targetGrade    String? // e.g. "Grade 4", "Grade 4-6"
   description    String?
 
   @@index([schoolId, startDate])
@@ -1299,9 +1413,11 @@ model Activity {
 
 model Schedule {
   id               String         @id @default(cuid())
-  schoolId         String
-  teacherId        String
+  schoolId         String?
+  teacherId        String?
+  seniorTeacherId  String?
   classId          String?
+  audience         String         @default("K12") // K12 | ADULT (senior students)
   title            String
   description      String?
   subject          String?
@@ -1318,28 +1434,29 @@ model Schedule {
   updatedAt        DateTime       @updatedAt
 
   // Relationships
-  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
-  class   Class?  @relation(fields: [classId], references: [id], onDelete: SetNull)
+  school        School?        @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher       Teacher?       @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  seniorTeacher SeniorTeacher? @relation(fields: [seniorTeacherId], references: [id], onDelete: SetNull)
+  class         Class?         @relation(fields: [classId], references: [id], onDelete: SetNull)
 
   @@map("schedules")
 }
 
 model AcademicCalendar {
-  id          String   @id @default(cuid())
-  schoolId    String
-  year        Int      // e.g. 2026
-  term        Int      // 1, 2, or 3
-  termName    String   // e.g. "Term 1"
-  startDate   DateTime
-  endDate     DateTime
-  weeksCount  Int      // e.g. 13
-  breaks      Json?    // [{ name: "Midterm Break", start: "...", end: "..." }]
-  holidays    Json?    // [{ name: "National Holiday", date: "..." }]
-  isOpening   Boolean  @default(false) // Is this the opening term?
-  isCurrent   Boolean  @default(false) // Auto-calculated current term
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  schoolId   String
+  year       Int // e.g. 2026
+  term       Int // 1, 2, or 3
+  termName   String // e.g. "Term 1"
+  startDate  DateTime
+  endDate    DateTime
+  weeksCount Int // e.g. 13
+  breaks     Json? // [{ name: "Midterm Break", start: "...", end: "..." }]
+  holidays   Json? // [{ name: "National Holiday", date: "..." }]
+  isOpening  Boolean  @default(false) // Is this the opening term?
+  isCurrent  Boolean  @default(false) // Auto-calculated current term
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
@@ -1726,6 +1843,7 @@ enum CurriculumType {
   CAMBRIDGE
   IGCSE
   IB
+  GED // US General Education Diploma (high-school equivalency)
   OTHER
 }
 
@@ -1749,6 +1867,19 @@ enum CourseType {
   // Robotics & Engineering
   ROBOTICS_BASIC
   ROBOTICS_ADVANCED
+
+  // GED (US General Education Diploma) — high-school equivalency subjects
+  GED_MATH
+  GED_RLA
+  GED_SCIENCE
+  GED_SOCIAL_STUDIES
+
+  // Adult / Senior learner essential-skills programs
+  ADULT_COMPUTER_LITERACY
+  ADULT_AI_LITERACY
+  ADULT_FINANCIAL_LITERACY
+  ADULT_WORKPLACE_READINESS
+  ADULT_ESL
 
   // Other
   OTHER
@@ -1849,6 +1980,7 @@ model Course {
   assignments        CourseAssignment[]
   lessons            CourseLesson[]
   enrollments        CourseEnrollment[]
+  seniorEnrollments  SeniorCourseEnrollment[]
   teacherAssignments TeacherCourseAssignment[]
 
   @@index([type, gradeLevel])
@@ -1944,21 +2076,21 @@ model LearningArea {
 
 // Model for external database connections
 model ExternalDatabase {
-  id          String        @id @default(cuid())
+  id          String       @id @default(cuid())
   name        String
-  type        DatabaseType  @default(POSTGRESQL)
+  type        DatabaseType @default(POSTGRESQL)
   host        String
   port        Int
   database    String
   username    String
   password    String
-  ssl         Boolean       @default(true)
-  isActive    Boolean       @default(true)
+  ssl         Boolean      @default(true)
+  isActive    Boolean      @default(true)
   description String?
   config      Json? // Additional database-specific config
   lastTested  DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([type])
   @@map("external_databases")
@@ -1975,18 +2107,18 @@ enum DatabaseType {
 
 // Email/SMS service configuration
 model CommunicationService {
-  id           String             @id @default(cuid())
-  name         String
-  type         CommunicationType
-  provider     CommunicationProvider
-  apiKey       String?
-  apiSecret    String?
-  fromEmail    String?
-  fromPhone    String?
-  isActive     Boolean            @default(true)
-  config       Json?
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id        String                @id @default(cuid())
+  name      String
+  type      CommunicationType
+  provider  CommunicationProvider
+  apiKey    String?
+  apiSecret String?
+  fromEmail String?
+  fromPhone String?
+  isActive  Boolean               @default(true)
+  config    Json?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
 
   @@map("communication_services")
 }
@@ -2009,37 +2141,37 @@ enum CommunicationProvider {
 
 // Model for Redis configuration
 model RedisConfig {
-  id        String        @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
   host      String
   port      Int
   username  String?
   password  String?
-  db        Int           @default(0)
-  ssl       Boolean       @default(true)
-  isActive  Boolean       @default(true)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  db        Int      @default(0)
+  ssl       Boolean  @default(true)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("redis_configs")
 }
 
 // Teacher-generated notes from AI lesson notes feature
 model TeacherNote {
-  id          String   @id @default(cuid())
-  title       String
-  content     String // JSON content of the notes
-  subject     String
-  grade       String
-  topic       String?
-  noteType    String   @default("detailed") // summary, detailed, study-guide, quick-reference, interactive
-  teacherId   String
+  id           String   @id @default(cuid())
+  title        String
+  content      String // JSON content of the notes
+  subject      String
+  grade        String
+  topic        String?
+  noteType     String   @default("detailed") // summary, detailed, study-guide, quick-reference, interactive
+  teacherId    String
   lessonPlanId String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relationships
-  teacher    Teacher    @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  teacher    Teacher     @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   lessonPlan LessonPlan? @relation(fields: [lessonPlanId], references: [id], onDelete: SetNull)
 
   @@index([teacherId, createdAt])
@@ -2052,11 +2184,11 @@ model TeacherNote {
 model AdminAuditLog {
   id        String   @id @default(cuid())
   actorId   String
-  action    String   // CREATE, UPDATE, DELETE
-  entity    String   // "school", "user", "package", "billing", "system_setting"
+  action    String // CREATE, UPDATE, DELETE
+  entity    String // "school", "user", "package", "billing", "system_setting"
   entityId  String?
   summary   String
-  changes   String?  // JSON diff of before/after
+  changes   String? // JSON diff of before/after
   ipAddress String?
   createdAt DateTime @default(now())
 
@@ -2085,16 +2217,16 @@ enum ReentryStatus {
 }
 
 model ExamSession {
-  id             String         @id @default(cuid())
-  assignmentId   String
-  studentId      String
-  startedAt      DateTime       @default(now())
-  endedAt        DateTime?
-  timeLimitMins  Int?
-  reentryStatus  ReentryStatus  @default(NONE)
+  id            String        @id @default(cuid())
+  assignmentId  String
+  studentId     String
+  startedAt     DateTime      @default(now())
+  endedAt       DateTime?
+  timeLimitMins Int?
+  reentryStatus ReentryStatus @default(NONE)
 
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment Assignment          @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
   violations LockdownViolation[]
 
   @@unique([assignmentId, studentId])
@@ -2105,25 +2237,25 @@ model ExamSession {
 }
 
 model ContactMessage {
-  id         String   @id @default(cuid())
-  firstName  String
-  lastName   String
-  email      String
-  subject    String
-  message    String   @db.Text
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  subject   String
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   @@index([isRead, createdAt])
   @@map("contact_messages")
 }
 
 model LockdownViolation {
-  id          String        @id @default(cuid())
-  sessionId   String
-  type        ViolationType
-  details     String?
-  createdAt   DateTime      @default(now())
+  id        String        @id @default(cuid())
+  sessionId String
+  type      ViolationType
+  details   String?
+  createdAt DateTime      @default(now())
 
   session ExamSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
@@ -2146,23 +2278,23 @@ enum MasteryLevel {
 
 // Per-unit (strand) mastery tracking — Khan Academy style
 model UnitMastery {
-  id              String        @id @default(cuid())
-  studentId       String
-  strandId        String?       // links to CurriculumStrand.id if DB-backed
-  subject         String
-  unitName        String        // strand name or fallback topic name
-  grade           String?
-  masteryScore    Int           @default(0) // 0-100
-  masteryLevel    MasteryLevel  @default(NOT_STARTED)
-  totalQuestions  Int           @default(0)
-  correctAnswers  Int           @default(0)
-  studyTimeMins   Int           @default(0)
-  quizzesTaken    Int           @default(0)
+  id               String       @id @default(cuid())
+  studentId        String
+  strandId         String? // links to CurriculumStrand.id if DB-backed
+  subject          String
+  unitName         String // strand name or fallback topic name
+  grade            String?
+  masteryScore     Int          @default(0) // 0-100
+  masteryLevel     MasteryLevel @default(NOT_STARTED)
+  totalQuestions   Int          @default(0)
+  correctAnswers   Int          @default(0)
+  studyTimeMins    Int          @default(0)
+  quizzesTaken     Int          @default(0)
   lessonsCompleted Int          @default(0)
-  lastPracticedAt DateTime?
-  nextReviewAt    DateTime?     // for spaced repetition
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  lastPracticedAt  DateTime?
+  nextReviewAt     DateTime? // for spaced repetition
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -2174,12 +2306,12 @@ model UnitMastery {
 
 // Skill prerequisite graph for knowledge map
 model SkillPrerequisite {
-  id               String  @id @default(cuid())
+  id               String @id @default(cuid())
   skillName        String
   subject          String
-  prerequisiteName String  // must learn this before the skill
-  prerequisiteType String  @default("required") // "required", "recommended"
-  order            Int     @default(0)
+  prerequisiteName String // must learn this before the skill
+  prerequisiteType String @default("required") // "required", "recommended"
+  order            Int    @default(0)
 
   @@unique([skillName, subject, prerequisiteName])
   @@index([subject])
@@ -2188,20 +2320,20 @@ model SkillPrerequisite {
 
 // Spaced repetition review schedule
 model ReviewSchedule {
-  id              String    @id @default(cuid())
-  studentId       String
-  subject         String
-  topic           String
-  unitName        String?
-  easeFactor      Float     @default(2.5)   // SM-2 ease factor
-  intervalDays    Int       @default(0)     // current interval
-  repetitions     Int       @default(0)     // successful repetitions
-  nextReviewAt    DateTime                // when to review
-  lastReviewAt    DateTime?
-  quality         Int       @default(0)     // last review quality (0-5)
-  totalReviews    Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  studentId    String
+  subject      String
+  topic        String
+  unitName     String?
+  easeFactor   Float     @default(2.5) // SM-2 ease factor
+  intervalDays Int       @default(0) // current interval
+  repetitions  Int       @default(0) // successful repetitions
+  nextReviewAt DateTime // when to review
+  lastReviewAt DateTime?
+  quality      Int       @default(0) // last review quality (0-5)
+  totalReviews Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -2219,7 +2351,7 @@ model StudentMemory {
   id        String   @id @default(cuid())
   studentId String   @unique
   summary   String   @default("") // AI-written short summary of the learner
-  facts     Json?                 // Array<{ id, fact, category, source, createdAt, lastSeenAt }>
+  facts     Json? // Array<{ id, fact, category, source, createdAt, lastSeenAt }>
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -2233,19 +2365,19 @@ model StudentMemory {
 // tracks where a student left off so they can resume a lesson
 // they didn't finish, and which topics are complete/next.
 model TopicProgress {
-  id          String   @id @default(cuid())
-  studentId   String
-  subject     String
-  grade       String   @default("Grade 4")
-  strandName  String   // parent strand (e.g. "Numbers")
-  topicName   String   // substrand / topic (e.g. "Whole Numbers")
-  order       Int      @default(0) // position within the subject path
-  status      ProgressStatus @default(NOT_STARTED)
-  lastContent String?  // cached generated lesson markdown for instant resume
-  lastPosition Int     @default(0) // approximate scroll/lesson position (0-100)
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String         @id @default(cuid())
+  studentId    String
+  subject      String
+  grade        String         @default("Grade 4")
+  strandName   String // parent strand (e.g. "Numbers")
+  topicName    String // substrand / topic (e.g. "Whole Numbers")
+  order        Int            @default(0) // position within the subject path
+  status       ProgressStatus @default(NOT_STARTED)
+  lastContent  String? // cached generated lesson markdown for instant resume
+  lastPosition Int            @default(0) // approximate scroll/lesson position (0-100)
+  completedAt  DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -2256,20 +2388,20 @@ model TopicProgress {
 
 // Course challenge — comprehensive end-of-unit test
 model CourseChallenge {
-  id              String    @id @default(cuid())
-  studentId       String
-  subject         String
-  unitName        String
-  grade           String?
-  totalQuestions  Int       @default(0)
-  correctAnswers  Int       @default(0)
-  score           Int       @default(0) // 0-100
-  timeTakenMins   Int       @default(0)
-  passed          Boolean   @default(false) // true if score >= 70
-  questions       Json?     // the questions that were asked
-  answers         Json?     // student answers
-  startedAt       DateTime  @default(now())
-  completedAt     DateTime?
+  id             String    @id @default(cuid())
+  studentId      String
+  subject        String
+  unitName       String
+  grade          String?
+  totalQuestions Int       @default(0)
+  correctAnswers Int       @default(0)
+  score          Int       @default(0) // 0-100
+  timeTakenMins  Int       @default(0)
+  passed         Boolean   @default(false) // true if score >= 70
+  questions      Json? // the questions that were asked
+  answers        Json? // student answers
+  startedAt      DateTime  @default(now())
+  completedAt    DateTime?
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -2280,19 +2412,19 @@ model CourseChallenge {
 
 // Writing coach submissions
 model WritingSubmission {
-  id              String    @id @default(cuid())
-  studentId       String
-  subject         String
-  topic           String
-  title           String?
-  content         String    @db.Text
-  wordCount       Int       @default(0)
-  feedback        Json?     // { grammar: {...}, structure: {...}, content: {...}, overall: string }
-  score           Int?      // 0-100
-  revisionCount   Int       @default(0)
-  status          String    @default("draft") // "draft", "submitted", "reviewed"
-  startedAt       DateTime  @default(now())
-  completedAt     DateTime?
+  id            String    @id @default(cuid())
+  studentId     String
+  subject       String
+  topic         String
+  title         String?
+  content       String    @db.Text
+  wordCount     Int       @default(0)
+  feedback      Json? // { grammar: {...}, structure: {...}, content: {...}, overall: string }
+  score         Int? // 0-100
+  revisionCount Int       @default(0)
+  status        String    @default("draft") // "draft", "submitted", "reviewed"
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -2304,14 +2436,14 @@ model WritingSubmission {
 model DocumentLibrary {
   id           String   @id @default(cuid())
   title        String
-  documentType String   // "scheme_of_work" | "lesson_plan" | "exam" | "curriculum_guide" | "resource"
+  documentType String // "scheme_of_work" | "lesson_plan" | "exam" | "curriculum_guide" | "resource"
   grade        String
   subject      String
   term         Int?
   strandName   String?
   content      String   @db.Text // Full extracted text
-  metadata     Json?    // { strandCount, substrandCount, outcomeCount, weekCount, formattingStyle, sections }
-  sourceId     String?  // Original uploaded file ID
+  metadata     Json? // { strandCount, substrandCount, outcomeCount, weekCount, formattingStyle, sections }
+  sourceId     String? // Original uploaded file ID
   teacherId    String?
   isProcessed  Boolean  @default(true)
   uploadedAt   DateTime @default(now())

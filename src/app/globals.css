@@ -256,6 +256,16 @@ button, a {
   }
 }
 
+/* Dashboard splash — bulletproof auto-hide. Runs as a CSS fallback so the
+   loading overlay always fades out and becomes non-interactive even if the
+   React timers fail (e.g. hydration/tab-background edge cases). */
+@keyframes splash-auto-hide {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
 @keyframes ai-brain-pulse {
   0%, 100% {
     transform: scale(1);

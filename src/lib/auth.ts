@@ -116,6 +116,8 @@ export const authOptions: NextAuthOptions = {
           SCHOOL_ADMIN: { schoolAdmin: { include: { school: true } } },
           SUPER_ADMIN:  { superAdmin: true },
           PARENT:       { parent: true },
+          SENIOR_STUDENT: { seniorStudent: true },
+          SENIOR_TEACHER: { seniorTeacher: true },
         }
         const fullUser = await prisma.user.findUnique({
           where: { id: user.id },
@@ -231,6 +233,8 @@ export const authOptions: NextAuthOptions = {
           student: fullUser.student,
           superAdmin: fullUser.superAdmin,
           parent: fullUser.parent,
+          seniorStudent: fullUser.seniorStudent,
+          seniorTeacher: fullUser.seniorTeacher,
         } as any
       },
     }),
@@ -261,6 +265,8 @@ export const authOptions: NextAuthOptions = {
           })
           if (firstLink?.student.schoolId) token.schoolId = firstLink.student.schoolId
         }
+        if (user.seniorStudent) token.seniorStudentId = user.seniorStudent.id
+        if (user.seniorTeacher) token.seniorTeacherId = user.seniorTeacher.id
       }
       return token
     },
@@ -274,6 +280,8 @@ export const authOptions: NextAuthOptions = {
         session.user.superAdminId = token.superAdminId as string
         session.user.parentId = token.parentId as string
         session.user.schoolId = token.schoolId as string
+        session.user.seniorStudentId = token.seniorStudentId as string
+        session.user.seniorTeacherId = token.seniorTeacherId as string
       }
       return session
     },

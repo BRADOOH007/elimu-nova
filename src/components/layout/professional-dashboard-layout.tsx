@@ -52,7 +52,7 @@ function TourCompletionMonitor({ userRole }: { userRole: string }) {
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  userRole: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT'
+  userRole: 'SUPER_ADMIN' | 'SCHOOL_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT' | 'SENIOR_STUDENT' | 'SENIOR_TEACHER'
   userName: string
   userEmail: string
   schoolName?: string
@@ -191,6 +191,8 @@ export function ProfessionalDashboardLayout({
       case 'TEACHER':      return 'Teacher'
       case 'STUDENT':      return 'Student'
       case 'PARENT':       return 'Parent'
+      case 'SENIOR_STUDENT': return 'Senior Student'
+      case 'SENIOR_TEACHER': return 'Senior Teacher'
       default:             return role
     }
   }

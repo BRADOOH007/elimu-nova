@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-type Role = 'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'SUPER_ADMIN' | 'PARENT'
+type Role = 'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'SUPER_ADMIN' | 'PARENT' | 'SENIOR_STUDENT' | 'SENIOR_TEACHER'
 
 interface RoleConfig {
   accent: string
@@ -64,6 +64,28 @@ const ROLE_CONFIG: Record<Role, RoleConfig> = {
       'Message teachers directly from your dashboard',
     ],
     accentHex: '#f43f5e',
+  },
+  SENIOR_STUDENT: {
+    accent: 'from-teal-500 to-emerald-500',
+    badge: 'GED PORTAL',
+    subline: 'Your General Education Diploma prep, courses and progress are loading.',
+    tips: [
+      'Master the four GED subjects at your own pace',
+      'Earn your GED preparation certificate of completion',
+      'Build computer and AI literacy for today\'s jobs',
+    ],
+    accentHex: '#0d9488',
+  },
+  SENIOR_TEACHER: {
+    accent: 'from-emerald-500 to-lime-500',
+    badge: 'ADULT EDUCATION',
+    subline: 'Your teaching room and adult-learner live lessons are loading.',
+    tips: [
+      'Start live lessons for adult GED learners in one click',
+      'Teach computer and AI literacy to adults',
+      'Track your learners\' progress toward their diploma',
+    ],
+    accentHex: '#059669',
   },
 }
 
@@ -148,6 +170,9 @@ export function DashboardSplash({ role, userName, visible }: Props) {
         opacity,
         // CRITICAL: once fading out, disable ALL pointer events immediately
         pointerEvents: opacity < 1 ? 'none' : 'auto',
+        // Bulletproof CSS fallback: force-fade + hide after ~2.8s even if JS
+        // timers never fire, so the overlay can never permanently block clicks.
+        animation: 'splash-auto-hide 0.6s ease-out 2.2s forwards',
         transition: 'opacity 0.5s ease-out',
         background: 'linear-gradient(135deg, #060918 0%, #0d1230 40%, #0a0e1f 100%)',
         display: 'flex',

@@ -26,6 +26,8 @@ const ROLE_PERKS: Record<string, string[]> = {
   TEACHER:      ['Generate lesson plans in seconds', 'Auto-mark assignments', 'Monitor student performance'],
   SCHOOL_ADMIN: ['Full school dashboard', 'Manage teachers & students', 'Analytics & billing in one place'],
   PARENT:       ['Follow your child\'s progress daily', 'Get AI-powered alerts on performance', 'Stay connected without needing a school invite'],
+  SENIOR_STUDENT: ['US General Education Diploma (GED) prep', 'Computer & AI literacy courses', 'Earn a GED preparation certificate'],
+  SENIOR_TEACHER: ['Teach adult learners live lessons', 'GED & essential-skills curriculum', 'Instructor dashboard for seniors'],
 }
 
 export default function SignUpPage() {
@@ -35,7 +37,7 @@ export default function SignUpPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'STUDENT' as 'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'PARENT',
+    role: 'STUDENT' as 'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'PARENT' | 'SENIOR_STUDENT' | 'SENIOR_TEACHER',
     schoolName: '',
     schoolAddress: '',
     schoolPhone: '',
@@ -145,7 +147,7 @@ export default function SignUpPage() {
           {/* Role-specific perks — dynamically updates based on selected role */}
           <div className="mb-3 animate-signup-fade-up signup-stagger-5" key={formData.role}>
             <p className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
-              {formData.role === 'STUDENT' ? 'For Students' : formData.role === 'TEACHER' ? 'For Teachers' : formData.role === 'PARENT' ? 'For Parents' : 'For Schools'}
+              {formData.role === 'STUDENT' ? 'For Students' : formData.role === 'TEACHER' ? 'For Teachers' : formData.role === 'PARENT' ? 'For Parents' : formData.role === 'SENIOR_STUDENT' ? 'For Adult Learners' : formData.role === 'SENIOR_TEACHER' ? 'For Adult Educators' : 'For Schools'}
             </p>
             <ul className="space-y-3">
               {perks.map((p, i) => (
@@ -260,11 +262,18 @@ export default function SignUpPage() {
                     { value: 'TEACHER',      label: 'Teacher',  icon: Brain         },
                     { value: 'SCHOOL_ADMIN', label: 'School',   icon: Users         },
                     { value: 'PARENT',       label: 'Parent',   icon: Heart         },
+                    { value: 'SENIOR_STUDENT', label: 'Senior', icon: Award         },
+                    { value: 'SENIOR_TEACHER', label: 'Instructor', icon: BookOpen  },
                   ] as const).map(({ value, label, icon: Icon }) => (
                     <button
                       key={value}
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, role: value }))}
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        role: value,
+                        // Senior students default to the US General Education Diploma (GED)
+                        ...(value === 'SENIOR_STUDENT' ? { country: 'US', curriculum: 'ged-hiset' } : {}),
+                      }))}
                       className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
                         formData.role === value
                           ? 'bg-white text-gray-900 shadow-sm'   // active
@@ -309,7 +318,7 @@ export default function SignUpPage() {
                       </select>
                     </div>
                   </div>
-                  {formData.role !== 'PARENT' && (
+                  {formData.role !== 'PARENT' && formData.role !== 'SENIOR_STUDENT' && formData.role !== 'SENIOR_TEACHER' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Grade / Year</label>
                     <div className="relative">
@@ -439,6 +448,12 @@ export default function SignUpPage() {
               {formData.role === 'PARENT' && (
                 <p className="text-xs text-gray-500 bg-purple-50 border border-purple-100 rounded-lg px-4 py-3">
                   <span className="font-semibold text-purple-700">Independent parent account.</span> You can link your children and connect to their school from your dashboard after signing up — no school invite needed.
+                </p>
+              )}
+
+              {formData.role === 'SENIOR_STUDENT' && (
+                <p className="text-xs text-gray-500 bg-teal-50 border border-teal-100 rounded-lg px-4 py-3">
+                  <span className="font-semibold text-teal-700">Adult learner account.</span> Prepare for the US General Education Diploma (GED) and build computer &amp; AI literacy at your own pace — no prior schooling required.
                 </p>
               )}
             </form>

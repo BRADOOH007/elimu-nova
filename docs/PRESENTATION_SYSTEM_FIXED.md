@@ -14,7 +14,7 @@
 
 ### 3. **Image Generation Working Perfectly**
 - **Problem**: Stability AI API had insufficient balance
-- **Solution**: Updated with new API key `sk-zAdfNrf3e2wPDpSjSmXQSjk8JiF424F1ddNUYX2mdfjwvJBR`
+- **Solution**: Updated with a new Stability AI API key (value redacted — rotate any previously leaked keys)
 - **Result**: 100% success rate generating educational images
 
 ## 🎯 System Performance

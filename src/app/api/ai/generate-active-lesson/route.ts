@@ -97,8 +97,13 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
     })
   }
 
-  const prompt = `Create a study lesson for a ${gradeStr} student learning ${subject} about "${topic}".
+  const prompt = `Create a study lesson for a ${gradeStr} ${curriculum === 'ged-hiset' || grade === 'Adult' ? 'adult GED learner' : 'student'} learning ${subject} about "${topic}".
 ${curCtx}
+${curriculum === 'ged-hiset' || grade === 'Adult' ? `This is an ADULT LEARNER preparing for the GED high-school equivalency exam. Make the lesson genuinely beneficial for an adult:
+- Write in plain, respectful, jargon-free language; introduce technical terms only after explaining the idea.
+- Include at least one step-by-step worked example inside the "content" markdown.
+- Connect each concept to real adult life — work, money, home, or civic life.
+- End the "content" with a "**Key Takeaways**" bullet list and a "**GED Tip**" paragraph explaining how this topic commonly appears on the GED test (Mathematical Reasoning, Reasoning Through Language Arts, Science, or Social Studies).` : ''}
 You MUST return valid JSON. Escape all double quotes inside strings with backslash.
 
 {
