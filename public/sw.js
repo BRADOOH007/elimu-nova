@@ -1,5 +1,5 @@
 /* eslint-disable */
-const CACHE_NAME = 'elimunova-v2'
+const CACHE_NAME = 'elimunova-v3'
 const STATIC_ASSETS = [
   '/',
   '/pricing',
@@ -12,30 +12,20 @@ const STATIC_ASSETS = [
   '/manifest.json',
 ]
 
-const CACHE_STRATEGIES = {
-  static: 'cache-first',
-  api: 'network-first',
-  images: 'cache-first',
-}
-
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS)
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
   )
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+    caches.keys().then((cacheNames) =>
+      Promise.all(
+        cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))
       )
-    })
+    )
   )
   self.clients.claim()
 })
@@ -43,7 +33,6 @@ self.addEventListener('activate', (event) => {
 async function cacheFirst(request) {
   const cached = await caches.match(request)
   if (cached) return cached
-
   try {
     const response = await fetch(request)
     if (response.ok) {
@@ -70,17 +59,38 @@ async function networkFirst(request) {
   }
 }
 
+// Serve cached copy instantly (offline + low-data friendly), then refresh in
+// the background. Used for read-only GET API calls.
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE_NAME)
+  const cached = await cache.match(request)
+  const network = fetch(request)
+    .then((response) => {
+      if (response && response.ok) cache.put(request, response.clone())
+      return response
+    })
+    .catch(() => null)
+  return cached || (await network)
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
+  // Auth/session endpoints must always hit the network.
   if (url.pathname.startsWith('/api/auth/')) {
     event.respondWith(fetch(request))
     return
   }
 
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request))
+    // Read-only GET: serve from cache first, refresh in background.
+    // Mutations (POST/PUT/PATCH/DELETE): never cached — always network.
+    if (request.method === 'GET') {
+      event.respondWith(staleWhileRevalidate(request))
+    } else {
+      event.respondWith(fetch(request))
+    }
     return
   }
 
@@ -98,7 +108,5 @@ self.addEventListener('fetch', (event) => {
 })
 
 self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
-    self.skipWaiting()
-  }
+  if (event.data === 'skipWaiting') self.skipWaiting()
 })

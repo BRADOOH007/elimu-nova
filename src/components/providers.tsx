@@ -6,6 +6,7 @@ import React, { ReactNode, useEffect } from 'react'
 import { Toaster } from 'sonner'
 import { SWRegister } from '@/components/sw-register'
 import { AITutorProvider } from '@/components/ai-tutor-provider'
+import { DataSaverProvider } from '@/components/providers/data-saver-provider'
 
 const swrConfig = {
   staleTime: 1000 * 60 * 5,
@@ -117,7 +118,9 @@ export function Providers({ children }: ProvidersProps) {
     >
       <ClientErrorBoundary>
         <SWRConfig value={swrConfig}>
-          <AITutorProvider>{children}</AITutorProvider>
+          <DataSaverProvider>
+            <AITutorProvider>{children}</AITutorProvider>
+          </DataSaverProvider>
         </SWRConfig>
       </ClientErrorBoundary>
       <Toaster

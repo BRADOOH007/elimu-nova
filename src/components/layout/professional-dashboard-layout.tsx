@@ -11,7 +11,8 @@ import {
   X,
   User,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  Leaf
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -27,6 +28,7 @@ import { SkipToContent } from "@/components/ui/skip-to-content"
 import ActiveMeetingBanner from "@/components/layout/active-meeting-banner"
 import { useUnreadMessages } from '@/hooks/use-unread-messages'
 import { useSubscription } from '@/hooks/use-subscription'
+import { useDataSaver } from '@/components/providers/data-saver-provider'
 import { TourProvider } from '@/components/tour/TourProvider'
 import { TourOverlay } from '@/components/tour/TourOverlay'
 import { TourTooltip } from '@/components/tour/TourTooltip'
@@ -75,6 +77,7 @@ export function ProfessionalDashboardLayout({
 }: DashboardLayoutProps) {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const { dataSaver, setDataSaver, online } = useDataSaver()
 
   const [sidebarOpen,    setSidebarOpen]    = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -168,10 +171,10 @@ export function ProfessionalDashboardLayout({
     // Fetch immediately on mount
     fetchBroadcasts()
 
-    // Poll every 60 seconds for new broadcasts
-    const iv = setInterval(fetchBroadcasts, 60000)
+    // Poll every 60s normally; every 5min in data-saver mode to reduce data.
+    const iv = setInterval(fetchBroadcasts, dataSaver ? 300000 : 60000)
     return () => clearInterval(iv)
-  }, [session?.user?.id])
+  }, [session?.user?.id, dataSaver])
 
   const dismissBroadcast = (id: string) => {
     const next = new Set([...dismissedBroadcasts, id])
@@ -313,6 +316,15 @@ export function ProfessionalDashboardLayout({
                 {daysLeft}d left
               </span>
             )}
+
+            <button
+              onClick={() => setDataSaver(!dataSaver)}
+              className={`p-1.5 sm:p-2 rounded-lg transition-colors ${dataSaver ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-slate-100 text-slate-400'}`}
+              aria-label="Toggle data saver mode"
+              title={dataSaver ? 'Data saver on — tap to turn off' : 'Data saver — reduce data usage'}
+            >
+              <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
 
             <button
               onClick={() => setSettingsOpen(true)}
