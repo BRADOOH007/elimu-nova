@@ -3,11 +3,12 @@
 import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAITutor } from '@/components/ai-tutor-provider'
 import { GEDLessonView } from '@/components/senior-student/ged-lesson-view'
+import { CourseView } from '@/components/senior-student/course-view'
 import {
   GraduationCap, Laptop, Brain, TrendingUp, Calculator, BookOpen, FlaskConical, Globe,
   ChevronDown, ChevronRight, CheckCircle2, Circle, Loader2, ArrowLeft, MessageSquare, Play,
@@ -43,11 +44,13 @@ const fetcher = (url: string) => fetch(url).then((r) => (r.ok ? r.json() : null)
 
 function LearnContent() {
   const params = useSearchParams()
+  const router = useRouter()
   const tab = params.get('tab') === 'courses' ? 'courses' : 'ged'
   const selectedSubject = params.get('subject')
+  const selectedCourse = params.get('course')
   const { openAITutor } = useAITutor()
 
-  const { data, mutate } = useSWR<{ subjects: Subject[]; courses: Course[] }>(
+  const { data } = useSWR<{ subjects: Subject[]; courses: Course[] }>(
     '/api/senior-student/learn',
     fetcher,
   )
@@ -68,17 +71,6 @@ function LearnContent() {
     setBusy(null)
   }
 
-  const enroll = async (courseId: string) => {
-    setBusy(courseId)
-    await fetch('/api/senior-student/enroll', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId }),
-    })
-    await mutate()
-    setBusy(null)
-  }
-
   if (!data) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -89,6 +81,9 @@ function LearnContent() {
 
   // ── COURSES TAB ──
   if (tab === 'courses') {
+    if (selectedCourse) {
+      return <CourseView courseId={selectedCourse} onBack={() => router.push('/senior-student/learn?tab=courses')} />
+    }
     return (
       <div className="max-w-5xl mx-auto p-4 md:p-6 space-y-5">
         <div className="flex items-center gap-3">
@@ -104,47 +99,44 @@ function LearnContent() {
           {data.courses.map((c) => {
             const Icon = COURSE_ICONS[c.type] ?? Laptop
             return (
-              <Card key={c.id} className="border-0 shadow-sm">
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                      <Icon className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-800">{c.title}</h3>
-                      <p className="text-xs text-slate-500">{c.lessonCount} lessons · {c.duration ?? 'self-paced'}</p>
-                    </div>
-                  </div>
-                  <p className="text-sm text-slate-600 mb-3">{c.description}</p>
-                  <ul className="space-y-1 mb-4">
-                    {(c.objectives ?? []).slice(0, 3).map((o) => (
-                      <li key={o} className="text-xs text-slate-500 flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {o}
-                      </li>
-                    ))}
-                  </ul>
-                  {c.enrolled ? (
-                    <div>
-                      <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-                        <span>{c.status === 'COMPLETED' ? 'Completed' : 'In progress'}</span>
-                        <span className="font-semibold">{c.progress}%</span>
+              <Link key={c.id} href={`/senior-student/learn?tab=courses&course=${c.id}`}>
+                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow h-full">
+                  <CardContent className="p-5">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
+                        <Icon className="h-5 w-5 text-indigo-600" />
                       </div>
-                      <div className="bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${c.progress}%` }} />
+                      <div>
+                        <h3 className="font-semibold text-slate-800">{c.title}</h3>
+                        <p className="text-xs text-slate-500">{c.lessonCount} lessons · {c.duration ?? 'self-paced'}</p>
                       </div>
                     </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => enroll(c.id)}
-                      disabled={busy === c.id}
-                    >
-                      {busy === c.id ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
-                      Enroll
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+                    <p className="text-sm text-slate-600 mb-3">{c.description}</p>
+                    <ul className="space-y-1 mb-4">
+                      {(c.objectives ?? []).slice(0, 3).map((o) => (
+                        <li key={o} className="text-xs text-slate-500 flex items-center gap-1.5">
+                          <CheckCircle2 className="h-3 w-3 text-emerald-500" /> {o}
+                        </li>
+                      ))}
+                    </ul>
+                    {c.enrolled ? (
+                      <div>
+                        <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+                          <span>{c.status === 'COMPLETED' ? 'Completed' : 'In progress'}</span>
+                          <span className="font-semibold">{c.progress}%</span>
+                        </div>
+                        <div className="bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${c.progress}%` }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600">
+                        Enroll & view course <ArrowLeft className="h-3 w-3 rotate-180" />
+                      </span>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
             )
           })}
         </div>

@@ -376,7 +376,7 @@ interface CourseDef {
   difficulty: DifficultyLevel
   duration: string
   objectives: string[]
-  lessons: { title: string; description: string; duration?: number }[]
+  lessons: { title: string; description: string; content: string; duration?: number }[]
 }
 
 const ADULT_COURSES: CourseDef[] = [
@@ -388,11 +388,96 @@ const ADULT_COURSES: CourseDef[] = [
     duration: '6 weeks',
     objectives: ['Operate a computer and manage files', 'Browse the internet safely', 'Send professional emails', 'Create documents and spreadsheets'],
     lessons: [
-      { title: 'Computer Basics & Files', description: 'Parts of a computer, operating systems, and file management.', duration: 25 },
-      { title: 'The Internet & Web Browsers', description: 'Searching, bookmarks, and understanding URLs.', duration: 25 },
-      { title: 'Email & Online Communication', description: 'Writing, sending, attaching, and staying safe from scams.', duration: 25 },
-      { title: 'Word Processing & Spreadsheets', description: 'Create documents and basic spreadsheets for work.', duration: 30 },
-      { title: 'Online Safety & Privacy', description: 'Passwords, phishing, and protecting your identity.', duration: 25 },
+      {
+        title: 'Computer Basics & Files',
+        description: 'Parts of a computer, operating systems, and file management.',
+        duration: 25,
+        content: `## The parts of a computer
+A computer has four main parts: the **monitor** (screen), the **system unit** or laptop body (the brain), the **keyboard** (for typing), and the **mouse or touchpad** (for pointing and clicking). You do not need to know what is inside to use one — but knowing these parts helps you ask for help.
+
+## What is an operating system?
+The operating system is the software that runs the computer. Windows, macOS, and Android are examples. It is what you see when the computer starts — the desktop with icons and menus.
+
+## Files and folders
+Everything you save is a **file** (a document, photo, or video). Files live inside **folders** to keep them organised. To save a file, choose **File > Save**, give it a clear name, and pick a folder you will remember.
+
+### Key takeaways
+- The monitor, keyboard, mouse, and system unit are the basic parts.
+- The operating system is the software that runs everything.
+- Save files into named folders so you can find them again.`,
+      },
+      {
+        title: 'The Internet & Web Browsers',
+        description: 'Searching, bookmarks, and understanding URLs.',
+        duration: 25,
+        content: `## What is the internet?
+The internet connects computers around the world. The **web** is the collection of websites you visit through a **browser** such as Chrome, Firefox, or Safari.
+
+## Understanding a web address
+A web address (URL) tells your browser where to go. Look at the start: a padlock icon and **https://** mean the site is secure. Be cautious about entering passwords or payment details on sites without it.
+
+## Searching and bookmarks
+Type keywords into a search engine to find information. To save a site for later, click the **star** in the address bar to create a **bookmark**.
+
+### Key takeaways
+- Use a browser to visit websites on the web.
+- A padlock and https:// mean a connection is secure.
+- Bookmark the sites you use often.`,
+      },
+      {
+        title: 'Email & Online Communication',
+        description: 'Writing, sending, attaching, and staying safe from scams.',
+        duration: 25,
+        content: `## Writing a clear email
+A good email has three parts: a **subject line** that says what it is about, a short **message**, and a polite **closing** with your name. For example: *"Application for the sales role — John Mwangi."*
+
+## Attaching files
+To send a photo or document, click the **paperclip (attach)** icon and choose the file. Attachments have a size limit, so very large files may need a link instead.
+
+## Avoiding scams
+Scammers send fake emails to trick you. Never click links or open attachments from senders you do not know, and never share your password or bank details by email.
+
+### Key takeaways
+- Always write a clear subject line.
+- Use the paperclip icon to attach files.
+- Do not open unknown links or share passwords by email.`,
+      },
+      {
+        title: 'Word Processing & Spreadsheets',
+        description: 'Create documents and basic spreadsheets for work.',
+        duration: 30,
+        content: `## Word processing
+A word processor (like Microsoft Word or Google Docs) lets you write letters, reports, and CVs. Use the toolbar to make text **bold**, change the font, and align paragraphs.
+
+## Spreadsheets
+A spreadsheet (like Excel or Google Sheets) is a grid of **cells** used for numbers and lists. Each cell has a name like **A1** (column A, row 1). You can add up a column with a formula such as **=SUM(A1:A10)**.
+
+## Everyday uses
+- Write a CV or a letter in a word processor.
+- Track income and expenses in a spreadsheet.
+
+### Key takeaways
+- Use a word processor for letters and documents.
+- Use a spreadsheet for numbers, lists, and calculations.`,
+      },
+      {
+        title: 'Online Safety & Privacy',
+        description: 'Passwords, phishing, and protecting your identity.',
+        duration: 25,
+        content: `## Strong passwords
+Use a different password for every important account, and make each one long. A strong password uses a mix of letters, numbers, and symbols — or better, a short **passphrase** of random words.
+
+## Recognising phishing
+**Phishing** is when someone pretends to be a bank or company to steal your details. Be suspicious of urgent messages asking you to "verify your account" or "claim a prize."
+
+## Protecting your identity
+Do not share your ID number, bank PIN, or passwords online. Log out of shared computers, and only enter personal details on secure (https) sites.
+
+### Key takeaways
+- Use long, unique passwords for every account.
+- Urgent "verify now" messages are often phishing.
+- Never share your PIN, ID number, or passwords.`,
+      },
     ],
   },
   {
@@ -403,10 +488,83 @@ const ADULT_COURSES: CourseDef[] = [
     duration: '4 weeks',
     objectives: ['Explain what AI is and is not', 'Use AI assistants effectively with good prompts', 'Recognize AI limitations and bias', 'Apply AI tools to everyday work'],
     lessons: [
-      { title: 'What Is AI?', description: 'A plain-language introduction to artificial intelligence.', duration: 20 },
-      { title: 'Using AI Assistants & Prompting', description: 'How to write clear prompts and get useful results.', duration: 30 },
-      { title: 'AI Limitations & Ethics', description: 'Bias, hallucinations, privacy, and responsible use.', duration: 25 },
-      { title: 'AI at Work & in Daily Life', description: 'Real-world ways AI helps with writing, research, and planning.', duration: 25 },
+      {
+        title: 'What Is AI?',
+        description: 'A plain-language introduction to artificial intelligence.',
+        duration: 20,
+        content: `## A simple definition
+Artificial intelligence (AI) is software that can perform tasks that normally need human thinking — like understanding language, answering questions, or recognising images.
+
+## What AI is not
+AI is not a person and does not "think" the way you do. It predicts the most likely next words or answers based on patterns it learned from huge amounts of text. It can be very helpful, but it also makes mistakes.
+
+## Where you already see AI
+- Voice assistants (Siri, Google Assistant)
+- Auto-correct and suggested replies
+- Recommendations on YouTube and shopping apps
+- Chatbots that answer customer questions
+
+### Key takeaways
+- AI is software that mimics human-like tasks.
+- AI predicts based on patterns — it does not truly understand.
+- You already use AI every day without realising it.`,
+      },
+      {
+        title: 'Using AI Assistants & Prompting',
+        description: 'How to write clear prompts and get useful results.',
+        duration: 30,
+        content: `## What is a prompt?
+A **prompt** is the instruction you give an AI assistant (like ChatGPT or Gemini). The quality of the answer depends a lot on how clear your prompt is.
+
+## A simple formula
+1. **Role** — tell it who to act as: *"You are a friendly career advisor."*
+2. **Task** — what you want: *"Write a short CV summary for a shop assistant."*
+3. **Details** — the facts it needs: *"I have 5 years of experience and work well with customers."*
+
+## Asking for better answers
+If the first answer is not right, keep refining: *"Make it shorter,"* *"Use simpler words,"* or *"Give me three options."*
+
+### Key takeaways
+- A prompt is your instruction to the AI.
+- Use Role + Task + Details for better results.
+- Refine your prompt if the answer is not what you need.`,
+      },
+      {
+        title: 'AI Limitations & Ethics',
+        description: 'Bias, hallucinations, privacy, and responsible use.',
+        duration: 25,
+        content: `## AI makes mistakes
+AI can confidently state something that is wrong — this is called a **hallucination**. Always check important facts (dates, laws, prices) against a trusted source.
+
+## Bias
+Because AI learns from human data, it can repeat human **biases**. Be aware of this and do not take every AI answer as neutral truth.
+
+## Privacy and honesty
+Do not paste sensitive personal details (ID numbers, passwords) into AI tools. If you use AI to help write a document for work or study, be honest about it when the rules require it.
+
+### Key takeaways
+- AI can be confidently wrong — verify important facts.
+- AI can reflect human bias.
+- Keep personal and sensitive data out of AI tools.`,
+      },
+      {
+        title: 'AI at Work & in Daily Life',
+        description: 'Real-world ways AI helps with writing, research, and planning.',
+        duration: 25,
+        content: `## Writing help
+Use AI to draft and polish emails, letters, reports, and CVs. Always read and adjust the result so it sounds like you.
+
+## Research and learning
+Ask AI to explain a topic in simple terms, summarise a long document, or create a study plan. Use it as a starting point, then verify with reliable sources.
+
+## Planning and organisation
+AI can help you plan a weekly schedule, write a meal plan, prepare for an interview, or brainstorm business ideas.
+
+### Key takeaways
+- Use AI to draft and polish writing.
+- Use AI to explain, summarise, and plan.
+- Always review and personalise the output.`,
+      },
     ],
   },
   {
@@ -417,10 +575,82 @@ const ADULT_COURSES: CourseDef[] = [
     duration: '4 weeks',
     objectives: ['Create and follow a budget', 'Use banking tools', 'Understand credit and debt', 'Plan for savings and goals'],
     lessons: [
-      { title: 'Budgeting Basics', description: 'Track income and expenses with a simple budget.', duration: 25 },
-      { title: 'Banking & Accounts', description: 'Checking, savings, and online banking.', duration: 25 },
-      { title: 'Credit, Loans & Debt', description: 'Credit scores, interest, and borrowing wisely.', duration: 30 },
-      { title: 'Saving & Planning Ahead', description: 'Emergency funds and long-term goals.', duration: 25 },
+      {
+        title: 'Budgeting Basics',
+        description: 'Track income and expenses with a simple budget.',
+        duration: 25,
+        content: `## What is a budget?
+A budget is a plan for your money. It shows how much comes in (**income**) and how much goes out (**expenses**).
+
+## The 50/30/20 rule
+A simple way to start:
+- **50%** for needs (rent, food, transport)
+- **30%** for wants (entertainment, eating out)
+- **20%** for savings and paying off debt
+
+## Track your spending
+For one month, write down everything you spend. You will quickly see where the money goes and where you can cut back.
+
+### Key takeaways
+- A budget is a plan for income and expenses.
+- Try the 50/30/20 rule.
+- Track spending to find savings.`,
+      },
+      {
+        title: 'Banking & Accounts',
+        description: 'Checking, savings, and online banking.',
+        duration: 25,
+        content: `## Types of accounts
+- A **checking (current) account** is for everyday money — paying bills and receiving salary.
+- A **savings account** is for money you keep aside, and it usually earns a small amount of **interest**.
+
+## Online and mobile banking
+Most banks let you check your balance, send money, and pay bills from a phone app. Keep your login details private and log out on shared devices.
+
+## Avoiding fees
+Some accounts charge monthly fees or fees for certain transactions. Ask your bank about fees so you can choose the right account.
+
+### Key takeaways
+- Use a checking account for daily money and a savings account for goals.
+- Mobile banking is convenient — keep it secure.
+- Ask about fees before choosing an account.`,
+      },
+      {
+        title: 'Credit, Loans & Debt',
+        description: 'Credit scores, interest, and borrowing wisely.',
+        duration: 30,
+        content: `## What is credit?
+Credit means borrowing money now and paying it back later. A **credit score** is a number lenders use to judge how reliably you repay. Paying bills on time improves your score.
+
+## Understanding interest
+When you borrow, you usually pay back more than you borrowed — the extra is **interest**. High-interest loans (like some mobile loans) grow very fast, so borrow only what you truly need.
+
+## Avoiding a debt trap
+Only borrow for things that will improve your situation, and always check the total cost including interest. If you are struggling, talk to the lender early rather than ignoring it.
+
+### Key takeaways
+- A credit score reflects how reliably you repay.
+- Interest is the extra you pay to borrow — it can grow fast.
+- Borrow only what you need and can repay.`,
+      },
+      {
+        title: 'Saving & Planning Ahead',
+        description: 'Emergency funds and long-term goals.',
+        duration: 25,
+        content: `## Start an emergency fund
+An **emergency fund** is money set aside for surprises — a medical bill or car repair. Aim to build up about 3 months of expenses, even if it takes time. Start small and be consistent.
+
+## Set a savings goal
+Decide what you are saving for and how much you need. Break it into monthly amounts: saving 1,000 a month reaches 12,000 in a year.
+
+## Make saving automatic
+Set up an automatic transfer to your savings account on payday, so you save before you spend.
+
+### Key takeaways
+- Build an emergency fund of about 3 months of expenses.
+- Break big goals into monthly amounts.
+- Automate saving so it happens before you spend.`,
+      },
     ],
   },
 ]
@@ -507,18 +737,26 @@ async function seedAdultCourses() {
     }
     const courseId = existing.id
 
-    const existingLessons = await prisma.courseLesson.count({ where: { courseId } })
-    if (existingLessons > 0) {
-      console.log(`  • ${course.title}: already seeded (skip)`)
-      continue
-    }
+    // Upsert each lesson: create if missing, else fill in content if empty.
     let order = 0
+    let created = 0
+    let updated = 0
     for (const l of course.lessons) {
-      await prisma.courseLesson.create({
-        data: { courseId, title: l.title, description: l.description, duration: l.duration ?? 20, order: order++ },
-      })
+      const found = await prisma.courseLesson.findFirst({ where: { courseId, title: l.title } })
+      if (found) {
+        if (!found.content) {
+          await prisma.courseLesson.update({ where: { id: found.id }, data: { content: l.content, description: l.description } })
+          updated++
+        }
+      } else {
+        await prisma.courseLesson.create({
+          data: { courseId, title: l.title, description: l.description, content: l.content, duration: l.duration ?? 20, order: order },
+        })
+        created++
+      }
+      order++
     }
-    console.log(`  • ${course.title}: seeded ${course.lessons.length} lessons`)
+    console.log(`  • ${course.title}: ${created} created, ${updated} content-filled, ${course.lessons.length} total`)
   }
 }
 
