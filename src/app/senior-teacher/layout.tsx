@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import {
-  BarChart3, Radio, GraduationCap,
+  BarChart3, Radio, Users,
 } from 'lucide-react'
 import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
@@ -13,7 +13,7 @@ export default function SeniorTeacherLayout({ children }: { children: React.Reac
   const sidebarItems = [
     { icon: BarChart3,     label: 'Dashboard',   href: '/senior-teacher/dashboard',   tourId: 'senior-teacher-dashboard' },
     { icon: Radio,         label: 'Live Lessons', href: '/senior-teacher/live-class', tourId: 'senior-teacher-live' },
-    { icon: GraduationCap, label: 'GED Subjects', href: '/senior-teacher/dashboard#subjects', tourId: 'senior-teacher-subjects' },
+    { icon: Users,         label: 'My Learners', href: '/senior-teacher/learners',   tourId: 'senior-teacher-learners' },
   ]
 
   if (!session) return null

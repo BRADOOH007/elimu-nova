@@ -29,11 +29,13 @@ interface ActiveLesson {
 interface GEDLessonViewProps {
   subject: string
   topic: string
+  objectives?: string[]
+  staticContent?: string | null
   onClose: () => void
   onComplete: () => void
 }
 
-export function GEDLessonView({ subject, topic, onClose, onComplete }: GEDLessonViewProps) {
+export function GEDLessonView({ subject, topic, objectives, staticContent, onClose, onComplete }: GEDLessonViewProps) {
   const [lesson, setLesson] = useState<ActiveLesson | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -84,6 +86,61 @@ export function GEDLessonView({ subject, topic, onClose, onComplete }: GEDLesson
   }
 
   if (error || !lesson) {
+    // Static fallback: show the seeded lesson content + objectives when AI
+    // generation is unavailable (no AI keys) so learning never dead-ends.
+    if (staticContent || (objectives && objectives.length > 0)) {
+      return (
+        <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <button onClick={onClose} className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800">
+              <X className="h-4 w-4" /> Close lesson
+            </button>
+            <span className="text-xs font-semibold text-teal-600 bg-teal-50 border border-teal-100 rounded-full px-3 py-1">{subject}</span>
+          </div>
+
+          <Card className="border-0 shadow-sm bg-gradient-to-br from-teal-600 to-emerald-700 text-white overflow-hidden">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen className="h-4 w-4 text-emerald-200" />
+                <span className="text-xs uppercase tracking-wider text-emerald-200 font-medium">Lesson</span>
+              </div>
+              <h1 className="text-2xl font-bold leading-tight">{topic}</h1>
+              {(objectives && objectives.length > 0) && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {objectives.map((o) => (
+                    <span key={o} className="bg-white/15 text-emerald-50 text-xs font-medium rounded-full px-3 py-1">{o}</span>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {staticContent ? (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-6">
+                <div className="prose prose-sm md:prose-base max-w-none prose-headings:text-slate-800 prose-p:text-slate-600 prose-strong:text-slate-800 prose-li:text-slate-600">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{staticContent}</ReactMarkdown>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-0 shadow-sm">
+              <CardContent className="p-12 text-center text-sm text-slate-500">
+                <p className="mb-4">{error || 'No lesson content available.'}</p>
+              </CardContent>
+            </Card>
+          )}
+
+          <Button
+            className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700"
+            onClick={onComplete}
+          >
+            <CheckCircle2 className="h-4 w-4 mr-2" /> Mark lesson complete
+          </Button>
+        </div>
+      )
+    }
+
     return (
       <div className="max-w-3xl mx-auto p-6">
         <Card className="border-0 shadow-sm">
