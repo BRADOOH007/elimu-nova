@@ -30,7 +30,7 @@ const COURSE_ICONS: Record<string, LucideIcon> = {
   ADULT_ESL: BookOpen,
 }
 
-interface Lesson { id: string; title: string; objectives: string[]; duration: number | null }
+interface Lesson { id: string; title: string; objectives: string[]; content: string | null; duration: number | null }
 interface Substrand { id: string; name: string; description: string | null; learningOutcomes: string[]; lessons: Lesson[] }
 interface Strand { id: string; name: string; description: string | null; substrands: Substrand[] }
 interface Subject { subject: string; description: string | null; curriculumId: string | null; strands: Strand[] }
@@ -57,7 +57,7 @@ function LearnContent() {
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [busy, setBusy] = useState<string | null>(null)
-  const [activeLesson, setActiveLesson] = useState<{ id: string; title: string } | null>(null)
+  const [activeLesson, setActiveLesson] = useState<{ id: string; title: string; objectives: string[]; content: string | null } | null>(null)
 
   const toggle = (key: string) => setExpanded((p) => ({ ...p, [key]: !p[key] }))
 
@@ -174,6 +174,8 @@ function LearnContent() {
           <GEDLessonView
             subject={selectedSubject}
             topic={activeLesson.title}
+            objectives={activeLesson.objectives}
+            staticContent={activeLesson.content}
             onClose={() => setActiveLesson(null)}
             onComplete={async () => {
               await completeLesson(selectedSubject, activeLesson.id)
@@ -223,7 +225,7 @@ function LearnContent() {
                               <div className="flex items-center gap-2 shrink-0">
                                 <Button
                                   size="sm"
-                                  onClick={() => setActiveLesson({ id: lesson.id, title: lesson.title })}
+                                  onClick={() => setActiveLesson({ id: lesson.id, title: lesson.title, objectives: lesson.objectives, content: lesson.content })}
                                 >
                                   <Play className="h-4 w-4 mr-1" /> Start
                                 </Button>

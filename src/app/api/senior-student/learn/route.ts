@@ -43,6 +43,7 @@ export const GET = route({ auth: 'SENIOR_STUDENT' }, async (_req, { user }) => {
               id: l.id,
               title: l.title,
               objectives: l.objectives,
+              content: l.content,
               duration: l.duration,
             })),
           })),
