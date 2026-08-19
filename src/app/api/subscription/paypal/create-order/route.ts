@@ -14,7 +14,8 @@ export const POST = route({}, async (req, { user }) => {
     return NextResponse.json({ error: 'Missing required fields: packageId' }, { status: 400 })
   }
 
-  const packageInfo = await resolveCheckoutPackage(packageId)
+  // KES is not a PayPal-supported currency — always resolve & charge in USD.
+  const packageInfo = await resolveCheckoutPackage(packageId, 'USD')
   if (!packageInfo) {
     return NextResponse.json({ error: 'Package not found' }, { status: 404 })
   }

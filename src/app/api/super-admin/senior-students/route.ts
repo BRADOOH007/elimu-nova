@@ -92,12 +92,15 @@ async function issueFreemium(userId: string) {
 
 async function getOrCreateSeniorPackage() {
   let pkg = await prisma.package.findFirst({ where: { name: 'Senior GED Plan', isActive: true } })
+  if (pkg && pkg.price !== 100) {
+    pkg = await prisma.package.update({ where: { id: pkg.id }, data: { price: 100 } })
+  }
   if (!pkg) {
     pkg = await prisma.package.create({
       data: {
         name: 'Senior GED Plan',
         description: 'Monthly access to the US General Education Diploma (GED) preparation program.',
-        price: 49,
+        price: 100,
         duration: 30,
         maxTeachers: 1,
         maxStudents: 1,

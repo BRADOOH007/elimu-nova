@@ -14,7 +14,7 @@ export const POST = route({}, async (req, { user }) => {
     )
   }
 
-  const packageInfo = await resolveCheckoutPackage(packageId)
+  const packageInfo = await resolveCheckoutPackage(packageId, currency)
 
   if (!packageInfo) {
     return NextResponse.json({ error: 'Package not found' }, { status: 404 })

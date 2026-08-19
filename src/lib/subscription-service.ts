@@ -223,7 +223,17 @@ export async function startFreeTrial(userId?: string, schoolId?: string): Promis
   })
 }
 
-const CHECKOUT_PACKAGE_CATALOG: Record<string, { name: string; description: string; price: number; maxTeachers: number; maxStudents: number; features: string[] }> = {
+interface CheckoutCatalogEntry {
+  name: string
+  description: string
+  price: number
+  kesPrice?: number
+  maxTeachers: number
+  maxStudents: number
+  features: string[]
+}
+
+const CHECKOUT_PACKAGE_CATALOG: Record<string, CheckoutCatalogEntry> = {
   school_basic: {
     name: 'Basic School Plan',
     description: 'Perfect for small schools getting started with AI.',
@@ -264,6 +274,60 @@ const CHECKOUT_PACKAGE_CATALOG: Record<string, { name: string; description: stri
     maxStudents: 3,
     features: ['Full AI Access for up to 3 Children', 'Unified Parent Dashboard', 'Individual Progress Reports'],
   },
+  learner_prek3: {
+    name: 'Pre K–3 Plan',
+    description: 'Early childhood learning for young learners.',
+    price: 100,
+    kesPrice: 500,
+    maxTeachers: 0,
+    maxStudents: 1,
+    features: ['Play-based early learning', 'Phonics & number skills', 'AI tutor for little learners', 'Parent progress reports'],
+  },
+  learner_4_8: {
+    name: 'Grade 4–8 Plan',
+    description: 'Upper primary & junior secondary.',
+    price: 120,
+    kesPrice: 800,
+    maxTeachers: 0,
+    maxStudents: 1,
+    features: ['Full CBC curriculum', 'AI-powered personal tutor', 'Homework help 24/7', 'Weakness identification & practice'],
+  },
+  learner_9_12: {
+    name: 'Grade 9–12 Plan',
+    description: 'Senior secondary & exam preparation.',
+    price: 150,
+    kesPrice: 1200,
+    maxTeachers: 0,
+    maxStudents: 1,
+    features: ['KCSE exam preparation', 'Past papers & marking schemes', 'Subject-focused AI tutoring', 'Progress & performance analytics'],
+  },
+  ged: {
+    name: 'Senior GED Plan',
+    description: 'Monthly access to the US General Education Diploma (GED) preparation program.',
+    price: 100,
+    kesPrice: 2000,
+    maxTeachers: 0,
+    maxStudents: 1,
+    features: ['Full GED curriculum', 'Computer & AI literacy courses', 'Live lessons', 'GED certificate'],
+  },
+  tutoring_3_8: {
+    name: 'Tutoring 3–8 Plan',
+    description: '1:1 tutoring for grades 3–8.',
+    price: 50,
+    kesPrice: 600,
+    maxTeachers: 0,
+    maxStudents: 1,
+    features: ['1:1 live tutoring', 'Personalised lesson plan', 'Homework & exam help', 'Flexible scheduling'],
+  },
+  tutoring_9_12: {
+    name: 'Tutoring 9–12 Plan',
+    description: '1:1 tutoring for grades 9–12.',
+    price: 60,
+    kesPrice: 800,
+    maxTeachers: 0,
+    maxStudents: 1,
+    features: ['1:1 live tutoring', 'KCSE exam coaching', 'Past paper walkthroughs', 'Flexible scheduling'],
+  },
 }
 
 const CHECKOUT_PACKAGE_NAMES: Record<string, string> = {
@@ -275,14 +339,27 @@ const CHECKOUT_PACKAGE_NAMES: Record<string, string> = {
   school_enterprise: 'Enterprise School Plan',
   parent_single: 'Single Child Plan',
   parent_family: 'Family Plan',
+  learner_prek3: 'Pre K–3 Plan',
+  learner_4_8: 'Grade 4–8 Plan',
+  learner_9_12: 'Grade 9–12 Plan',
+  ged: 'Senior GED Plan',
+  tutoring_3_8: 'Tutoring 3–8 Plan',
+  tutoring_9_12: 'Tutoring 9–12 Plan',
 }
 
 /**
  * Resolve a checkout package by id, falling back to a known plan name or the
  * built-in catalog (find-or-create). Shared by Stripe and PayPal checkout so
  * both processors stay in sync.
+ *
+ * `currency` picks the stored package price: KES for catalog plans with a
+ * `kesPrice`, otherwise the USD price. History rows keep their own `amount` so
+ * re-resolution never corrupts past subscription charges.
  */
-export async function resolveCheckoutPackage(packageId: string): Promise<{ id: string; name: string; price: number; duration: number } | null> {
+export async function resolveCheckoutPackage(
+  packageId: string,
+  currency?: string
+): Promise<{ id: string; name: string; price: number; duration: number } | null> {
   let pkg = await prisma.package.findUnique({ where: { id: packageId } })
 
   if (!pkg) {
@@ -292,15 +369,30 @@ export async function resolveCheckoutPackage(packageId: string): Promise<{ id: s
     }
   }
 
-  if (!pkg) {
-    const entry = CHECKOUT_PACKAGE_CATALOG[packageId]
-    if (entry) {
-      const existing = await prisma.package.findFirst({ where: { name: entry.name, isActive: true } })
-      if (existing) {
-        pkg = existing
-      } else {
-        pkg = await prisma.package.create({ data: { ...entry, duration: 30, isActive: true } })
-      }
+  const catalogEntry = CHECKOUT_PACKAGE_CATALOG[packageId]
+  if (!pkg && catalogEntry) {
+    // Find-or-create a DB package for this catalog plan (e.g. GED/tutoring),
+    // priced per the requested currency.
+    const useKes = currency?.toLowerCase() === 'kes' && catalogEntry.kesPrice != null
+    const desiredPrice = useKes ? catalogEntry.kesPrice! : catalogEntry.price
+    const existing = await prisma.package.findFirst({ where: { name: catalogEntry.name, isActive: true } })
+    if (existing) {
+      pkg = existing.price !== desiredPrice
+        ? await prisma.package.update({ where: { id: existing.id }, data: { price: desiredPrice } })
+        : existing
+    } else {
+      pkg = await prisma.package.create({
+        data: {
+          name: catalogEntry.name,
+          description: catalogEntry.description,
+          price: desiredPrice,
+          maxTeachers: catalogEntry.maxTeachers,
+          maxStudents: catalogEntry.maxStudents,
+          features: catalogEntry.features,
+          duration: 30,
+          isActive: true,
+        },
+      })
     }
   }
 
