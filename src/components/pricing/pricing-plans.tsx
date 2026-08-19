@@ -9,7 +9,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-type Audience = 'schools' | 'parents'
+type Audience = 'schools' | 'learners' | 'adult'
 type Currency = 'kes' | 'usd'
 
 interface PricingPlan {
@@ -20,6 +20,8 @@ interface PricingPlan {
   kesPrice: number | null
   usdPrice: number | null
   custom?: boolean
+  billingPeriod?: string
+  detail?: string
   teachers?: number | string
   students?: number | string
   children?: number | string
@@ -51,20 +53,45 @@ const SCHOOL_PLANS: PricingPlan[] = [
   },
 ]
 
-const PARENT_PLANS: PricingPlan[] = [
+const LEARNER_PLANS: PricingPlan[] = [
   {
-    key: 'parent_single', name: 'Single Child Plan', match: 'single',
-    tagline: 'A personal AI tutor for one child.',
-    kesPrice: 1000, usdPrice: 20,
-    children: 1,
-    features: ['24/7 Personal AI Tutor', 'Instant Homework Explanations', 'Weakness Identification', 'Curriculum Practice'],
+    key: 'learner_prek3', name: 'Pre K–3', match: 'pre k',
+    tagline: 'Early childhood learning for young learners.',
+    kesPrice: 500, usdPrice: 100, billingPeriod: '/month', detail: 'Pre K–3',
+    features: ['Play-based early learning', 'Phonics & number skills', 'AI tutor for little learners', 'Parent progress reports'],
   },
   {
-    key: 'parent_family', name: 'Family Plan', match: 'family',
-    tagline: 'Full AI access for up to 3 children.',
-    kesPrice: 1800, usdPrice: 35,
-    children: 'Up to 3', popular: true,
-    features: ['Full AI Access for up to 3 Children', 'Unified Parent Dashboard', 'Individual Progress Reports'],
+    key: 'learner_4_8', name: 'Grade 4–8', match: 'grade 4',
+    tagline: 'Upper primary & junior secondary.',
+    kesPrice: 800, usdPrice: 120, billingPeriod: '/month', detail: 'Grade 4–8', popular: true,
+    features: ['Full CBC curriculum', 'AI-powered personal tutor', 'Homework help 24/7', 'Weakness identification & practice'],
+  },
+  {
+    key: 'learner_9_12', name: 'Grade 9–12', match: 'grade 9',
+    tagline: 'Senior secondary & exam preparation.',
+    kesPrice: 1200, usdPrice: 150, billingPeriod: '/term', detail: 'Grade 9–12',
+    features: ['KCSE exam preparation', 'Past papers & marking schemes', 'Subject-focused AI tutoring', 'Progress & performance analytics'],
+  },
+]
+
+const ADULT_PLANS: PricingPlan[] = [
+  {
+    key: 'ged', name: 'GED / Adult Diploma', match: 'ged',
+    tagline: 'US General Education Diploma preparation.',
+    kesPrice: 2000, usdPrice: 100, billingPeriod: '/month', detail: 'Adult learners', popular: true,
+    features: ['Full GED curriculum (4 subjects)', 'Computer & AI literacy courses', 'Live lessons with instructors', 'GED certificate of completion'],
+  },
+  {
+    key: 'tutoring_3_8', name: 'Tutoring 3–8', match: 'tutoring 3',
+    tagline: '1:1 tutoring for grades 3–8.',
+    kesPrice: 600, usdPrice: 50, billingPeriod: '/hour', detail: 'Grades 3–8',
+    features: ['1:1 live tutoring', 'Personalised lesson plan', 'Homework & exam help', 'Flexible scheduling'],
+  },
+  {
+    key: 'tutoring_9_12', name: 'Tutoring 9–12', match: 'tutoring 9',
+    tagline: '1:1 tutoring for grades 9–12.',
+    kesPrice: 800, usdPrice: 60, billingPeriod: '/hour', detail: 'Grades 9–12',
+    features: ['1:1 live tutoring', 'KCSE exam coaching', 'Past paper walkthroughs', 'Flexible scheduling'],
   },
 ]
 
@@ -88,7 +115,9 @@ export function PricingPlans() {
   const [currency, setCurrency] = useState<Currency>('kes')
 
   const role = session?.user?.role as string | undefined
-  const [audience, setAudience] = useState<Audience>(role === 'PARENT' ? 'parents' : 'schools')
+  const [audience, setAudience] = useState<Audience>(
+    role === 'PARENT' ? 'learners' : role === 'SENIOR_STUDENT' ? 'adult' : 'schools'
+  )
 
   useEffect(() => {
     fetch('/api/packages/public')
@@ -105,7 +134,8 @@ export function PricingPlans() {
     { card: "from-pink-500/10 via-rose-500/5 to-transparent", border: "from-pink-500 to-rose-600", icon: "from-pink-500 to-rose-600", btn: "from-pink-600 to-rose-600 hover:from-pink-700 hover:to-rose-700", accent: "text-pink-400" },
   ] as const
 
-  const activePlans = audience === 'schools' ? SCHOOL_PLANS : PARENT_PLANS
+  const activePlans =
+    audience === 'schools' ? SCHOOL_PLANS : audience === 'learners' ? LEARNER_PLANS : ADULT_PLANS
 
   const handleStartTrial = async () => {
     if (!session) { router.push('/auth/signin'); return }
@@ -156,8 +186,7 @@ export function PricingPlans() {
 
   const priceSuffix = (plan: PricingPlan) => {
     if (plan.custom) return ''
-    if (audience === 'parents' && plan.key === 'parent_single') return '/child /month'
-    return '/month'
+    return plan.billingPeriod || '/month'
   }
 
   const isCurrentPlan = (plan: PricingPlan) => {
@@ -182,7 +211,9 @@ export function PricingPlans() {
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
           {audience === 'schools'
             ? 'Flexible school & institutional plans. Start with a 14-day full access trial.'
-            : 'Affordable AI tutoring for your child — at a fraction of private tuition.'}
+            : audience === 'learners'
+            ? 'Affordable AI tutoring for your child — at a fraction of private tuition.'
+            : 'US GED & adult learning with live tutoring — built for adult learners.'}
         </p>
 
         {session && subscription && (
@@ -206,7 +237,7 @@ export function PricingPlans() {
         )}
 
         {/* Audience Toggle */}
-        <div className="mt-8 inline-flex items-center gap-1 p-1 bg-slate-800/60 rounded-full border border-slate-700/40">
+        <div className="mt-8 inline-flex flex-wrap items-center justify-center gap-1 p-1 bg-slate-800/60 rounded-full border border-slate-700/40">
           <button
             type="button"
             onClick={() => setAudience('schools')}
@@ -214,18 +245,28 @@ export function PricingPlans() {
               audience === 'schools' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Building2 className="w-4 h-4" />
-            School &amp; Institutional Plans
+            <span className="hidden sm:block"><Building2 className="w-4 h-4" /></span>
+            Schools
           </button>
           <button
             type="button"
-            onClick={() => setAudience('parents')}
+            onClick={() => setAudience('learners')}
             className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all ${
-              audience === 'parents' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+              audience === 'learners' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Home className="w-4 h-4" />
-            Independent Parent Plans
+            <span className="hidden sm:block"><Home className="w-4 h-4" /></span>
+            Parents
+          </button>
+          <button
+            type="button"
+            onClick={() => setAudience('adult')}
+            className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all ${
+              audience === 'adult' ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <span className="hidden sm:block"><GraduationCap className="w-4 h-4" /></span>
+            Adult &amp; GED
           </button>
         </div>
 
@@ -253,7 +294,7 @@ export function PricingPlans() {
       </div>
 
       {/* Pricing Cards */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${audience === 'schools' ? 'lg:grid-cols-3' : 'lg:grid-cols-2 max-w-4xl mx-auto'} gap-6 lg:gap-8 mb-14 items-start`}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-14 items-start">
         {activePlans.map((plan, index) => {
           const g = gradients[index] || gradients[0]
           const current = isCurrentPlan(plan)
@@ -334,9 +375,9 @@ export function PricingPlans() {
                       <div className={`col-span-2 rounded-xl p-3.5 text-center ${
                         popular ? 'bg-purple-900/30 border border-purple-500/25' : 'bg-slate-900/60 border border-slate-700/50'
                       }`}>
-                        <Users className={`w-4 h-4 mx-auto mb-1.5 ${g.accent}`} />
-                        <div className="text-lg font-bold text-white">{plan.children}</div>
-                        <div className="text-xs text-slate-400">Children</div>
+                        <GraduationCap className={`w-4 h-4 mx-auto mb-1.5 ${g.accent}`} />
+                        <div className="text-lg font-bold text-white">{plan.detail || plan.name}</div>
+                        <div className="text-xs text-slate-400">{audience === 'adult' ? 'Program' : 'Level'}</div>
                       </div>
                     )}
                   </div>
@@ -415,12 +456,14 @@ export function PricingPlans() {
           <div className="relative z-10 flex flex-col sm:flex-row items-center gap-6">
             <div className="flex-1 text-center sm:text-left">
               <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
-                {audience === 'schools' ? 'Start free, scale when you are ready.' : 'Premium tutoring without the premium price.'}
+                {audience === 'schools' ? 'Start free, scale when you are ready.' : audience === 'learners' ? 'Premium tutoring without the premium price.' : 'Your pathway to a GED diploma.'}
               </h3>
               <p className="text-slate-300 max-w-xl mx-auto sm:mx-0">
                 {audience === 'schools'
                   ? 'Starts with a 14-day full access trial. All plans include automated CBC & STEM curriculum tools.'
-                  : '24/7 AI tutoring at a fraction of the cost of traditional private tutoring (avg. KES 15,000/mo).'}
+                  : audience === 'learners'
+                  ? '24/7 AI tutoring at a fraction of the cost of traditional private tutoring (avg. KES 15,000/mo).'
+                  : 'Earn a US GED diploma with AI tutoring, live lessons, and computer literacy — all in one plan.'}
               </p>
             </div>
             <Link href={audience === 'schools' ? '/contact' : '/auth/signup'}>
@@ -443,7 +486,9 @@ export function PricingPlans() {
             <p className="text-slate-300 mb-6 max-w-lg mx-auto">
               {audience === 'schools'
                 ? 'All school plans include a 14-day full access trial. No credit card required. Cancel anytime.'
-                : 'No hidden fees. Start with your first child today and add more anytime.'}
+                : audience === 'learners'
+                ? 'No hidden fees. Start with your first child today and add more anytime.'
+                : 'No hidden fees. Includes GED prep, live lessons, and tutoring — cancel anytime.'}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/contact">
