@@ -33,6 +33,20 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
     })
 
     if (!subscription) {
+      // School coverage: the school's plan covers every school-affiliated
+      // user. If the caller passed both userId and schoolId and no
+      // (user, school) pairing exists, evaluate the school-level row instead
+      // of blocking the user outright.
+      if (schoolId) {
+        const schoolSub = await prisma.subscription.findFirst({
+          where: { schoolId },
+          include: { package: true },
+          orderBy: { createdAt: 'desc' },
+        }).catch(() => null)
+        if (schoolSub) {
+          return getSubscriptionStatus(undefined, schoolId)
+        }
+      }
       // School-affiliated users with no explicit subscription row:
       // Grant access — the school admin manages the school-level subscription.
       // Only independent users (userId only, no schoolId) need to subscribe themselves.
@@ -74,8 +88,30 @@ export async function getSubscriptionStatus(userId?: string, schoolId?: string):
     }
 
     // ACTIVE = paid and in good standing (Stripe webhooks flip to INACTIVE/
-    // CANCELLED on payment failure or cancellation). A paid subscriber is never
-    // locked out, even if endDate is momentarily stale — renewals refresh it.
+    // CANCELLED on payment failure or cancellation, and keep endDate current
+    // on renewal). Recurring Stripe rows are webhook-managed — never expire
+    // them from a stale local date. Time-bound plans (PayPal / M-Pesa / cash,
+    // which have no stripeSubscriptionId) expire once endDate + grace passes —
+    // the grace absorbs webhook/renewal lag without locking paid users.
+    const isStripeManaged = Boolean((subscription as any).stripeSubscriptionId)
+    if (subscriptionStatus === 'ACTIVE' && !isStripeManaged) {
+      const graceEnd = new Date(subscription.endDate.getTime() + (EXPIRY_GRACE_DAYS * 24 * 60 * 60 * 1000))
+      if (graceEnd < now) {
+        await prisma.subscription.update({
+          where: { id: subscription.id },
+          data: { status: 'EXPIRED' as any },
+        }).catch(() => {})
+        return {
+          isActive: false,
+          isTrial: false,
+          isExpired: true,
+          daysRemaining: 0,
+          status: 'EXPIRED',
+          packageName: subscription.package?.name || 'Paid Plan',
+          endDate: subscription.endDate,
+        }
+      }
+    }
     if (subscriptionStatus === 'ACTIVE') {
       return {
         isActive: true,
@@ -457,7 +493,8 @@ export async function invalidateCacheForStripeSubscription(stripeSubscriptionId:
 }
 
 export async function createStripeCustomer(email: string, name: string, userId?: string, schoolId?: string) {
-  const { stripe } = await import('@/lib/stripe')
+  const { getStripeAsync } = await import('@/lib/stripe')
+  const stripe = await getStripeAsync()
 
   const customer = await stripe.customers.create({
     email,
@@ -480,7 +517,8 @@ export async function createCheckoutSession(
   schoolId?: string,
   currency?: string
 ) {
-  const { stripe } = await import('@/lib/stripe')
+  const { getStripeAsync } = await import('@/lib/stripe')
+  const stripe = await getStripeAsync()
 
   const packageInfo = await prisma.package.findUnique({
     where: { id: packageId }
@@ -527,13 +565,16 @@ export async function createCheckoutSession(
         userId,
         schoolId,
         packageId: packageInfo.id,
-        status: 'ACTIVE' as any,
+        // INACTIVE until the Stripe webhook confirms payment — an abandoned
+        // checkout must never unlock access.
+        status: 'INACTIVE' as any,
         startDate,
         endDate,
         amount: packageInfo.price,
         isTrial: false,
         type: 'SUBSCRIPTION',
         paymentMethod: 'STRIPE',
+        stripeCustomerId: customer.id,
       }
     })
     localSubId = created.id

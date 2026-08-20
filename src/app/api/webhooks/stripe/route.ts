@@ -72,20 +72,10 @@ export const POST = route({ auth: 'none' }, async (req) => {
         stripeSubId,
       })
 
-      // Create a local PAID invoice + notify + email, so Stripe payments are
-      // recorded in the same way as M-Pesa ones.
-      try {
-        const amount = typeof session.amount_total === 'number' ? session.amount_total / 100 : undefined
-        await handlePaymentSuccess({
-          subscriptionId: localSubId,
-          amount,
-          method: 'STRIPE',
-          receipt: session.id,
-          notes: `STRIPE_SESSION:${session.id}`,
-        })
-      } catch (err) {
-        logger.warn('Failed to record payment/invoice after checkout', err instanceof Error ? { error: err.message } : {})
-      }
+      // Payment/invoice recording is handled by `invoice.payment_succeeded`
+      // (always emitted right after a subscription checkout) to avoid creating
+      // a duplicate PAID invoice for the initial purchase.
+
       break
     }
 
@@ -102,10 +92,19 @@ export const POST = route({ auth: 'none' }, async (req) => {
         where: { stripeSubscriptionId: invoice.subscription },
       })
 
+      // Keep the stored endDate current on every successful renewal so the
+      // expiry sweep never locks a paying subscriber out (recurring plans).
+      // The invoice line-item period reflects the current billing period.
+      const periodEnd = invoice.lines?.data?.[0]?.period?.end
+      const currentPeriodEnd = typeof periodEnd === 'number' ? periodEnd : undefined
+
       for (const localSub of localSubs) {
         await prisma.subscription.update({
           where: { id: localSub.id },
-          data: { status: 'ACTIVE' },
+          data: {
+            status: 'ACTIVE',
+            ...(currentPeriodEnd && { endDate: new Date(currentPeriodEnd * 1000) }),
+          },
         })
 
         const amount = typeof invoice.amount_paid === 'number' ? invoice.amount_paid / 100 : undefined
