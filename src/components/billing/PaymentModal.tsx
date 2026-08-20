@@ -20,9 +20,10 @@ interface PaymentModalProps {
   currency?: string
   amount?: number
   planName?: string
+  packageId?: string
 }
 
-export default function PaymentModal({ isOpen, onClose, country = 'US', currency = 'USD', amount = 0, planName = 'Premium Plan' }: PaymentModalProps) {
+export default function PaymentModal({ isOpen, onClose, country = 'US', currency = 'USD', amount = 0, planName = 'Premium Plan', packageId }: PaymentModalProps) {
   const [method, setMethod] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -63,23 +64,27 @@ export default function PaymentModal({ isOpen, onClose, country = 'US', currency
 
     try {
       if (method === 'paypal') {
-        // Create PayPal order
+        // Create a real PayPal order. The API resolves the package by id (and
+        // always charges USD — KES is not PayPal-supported). Without a
+        // packageId the order cannot be priced, so fail visibly instead of
+        // pretending the payment went through.
         const res = await fetch('/api/subscription/paypal/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, currency: isKenya ? 'KES' : 'USD' }),
+          body: JSON.stringify(packageId ? { packageId, currency: 'USD' } : { amount, currency: 'USD' }),
         })
-        if (res.ok) {
-          const data = await res.json()
-          // Redirect to PayPal approval URL
-          if (data.approvalUrl) {
-            window.location.href = data.approvalUrl
-            return
-          }
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setLoading(false)
+          throw new Error(data.error || 'PayPal order could not be created')
         }
-        // Fallback: if PayPal not configured, simulate for demo (admin only)
-        await new Promise(r => setTimeout(r, 2000))
-        await activateBilling('PAYPAL')
+        const data = await res.json()
+        // Redirect to PayPal approval URL
+        if (data.approvalUrl) {
+          window.location.href = data.approvalUrl
+          return
+        }
+        throw new Error('PayPal did not return an approval URL')
       } else if (method === 'mpesa') {
         // M-Pesa STK Push
         const res = await fetch('/api/billing/mpesa/stkpush', {
