@@ -43,9 +43,16 @@ jobs:
 
       - name: Run pg_dump
         run: |
+          # Strip any stray newlines from the secret so the connection string
+          # stays a single clean value (a trailing \n breaks sslmode parsing).
+          DB_URL="$(printf '%s' "${{ secrets.BACKUP_DATABASE_URL || secrets.DATABASE_URL }}" | tr -d '\r\n')"
+          if [ -z "$DB_URL" ]; then
+            echo "::error::No database URL configured. Add BACKUP_DATABASE_URL (direct, non-pooler Neon URL) to repository secrets."
+            exit 1
+          fi
           TIMESTAMP=$(date +%Y-%m-%dT%H-%M-%S)
           FILENAME="elimunova-backup-${TIMESTAMP}.sql"
-          pg_dump "${{ secrets.BACKUP_DATABASE_URL || secrets.DATABASE_URL }}" \
+          pg_dump "$DB_URL" \
             --no-owner \
             --no-acl \
             --format=custom \
