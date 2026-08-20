@@ -34,8 +34,8 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
 
     const setting = await (prisma as any).systemSettings.upsert({
       where: { key },
-      update: { value, updatedById: user.id },
-      create: { key, value, type: type || 'string', category: category || 'general', description, updatedById: user.id },
+      update: { value, updatedBy: user.id },
+      create: { key, value, type: type || 'string', category: category || 'general', description, updatedBy: user.id },
     })
     return NextResponse.json(setting)
   } catch (error) {

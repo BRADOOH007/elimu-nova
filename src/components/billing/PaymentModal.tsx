@@ -46,7 +46,21 @@ export default function PaymentModal({ isOpen, onClose, country = 'US', currency
   const handlePay = async () => {
     if (!method) { toast({ title: 'Select method', description: 'Please select a payment method', variant: 'destructive' }); return }
     setLoading(true)
-    
+
+    // Manual activation is reserved for platform admins (super admin) — for
+    // regular users an unauthenticated grant endpoint was an escalation risk.
+    const activateBilling = async (m: string) => {
+      const res = await fetch('/api/billing/activate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method: m, amount, currency: isKenya ? 'KES' : 'USD' }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `Activation failed (${res.status})`)
+      }
+    }
+
     try {
       if (method === 'paypal') {
         // Create PayPal order
@@ -63,14 +77,9 @@ export default function PaymentModal({ isOpen, onClose, country = 'US', currency
             return
           }
         }
-        // Fallback: if PayPal not configured, simulate for demo
+        // Fallback: if PayPal not configured, simulate for demo (admin only)
         await new Promise(r => setTimeout(r, 2000))
-        // Activate subscription directly
-        await fetch('/api/billing/activate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: 'PAYPAL', amount, currency: isKenya ? 'KES' : 'USD' }),
-        })
+        await activateBilling('PAYPAL')
       } else if (method === 'mpesa') {
         // M-Pesa STK Push
         const res = await fetch('/api/billing/mpesa/stkpush', {
@@ -79,38 +88,28 @@ export default function PaymentModal({ isOpen, onClose, country = 'US', currency
           body: JSON.stringify({ amount, currency: 'KES' }),
         })
         if (!res.ok) {
-          // Fallback: simulate for demo
+          // Fallback: simulate for demo (admin only)
           await new Promise(r => setTimeout(r, 2000))
-          await fetch('/api/billing/activate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ method: 'MPESA', amount, currency: 'KES' }),
-          })
+          await activateBilling('MPESA')
         }
       } else {
-        // Card, Apple Pay, Bank: simulate for demo (Stripe would be integrated here)
+        // Card, Apple Pay, Bank: simulate for demo (admin only)
         await new Promise(r => setTimeout(r, 2000))
-        await fetch('/api/billing/activate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: method.toUpperCase(), amount, currency: isKenya ? 'KES' : 'USD' }),
-        })
+        await activateBilling(method.toUpperCase())
       }
+
+      setLoading(false)
+      setSuccess(true)
+      toast({ title: 'Payment Successful', description: `Charged ${fmt(amount)} via ${method.toUpperCase()}` })
     } catch (e) {
       console.error('Payment error:', e)
-      // Fallback: activate subscription for demo
-      try {
-        await fetch('/api/billing/activate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ method: method.toUpperCase(), amount, currency: isKenya ? 'KES' : 'USD' }),
-        })
-      } catch {}
+      setLoading(false)
+      toast({
+        title: 'Payment failed',
+        description: e instanceof Error ? e.message : 'Online activation is restricted to platform admins. Use the pricing page to pay by card or PayPal.',
+        variant: 'destructive',
+      })
     }
-    
-    setLoading(false)
-    setSuccess(true)
-    toast({ title: 'Payment Successful', description: `Charged ${fmt(amount)} via ${method.toUpperCase()}` })
   }
 
   const currencyLabel = isKenya ? 'KES' : 'USD'

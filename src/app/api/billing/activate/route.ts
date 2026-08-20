@@ -1,20 +1,16 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 
 /**
  * POST /api/billing/activate
- * Activates subscription after successful payment.
- * Called by PaymentModal after payment confirmation.
+ * Activates a subscription manually (cash/demo activation by a platform admin).
+ * Restricted to SUPER_ADMIN — regular users must pay via Stripe/PayPal/M-Pesa
+ * so nobody can self-grant a paid subscription.
  */
-export const POST = route({ skipSubscriptionCheck: true }, async (request) => {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+export const POST = route({ auth: 'SUPER_ADMIN', skipSubscriptionCheck: true }, async (request, { user }) => {
   const { method, amount, currency } = await request.json()
-  const userId = session.user.id
+  const userId = user.id
 
   // Find or create subscription
   const existingSub = await prisma.subscription.findFirst({

@@ -72,35 +72,44 @@ async function refreshDbCache(): Promise<void> {
 }
 
 export async function getKey(envVar: string): Promise<string | undefined> {
+  // DB (system_settings, set via Super Admin → AI Config) is authoritative.
+  const dbKey = DB_KEY_MAP[envVar]
+  if (dbKey) {
+    if (!dbKeysCache || Date.now() - dbKeysCacheTime >= 60_000) await refreshDbCache()
+    const dbValue = dbKeysCache?.[dbKey]
+    if (dbValue) {
+      const dbParts = dbValue.split(',').map(s => s.trim()).filter(Boolean)
+      if (dbParts.length) return dbParts[0]
+    }
+  }
+  // Fallback to env var (local dev / deployment bootstrap).
   if (process.env[envVar]) {
     const val = process.env[envVar]
     const parts = val.split(',').map(s => s.trim()).filter(Boolean)
     return parts[0] || undefined
   }
-  const dbKey = DB_KEY_MAP[envVar]
-  if (!dbKey) return undefined
-  if (!dbKeysCache || Date.now() - dbKeysCacheTime >= 60_000) await refreshDbCache()
-  const raw = dbKeysCache?.[dbKey]
-  if (!raw) return undefined
-  const parts = raw.split(',').map(s => s.trim()).filter(Boolean)
-  return parts[0] || undefined
+  return undefined
 }
 
 /** Get all keys for a provider (comma-separated) — for key rotation */
 export async function getAllKeys(envVar: string): Promise<string[]> {
-  const raw = process.env[envVar] || (() => {
-    const dbKey = DB_KEY_MAP[envVar]
-    if (!dbKey) return undefined
-    return dbKeysCache?.[dbKey]
-  })()
+  const dbKey = DB_KEY_MAP[envVar]
+  if (dbKey) {
+    if (!dbKeysCache || Date.now() - dbKeysCacheTime >= 60_000) await refreshDbCache()
+    const dbValue = dbKeysCache?.[dbKey]
+    if (dbValue) return dbValue.split(',').map(s => s.trim()).filter(Boolean)
+  }
+  const raw = process.env[envVar]
   if (!raw) return []
   return raw.split(',').map(s => s.trim()).filter(Boolean)
 }
 
 async function getSetting(key: string): Promise<string | undefined> {
-  if (process.env[key]) return process.env[key]
   if (!dbKeysCache || Date.now() - dbKeysCacheTime >= 60_000) await refreshDbCache()
-  return dbKeysCache?.[key]
+  const dbValue = dbKeysCache?.[key]
+  if (dbValue !== undefined && dbValue !== '') return dbValue
+  if (process.env[key]) return process.env[key]
+  return undefined
 }
 
 export type AIProvider = 'cerebras' | 'deepseek' | 'gemini' | 'groq' | 'openrouter' | 'openai' | 'premium-openai' | 'premium-gemini'

@@ -1,18 +1,21 @@
 import OpenAI from 'openai'
+import { getKey } from './ai-provider'
 
 let client: OpenAI | null = null
+let clientKey = ''
 
-function getClient(): OpenAI {
-  if (!client) {
-    const key = process.env.OPENAI_API_KEY || ''
-    if (!key) throw new Error('OPENAI_API_KEY is required for embeddings')
+async function getClient(): Promise<OpenAI> {
+  const key = ((await getKey('OPENAI_API_KEY')) || '').trim()
+  if (!key) throw new Error('OPENAI_API_KEY is required for embeddings (set via Super Admin → AI Config)')
+  if (!client || clientKey !== key) {
     client = new OpenAI({ apiKey: key })
+    clientKey = key
   }
   return client
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const openai = getClient()
+  const openai = await getClient()
   const res = await openai.embeddings.create({
     model: 'text-embedding-3-small',
     input: text,
@@ -22,7 +25,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 }
 
 export async function generateEmbeddings(texts: string[]): Promise<number[][]> {
-  const openai = getClient()
+  const openai = await getClient()
   const res = await openai.embeddings.create({
     model: 'text-embedding-3-small',
     input: texts,

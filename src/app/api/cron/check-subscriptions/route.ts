@@ -9,10 +9,14 @@ export const GET = route({ auth: 'none' }, async () => {
   let expired = 0
   let trialled = 0
 
-  // Mark ACTIVE subscriptions past endDate as EXPIRED
+  // Mark ACTIVE subscriptions past endDate as EXPIRED.
+  // Rows with a stripeSubscriptionId are recurring Stripe plans whose life is
+  // managed by webhook events (status + endDate refreshed on every invoice) —
+  // they are never expirable from this local date lookup.
   const activeExpired = await prisma.subscription.updateMany({
     where: {
       status: 'ACTIVE',
+      stripeSubscriptionId: null,
       endDate: { lt: now },
     },
     data: { status: 'EXPIRED' },

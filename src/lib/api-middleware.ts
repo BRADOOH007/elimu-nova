@@ -101,14 +101,24 @@ async function checkSubscriptionAccess(user: UserInfo, path: string): Promise<{ 
       if (student?.schoolId) schoolId = student.schoolId
       else if (student?.teacher && !student.teacher.schoolId) userId = student.teacher.userId
       else {
-        // Independent/homeschool student — check parent subscription first
+        // Independent/homeschool student — resolve like /api/subscription/status:
+        // if the parent is school-linked (via a sibling child) the school plan
+        // covers this student; otherwise fall back to the parent's subscription.
         const parentLink = await prisma.parentStudent.findFirst({
           where: { studentId: student?.id },
-          include: { parent: { select: { userId: true } } }
+          include: {
+            parent: {
+              select: {
+                userId: true,
+                students: { include: { student: { select: { schoolId: true } } } },
+              },
+            },
+          },
         })
         if (parentLink?.parent?.userId) {
-          // Resolve to parent's subscription for the check
-          userId = parentLink.parent.userId
+          const linkedSchoolId = parentLink.parent.students.find(s => s.student.schoolId)?.student.schoolId
+          if (linkedSchoolId) schoolId = linkedSchoolId
+          else userId = parentLink.parent.userId
         } else {
           userId = user.id
         }
