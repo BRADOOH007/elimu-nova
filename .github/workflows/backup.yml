@@ -63,7 +63,11 @@ jobs:
           fi
           TIMESTAMP=$(date +%Y-%m-%dT%H-%M-%S)
           FILENAME="elimunova-backup-${TIMESTAMP}.sql"
-          pg_dump "$DB_URL" \
+          # /usr/bin/pg_dump is a wrapper that may still resolve to an older
+          # client; pick the newest installed client explicitly so the dump
+          # tool major matches (or exceeds) the Neon server major.
+          PGBIN=$(ls -d /usr/lib/postgresql/*/bin | sort -V | tail -1)
+          "$PGBIN/pg_dump" "$DB_URL" \
             --no-owner \
             --no-acl \
             --format=custom \
