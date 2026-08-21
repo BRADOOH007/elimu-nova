@@ -95,11 +95,31 @@ describe('subscription-service', () => {
       expect(result.daysRemaining).toBe(9999)
     })
 
-    it('treats ACTIVE subscriptions as always accessible (paid subscribers are never locked out)', async () => {
-      // An ACTIVE subscription represents a paying subscriber in good standing.
-      // Even if endDate is in the past (e.g. webhook delay / renewal race),
-      // a paid subscriber must never be blocked.
-      const pastDate = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
+    it('treats recurring Stripe subscriptions as always accessible (webhook-managed, never locked out)', async () => {
+      // A recurring Stripe subscription is managed by webhook events (status +
+      // endDate refreshed on every invoice). Even if endDate is stale, a
+      // Stripe-managed paid subscriber must never be blocked by a local date.
+      const pastDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+      ;(prisma.subscription.findFirst as any).mockResolvedValue({
+        id: 'sub-1',
+        endDate: pastDate,
+        status: 'ACTIVE',
+        isTrial: false,
+        stripeSubscriptionId: 'sub_stripe_123',
+        package: { name: 'Pro' },
+      })
+
+      const result = await getSubscriptionStatus('user-1')
+
+      expect(result.isActive).toBe(true)
+      expect(result.isExpired).toBe(false)
+      expect(result.status).toBe('ACTIVE')
+    })
+
+    it('keeps a time-bound ACTIVE subscription active while inside the expiry grace window', async () => {
+      // PayPal / M-Pesa / cash plans expire by date, but the 5-day grace
+      // absorbs renewal lag — still inside grace means still active.
+      const pastDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
       ;(prisma.subscription.findFirst as any).mockResolvedValue({
         id: 'sub-1',
         endDate: pastDate,
@@ -113,6 +133,30 @@ describe('subscription-service', () => {
       expect(result.isActive).toBe(true)
       expect(result.isExpired).toBe(false)
       expect(result.status).toBe('ACTIVE')
+    })
+
+    it('expires a time-bound ACTIVE subscription once endDate passes beyond grace', async () => {
+      // Non-recurring paid plan well past endDate + 5-day grace — genuinely
+      // lapsed and must block access (and be flipped to EXPIRED in the DB).
+      const pastDate = new Date(Date.now() - (5 + 6) * 24 * 60 * 60 * 1000)
+      ;(prisma.subscription.findFirst as any).mockResolvedValue({
+        id: 'sub-1',
+        endDate: pastDate,
+        status: 'ACTIVE',
+        isTrial: false,
+        package: { name: 'Pro' },
+      })
+      ;(prisma.subscription.update as any).mockResolvedValue({})
+
+      const result = await getSubscriptionStatus('user-1')
+
+      expect(result.isActive).toBe(false)
+      expect(result.isExpired).toBe(true)
+      expect(result.status).toBe('EXPIRED')
+      expect(prisma.subscription.update).toHaveBeenCalledWith({
+        where: { id: 'sub-1' },
+        data: { status: 'EXPIRED' },
+      })
     })
 
     it('returns expired status when a TRIAL subscription end date has passed beyond grace', async () => {
