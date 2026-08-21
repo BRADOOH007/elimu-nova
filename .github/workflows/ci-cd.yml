@@ -157,7 +157,9 @@ jobs:
 
   deploy-production:
     name: Deploy Production (Vercel)
-    needs: [build, e2e-tests]
+    # Only depends on build — e2e-tests is disabled (if: false) and a skipped
+    # dependency would skip this job too, meaning prod never deployed from CI.
+    needs: [build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
