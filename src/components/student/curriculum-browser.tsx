@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { BookOpen, ChevronRight, ChevronDown, ExternalLink, Loader2, Play, CheckCircle2, RefreshCw } from 'lucide-react'
+import { BookOpen, ChevronRight, ChevronDown, ExternalLink, Loader2, Play, CheckCircle2, RefreshCw, Sparkles } from 'lucide-react'
 import { getKECWorkbook, getKECCategoryUrl } from '@/data/kec-workbooks'
 import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
 
@@ -21,6 +21,7 @@ interface Substrand {
 
 interface CurriculumBrowserProps {
   onSelectTopic: (subject: string, topic: string, learningOutcomes?: string[]) => void
+  onQuiz?: (subject: string, topic: string) => void
   defaultSubject?: string
   defaultGrade?: string
   curriculum?: string
@@ -52,7 +53,7 @@ const getFallbackTopics = (subj: string): string[] => {
   return map[subj] || ['General']
 }
 
-export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade, curriculum = 'cbc' }: CurriculumBrowserProps) {
+export function CurriculumBrowser({ onSelectTopic, onQuiz, defaultSubject, defaultGrade, curriculum = 'cbc' }: CurriculumBrowserProps) {
   const [grade, setGrade] = useState(defaultGrade || 'Grade 4')
   const [subject, setSubject] = useState(defaultSubject || 'Mathematics')
   const currentSubjects = useMemo(() => getSubjectsForGrade(curriculum, grade), [curriculum, grade])
@@ -264,6 +265,14 @@ export function CurriculumBrowser({ onSelectTopic, defaultSubject, defaultGrade,
                   >
                     {studyLabel(strand.name)}
                   </button>
+                  {onQuiz && (
+                    <button
+                      onClick={e => { e.stopPropagation(); onQuiz(subject, strand.name) }}
+                      className="text-xs font-semibold px-2.5 py-1 rounded-full transition-all flex items-center gap-1 text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-500 hover:shadow-md"
+                    >
+                      <Sparkles className="h-3 w-3" /> Quiz
+                    </button>
+                  )}
                   {expandedStrand === strand.id ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
                 </div>
               </div>

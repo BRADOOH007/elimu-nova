@@ -8,18 +8,68 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { COUNTRIES, getCurriculaByCountry, getSubjectsForCurriculum, getGradesForCurriculum } from '@/lib/curricula'
+import { COUNTRIES, getCurriculaByCountry, getGradesForCurriculum } from '@/lib/curricula'
+import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import {
   BookOpen, ChevronRight, ChevronLeft, CheckCircle, Loader2,
   FileText, Presentation, Download, Sparkles, Plus, Trash2,
-  Calendar, Settings, Zap, NotebookPen, Upload
+  Calendar, Settings, Zap, NotebookPen, Upload, ToggleLeft, ToggleRight
 } from 'lucide-react'
 
 // Import CBC curriculum data
 import { grades1to9CurriculumByTerm } from '@/data/grades1-9CurriculumByTerm'
 
 const TERMS = ['Term 1','Term 2','Term 3']
+
+/** Generic subject strands used as a last-resort fallback (e.g. Grade 12 Kiswahili). */
+function genericSubjectStrands(subject: string): { name: string; subStrands: { name: string }[] }[] {
+  const s = subject.toLowerCase().trim()
+  if (s.includes('kiswahili') || s.includes('swahili')) {
+    return [
+      { name: 'Kusikiliza na Kuzungumza', subStrands: [{ name: 'Mazungumzo' }, { name: 'Hadithi' }, { name: 'Ushairi' }] },
+      { name: 'Sarufi', subStrands: [{ name: 'Nomino' }, { name: 'Vitenzi' }, { name: 'Viambatisho' }] },
+      { name: 'Msamiati', subStrands: [{ name: 'Maneno ya kila siku' }, { name: 'Msamiati wa mazingira' }] },
+      { name: 'Ufahamu', subStrands: [{ name: 'Kusoma na kufahamu' }, { name: 'Kujibu maswali' }] },
+      { name: 'Insha', subStrands: [{ name: 'Insha ya kueleza' }, { name: 'Barua' }, { name: 'Hadithi' }] },
+    ]
+  }
+  if (s.includes('mathematics') || s.includes('maths') || s.includes('math ') || s.includes('numeracy')) {
+    return [
+      { name: 'Numbers', subStrands: [{ name: 'Whole Numbers' }, { name: 'Decimals' }, { name: 'Fractions' }] },
+      { name: 'Algebra', subStrands: [{ name: 'Patterns' }, { name: 'Equations' }] },
+      { name: 'Geometry', subStrands: [{ name: 'Measurement' }, { name: 'Shapes' }] },
+      { name: 'Data Handling', subStrands: [{ name: 'Collecting Data' }, { name: 'Statistics' }] },
+    ]
+  }
+  if (s.includes('science') || s.includes('technology')) {
+    return [
+      { name: 'Living Things', subStrands: [{ name: 'Plants' }, { name: 'Animals' }, { name: 'Human Body' }] },
+      { name: 'Energy', subStrands: [{ name: 'Heat' }, { name: 'Light' }, { name: 'Electricity' }] },
+      { name: 'Forces and Motion', subStrands: [{ name: 'Forces' }, { name: 'Simple Machines' }] },
+      { name: 'Earth and Space', subStrands: [{ name: 'Weather' }, { name: 'Solar System' }] },
+    ]
+  }
+  if (s.includes('english') || s.includes('language') || s.includes('literacy')) {
+    return [
+      { name: 'Listening and Speaking', subStrands: [{ name: 'Oral Narratives' }, { name: 'Presentations' }] },
+      { name: 'Reading', subStrands: [{ name: 'Comprehension' }, { name: 'Fluency' }] },
+      { name: 'Grammar', subStrands: [{ name: 'Nouns' }, { name: 'Verbs' }, { name: 'Tenses' }] },
+      { name: 'Writing', subStrands: [{ name: 'Composition' }, { name: 'Creative Writing' }] },
+    ]
+  }
+  if (s.includes('social') || s.includes('history') || s.includes('geography') || s.includes('civic')) {
+    return [
+      { name: 'Our Country', subStrands: [{ name: 'Map of Kenya' }, { name: 'Counties' }] },
+      { name: 'Resources', subStrands: [{ name: 'Natural Resources' }, { name: 'Resource Management' }] },
+      { name: 'Government', subStrands: [{ name: 'Leadership' }, { name: 'Citizenship' }] },
+      { name: 'History', subStrands: [{ name: 'Independence' }, { name: 'Constitution' }] },
+    ]
+  }
+  return [
+    { name: 'General', subStrands: [{ name: 'Core Concepts' }, { name: 'Application' }, { name: 'Review' }] },
+  ]
+}
 
 interface SelectedTopic { strand: string; subStrand: string }
 
@@ -33,24 +83,31 @@ interface KICDRow {
 export default function CreateSchemePage() {
   const { toast } = useToast()
   const router = useRouter()
-  const [step, setStep] = useState(1) // 1=Setup, 2=Topics, 3=Generate, 4=View
+  const [step, setStep] = useState(1) // 1=Setup, 2=Topics, 3=Breaks, 4=Generate, 5=View
   const [schemeCountry, setSchemeCountry] = useState('KE')
   const [schemeCurriculum, setSchemeCurriculum] = useState('cbc')
-
-  const SUBJECTS = getSubjectsForCurriculum(schemeCurriculum)
-  const GRADES = getGradesForCurriculum(schemeCurriculum)
 
   // Step 1 — Setup
   const [subject, setSubject]         = useState('')
   const [grade, setGrade]             = useState('')
+
+  const SUBJECTS = getSubjectsForCurriculum(schemeCurriculum, grade || null)
+  const GRADES = getGradesForCurriculum(schemeCurriculum)
   const [term, setTerm]               = useState('Term 1')
   const [weeksCount, setWeeksCount]   = useState(13)
   const [lessonsPerWeek, setLessonsPerWeek] = useState(5)
   const [title, setTitle]             = useState('')
+  const [hasDoubleLessons, setHasDoubleLessons] = useState(false)
 
   // Step 2 — Topics
   const [selectedTopics, setSelectedTopics] = useState<SelectedTopic[]>([])
   const [availableStrands, setAvailableStrands] = useState<any[]>([])
+
+  // Step 2.5 — Breaks
+  const [customBreaks, setCustomBreaks] = useState<Array<{ afterWeek: number; reason: string }>>([
+    { afterWeek: 4, reason: 'Mid-Term Break (1 week)' },
+    { afterWeek: 10, reason: 'End of Term Examinations' },
+  ])
 
   // Step 3/4 — Generation
   const [generating, setGenerating]   = useState(false)
@@ -81,7 +138,7 @@ export default function CreateSchemePage() {
         const res = await fetch('/api/curriculum/auto-populate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ grade, subject, term: termNum }),
+          body: JSON.stringify({ grade, subject, term: termNum, curriculum: schemeCurriculum }),
         })
         if (res.ok) {
           const data = await res.json()
@@ -108,7 +165,13 @@ export default function CreateSchemePage() {
                laName.includes(subjectLower) ||
                (subjectLower.includes(laName.split(' ')[0]) && laName.split(' ')[0].length > 3)
       })
-      setAvailableStrands(subjectData?.strands || [])
+      let strands = subjectData?.strands || []
+      // Last-resort fallback so senior secondary (Grade 10-12) and other
+      // grade/subject combinations without seeded/local data still get topics.
+      if (strands.length === 0) {
+        strands = genericSubjectStrands(subject)
+      }
+      setAvailableStrands(strands)
     }
     loadFromApi()
   }, [subject, grade, term])
@@ -140,13 +203,13 @@ export default function CreateSchemePage() {
       const res  = await fetch('/api/ai/generate-scheme-structured', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, subject, grade, term, weeksCount, lessonsPerWeek, selectedTopics, documentContext, curriculum: schemeCurriculum, country: schemeCountry }),
+        body: JSON.stringify({ title, subject, grade, term, weeksCount, lessonsPerWeek, selectedTopics, documentContext, curriculum: schemeCurriculum, country: schemeCountry, customBreaks, hasDoubleLessons }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Generation failed')
       setRows(data.rows)
       setSchemeId(data.scheme?.id || null)
-      setStep(4)
+      setStep(5)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -307,7 +370,7 @@ export default function CreateSchemePage() {
 
       {/* Step indicators */}
       <div className="flex items-center gap-2">
-        {['Setup', 'Topics', 'Generate', 'View & Export'].map((s, i) => (
+        {['Setup', 'Topics', 'Breaks', 'Generate', 'View & Export'].map((s, i) => (
           <div key={s} className="flex items-center gap-2">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
               step > i + 1 ? 'bg-green-500 text-white' :
@@ -317,7 +380,7 @@ export default function CreateSchemePage() {
               {step > i + 1 ? <CheckCircle className="h-4 w-4" /> : i + 1}
             </div>
             <span className={`text-sm font-medium hidden sm:block ${step === i + 1 ? 'text-slate-800' : 'text-slate-400'}`}>{s}</span>
-            {i < 3 && <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />}
+            {i < 4 && <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />}
           </div>
         ))}
       </div>
@@ -391,6 +454,21 @@ export default function CreateSchemePage() {
               </Select>
             </div>
             <div className="space-y-1.5">
+              <Label>Double Periods</Label>
+              <button
+                type="button"
+                onClick={() => setHasDoubleLessons(!hasDoubleLessons)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all ${
+                  hasDoubleLessons
+                    ? 'bg-purple-50 border-purple-300 text-purple-700'
+                    : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                }`}
+              >
+                {hasDoubleLessons ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+                {hasDoubleLessons ? '80 min periods' : '40 min periods'}
+              </button>
+            </div>
+            <div className="space-y-1.5">
               <Label>Scheme Title</Label>
               <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Auto-generated from selections" />
             </div>
@@ -451,14 +529,79 @@ export default function CreateSchemePage() {
               <ChevronLeft className="h-4 w-4 mr-1" /> Back
             </Button>
             <Button onClick={() => setStep(3)} className="bg-gradient-to-r from-blue-600 to-purple-600">
+              Next: Breaks & Schedule <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 3: Breaks Configuration ── */}
+      {step === 3 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5">
+          <h2 className="font-bold text-slate-800 flex items-center gap-2"><Calendar className="h-4 w-4" /> Breaks & Schedule</h2>
+          <p className="text-sm text-slate-500">Configure mid-term breaks, exam weeks, and holidays. These weeks won't have lessons.</p>
+
+          <div className="space-y-3">
+            {customBreaks.map((brk, i) => (
+              <div key={i} className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <div className="flex-1 grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">After Teaching Week</Label>
+                    <Select value={String(brk.afterWeek)} onValueChange={v => {
+                      const updated = [...customBreaks]
+                      updated[i] = { ...updated[i], afterWeek: Number(v) }
+                      setCustomBreaks(updated)
+                    }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: weeksCount }, (_, n) => n + 1).map(n => (
+                          <SelectItem key={n} value={String(n)}>Week {n}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Reason</Label>
+                    <Input value={brk.reason} onChange={e => {
+                      const updated = [...customBreaks]
+                      updated[i] = { ...updated[i], reason: e.target.value }
+                      setCustomBreaks(updated)
+                    }} placeholder="e.g. Mid-Term Break" />
+                  </div>
+                </div>
+                <button onClick={() => setCustomBreaks(customBreaks.filter((_, j) => j !== i))}
+                  className="text-red-400 hover:text-red-600 mt-4">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <Button variant="outline" size="sm" onClick={() => setCustomBreaks([
+            ...customBreaks,
+            { afterWeek: Math.min(customBreaks.length > 0 ? customBreaks[customBreaks.length - 1].afterWeek + 2 : 5, weeksCount), reason: '' }
+          ])}>
+            <Plus className="h-4 w-4 mr-1" /> Add Break
+          </Button>
+
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-600">
+            <strong>{weeksCount - customBreaks.length} teaching weeks</strong> across {weeksCount} calendar weeks
+            {hasDoubleLessons && <span className="ml-2 text-purple-600 font-medium">· 80 min double periods</span>}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" onClick={() => setStep(2)}>
+              <ChevronLeft className="h-4 w-4 mr-1" /> Back
+            </Button>
+            <Button onClick={() => setStep(4)} className="bg-gradient-to-r from-blue-600 to-purple-600">
               Next: Generate <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* ── STEP 3: Generate ── */}
-      {step === 3 && (
+      {/* ── STEP 4: Generate ── */}
+      {step === 4 && (
         <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-5 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center mx-auto">
             <Sparkles className="h-8 w-8 text-white" />
@@ -471,6 +614,8 @@ export default function CreateSchemePage() {
               { label: 'Term', value: term },
               { label: 'Total lessons', value: `${totalLessons} (${weeksCount} weeks × ${lessonsPerWeek}/week)` },
               { label: 'Topics selected', value: selectedTopics.length > 0 ? `${selectedTopics.length} sub-strands` : 'AI will select' },
+              { label: 'Breaks', value: `${customBreaks.length} configured` },
+              { label: 'Period length', value: hasDoubleLessons ? '80 min (double)' : '40 min (standard)' },
             ].map(r => (
               <div key={r.label} className="flex justify-between text-sm">
                 <span className="text-slate-500">{r.label}</span>
@@ -493,7 +638,7 @@ export default function CreateSchemePage() {
           </div>
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-xl">{error}</div>}
           <div className="flex gap-3 justify-center">
-            <Button variant="outline" onClick={() => setStep(2)}>
+            <Button variant="outline" onClick={() => setStep(3)}>
               <ChevronLeft className="h-4 w-4 mr-1" /> Back
             </Button>
             <Button onClick={generate} disabled={generating} className="bg-gradient-to-r from-blue-600 to-purple-600">
@@ -503,8 +648,8 @@ export default function CreateSchemePage() {
         </div>
       )}
 
-      {/* ── STEP 4: View & Export ── */}
-      {step === 4 && rows.length > 0 && (
+      {/* ── STEP 5: View & Export ── */}
+      {step === 5 && rows.length > 0 && (
         <div className="space-y-4">
           {/* Actions */}
           <div className="flex items-center justify-between flex-wrap gap-3">

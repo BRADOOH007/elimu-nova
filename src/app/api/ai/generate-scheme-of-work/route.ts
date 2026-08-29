@@ -134,7 +134,7 @@ CRITICAL REQUIREMENTS:
 
     // Generate scheme of work using full AI waterfall
     const content = await OpenAIService.generateLongContent(messages, {
-      maxTokens: 2500,
+      maxTokens: 8000,
       temperature: 0.7
     })
 

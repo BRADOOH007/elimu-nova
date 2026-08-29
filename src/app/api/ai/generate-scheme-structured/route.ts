@@ -11,11 +11,14 @@
  */
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { type AIMessage, callAI } from '@/lib/ai-provider'
+import { callAI } from '@/lib/ai-provider'
 import { buildKICDSchemePrompt, CBC_SUBJECT_LESSON_ALLOCATION } from '@/lib/cbc-context'
 import { route } from '@/lib/api-middleware'
 import { buildFullGenerationContext } from '@/lib/curriculum-intelligence'
 import { buildCurriculumSchemeContext } from '@/lib/curriculum-prompt'
+import { buildSubjectPedagogySection } from '@/lib/subject-pedagogy'
+import { buildGradeBandSection, getGradeBandProfile } from '@/lib/grade-bands'
+import { lookupCurriculumTopic, isKiswahiliSubject } from '@/lib/deterministic-curriculum'
 
 export interface KICDRow {
   week: number; lesson: number; strand: string; subStrand: string
@@ -33,8 +36,10 @@ const TERM_BREAKS: Record<string, Array<{ afterWeek: number; reason: string }>> 
 }
 
 // ── Timeline builder ─────────────────────────────────────────
-function buildTimeline(weeksCount: number, term: string) {
-  const breaks = TERM_BREAKS[term] || TERM_BREAKS['Term 1']
+function buildTimeline(weeksCount: number, term: string, customBreaks?: Array<{ afterWeek: number; reason: string }>) {
+  const breaks = customBreaks && customBreaks.length > 0
+    ? customBreaks
+    : TERM_BREAKS[term] || TERM_BREAKS['Term 1']
   const timeline: Array<{ week: number; isBreak: boolean; breakReason?: string }> = []
   let teachingWeek = 0
   for (let cal = 1; cal <= weeksCount + breaks.length; cal++) {
@@ -137,45 +142,99 @@ function normaliseRow(r: any, week: number, lesson: number): KICDRow {
 }
 
 // ── Deterministic fallback: builds a complete scheme from selected topics ──
-function buildFallbackScheme(topics: Array<{ strand: string; subStrand: string }>, weeksCount: number, lessonsPerWeek: number): KICDRow[] {
+/**
+ * Smart deterministic scheme fallback — enriched from real DB curriculum data
+ * (strand / sub-strand / learning outcomes) plus grade-band + subject pedagogy.
+ * Mirrors the lesson-plan builder so schemes are curriculum-accurate even when
+ * AI is unavailable.
+ */
+async function buildSmartScheme(
+  opts: {
+    subject: string
+    grade: string
+    curriculum?: string
+    country?: string
+    topics: Array<{ strand: string; subStrand: string }>
+    weeksCount: number
+    lessonsPerWeek: number
+    hasDoubleLessons?: boolean
+    term?: string
+  }
+): Promise<KICDRow[]> {
+  const { subject, grade, curriculum, topics, weeksCount, lessonsPerWeek, hasDoubleLessons } = opts
+  const band = getGradeBandProfile(grade)
+
+  // Resolve enriched topic data once per unique subStrand.
+  const enriched = new Map<string, { strandName: string; subStrandName: string; outcomes: string[] }>()
+  for (const t of topics) {
+    const key = `${t.strand}|${t.subStrand}`
+    if (enriched.has(key)) continue
+    const lookup = await lookupCurriculumTopic({ grade, subject, topic: t.subStrand, curriculum })
+    enriched.set(key, {
+      strandName: lookup.matched ? lookup.strandName : (t.strand || subject),
+      subStrandName: lookup.matched ? lookup.subStrandName : (t.subStrand || subject),
+      outcomes: lookup.learningOutcomes || [],
+    })
+  }
+
+  const activityPool = [
+    ...(band.activityTypes || []),
+    'Guided discovery through questioning',
+    'Collaborative group work',
+    'Practical hands-on activity',
+    'Individual practice and exercises',
+  ]
+  const assessPool = (band.assessmentMethods && band.assessmentMethods.length > 0)
+    ? band.assessmentMethods
+    : ['Oral questions', 'Classwork and exercises', 'Observation', 'Short quiz']
+
+  const makeSLO = (outcomes: string[]): string => {
+    if (outcomes && outcomes.length > 0) return outcomes[0]
+    return `By the end of the lesson, the learner should be able to describe and explain key concepts in the sub-strand with accuracy.`
+  }
+
   const rows: KICDRow[] = []
-  let topicIdx = 0
+  let idx = 0
   for (let w = 1; w <= weeksCount; w++) {
     for (let l = 1; l <= lessonsPerWeek; l++) {
-      const idx = (w - 1) * lessonsPerWeek + (l - 1)
-      const t = topics[idx % topics.length] || topics[topicIdx++ % topics.length] || { strand: 'Topic', subStrand: 'Subtopic' }
-      const activityTypes = ['Lecture/discussion', 'Group work and collaborative learning', 'Hands-on practical activity', 'Individual practice and exercises', 'Question and answer session']
-      const resources = ['Textbook and exercise books', 'Chalkboard or whiteboard', 'Charts, diagrams or models', 'Digital learning resources', 'Local materials and realia']
-      const questions = [
-        'What do you already know about this topic?',
-        'How does this concept apply to everyday life?',
-        'Can you explain this to a friend?',
-        'What challenges did you encounter?',
-        'How can we solve this problem differently?',
-      ]
+      const progress = (w - 1) * lessonsPerWeek + (l - 1)
+      const t = topics[progress % topics.length] || topics[0] || { strand: subject, subStrand: subject }
+      const data = enriched.get(`${t.strand}|${t.subStrand}`) || {
+        strandName: t.strand || subject, subStrandName: t.subStrand || subject, outcomes: [],
+      }
+      const slo = makeSLO(data.outcomes)
+      const q1 = (data.outcomes?.[1] || data.outcomes?.[0] || `What do you already know about ${data.subStrandName}?`)
       rows.push({
-        week: w, lesson: l,
-        strand: t.strand,
-        subStrand: t.subStrand,
-        specificLearningOutcomes: `By the end of the lesson, the learner should be able to describe and explain key concepts in ${t.subStrand} with at least 70% accuracy.`,
-        keyInquiryQuestions: [questions[idx % questions.length], questions[(idx + 1) % questions.length]],
-        learningExperiences: [
-          activityTypes[idx % activityTypes.length],
-          activityTypes[(idx + 1) % activityTypes.length],
-          activityTypes[(idx + 2) % activityTypes.length],
+        week: w,
+        lesson: l,
+        strand: data.strandName,
+        subStrand: data.subStrandName,
+        specificLearningOutcomes: slo,
+        keyInquiryQuestions: [
+          q1,
+          `How does ${data.subStrandName} apply to everyday life?`,
         ],
-        learningResources: [resources[idx % resources.length], resources[(idx + 1) % resources.length]],
-        assessment: `Review learners' ability to explain ${t.subStrand}. Use oral questions, classwork, and observation.`,
+        learningExperiences: [
+          activityPool[idx % activityPool.length],
+          activityPool[(idx + 1) % activityPool.length],
+          activityPool[(idx + 2) % activityPool.length],
+        ],
+        learningResources: [
+          isKiswahiliSubject(subject) ? 'Kitabu cha Kiswahili' : `${subject} textbook`,
+          'Chalkboard or whiteboard',
+          'Charts, diagrams or models',
+          'Learner exercise books',
+        ],
+        assessment: `Assess learners' understanding of ${data.subStrandName} using ${assessPool[idx % assessPool.length].toLowerCase()}.`,
         reflection: '',
-        durationMinutes: 40,
+        durationMinutes: hasDoubleLessons ? 80 : 40,
         type: 'lesson',
       })
+      idx++
     }
   }
   return rows
 }
-
-// ── AI provider waterfall with retries ────────────────────────
 const PROVIDERS = [
   {
     name: 'Cerebras',
@@ -232,6 +291,7 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
     const {
       title, subject, grade, term = 'Term 1', weeksCount = 13, lessonsPerWeek = 5,
       selectedTopics = [], saveToDb = true, documentContext, curriculum, country,
+      customBreaks, hasDoubleLessons = false,
     } = await request.json()
 
     if (!subject || !grade) {
@@ -263,8 +323,14 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
 
     // Fetch curriculum intelligence — official outcomes + teacher examples + RAG
     const { curriculumSection, examplesSection, ragContext } = await buildFullGenerationContext(
-      grade, subject as string, { generationType: 'scheme_of_work' }
+      grade, subject as string, { generationType: 'scheme_of_work', curriculum: curriculum as string }
     )
+
+    // Subject-specific pedagogy
+    const pedagogySection = buildSubjectPedagogySection(subject as string)
+
+    // Grade-band adaptations
+    const gradeBandSection = buildGradeBandSection(grade)
 
     const topicsStr = topics.map(t => `- ${t.strand} → ${t.subStrand}`).join('\n')
 
@@ -281,8 +347,10 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
 ${curriculumSection}
 ${ragContext}
 ${examplesSection}
+${pedagogySection}
+${gradeBandSection}
 Return ONLY a raw JSON array. First char [ last char ]. No markdown. No explanation.
-Each object: {"week":<1-${weeksCount}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"${curriculum && curriculum !== 'cbc' ? 'Students will be able to...' : 'By the end of the lesson, the learner should be able to...'}","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":40}
+Each object: {"week":<1-${weeksCount}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"${curriculum && curriculum !== 'cbc' ? 'Students will be able to...' : 'By the end of the lesson, the learner should be able to...'}","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":${hasDoubleLessons ? 80 : 40}}
 ${curriculum && curriculum !== 'cbc' ? 'Aligned to the selected curriculum. US/local examples.' : 'CBC-aligned. Kenya-specific examples.'} ${grade} ${subject}. Distribute topics: ${topicsStr} across ${weeksCount} weeks. Exactly ${effectiveLpw} lessons per week. Return exactly ${totalLessons} objects.`
         const userPrompt = `${weeksCount}-week ${subject} scheme ${grade} ${term}. ${effectiveLpw} lessons/week. Total: ${totalLessons} lessons.\nTopics:\n${topicsStr}`
         const raw = await generateAIChunk(systemPrompt, userPrompt)
@@ -316,8 +384,10 @@ ${curriculum && curriculum !== 'cbc' ? 'Aligned to the selected curriculum. US/l
 ${curriculumSection}
 ${ragContext}
 ${examplesSection}
+${pedagogySection}
+${gradeBandSection}
 Return ONLY a raw JSON array. First char [ last char ]. No markdown. No explanation.
-Each object: {"week":<${startWeek}-${startWeek + chunkWeeks - 1}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"${curriculum && curriculum !== 'cbc' ? 'Students will be able to...' : 'By the end of the lesson, the learner should be able to...'}","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":40}
+Each object: {"week":<${startWeek}-${startWeek + chunkWeeks - 1}>,"lesson":<1-${effectiveLpw}>,"strand":"...","subStrand":"...","specificLearningOutcomes":"${curriculum && curriculum !== 'cbc' ? 'Students will be able to...' : 'By the end of the lesson, the learner should be able to...'}","keyInquiryQuestions":["...","..."],"learningExperiences":["...","...","..."],"learningResources":["...","..."],"assessment":"...","reflection":"","durationMinutes":${hasDoubleLessons ? 80 : 40}}
 ${curriculum && curriculum !== 'cbc' ? 'Aligned to the selected curriculum. US/local examples.' : 'CBC-aligned. Kenya-specific.'} ${grade} ${subject}. Topics: ${chunkTopicsStr}. ${chunkWeeks} weeks × ${effectiveLpw} lessons = ${chunkLessons} rows.`
           const userPrompt = `Weeks ${startWeek}-${startWeek + chunkWeeks - 1} of ${subject} ${grade} ${term}. ${effectiveLpw} lessons/week.\nTopics:\n${chunkTopicsStr}`
           const raw = await generateAIChunk(systemPrompt, userPrompt)
@@ -326,10 +396,15 @@ ${curriculum && curriculum !== 'cbc' ? 'Aligned to the selected curriculum. US/l
           console.log(`[SCHEME] Chunk ${ci + 1}/${topicChunks.length}: ${chunkRows.length} rows`)
         } catch (e: any) {
           console.warn(`[SCHEME] Chunk ${ci + 1} failed:`, e.message)
-          // Generate fallback rows for this chunk
-          const fallback = buildFallbackScheme(chunkTopics, chunkWeeks, effectiveLpw).map(r => ({ ...r, week: r.week + startWeek - 1 }))
-          aiRows.push(...fallback)
-          console.log(`[SCHEME] 🔧 Fallback chunk ${ci + 1}: ${fallback.length} rows`)
+          // Generate smart fallback rows for this chunk
+          const smartBase = await buildSmartScheme({
+            subject, grade, curriculum, country,
+            topics: chunkTopics, weeksCount: chunkWeeks, lessonsPerWeek: effectiveLpw, hasDoubleLessons,
+          })
+          const smart = smartBase.map(r => ({ ...r, week: r.week + startWeek - 1 }))
+          aiRows.push(...smart)
+          usedFallback = true
+          console.log(`[SCHEME] 🔧 Smart fallback chunk ${ci + 1}: ${smart.length} rows`)
         }
       }
     }
@@ -345,11 +420,19 @@ ${curriculum && curriculum !== 'cbc' ? 'Aligned to the selected curriculum. US/l
 
     // ── Fallback for missing or all-failed ────────────────────
     if (aiRows.length < totalLessons * 0.5) {
-      // AI got less than half the needed rows — use full fallback
-      console.log(`[SCHEME] ⚠️ AI only produced ${aiRows.length}/${totalLessons} rows — using deterministic fallback for reliability.`)
-      aiRows = buildFallbackScheme(topics, weeksCount, effectiveLpw)
+      // AI got less than half the needed rows — use the smart deterministic
+      // builder (real DB outcomes + grade-band + subject pedagogy).
+      console.log(`[SCHEME] ⚠️ AI only produced ${aiRows.length}/${totalLessons} rows — using smart deterministic fallback.`)
+      aiRows = await buildSmartScheme({
+        subject, grade, curriculum, country,
+        topics, weeksCount, lessonsPerWeek: effectiveLpw, hasDoubleLessons,
+      })
       usedFallback = true
     }
+
+    // Recompute coverage from the FINAL aiRows (fallback replaces them entirely).
+    covered.clear()
+    aiRows.forEach(r => covered.add(`${r.week}|${r.lesson}`))
 
     // Fill any missing slot
     for (let w = 1; w <= weeksCount; w++) {
@@ -370,7 +453,7 @@ ${curriculum && curriculum !== 'cbc' ? 'Aligned to the selected curriculum. US/l
     aiRows = aiRows.slice(0, totalLessons)
 
     // ── Insert break rows into timeline ───────────────────────
-    const timeline = buildTimeline(weeksCount, term)
+    const timeline = buildTimeline(weeksCount, term, customBreaks)
     const allRows: KICDRow[] = []
     let teachingIdx = 0
     for (const slot of timeline) {

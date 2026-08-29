@@ -6,6 +6,7 @@
 import { prisma } from '@/lib/prisma'
 import { buildKICDSchemePrompt } from '@/lib/cbc-context'
 import { buildCurriculumAssessmentContext } from '@/lib/curriculum-prompt'
+import { getCurriculumType } from '@/lib/curriculum-type-map'
 
 export interface StructuredQuestion {
   id: number | string
@@ -38,12 +39,12 @@ const SUBJECT_ALIASES: Record<string, string[]> = {
 }
 
 /** Load real curriculum learning outcomes for grade+subject+topic (best-effort). */
-export async function loadCurriculumOutcomes(grade: string, subject: string, topic?: string): Promise<string[]> {
+export async function loadCurriculumOutcomes(grade: string, subject: string, topic?: string, curriculum?: string): Promise<string[]> {
   try {
     const aliases = SUBJECT_ALIASES[subject] || [subject]
-    const curriculum = await prisma.curriculum.findFirst({
+    const found = await prisma.curriculum.findFirst({
       where: {
-        type: 'CBC',
+        type: getCurriculumType(curriculum),
         grade,
         isActive: true,
         OR: [
@@ -54,10 +55,10 @@ export async function loadCurriculumOutcomes(grade: string, subject: string, top
       },
       select: { id: true },
     })
-    if (!curriculum) return []
+    if (!found) return []
 
     const strands = await prisma.curriculumStrand.findMany({
-      where: { curriculumId: curriculum.id },
+      where: { curriculumId: found.id },
       select: { id: true, name: true },
       orderBy: { order: 'asc' },
       take: 12,

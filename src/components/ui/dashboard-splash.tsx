@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Role = 'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'SUPER_ADMIN' | 'PARENT' | 'SENIOR_STUDENT' | 'SENIOR_TEACHER'
 
@@ -95,18 +95,43 @@ interface Props {
   visible: boolean
 }
 
+const DISMISS_MS   = 5000
+const FADE_MS      = 600
+const DOM_PURGE_MS = DISMISS_MS + FADE_MS + 500
+
 export function DashboardSplash({ role, userName, visible }: Props) {
-  // gone = completely removed from DOM (no z-index, no pointer-events)
-  const [gone, setGone] = useState(false)
+  const [gone, setGone]       = useState(false)
   const [opacity, setOpacity] = useState(1)
   const [progress, setProgress] = useState(0)
   const [tipIndex, setTipIndex] = useState(0)
-  const [dismissed, setDismissed] = useState(false)
+
+  const dismissedRef = useRef(false)
+  const timersRef    = useRef<ReturnType<typeof setTimeout>[]>([])
 
   const cfg       = ROLE_CONFIG[role] || ROLE_CONFIG.STUDENT
   const firstName = userName?.split(' ')[0] || 'there'
 
-  // Progress animation
+  const schedule = (fn: () => void, ms: number) => {
+    const id = setTimeout(fn, ms)
+    timersRef.current.push(id)
+    return id
+  }
+
+  const clearAll = () => {
+    timersRef.current.forEach(clearTimeout)
+    timersRef.current = []
+  }
+
+  const dismiss = () => {
+    if (dismissedRef.current) return
+    dismissedRef.current = true
+    clearAll()
+    setProgress(100)
+    setOpacity(0)
+    schedule(() => setGone(true), FADE_MS)
+  }
+
+  /* ── Progress bar ── */
   useEffect(() => {
     const iv = setInterval(() => {
       setProgress(p => {
@@ -117,68 +142,48 @@ export function DashboardSplash({ role, userName, visible }: Props) {
     return () => clearInterval(iv)
   }, [])
 
-  // Tip rotation
+  /* ── Tip rotation ── */
   useEffect(() => {
     const iv = setInterval(() => setTipIndex(i => (i + 1) % cfg.tips.length), 3000)
     return () => clearInterval(iv)
   }, [cfg.tips.length])
 
-  // Dismiss when visible → false, user clicks, OR after hard 2s timeout
+  /* ── Hard dismiss — fires after DISMISS_MS no matter what ── */
   useEffect(() => {
-    let fadeTimer: NodeJS.Timeout
-    let removeTimer: NodeJS.Timeout
+    schedule(dismiss, DISMISS_MS)
+    return clearAll
+  }, [])
 
-    const dismiss = () => {
-      setProgress(100)
-      setOpacity(0)
-      removeTimer = setTimeout(() => setGone(true), 600)
-    }
+  /* ── Early dismiss when parent sets visible=false ── */
+  useEffect(() => {
+    if (!visible) dismiss()
+  }, [visible])
 
-    if (!visible || dismissed) {
-      fadeTimer = setTimeout(dismiss, 100)
-    }
-
-    const hardTimer = setTimeout(() => {
-      dismiss()
-      // Force-hide via DOM as safety net
+  /* ── DOM-level safety net: physically remove the element ── */
+  useEffect(() => {
+    const id = setTimeout(() => {
       const el = document.getElementById('dashboard-splash')
-      if (el) { el.style.display = 'none' }
-    }, 2000)
+      if (el) el.remove()
+    }, DOM_PURGE_MS)
+    return () => clearTimeout(id)
+  }, [])
 
-    return () => {
-      clearTimeout(fadeTimer)
-      clearTimeout(removeTimer)
-      clearTimeout(hardTimer)
-    }
-  }, [visible, dismissed])
-
-  // Once gone, keep a hidden sentinel so TourLauncher can detect dismissal
-  if (gone) return <div id="dashboard-splash" data-gone="true" style={{display:'none'}} />
-
-  const handleDismiss = () => {
-    if (!dismissed) setDismissed(true)
-  }
+  if (gone) return <div id="dashboard-splash" data-gone="true" style={{ display: 'none' }} />
 
   return (
     <div
       id="dashboard-splash"
-      onClick={handleDismiss}
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 60,
         opacity,
-        // CRITICAL: once fading out, disable ALL pointer events immediately
-        pointerEvents: opacity < 1 ? 'none' : 'auto',
-        // Bulletproof CSS fallback: force-fade + hide after ~2.8s even if JS
-        // timers never fire, so the overlay can never permanently block clicks.
-        animation: 'splash-auto-hide 0.6s ease-out 2.2s forwards',
-        transition: 'opacity 0.5s ease-out',
+        pointerEvents: 'none',
         background: 'linear-gradient(135deg, #060918 0%, #0d1230 40%, #0a0e1f 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        cursor: 'pointer',
+        transition: 'opacity 0.5s ease-out',
       }}
     >
       {/* Grid texture */}
@@ -249,7 +254,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
 
       {/* Bottom watermark */}
       <div style={{ position: 'absolute', bottom: 20, left: 0, right: 0, textAlign: 'center', color: '#475569', fontSize: 11, letterSpacing: 1, fontWeight: 500 }}>
-        Click anywhere to skip · ElimuNova AI
+        ElimuNova AI
       </div>
     </div>
   )

@@ -111,8 +111,8 @@ export const POST = route({ auth: 'none' }, async (req) => {
     if (effectiveCountry || effectiveCurriculum || grade) {
       await (prisma as any).userPreference.upsert({
         where: { userId: user.id },
-        update: { country: effectiveCountry || '', curriculum: effectiveCurriculum || '', language: 'en' },
-        create: { userId: user.id, country: effectiveCountry || '', curriculum: effectiveCurriculum || '', language: 'en' },
+        update: { country: effectiveCountry || '', curriculum: effectiveCurriculum || '', grade: grade || '', language: 'en' },
+        create: { userId: user.id, country: effectiveCountry || '', curriculum: effectiveCurriculum || '', grade: grade || '', language: 'en' },
       })
     }
 

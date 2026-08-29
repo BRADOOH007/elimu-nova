@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { OpenAIService } from '@/lib/openai-service'
+import { OpenAIAI } from '@/lib/openrouter-ai'
 import { route } from '@/lib/api-middleware'
 
 // GET - Fetch student resources
@@ -161,7 +161,7 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
   }
 
   // Generate AI resource content
-  const aiResource = await (OpenAIService as any).generateAIResource({
+  const aiResource = await OpenAIAI.generateAIResource({
     type,
     subject,
     topic,

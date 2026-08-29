@@ -158,7 +158,7 @@ export default function ExamSplitPane({
                         <div className="mt-2 space-y-1">
                           {q.options.map((opt, oi) => (
                             <div key={oi} className={`text-sm px-3 py-1.5 rounded ${
-                              answers[String(q.id)] === opt.charAt(0) ? 'bg-blue-100 text-blue-800' : 'text-gray-600'
+                              answers[String(q.id)] === String(oi) ? 'bg-blue-100 text-blue-800' : 'text-gray-600'
                             }`}>
                               {opt}
                             </div>
@@ -175,6 +175,11 @@ export default function ExamSplitPane({
                               }`}>{v}</span>
                             )
                           })}
+                        </div>
+                      )}
+                      {q.type === 'short_answer' && answers[String(q.id)] && (
+                        <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-700 italic">
+                          Answer: {answers[String(q.id)]}
                         </div>
                       )}
                     </div>
@@ -226,8 +231,7 @@ export default function ExamSplitPane({
                 {q.type === 'multiple_choice' && q.options && (
                   <div className="space-y-2">
                     {q.options.map((opt, oi) => {
-                      const letter = opt.charAt(0)
-                      const isSelected = answers[String(q.id)] === letter
+                      const isSelected = answers[String(q.id)] === String(oi)
                       return (
                         <label
                           key={oi}
@@ -241,9 +245,9 @@ export default function ExamSplitPane({
                             {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
                           </div>
                           <span className="text-sm text-gray-700">{opt}</span>
-                          <input type="radio" name={`ans_${q.id}`} value={letter}
+                          <input type="radio" name={`ans_${q.id}`} value={String(oi)}
                             checked={isSelected}
-                            onChange={() => handleAnswer(q.id, letter)}
+                            onChange={() => handleAnswer(q.id, String(oi))}
                             className="hidden"
                           />
                         </label>
@@ -270,6 +274,16 @@ export default function ExamSplitPane({
                       )
                     })}
                   </div>
+                )}
+
+                {q.type === 'short_answer' && (
+                  <Textarea
+                    value={answers[String(q.id)] || ''}
+                    onChange={(e) => handleAnswer(q.id, e.target.value)}
+                    placeholder="Write your answer here..."
+                    rows={q.marks > 3 ? 5 : 3}
+                    className="text-sm"
+                  />
                 )}
               </CardContent>
             </Card>

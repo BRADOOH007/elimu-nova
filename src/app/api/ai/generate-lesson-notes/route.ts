@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
+import { buildFullGenerationContext } from '@/lib/curriculum-intelligence'
+import { buildSubjectPedagogySection } from '@/lib/subject-pedagogy'
+import { buildGradeBandSection, getContentWordLimit } from '@/lib/grade-bands'
 
 export const POST = route({ auth: ['STUDENT', 'TEACHER', 'SUPER_ADMIN'] }, async (request, { user }) => {
 
-    const { lessonPlan, noteType } = await request.json()
+    const { lessonPlan, noteType, curriculum } = await request.json()
 
     if (!lessonPlan) {
       return NextResponse.json({ error: 'Lesson plan is required' }, { status: 400 })
@@ -21,7 +24,29 @@ export const POST = route({ auth: ['STUDENT', 'TEACHER', 'SUPER_ADMIN'] }, async
         || JSON.stringify(rawContent).slice(0, 3000)
     }
 
+    const lessonTitle = lessonPlan.title || 'Lesson'
+    const lessonSubject = lessonPlan.subject || 'General'
+    const lessonGrade = lessonPlan.grade || 'Grade 8'
+
+    // Fetch curriculum intelligence — official outcomes + teacher examples + RAG
+    let curriculumSection = ''
+    try {
+      const { curriculumSection: cs } = await buildFullGenerationContext(
+        lessonGrade, lessonSubject, { generationType: 'lesson_plan', topic: lessonTitle, curriculum: curriculum || lessonPlan.curriculum }
+      )
+      curriculumSection = cs
+    } catch { /* curriculum intelligence unavailable */ }
+
+    // Subject-specific pedagogy
+    const pedagogySection = buildSubjectPedagogySection(lessonSubject)
+
+    // Grade-band adaptations
+    const gradeBandSection = buildGradeBandSection(lessonGrade)
+
     const systemPrompt = `You are an AI lesson notes generator for ElimuNova. Generate comprehensive student-ready notes from lesson plans.
+${curriculumSection}
+${pedagogySection}
+${gradeBandSection}
 
 NOTE TYPES:
 1. summary      — Key points and main concepts only
@@ -36,6 +61,8 @@ REQUIREMENTS:
 - Organise information logically with headings
 - Include important formulas, dates, or key facts where relevant
 - Include study tips and memory aids
+- ${curriculumSection ? 'Align strictly with the curriculum outcomes provided.' : 'Cover standard learning outcomes for this topic.'}
+- Use age-appropriate vocabulary and reading level
 
 Return ONLY a valid JSON object — no markdown, no explanation:
 {
@@ -53,6 +80,8 @@ Return ONLY a valid JSON object — no markdown, no explanation:
       "definitions": { "term": "definition" }
     }
   ],
+  "vocabulary": [{ "term": "key term", "definition": "clear definition", "example": "usage example" }],
+  "misconceptions": [{ "statement": "common mistake", "correction": "correct understanding" }],
   "summary": "Brief lesson summary",
   "studyTips": ["tip 1", "tip 2"],
   "importantPoints": ["point 1", "point 2"],
@@ -61,9 +90,10 @@ Return ONLY a valid JSON object — no markdown, no explanation:
 
     const userPrompt = `Generate ${noteType || 'detailed'} notes for:
 
-Title: ${lessonPlan.title || 'Lesson'}
-Subject: ${lessonPlan.subject || 'General'}
-Grade: ${lessonPlan.grade || ''}
+Title: ${lessonTitle}
+Subject: ${lessonSubject}
+Grade: ${lessonGrade}
+${curriculum ? `Curriculum: ${curriculum}` : ''}
 Content:
 ${contentStr || 'Generate appropriate notes for this subject and grade level.'}`
 
@@ -72,7 +102,7 @@ ${contentStr || 'Generate appropriate notes for this subject and grade level.'}`
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt   },
       ],
-      { maxTokens: 2000, temperature: 0.6 }
+      { maxTokens: 6000, temperature: 0.6 }
     )
 
     // Robust JSON extraction
@@ -88,11 +118,13 @@ ${contentStr || 'Generate appropriate notes for this subject and grade level.'}`
     } catch (e) {
       console.warn('[LessonNotes] AI returned invalid JSON:', e, 'Raw:', raw.slice(0, 200))
       notesData = {
-        title:          `Notes for ${lessonPlan.title || 'Lesson'}`,
-        subject:        lessonPlan.subject || '',
-        grade:          lessonPlan.grade   || '',
+        title:          `Notes for ${lessonTitle}`,
+        subject:        lessonSubject,
+        grade:          lessonGrade,
         noteType:       noteType || 'detailed',
         sections:       [],
+        vocabulary:     [],
+        misconceptions: [],
         summary:        '',
         studyTips:      [],
         importantPoints: [],

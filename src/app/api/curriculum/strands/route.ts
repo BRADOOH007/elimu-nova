@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCurriculumType } from '@/lib/curriculum-type-map'
 
 import { route, apiLogger } from '@/lib/api-middleware'
 const log = apiLogger('curriculum/strands')
@@ -17,7 +18,7 @@ export const GET = route({}, async (req, { user, params }) => {
       return NextResponse.json({ error: 'grade and subject are required' }, { status: 400 })
     }
 
-    const curriculumType = curriculum === 'cbc' ? 'CBC' : 'OTHER'
+    const curriculumType = getCurriculumType(curriculum)
     const where: any = { type: curriculumType, grade, subject: { contains: subject, mode: 'insensitive' }, isActive: true }
     if (term !== undefined) where.term = term
 

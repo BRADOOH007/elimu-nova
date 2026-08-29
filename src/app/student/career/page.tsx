@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import {
   Compass, Sparkles, Loader2, TrendingUp, BookOpen,
@@ -25,7 +25,6 @@ const GRADES = [
   'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12',
   'Form 1', 'Form 2', 'Form 3', 'Form 4',
 ]
-
 const INTEREST_OPTIONS = [
   'Science & Technology', 'Mathematics', 'Arts & Design', 'Business & Finance',
   'Healthcare & Medicine', 'Law & Justice', 'Education & Teaching', 'Engineering',
@@ -41,6 +40,16 @@ export default function CareerPathwaysPage() {
   const [results, setResults]     = useState<CareerResult | null>(null)
   const [expanded, setExpanded]   = useState<number | null>(0)
   const [error, setError]         = useState('')
+  const [curriculum, setCurriculum] = useState('')
+
+  useEffect(() => {
+    fetch('/api/user-preferences').then(r => r.json()).then(d => setCurriculum(d.curriculum || '')).catch(() => {})
+  }, [])
+
+  const isKenyanCurriculum = curriculum === 'cbc' || curriculum === '8-4-4'
+  const gradeOptions = isKenyanCurriculum
+    ? GRADES
+    : GRADES.filter(g => !g.startsWith('Form'))
 
   const toggleInterest = (i: string) =>
     setInterests(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])
@@ -104,7 +113,7 @@ export default function CareerPathwaysPage() {
         <div>
           <label className="block text-sm font-semibold text-slate-700 mb-2">What grade are you in? *</label>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-            {GRADES.map(g => (
+              {gradeOptions.map(g => (
               <button
                 key={g}
                 onClick={() => setGrade(g)}

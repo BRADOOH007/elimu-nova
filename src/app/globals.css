@@ -564,3 +564,69 @@ button, a {
 @utility pr-safe {
   padding-right: max(env(safe-area-inset-right), 0px);
 }
+
+/* Lesson content area — removes hard height cap, lets content breathe */
+.lesson-content {
+  max-height: none;
+  overflow-y: visible;
+}
+.lesson-content .markdown-body {
+  max-width: 100%;
+}
+.lesson-content .markdown-body blockquote {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid #f59e0b;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 0 0.5rem 0.5rem 0;
+}
+.lesson-content .markdown-body blockquote p {
+  color: #92400e;
+  margin: 0;
+}
+.lesson-content .markdown-body blockquote strong {
+  color: #b45309;
+}
+.lesson-content .markdown-body table {
+  margin: 1rem 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.lesson-content .markdown-body thead {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+}
+.lesson-content .markdown-body thead th {
+  color: white;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+}
+.lesson-content .markdown-body tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+.lesson-content .markdown-body tbody td {
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.lesson-content .markdown-body pre {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-size: 0.8125rem;
+  border: 1px solid #475569;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.lesson-content .markdown-body pre code {
+  color: #e2e8f0;
+  background: none;
+}
+.lesson-content .markdown-body code:not(pre code) {
+  background: #f1f5f9;
+  color: #6366f1;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}

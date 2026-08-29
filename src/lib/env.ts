@@ -33,6 +33,26 @@ const envSchema = z
   })
   .passthrough()
 
+/**
+ * Optional keys that are safe to leave blank (empty-string placeholders) —
+ * they degrade gracefully in code. Blank values are treated as unset so
+ * validation never fails on an empty `.env` placeholder in production.
+ */
+const OPTIONAL_KEYS = [
+  'NEXTAUTH_URL',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+] as const
+
+function normalizeEnv(raw: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  for (const key of OPTIONAL_KEYS) {
+    const value = raw[key]
+    if (typeof value === 'string' && value.trim() === '') delete raw[key]
+  }
+  return raw
+}
+
 /** Keys that must be set in production. Everything else degrades gracefully. */
 const REQUIRED_IN_PRODUCTION = ['DATABASE_URL', 'NEXTAUTH_SECRET'] as const
 
@@ -49,14 +69,15 @@ function formatIssues(issues: z.ZodIssue[]): string {
   return issues
     .map((issue) => {
       const key = issue.path.join('.')
-      const raw = key ? process.env[key] : undefined
+      const raw = key ? normalized[key] : undefined
       const shown = raw ? ` (currently set to '${raw.slice(0, 12)}…')` : ''
       return `  • ${key}: ${issue.message}${shown}`
     })
     .join('\n')
 }
 
-const parseResult = envSchema.safeParse(process.env)
+const normalized = normalizeEnv(process.env)
+const parseResult = envSchema.safeParse(normalized)
 
 if (process.env.SKIP_ENV_CHECK === '1') {
   // Validation bypassed explicitly (e.g. CI smoke builds with no .env).

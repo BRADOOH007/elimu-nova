@@ -13,6 +13,9 @@ import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { buildKICDLessonPrompt } from '@/lib/cbc-context'
 import { buildCurriculumLessonContext } from '@/lib/curriculum-prompt'
+import { buildFullGenerationContext } from '@/lib/curriculum-intelligence'
+import { buildSubjectPedagogySection } from '@/lib/subject-pedagogy'
+import { buildGradeBandSection } from '@/lib/grade-bands'
 import type { KICDRow } from '@/app/api/ai/generate-scheme-structured/route'
 import { route } from '@/lib/api-middleware'
 import { cleanAiJson } from '@/lib/ai-generation-utils'
@@ -61,8 +64,33 @@ export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
     const kicdContext = curriculum && curriculum !== 'cbc'
       ? buildCurriculumLessonContext({ curriculum, country, grade, subject })
       : buildKICDLessonPrompt(grade, subject)
+
+    // Fetch curriculum intelligence — official outcomes + teacher examples + RAG
+    let curriculumSection = ''
+    let ragContext = ''
+    let examplesSection = ''
+    try {
+      const result = await buildFullGenerationContext(
+        grade, subject, { generationType: 'lesson_plan', topic: row.subStrand || subject, curriculum }
+      )
+      curriculumSection = result.curriculumSection
+      ragContext = result.ragContext
+      examplesSection = result.examplesSection
+    } catch { /* curriculum intelligence unavailable */ }
+
+    // Subject-specific pedagogy
+    const pedagogySection = buildSubjectPedagogySection(subject)
+
+    // Grade-band adaptations
+    const gradeBandSection = buildGradeBandSection(grade)
+
     const systemPrompt = `You are ${curriculum && curriculum !== 'cbc' ? 'an expert educator creating detailed lesson plans aligned to the selected curriculum' : 'a Kenyan CBC/CBE curriculum expert creating detailed lesson plans in the official KICD format'}.${templateBlock}
 ${kicdContext}
+${curriculumSection}
+${ragContext}
+${examplesSection}
+${pedagogySection}
+${gradeBandSection}
 The lesson plan must match exactly what is in the scheme of work row provided.
 
 Return a JSON object EXACTLY matching this 11-section structure:
@@ -98,7 +126,18 @@ Return a JSON object EXACTLY matching this 11-section structure:
   },
   "assessment": "string",
   "extendedActivities": "string",
-  "reflection": "string"
+  "reflection": "string",
+  "vocabulary": [{ "term": "key term", "definition": "clear definition", "example": "usage in context" }],
+  "misconceptions": [{ "statement": "common student mistake", "correction": "how to address it", "preventionTip": "how to prevent this misconception" }],
+  "differentiation": {
+    "support": "strategies for struggling learners",
+    "extension": "activities for advanced learners",
+    "learningStyles": ["visual", "kinesthetic", "auditory"],
+    "grouping": "suggested grouping strategy"
+  },
+  "crossCurricularLinks": [{ "subject": "connected subject", "connection": "how topics relate", "activity": "joint activity idea" }],
+  "rubric": [{ "criteria": "assessment criteria", "excellent": "descriptor", "good": "descriptor", "developing": "descriptor" }],
+  "formativeCheckpoints": ["check point 1 during lesson", "check point 2 during lesson"]
 }
 Return ONLY valid JSON. No markdown or explanation.`
 
@@ -139,7 +178,7 @@ Use local examples. Each activity should have clear timing and instructions.`
         { role: 'system', content: systemPrompt },
         { role: 'user',   content: userPrompt   },
       ],
-      { maxTokens: 2000, temperature: 0.5 }
+      { maxTokens: 10000, temperature: 0.5 }
     )
 
     // Robust JSON extraction — find first { and last }

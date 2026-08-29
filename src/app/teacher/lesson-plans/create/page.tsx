@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { COUNTRIES, getCurriculaByCountry, getSubjectsForCurriculum, getGradesForCurriculum } from '@/lib/curricula'
+import { COUNTRIES, getCurriculaByCountry, getGradesForCurriculum } from '@/lib/curricula'
+import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import { LessonPlanViewer } from '@/components/lesson-plan/lesson-plan-viewer'
 import {
@@ -70,9 +71,21 @@ const TOPIC_SUGGESTIONS: Record<string, { strands: string[]; topics: Record<stri
       'Sarufi': ['Viungo', 'Nomino', 'Vitenzi', 'Vijia', 'Viambatisho'],
       'Msamiati': ['Maneno ya kila siku', 'Viungo vya mwili', 'Mazingira', 'Shule'],
       'Ufahamu': ['Kifungu kile', 'Maswali', 'Ufunzi'],
-      'Insha': ['Insha y富力', 'Barua', 'Hadithi', 'Maelezo'],
+      'Insha': ['Insha ya kueleza', 'Barua', 'Hadithi', 'Maelezo'],
     },
   },
+}
+
+/** Normalise a subject name to find a matching TOPIC_SUGGESTIONS key. */
+function topicSuggestKey(subject: string): string {
+  const s = subject.toLowerCase().trim()
+  if (s.includes('kiswahili') || s.includes('swahili')) return 'Kiswahili'
+  if (s.includes('mathematics') || s.includes('maths') || s.includes('math ')) return 'Mathematics'
+  if (s.includes('english') || s.includes('literacy') || s.includes('language')) return 'English'
+  if (s.includes('science')) return 'Science'
+  if (s.includes('social')) return 'Social Studies'
+  if (s.includes('history') || s.includes('geography') || s.includes('civic')) return 'Social Studies'
+  return subject
 }
 
 interface KICDOrganisationStep {
@@ -164,9 +177,6 @@ export default function CreateLessonPlan() {
   const [termCountry, setTermCountry] = useState('KE')
   const [termCurriculum, setTermCurriculum] = useState('cbc')
 
-  const SUBJECTS = getSubjectsForCurriculum(mode === 'single' ? singleCurriculum : termCurriculum)
-  const GRADES = getGradesForCurriculum(mode === 'single' ? singleCurriculum : termCurriculum)
-
   // Single mode fields
   const [formData, setFormData] = useState({
     subject: '', grade: '', topic: '', title: '', duration: 40,
@@ -191,6 +201,11 @@ export default function CreateLessonPlan() {
   // Auto-populate state
   const [availableTopics, setAvailableTopics] = useState<{ strandName: string; substrands: { name: string; learningOutcomes: string[]; activities: string[] }[] }[]>([])
   const [loadingTopics, setLoadingTopics] = useState(false)
+
+  // Subjects are grade-aware for CBC — pass current grade so the dropdown filters correctly,
+  // but show all subjects when grade not yet selected (handled inside getSubjectsForCurriculum).
+  const SUBJECTS = getSubjectsForCurriculum(mode === 'single' ? singleCurriculum : termCurriculum, mode === 'single' ? (formData.grade || null) : (termData.grade || null))
+  const GRADES = getGradesForCurriculum(mode === 'single' ? singleCurriculum : termCurriculum)
 
   // Auto-fill weeksCount from academic calendar when term is selected
   useEffect(() => {
@@ -222,7 +237,7 @@ export default function CreateLessonPlan() {
         const res = await fetch('/api/curriculum/auto-populate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ grade: curGrade, subject: curSubject, term: termNum }),
+          body: JSON.stringify({ grade: curGrade, subject: curSubject, term: termNum, curriculum: mode === 'single' ? singleCurriculum : termCurriculum }),
         })
         let topics: { strandName: string; substrands: { name: string; learningOutcomes: string[]; activities: string[] }[] }[] = []
         if (res.ok) {
@@ -230,9 +245,11 @@ export default function CreateLessonPlan() {
           topics = data.topics || []
         }
 
+        const fallbackKey = topicSuggestKey(curSubject)
+
         // Merge with fallback suggestions if DB has few results
         if (topics.length < 2) {
-          const fallback = TOPIC_SUGGESTIONS[curSubject]
+          const fallback = TOPIC_SUGGESTIONS[fallbackKey]
           if (fallback) {
             for (const strand of fallback.strands) {
               const existing = topics.find(t => t.strandName === strand)
@@ -254,7 +271,7 @@ export default function CreateLessonPlan() {
         setAvailableTopics(topics)
       } catch {
         // Use fallback only
-        const fallback = TOPIC_SUGGESTIONS[curSubject]
+        const fallback = TOPIC_SUGGESTIONS[topicSuggestKey(curSubject)]
         if (fallback) {
           setAvailableTopics(fallback.strands.map(strand => ({
             strandName: strand,
@@ -318,13 +335,10 @@ export default function CreateLessonPlan() {
   }
 
   const getFullTemplate = async () => {
+    // Only send a custom uploaded document to AI — the default KICD template is already
+    // handled by the deterministic builder, so don't trigger AI retries when no upload.
     if (documentContext && documentContext.length > 500) return documentContext
-    const res = await fetch(`/api/teacher/template?curriculum=${encodeURIComponent(mode === 'single' ? singleCurriculum : termCurriculum)}&country=${encodeURIComponent(mode === 'single' ? singleCountry : termCountry)}`)
-    if (res.ok) {
-      const data = await res.json()
-      return data.lessonPlanTemplate || documentContext
-    }
-    return documentContext
+    return null
   }
 
   const handleGenerate = async () => {

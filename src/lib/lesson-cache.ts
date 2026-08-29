@@ -109,21 +109,23 @@ export function similarityScore(a: string, b: string): number {
 
 /* ── Layer 2: curriculum canonical topics ───────────────────────────────── */
 
-async function findCurriculumId(grade: string, subject: string): Promise<string | null> {
-  const exact = await prisma.curriculum.findFirst({ where: { type: 'CBC', grade, subject, isActive: true }, select: { id: true } })
+async function findCurriculumId(grade: string, subject: string, curriculum?: string): Promise<string | null> {
+  const { getCurriculumType } = await import('@/lib/curriculum-type-map')
+  const curriculumType = getCurriculumType(curriculum)
+  const exact = await prisma.curriculum.findFirst({ where: { type: curriculumType, grade, subject, isActive: true }, select: { id: true } })
   if (exact) return exact.id
 
   const aliases = SUBJECT_ALIASES[subject] || []
   if (aliases.length > 0) {
     const viaAlias = await prisma.curriculum.findFirst({
-      where: { type: 'CBC', grade, subject: { in: aliases }, isActive: true },
+      where: { type: curriculumType, grade, subject: { in: aliases }, isActive: true },
       select: { id: true },
     })
     if (viaAlias) return viaAlias.id
   }
 
   const fuzzy = await prisma.curriculum.findFirst({
-    where: { type: 'CBC', grade, isActive: true, subject: { contains: subject } },
+    where: { type: curriculumType, grade, isActive: true, subject: { contains: subject } },
     select: { id: true },
   })
   return fuzzy?.id || null

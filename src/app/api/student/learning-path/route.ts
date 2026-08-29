@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { getCurriculumType } from '@/lib/curriculum-type-map'
 
 const FALLBACK_TOPICS: Record<string, string[]> = {
   Mathematics: ['Whole Numbers','Fractions','Decimals','Measurement','Geometry','Algebra','Data Handling','Statistics'],
@@ -110,15 +111,7 @@ export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
   const subject    = searchParams.get('subject')    || 'Mathematics'
   const curriculum = searchParams.get('curriculum') || ''
 
-  // Map curriculum id to DB curriculum type
-  const curriculumTypeMap: Record<string, string> = {
-    cbc: 'CBC', '8-4-4': '8-4-4', 'common-core': 'COMMON_CORE', ngss: 'NGSS', teks: 'TEKS',
-    'florida-best': 'FLORIDA_BEST', california: 'CALIFORNIA', 'ny-state': 'NY_STATE',
-    ap: 'AP', 'ged-hiset': 'GED_HISET', 'us-homeschool': 'US_HOMESCHOOL',
-    cambridge: 'CAMBRIDGE', gcse: 'GCSE', 'a-level': 'A_LEVEL', caps: 'CAPS', ieb: 'IEB',
-    waec: 'WAEC', cbse: 'CBSE', icse: 'ICSE', ib: 'IB', general: 'GENERAL',
-  }
-  const curriculumType = curriculumTypeMap[curriculum] || 'CBC'
+  const curriculumType = getCurriculumType(curriculum || 'cbc')
 
   const student = await prisma.student.findUnique({ where: { userId: user.id } })
   if (!student) return NextResponse.json({ error: 'Student not found' }, { status: 404 })

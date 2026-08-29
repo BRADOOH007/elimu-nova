@@ -125,6 +125,7 @@ export interface AICallOptions {
   temperature?:      number
   useReasoner?:      boolean
   usePremium?:       boolean
+  responseFormat?:   'json_object'
   cerebrasModel?:    string
   deepseekModel?:    string
   geminiModel?:      string
@@ -155,7 +156,7 @@ const OPENAI_URL     = 'https://api.openai.com/v1/chat/completions'
 async function callHTTP(
   url: string, apiKey: string, model: string,
   messages: AIMessage[], maxTokens = 2000, temperature = 0.7,
-  allKeys?: string[],
+  allKeys?: string[], responseFormat?: 'json_object',
 ): Promise<{ content: string; tokensUsed?: number }> {
   const keys = allKeys && allKeys.length > 0 ? allKeys : [apiKey]
   let lastError: string = ''
@@ -169,7 +170,10 @@ async function callHTTP(
           'HTTP-Referer': 'https://elimunova.app',
           'X-Title': 'ElimuNova AI',
         },
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature }),
+        body: JSON.stringify({
+          model, messages, max_tokens: maxTokens, temperature,
+          ...(responseFormat ? { response_format: { type: responseFormat } } : {}),
+        }),
       }, TIMEOUTS.AI)
       if (!res.ok) {
         lastError = `${url} ${res.status}`
@@ -195,10 +199,11 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     temperature          = 0.7,
     useReasoner          = false,
     usePremium           = true,
+    responseFormat,
     cerebrasModel        = process.env.CEREBRAS_MODEL        || 'gemma-4-31b',
     deepseekModel        = useReasoner ? 'deepseek-reasoner' : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
-    geminiModel          = process.env.GEMINI_MODEL          || 'gemini-2.0-flash',
-    groqModel            = process.env.GROQ_MODEL            || 'llama-3.3-70b-versatile',
+    geminiModel          = process.env.GEMINI_MODEL          || 'gemini-3.6-flash',
+    groqModel            = process.env.GROQ_MODEL            || 'openai/gpt-oss-120b',
     openrouterModel      = process.env.OPENROUTER_MODEL      || 'openai/gpt-4o-mini',
     openaiModel          = process.env.OPENAI_MODEL          || 'gpt-4o-mini',
     premiumOpenaiModel   = process.env.PREMIUM_OPENAI_MODEL  || 'gpt-4o',
@@ -295,7 +300,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
           const content = (res as any).choices?.[0]?.message?.content || ''
           if (content) return { content, provider: activeProvider as AIProvider, model: cfg.model, tokensUsed: (res as any).usage?.total_tokens, latencyMs: Date.now() - start }
         } else {
-          const { content, tokensUsed } = await callHTTP(cfg.url, cfg.key, cfg.model, safeMessages, maxTokens, temperature)
+          const { content, tokensUsed } = await callHTTP(cfg.url, cfg.key, cfg.model, safeMessages, maxTokens, temperature, undefined, responseFormat)
           if (content) return { content, provider: activeProvider as AIProvider, model: cfg.model, tokensUsed, latencyMs: Date.now() - start }
         }
       } catch (e: any) {
@@ -307,7 +312,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 1. Premium OpenAI (GPT-4o) — best quality (skip if key is OpenRouter)
   if (OPENAI_KEY && !OPENAI_KEY.startsWith('sk-or-') && resolvedPremium) {
     try {
-      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, resolvedPremiumOpenai, safeMessages, maxTokens, temperature, ALL_OPENAI_KEYS)
+      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, resolvedPremiumOpenai, safeMessages, maxTokens, temperature, ALL_OPENAI_KEYS, responseFormat)
       if (content) return { content, provider: 'premium-openai', model: resolvedPremiumOpenai, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       errors.push(`Premium OpenAI: ${e.message}`); console.warn('[AI] Premium OpenAI:', e.message)
@@ -317,7 +322,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 2. Premium Gemini Pro — second priority
   if (GEMINI_KEY && resolvedPremium) {
     try {
-      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, resolvedPremiumGemini, safeMessages, maxTokens, temperature, ALL_GEMINI_KEYS)
+      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, resolvedPremiumGemini, safeMessages, maxTokens, temperature, ALL_GEMINI_KEYS, responseFormat)
       if (content) return { content, provider: 'premium-gemini', model: resolvedPremiumGemini, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       errors.push(`Premium Gemini: ${e.message}`); console.warn('[AI] Premium Gemini:', e.message)
@@ -327,7 +332,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 3. Groq — free, ultra-fast
   if (GROQ_KEY && !useReasoner) {
     try {
-      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, effectiveGroqModel, safeMessages, maxTokens, temperature, ALL_GROQ_KEYS)
+      const { content, tokensUsed } = await callHTTP(GROQ_URL, GROQ_KEY, effectiveGroqModel, safeMessages, maxTokens, temperature, ALL_GROQ_KEYS, responseFormat)
       if (content) return { content, provider: 'groq', model: effectiveGroqModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -360,7 +365,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 5. DeepSeek — best quality (V3 for chat, R1 for reasoning)
   if (DEEPSEEK_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(DEEPSEEK_URL, DEEPSEEK_KEY, effectiveDeepseekModel, safeMessages, maxTokens, temperature, ALL_DEEPSEEK_KEYS)
+      const { content, tokensUsed } = await callHTTP(DEEPSEEK_URL, DEEPSEEK_KEY, effectiveDeepseekModel, safeMessages, maxTokens, temperature, ALL_DEEPSEEK_KEYS, responseFormat)
       if (content) return { content, provider: 'deepseek', model: effectiveDeepseekModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -372,7 +377,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 6. Gemini Flash — free quota
   if (GEMINI_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, effectiveGeminiModel, safeMessages, maxTokens, temperature, ALL_GEMINI_KEYS)
+      const { content, tokensUsed } = await callHTTP(GEMINI_URL, GEMINI_KEY, effectiveGeminiModel, safeMessages, maxTokens, temperature, ALL_GEMINI_KEYS, responseFormat)
       if (content) return { content, provider: 'gemini', model: effectiveGeminiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -390,7 +395,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     const model = isOR ? effectiveOpenrouterModel : effectiveOpenaiModel
     const allORKeys = isOR ? ALL_OPENROUTER_KEYS : ALL_OPENAI_KEYS
     try {
-      const { content, tokensUsed } = await callHTTP(url, effectiveORKey, model, safeMessages, maxTokens, temperature, allORKeys)
+      const { content, tokensUsed } = await callHTTP(url, effectiveORKey, model, safeMessages, maxTokens, temperature, allORKeys, responseFormat)
       if (content) return { content, provider: isOR ? 'openrouter' : 'openai', model, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')
@@ -402,7 +407,7 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   // 8. OpenAI direct (only if a different, non-OpenRouter key remains)
   if (OPENAI_KEY && !OPENAI_KEY.startsWith('sk-or-') && OPENAI_KEY !== OPENROUTER_KEY) {
     try {
-      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, effectiveOpenaiModel, safeMessages, maxTokens, temperature, ALL_OPENAI_KEYS)
+      const { content, tokensUsed } = await callHTTP(OPENAI_URL, OPENAI_KEY, effectiveOpenaiModel, safeMessages, maxTokens, temperature, ALL_OPENAI_KEYS, responseFormat)
       if (content) return { content, provider: 'openai', model: effectiveOpenaiModel, tokensUsed, latencyMs: Date.now() - start }
     } catch (e: any) {
       const isImageError = e.message?.includes?.('image')

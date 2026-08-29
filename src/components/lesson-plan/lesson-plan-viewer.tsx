@@ -158,6 +158,13 @@ export function LessonCard({ lesson, teacherName, date }: { lesson: any; teacher
           </SectionBlock>
         )}
 
+        {/* ── Organisation of Learning (summary) ── */}
+        {l.organisation ? (
+          <SectionBlock label="Organisation of Learning">
+            <p>{l.organisation}</p>
+          </SectionBlock>
+        ) : null}
+
         {/* ── SLOs ── */}
         {slos.length > 0 && (
           <SectionBlock label={Array.isArray(l.specificLearningOutcomes) ? 'Specific Learning Outcomes' : 'Learning Outcomes'}>
@@ -283,6 +290,96 @@ export function LessonCard({ lesson, teacherName, date }: { lesson: any; teacher
           <SectionBlock label="Differentiation">
             {l.differentiation.support && <p className="mb-0.5"><span className="font-medium">Support:</span> {l.differentiation.support}</p>}
             {l.differentiation.extension && <p><span className="font-medium">Extension:</span> {l.differentiation.extension}</p>}
+            {l.differentiation.learningStyles && toArray(l.differentiation.learningStyles).length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {toArray(l.differentiation.learningStyles).map((s, i) => (
+                  <span key={i} className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">{s}</span>
+                ))}
+              </div>
+            )}
+            {l.differentiation.grouping && <p className="mt-0.5"><span className="font-medium">Grouping:</span> {l.differentiation.grouping}</p>}
+          </SectionBlock>
+        )}
+
+        {/* ── Vocabulary ── */}
+        {l.vocabulary && toArray(l.vocabulary).length > 0 && (
+          <SectionBlock label="Key Vocabulary">
+            <div className="space-y-1">
+              {(Array.isArray(l.vocabulary) ? l.vocabulary : []).slice(0, 10).map((v: any, i: number) => (
+                <div key={i} className="text-xs">
+                  <span className="font-semibold text-blue-700">{typeof v === 'string' ? v : v.term}:</span>{' '}
+                  <span className="text-slate-600">{typeof v === 'string' ? '' : v.definition}</span>
+                  {v?.example && <span className="text-slate-400 ml-1">({v.example})</span>}
+                </div>
+              ))}
+            </div>
+          </SectionBlock>
+        )}
+
+        {/* ── Common Misconceptions ── */}
+        {l.misconceptions && toArray(l.misconceptions).length > 0 && (
+          <SectionBlock label="Common Misconceptions">
+            <div className="space-y-1.5">
+              {(Array.isArray(l.misconceptions) ? l.misconceptions : []).slice(0, 5).map((m: any, i: number) => (
+                <div key={i} className="text-xs bg-amber-50 border border-amber-200 rounded-lg p-2">
+                  <p className="font-medium text-amber-800">{typeof m === 'string' ? m : m.statement}</p>
+                  {m?.correction && <p className="text-amber-700 mt-0.5">→ {m.correction}</p>}
+                  {m?.preventionTip && <p className="text-amber-600 mt-0.5 italic">Tip: {m.preventionTip}</p>}
+                </div>
+              ))}
+            </div>
+          </SectionBlock>
+        )}
+
+        {/* ── Cross-Curricular Links ── */}
+        {l.crossCurricularLinks && toArray(l.crossCurricularLinks).length > 0 && (
+          <SectionBlock label="Cross-Curricular Connections">
+            <div className="space-y-1">
+              {(Array.isArray(l.crossCurricularLinks) ? l.crossCurricularLinks : []).map((link: any, i: number) => (
+                <div key={i} className="text-xs">
+                  <span className="font-semibold text-teal-700">{typeof link === 'string' ? link : link.subject}:</span>{' '}
+                  <span className="text-slate-600">{typeof link === 'string' ? '' : link.connection}</span>
+                  {link?.activity && <span className="text-slate-400 ml-1">({link.activity})</span>}
+                </div>
+              ))}
+            </div>
+          </SectionBlock>
+        )}
+
+        {/* ── Assessment Rubric ── */}
+        {l.rubric && toArray(l.rubric).length > 0 && (
+          <SectionBlock label="Assessment Rubric">
+            <div className="overflow-x-auto">
+              <table className="text-xs w-full">
+                <thead>
+                  <tr className="bg-slate-100">
+                    <th className="text-left p-1.5 font-semibold">Criteria</th>
+                    <th className="text-left p-1.5 font-semibold text-green-700">Excellent</th>
+                    <th className="text-left p-1.5 font-semibold text-blue-700">Good</th>
+                    <th className="text-left p-1.5 font-semibold text-amber-700">Developing</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(Array.isArray(l.rubric) ? l.rubric : []).slice(0, 5).map((r: any, i: number) => (
+                    <tr key={i} className="border-t border-slate-100">
+                      <td className="p-1.5 font-medium">{typeof r === 'string' ? r : r.criteria}</td>
+                      <td className="p-1.5 text-slate-600">{r?.excellent || '—'}</td>
+                      <td className="p-1.5 text-slate-600">{r?.good || '—'}</td>
+                      <td className="p-1.5 text-slate-600">{r?.developing || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SectionBlock>
+        )}
+
+        {/* ── Formative Checkpoints ── */}
+        {l.formativeCheckpoints && toArray(l.formativeCheckpoints).length > 0 && (
+          <SectionBlock label="Formative Checkpoints">
+            <ul className="list-disc list-inside space-y-0.5">
+              {toArray(l.formativeCheckpoints).map((cp, i) => <li key={i} className="text-xs">{cp}</li>)}
+            </ul>
           </SectionBlock>
         )}
 

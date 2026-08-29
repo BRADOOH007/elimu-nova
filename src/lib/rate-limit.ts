@@ -112,7 +112,13 @@ export const rateLimitUpload = {
 }
 
 export const rateLimitAPI = {
-  maxRequests: 100,
+  maxRequests: 300,
   windowMs: 60 * 1000,
   keyPrefix: 'ratelimit:api',
+}
+
+export const rateLimitLibrary = {
+  maxRequests: 500,
+  windowMs: 60 * 1000,
+  keyPrefix: 'ratelimit:lib',
 }

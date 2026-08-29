@@ -7,8 +7,42 @@ const PRE_PRIMARY_SUBJECTS = [
   'Psychomotor and Creative Activities', 'Religious Education Activities',
 ]
 
+function normalizeSubjectKey(s: string): string {
+  return s.toLowerCase().replace(/&/g, 'and').replace(/\./g, '').replace(/\s+/g, ' ').trim()
+}
+
+function dedupeSubjects(subjects: string[]): string[] {
+  const map = new Map<string, string>()
+  for (const s of subjects) {
+    const key = normalizeSubjectKey(s)
+    if (!map.has(key)) map.set(key, s)
+  }
+  return Array.from(map.values()).sort((a, b) => a.localeCompare(b))
+}
+
 export function getKICDSubjectsForGrade(grade?: string | null): string[] {
-  if (!grade) return []
+  // When no grade is selected yet (initial dropdown), return union of all CBC subjects
+  // so the subject picker is not empty — teacher can pick subject first, then grade filters.
+  if (!grade || !grade.trim()) {
+    const all: string[] = []
+    // PP
+    all.push(...PRE_PRIMARY_SUBJECTS)
+    // Grades 1-9 across all terms
+    const basicGrades: GradeLevel[] = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6','Grade 7','Grade 8','Grade 9']
+    for (const g of basicGrades) {
+      for (let term = 1; term <= 3; term++) {
+        all.push(...getLearningAreasForTermAndGrade(term, g))
+      }
+    }
+    // Senior secondary 10-12
+    const senior = seniorSecondaryCategories['Core Subjects'] || []
+    all.push(...senior)
+    if (all.length > 0) return dedupeSubjects(all)
+    // Fallback to CURRICULA flat list
+    const cbc = CURRICULA.find(c => c.id === 'cbc')
+    if (cbc) return dedupeSubjects([...cbc.subjects])
+    return []
+  }
 
   const normalized = grade.trim()
 
@@ -22,13 +56,11 @@ export function getKICDSubjectsForGrade(grade?: string | null): string[] {
   }
 
   // Grades 1-9: union learning areas across all three terms (dedupe).
-  const seen = new Set<string>()
+  const seen: string[] = []
   for (let term = 1; term <= 3; term++) {
-    for (const area of getLearningAreasForTermAndGrade(term, normalized as GradeLevel)) {
-      seen.add(area)
-    }
+    seen.push(...getLearningAreasForTermAndGrade(term, normalized as GradeLevel))
   }
-  if (seen.size > 0) return Array.from(seen)
+  if (seen.length > 0) return dedupeSubjects(seen)
 
   return []
 }

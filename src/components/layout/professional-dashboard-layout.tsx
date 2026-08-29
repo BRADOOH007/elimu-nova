@@ -111,22 +111,19 @@ export function ProfessionalDashboardLayout({
   }>({ firstName: userName, lastName: '', avatar: undefined })
   const [avatarError, setAvatarError] = useState(false)
 
-  /* ── Splash min-timer — only runs if splash is showing ── */
+  /* ── Splash min-timer — splash shows for exactly 5 s then auto-dismisses ── */
   useEffect(() => {
     if (!showSplash) return
     const t = setTimeout(() => {
       setShowSplash(false)
       sessionStorage.setItem(`splash-shown-${userRole}`, '1')
-    }, 2000)
+    }, 5000)
     return () => clearTimeout(t)
   }, [])
 
-  /* ── Profile fetch ── */
+  /* ── Profile fetch (updates name only — splash dismissal is handled by the min-timer) ── */
   const fetchUserProfile = async () => {
-    if (!session?.user?.id) {
-      setShowSplash(false)
-      return
-    }
+    if (!session?.user?.id) return
     try {
       const res = await fetch(`/api/user-profile?userId=${session.user.id}`)
       if (res.ok) {
@@ -137,8 +134,6 @@ export function ProfessionalDashboardLayout({
         console.warn('[Dashboard] Profile fetch failed:', res.status)
       }
     } catch (e) { console.warn('[Dashboard] Profile fetch failed:', e) }
-    setShowSplash(false)
-    sessionStorage.setItem(`splash-shown-${userRole}`, '1')
   }
 
   useEffect(() => {

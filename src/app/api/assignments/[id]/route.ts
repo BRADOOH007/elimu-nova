@@ -2,22 +2,35 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-// Belt-and-suspenders: strip any grader-only keys (correctAnswer/answer) from
-// question objects embedded in content, so legacy exams created before content
-// sanitization can never expose answers to students.
+// Belt-and-suspenders: strip any grader-only keys (correctAnswer/answer and
+// common variants) from question objects embedded in content, and drop any
+// top-level answer-key container, so legacy exams created before content
+// sanitization can never expose answers to students before submission.
+const GRADER_KEYS = new Set(['correctAnswer', 'answer', 'correct', 'correct_option', 'correctOption', 'correctIndex', 'answerKey', 'solution', 'marked_answer', 'keyAns'])
+
+function stripAnswerFields(q: any): any {
+  const safe: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(q)) {
+    if (GRADER_KEYS.has(k)) continue
+    safe[k] = v
+  }
+  return safe
+}
+
 function sanitizeContentForStudent(content: string | null): string | null {
   if (!content) return content
   try {
     const parsed = JSON.parse(content)
-    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.questions)) {
-      parsed.questions = parsed.questions.map((q: any) => {
-        const safe: Record<string, unknown> = {}
-        for (const [k, v] of Object.entries(q)) {
-          if (k === 'correctAnswer' || k === 'answer') continue
-          safe[k] = v
-        }
-        return safe
-      })
+    if (parsed && typeof parsed === 'object') {
+      // Drop a top-level embedded answer key / answers container outright.
+      for (const k of ['answerKey', 'markingScheme', 'answers']) {
+        if (k in parsed && k !== 'questions') delete parsed[k]
+      }
+      if (Array.isArray(parsed.questions)) {
+        parsed.questions = parsed.questions.map(stripAnswerFields)
+      } else if (Array.isArray(parsed)) {
+        return content // not a questions payload — leave as-is
+      }
       return JSON.stringify(parsed)
     }
   } catch { /* not JSON — leave as-is */ }

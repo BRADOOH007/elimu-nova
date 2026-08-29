@@ -31,6 +31,7 @@ export class OpenAIService {
       maxTokens?:   number
       temperature?: number
       useReasoner?: boolean
+      responseFormat?: 'json_object'
     }
   ): Promise<string> {
     const result = await callAI({
@@ -38,6 +39,7 @@ export class OpenAIService {
       maxTokens:   options?.maxTokens   ?? 2000,
       temperature: options?.temperature ?? 0.7,
       useReasoner: options?.useReasoner ?? false,
+      responseFormat: options?.responseFormat,
     })
     console.log(`[AI] ${result.provider}/${result.model} — ${result.latencyMs}ms, ${result.tokensUsed ?? '?'} tokens`)
     return result.content
@@ -71,11 +73,12 @@ export class OpenAIService {
    */
   static async generateLongContent(
     messages: OpenAIMessage[],
-    options?: { maxTokens?: number; temperature?: number }
+    options?: { maxTokens?: number; temperature?: number; responseFormat?: 'json_object' }
   ): Promise<string> {
     return this.generateText(messages, {
       maxTokens:   options?.maxTokens   ?? 3000,
       temperature: options?.temperature ?? 0.7,
+      responseFormat: options?.responseFormat,
     })
   }
 
@@ -175,7 +178,12 @@ Create an assignment in the following JSON format:
   "content": "Full assignment with warm greeting, clear questions/problems, and encouraging closing",
   "estimatedTime": "${duration} days",
   "difficulty": "${difficulty}",
-  "learningOutcomes": ["Skill you'll develop 1", "Skill you'll develop 2"]
+  "learningOutcomes": ["Skill you'll develop 1", "Skill you'll develop 2"],
+  "questions": [
+    { "id": 1, "type": "multiple_choice", "question": "Question text", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "correctAnswer": "B", "marks": 1 },
+    { "id": 2, "type": "short_answer", "question": "Question text", "correctAnswer": "The expected key points", "marks": 2 }
+  ],
+  "answerKey": { "1": "B", "2": "The expected key points" }
 }`
 
     const userPrompt = `Create a warm, friendly, and engaging assignment for ${data.studentName} about ${topic} in ${subject}. Make it feel personal and encouraging. Use ${data.learningStyle} learning approaches. The assignment should be ${difficulty} level and take about ${duration} days to complete.
@@ -196,7 +204,34 @@ Remember: Be warm, encouraging, and make the student feel supported!`
       const cleaned = cleanAiJson(response)
       if (cleaned) {
         const parsed = JSON.parse(cleaned)
-        if (parsed && typeof parsed === 'object') return parsed
+        if (parsed && typeof parsed === 'object') {
+          // --- answerKey[] support: normalise the structured questions table and
+          // answer key so assignments can be auto-graded per question. ---
+          const questions = Array.isArray(parsed.questions)
+            ? parsed.questions.map((q: any, i: number) => {
+                const id = Number(q?.id) || i + 1
+                return {
+                  id,
+                  type: q?.type === 'short_answer' ? 'short_answer' : 'multiple_choice',
+                  question: String(q?.question || q?.text || `Question ${id}`),
+                  options: Array.isArray(q?.options) ? q.options.map((o: any) => String(o)) : undefined,
+                  correctAnswer: q?.correctAnswer != null ? String(q.correctAnswer) : undefined,
+                  marks: Number(q?.marks) || 1,
+                }
+              })
+            : []
+          const answerKey: Record<string, string> = {}
+          if (parsed.answerKey && typeof parsed.answerKey === 'object') {
+            Object.entries(parsed.answerKey).forEach(([k, v]) => { answerKey[String(k)] = String(v) })
+          } else {
+            questions.forEach((q: { id: number; correctAnswer?: string }) => { if (q.correctAnswer && !answerKey[String(q.id)]) answerKey[String(q.id)] = q.correctAnswer })
+          }
+          if (questions.length > 0) {
+            parsed.questions = questions
+            parsed.answerKey = answerKey
+          }
+          return parsed
+        }
       }
     } catch (error) {
       console.error('Failed to parse AI response as JSON:', error)
@@ -218,7 +253,27 @@ Remember: Be warm, encouraging, and make the student feel supported!`
       content: `This assignment focuses on ${topic} in ${subject}. You will explore key concepts and apply your knowledge.`,
       estimatedTime: `${duration} days`,
       difficulty,
-      learningOutcomes: ['Enhanced understanding', 'Practical application', 'Critical thinking']
+      learningOutcomes: ['Enhanced understanding', 'Practical application', 'Critical thinking'],
+      questions: [
+        {
+          id: 1,
+          type: 'short_answer',
+          question: `In your own words, explain what ${topic} means and give one everyday example.`,
+          correctAnswer: `A clear explanation of ${topic} with a relevant, accurate everyday example.`,
+          marks: 2,
+        },
+        {
+          id: 2,
+          type: 'short_answer',
+          question: `Describe one real-life situation where ${topic} is applied in ${subject}.`,
+          correctAnswer: `A correct, real-world application of ${topic} in ${subject}.`,
+          marks: 2,
+        },
+      ],
+      answerKey: {
+        '1': `A clear explanation of ${topic} with a relevant, accurate everyday example.`,
+        '2': `A correct, real-world application of ${topic} in ${subject}.`,
+      },
     }
   }
 
@@ -474,17 +529,5 @@ No markdown fences, no explanations — just the SVG.`,
       return null
     }
   }
-}
-
-function generateSVGPlaceholder(prompt: string): string {
-  const text = prompt.slice(0, 60) + (prompt.length > 60 ? '…' : '')
-  const svg = `<svg width="1024" height="1024" xmlns="http://www.w3.org/2000/svg">
-    <rect width="100%" height="100%" fill="#f0f4f8"/>
-    <rect x="40" y="40" width="944" height="944" rx="12" fill="none" stroke="#c3d0e0" stroke-width="3"/>
-    <text x="512" y="480" text-anchor="middle" font-family="Arial" font-size="36" fill="#6b7a8d">🎨 Educational Illustration</text>
-    <text x="512" y="540" text-anchor="middle" font-family="Arial" font-size="22" fill="#8896a5">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</text>
-    <text x="512" y="600" text-anchor="middle" font-family="Arial" font-size="18" fill="#aab4c0">ElimuNova AI</text>
-  </svg>`
-  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
 }
 
