@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
 import { SeniorAccessGate } from '@/components/senior-student/senior-access-gate'
 import {
-  BarChart3, GraduationCap, Laptop, Award, Radio,
+  BarChart3, GraduationCap, Laptop, Award, Radio, BookOpen, PenLine,
 } from 'lucide-react'
 import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
@@ -16,6 +16,8 @@ export default function SeniorStudentLayout({ children }: { children: React.Reac
     { icon: GraduationCap, label: 'GED Subjects', href: '/senior-student/learn',      tourId: 'senior-ged-subjects' },
     { icon: Laptop,        label: 'Courses',      href: '/senior-student/learn?tab=courses', tourId: 'senior-courses' },
     { icon: Radio,         label: 'Live Lessons', href: '/senior-student/live-class', tourId: 'senior-live-lessons' },
+    { icon: BookOpen,      label: 'Library',      href: '/senior-student/library',    tourId: 'senior-library' },
+    { icon: PenLine,       label: 'Essays',       href: '/senior-student/essays',     tourId: 'senior-essays' },
     { icon: Award,         label: 'Certificate',  href: '/senior-student/certificate', tourId: 'senior-certificate' },
   ]
 

@@ -27,6 +27,7 @@ import { evaluateAnswer } from '@/lib/answer-evaluator'
 import { trackQuizSubmission, trackPracticeAttempt } from '@/lib/telemetry'
 import { useSession } from 'next-auth/react'
 import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
+import { resolveStudentGradeAndCurriculum } from '@/lib/student-curriculum-resolver'
 
 // Types & constants (keep from original)
 interface QuizQ {
@@ -40,6 +41,10 @@ interface ActiveLessonData {
   content: string
   images?: { sectionTitle: string; imagePrompt: string; imageUrl?: string }[]
   recall: { question: string; type: 'mcq' | 'short' | 'fill'; options?: string[]; answer: string; explanation: string }[]
+  vocabulary?: { term: string; definition: string; example?: string }[]
+  keyTakeaways?: string[]
+  tryItYourself?: { challenge: string; hint: string }[]
+  misconceptions?: { statement: string; correction: string; tip?: string }[]
   generatedAt: string
 }
 interface ReviewEntry {
@@ -47,6 +52,13 @@ interface ReviewEntry {
   lastStudied: string; score: number; interval: number; nextReview: string
 }
 interface ChatMsg { role: 'user' | 'ai'; content: string }
+
+// Estimate reading time (min) from markdown content — ~180 wpm, clamp to a sensible study window.
+function estimateReadMinutes(content: string): number {
+  const words = (content || '').replace(/[#*`>|\[\]()\-_]/g, ' ').split(/\s+/).filter(Boolean).length
+  const minutes = Math.max(5, Math.ceil(words / 180))
+  return Math.min(minutes, 30)
+}
 
 import { getAllCBCSubjects, getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
 
@@ -63,10 +75,16 @@ function useCurriculumSubjects() {
         const res = await fetch('/api/user-preferences')
         if (res.ok) {
           const p = await res.json()
-          setCurriculum(p.curriculum || 'cbc')
-          const g = (p.tourCompletion as any)?.grade || 'Grade 4'
-          setDefaultGrade(g)
-          setSubjects(getSubjectsForCurriculum(p.curriculum || 'cbc', g))
+          const resolved = resolveStudentGradeAndCurriculum({
+            grade: p.grade,
+            country: p.country,
+            curriculum: p.curriculum,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+          })
+          setCurriculum(resolved.curriculum)
+          setDefaultGrade(resolved.grade)
+          setSubjects(getSubjectsForCurriculum(resolved.curriculum, resolved.grade))
         }
       } catch { /* use defaults */ }
     }
@@ -90,15 +108,9 @@ function LearnPageContent() {
   const { subjects, curriculum, defaultGrade, updateSubjectsForGrade } = useCurriculumSubjects()
 
   // Core study state — initialized from URL params if present
-  const [studySubject, setStudySubject] = useState(() => {
-    const s = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('subject') : null
-    return s || 'Mathematics'
-  })
-  const [studyTopic,   setStudyTopic]   = useState('')
-  const [studyGrade,   setStudyGrade]   = useState(() => {
-    const g = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('grade') : null
-    return g || defaultGrade || 'Grade 4'
-  })
+  const [studySubject, setStudySubject] = useState(() => searchParams.get('subject') || 'Mathematics')
+  const [studyTopic,   setStudyTopic]   = useState(() => searchParams.get('topic') || '')
+  const [studyGrade,   setStudyGrade]   = useState(() => searchParams.get('grade') || defaultGrade || 'Grade 4')
   const [studying,     setStudying]     = useState(false)
   const [lessonMd,     setLessonMd]     = useState('')
   const [studyStrands, setStudyStrands] = useState<{id:string;name:string}[]>([])
@@ -111,6 +123,10 @@ function LearnPageContent() {
   const [recallScore, setRecallScore] = useState(0)
   const [recallChecked, setRecallChecked] = useState<Record<number, boolean | null>>({})
   const [recallHints, setRecallHints] = useState<Record<number, boolean>>({})
+
+  // Formative quiz (AI-generated from a strand/topic)
+  const [formativeQuiz, setFormativeQuiz] = useState<{ subject: string; topic: string; questions: any[] } | null>(null)
+  const [formativeQuizLoading, setFormativeQuizLoading] = useState(false)
 
   // Learning path
   const [pathData, setPathData] = useState<{ topics: any[]; resumeTopic: any; completedCount: number; totalCount: number; percentComplete: number } | null>(null)
@@ -156,11 +172,7 @@ function LearnPageContent() {
   useEffect(() => {
     const subj = searchParams.get('subject')
     const grd = searchParams.get('grade')
-    if (subj) {
-      // Capitalize for UI dropdown ("english" -> "English")
-      const formatted = subj.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ')
-      setStudySubject(formatted)
-    }
+    if (subj) setStudySubject(subj)
     if (grd) setStudyGrade(grd)
   }, [searchParams])
 
@@ -224,6 +236,23 @@ function LearnPageContent() {
 
   const handleExploreTopic = (subject: string, topic: string) => {
     setStudySubject(subject); setStudyTopic(topic); generateLesson(subject, topic)
+  }
+
+  const handleQuiz = async (subject: string, topic: string) => {
+    setFormativeQuizLoading(true)
+    setFormativeQuiz({ subject, topic, questions: [] })
+    try {
+      const res = await fetch('/api/ai/generate-quiz', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subject, topic, grade: studyGrade, curriculum }),
+      })
+      const data = await res.json()
+      setFormativeQuiz({ subject, topic, questions: data.questions || [] })
+    } catch {
+      setFormativeQuiz(null)
+    } finally {
+      setFormativeQuizLoading(false)
+    }
   }
 
   // Deep-link from dashboard "What to learn next?" pills:
@@ -465,7 +494,7 @@ function LearnPageContent() {
           <div className="min-w-0 space-y-6">
 
             {/* Focus Timer (during learn phase) */}
-            {activeLesson && studyPhase === 'learn' && <FocusTimer onComplete={(m) => addXp(10)} />}
+            {activeLesson && studyPhase === 'learn' && <FocusTimer defaultMinutes={estimateReadMinutes(activeLesson.content)} onComplete={(m) => addXp(10)} />}
 
             {/* Loading */}
             {studying && (
@@ -525,31 +554,80 @@ function LearnPageContent() {
                     <div className="space-y-5">
                       {activeLesson.images && activeLesson.images.length > 0 && (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                          {activeLesson.images.map((img, i) => (
+                          {activeLesson.images.filter(img => img.imageUrl).map((img, i) => (
                             <figure key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                               <div className="relative aspect-video bg-slate-100">
-                                {img.imageUrl ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={img.imageUrl} alt={img.sectionTitle} className="h-full w-full object-cover" loading="lazy" />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-50 to-teal-50 p-4">
-                                    <div className="text-center">
-                                      <span className="text-3xl">🎨</span>
-                                      <p className="mt-2 text-xs font-semibold text-blue-700">{img.sectionTitle}</p>
-                                      <p className="mt-1 line-clamp-2 text-[11px] text-slate-500">{img.imagePrompt}</p>
-                                    </div>
-                                  </div>
-                                )}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={img.imageUrl!} alt={img.sectionTitle} className="h-full w-full object-cover" loading="lazy" />
                               </div>
-                              <figcaption className="border-t border-slate-100 bg-slate-50 px-3 py-2">
-                                <p className="text-xs font-semibold text-slate-700">{img.sectionTitle}</p>
-                                <p className="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{img.imagePrompt}</p>
-                              </figcaption>
+                              {img.sectionTitle && (
+                                <figcaption className="border-t border-slate-100 bg-slate-50 px-3 py-2">
+                                  <p className="text-xs font-semibold text-slate-700">{img.sectionTitle}</p>
+                                </figcaption>
+                              )}
                             </figure>
                           ))}
                         </div>
                       )}
-                      <div className="max-h-[450px] overflow-y-auto"><MarkdownRenderer content={activeLesson.content} /></div>
+                      <div className="lesson-content"><MarkdownRenderer content={activeLesson.content} /></div>
+
+                      {/* ── Vocabulary ── */}
+                      {activeLesson.vocabulary && activeLesson.vocabulary.length > 0 && (
+                        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                          <p className="text-sm font-bold text-blue-800 mb-2">Key Vocabulary</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {activeLesson.vocabulary.map((v, i) => (
+                              <div key={i} className="text-xs">
+                                <span className="font-semibold text-blue-700">{v.term}:</span>{' '}
+                                <span className="text-slate-600">{v.definition}</span>
+                                {v.example && <span className="text-slate-400 ml-1">({v.example})</span>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Key Takeaways ── */}
+                      {activeLesson.keyTakeaways && activeLesson.keyTakeaways.length > 0 && (
+                        <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+                          <p className="text-sm font-bold text-green-800 mb-2">Key Takeaways</p>
+                          <ul className="list-disc list-inside space-y-1 text-xs text-green-700">
+                            {activeLesson.keyTakeaways.map((t, i) => <li key={i}>{t}</li>)}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* ── Try It Yourself ── */}
+                      {activeLesson.tryItYourself && activeLesson.tryItYourself.length > 0 && (
+                        <div className="rounded-xl border border-purple-200 bg-purple-50 p-4">
+                          <p className="text-sm font-bold text-purple-800 mb-2">Try It Yourself</p>
+                          <div className="space-y-2">
+                            {activeLesson.tryItYourself.map((c, i) => (
+                              <div key={i} className="text-xs">
+                                <p className="font-medium text-purple-700">{i + 1}. {c.challenge}</p>
+                                <p className="text-purple-500 italic ml-4">Hint: {c.hint}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Common Misconceptions ── */}
+                      {activeLesson.misconceptions && activeLesson.misconceptions.length > 0 && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                          <p className="text-sm font-bold text-amber-800 mb-2">Watch Out — Common Mistakes</p>
+                          <div className="space-y-2">
+                            {activeLesson.misconceptions.map((m, i) => (
+                              <div key={i} className="text-xs">
+                                <p className="font-medium text-amber-700">{m.statement}</p>
+                                <p className="text-amber-600">→ {m.correction}</p>
+                                {m.tip && <p className="text-amber-500 italic">Tip: {m.tip}</p>}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <Button onClick={() => { setStudyPhase('recall'); setRecallAnswers(new Array(activeLesson.recall.length).fill(undefined)) }}
                         className="w-full bg-indigo-500 font-semibold text-white hover:bg-indigo-600"><Brain className="mr-2 h-4 w-4" />I'm Ready — {activeLesson.recall.length} Questions</Button>
                     </div>
@@ -651,7 +729,7 @@ function LearnPageContent() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-5 sm:p-6">
-                  <div className="max-h-[500px] overflow-y-auto"><MarkdownRenderer content={lessonMd} /></div>
+                  <div className="lesson-content"><MarkdownRenderer content={lessonMd} /></div>
                   <div className="mt-4 flex gap-2">
                     <Button onClick={() => { setLessonMd(''); setActiveLesson(null) }} variant="outline" className="flex-1">Pick Another Topic</Button>
                     <Button onClick={() => { setShowHopeDrawer(true); setHopeContext(`I'm studying ${studyTopic} in ${studySubject}. Help me understand this better.`) }} className="flex-1 bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
@@ -750,7 +828,7 @@ function LearnPageContent() {
                   </span>
                   <h2 className="text-lg font-extrabold text-slate-900">Explore the Curriculum</h2>
                 </div>
-                <CurriculumBrowser onSelectTopic={handleExploreTopic} defaultSubject={studySubject} defaultGrade={studyGrade} curriculum={curriculum} />
+                <CurriculumBrowser onSelectTopic={handleExploreTopic} onQuiz={handleQuiz} defaultSubject={studySubject} defaultGrade={studyGrade} curriculum={curriculum} />
                 <Recommendations onStudy={handleExploreTopic} />
               </div>
             )}
@@ -811,6 +889,42 @@ function LearnPageContent() {
           currentSubject={studySubject}
           currentTopic={studyTopic}
         />
+
+        {/* AI Formative Quiz Modal */}
+        {formativeQuiz && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setFormativeQuiz(null)}>
+            <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto bg-white rounded-2xl shadow-xl p-5" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="font-bold text-slate-900">Practice Quiz</p>
+                  <p className="text-xs text-slate-500">{formativeQuiz.subject} · {formativeQuiz.topic}</p>
+                </div>
+                <button onClick={() => setFormativeQuiz(null)} className="text-slate-400 hover:text-slate-600 font-bold text-lg">×</button>
+              </div>
+              {formativeQuizLoading ? (
+                <div className="flex items-center gap-2 text-sm text-slate-500 py-8 justify-center"><Loader2 className="h-5 w-5 animate-spin" /> Generating questions…</div>
+              ) : formativeQuiz.questions.length === 0 ? (
+                <p className="text-sm text-slate-500 py-8 text-center">Couldn't generate questions. Try again.</p>
+              ) : (
+                <div className="space-y-4">
+                  {formativeQuiz.questions.map((q, i) => (
+                    <div key={i} className="border border-slate-200 rounded-xl p-3">
+                      <p className="text-sm font-semibold text-slate-800">{i + 1}. {q.question}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
+                        {(q.options || []).map((o: string, oi: number) => (
+                          <div key={oi} className={`text-xs px-2.5 py-1.5 rounded-lg ${oi === q.answer ? 'bg-green-100 text-green-700 font-medium' : 'bg-slate-100 text-slate-600'}`}>
+                            {o}
+                          </div>
+                        ))}
+                      </div>
+                      {q.explanation && <p className="text-xs text-slate-500 mt-1.5">{q.explanation}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

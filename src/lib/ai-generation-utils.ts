@@ -8,13 +8,19 @@ export function cleanAiJson(raw: string): string {
   if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3)
   cleaned = cleaned.trim()
 
-  // Find the outermost JSON array or object
-  const isArray = cleaned.includes('[')
-  const startChar = isArray ? '[' : '{'
-  const endChar = isArray ? ']' : '}'
-  const start = cleaned.indexOf(startChar)
+  // Find the outermost JSON object or array by whichever bracket appears FIRST.
+  // (An object that contains arrays must be treated as an object, not an array.)
+  const objIdx = cleaned.indexOf('{')
+  const arrIdx = cleaned.indexOf('[')
+  let start: number
+  let endChar: string
+  if (objIdx === -1 && arrIdx === -1) return ''
+  if (objIdx === -1)       { start = arrIdx; endChar = ']' }
+  else if (arrIdx === -1)  { start = objIdx; endChar = '}' }
+  else if (objIdx < arrIdx) { start = objIdx; endChar = '}' }
+  else                     { start = arrIdx; endChar = ']' }
   const end = cleaned.lastIndexOf(endChar)
-  if (start === -1 || end <= start) return ''
+  if (end <= start) return ''
   cleaned = cleaned.slice(start, end + 1)
 
   // Fix common AI JSON issues
@@ -29,14 +35,35 @@ function fixJson(json: string): string {
   // Remove single-line comments: // ...
   s = s.replace(/\/\/[^\n]*/g, '')
 
+  // Remove multi-line comments: /* ... */
+  s = s.replace(/\/\*[\s\S]*?\*\//g, '')
+
   // Remove trailing commas before } or ]
   s = s.replace(/,\s*([}\]])/g, '$1')
 
-  // Convert single-quoted strings to double-quoted (simple case)
-  s = s.replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, '"$1"')
+  // Convert single-quoted strings to double-quoted strings
+  s = s.replace(/'((?:[^'\\]|\\.)*)'/g, '"$1"')
 
   // Quote unquoted keys: { key: → { "key":
   s = s.replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
+
+  // Normalize invalid JSON numeric literals (and bare `undefined`) to null.
+  // Using word-boundary checks avoids touching numbers/strings that legitimately
+  // contain these tokens (e.g. "Infinity" inside a quoted string).
+  s = s.replace(/(?<![A-Za-z0-9_."'])(?:-?Infinity|NaN|undefined)(?![A-Za-z0-9_."'])/g, 'null')
+
+  // Quote bare-word VALUES (array elements / object values) that the model
+  // emitted without quotes, e.g.  ["a", b, c]  or  { "k": value }.
+  // This runs AFTER key-quoting so keys (followed by ":") are never touched.
+  // true / false / null are preserved as valid JSON.
+  s = s.replace(
+    /([{,[]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)(?=\s*[,}\]])/g,
+    (_m, pre, tok) => {
+      const lower = tok.toLowerCase()
+      if (lower === 'true' || lower === 'false' || lower === 'null') return pre + tok
+      return pre + '"' + tok + '"'
+    }
+  )
 
   // Fix unescaped newlines inside string values (replace literal \n with \\n)
   // This is a best-effort fix — walk char by char inside strings

@@ -7,6 +7,60 @@ import {
   CBC_SUBJECT_LESSON_ALLOCATION,
 } from '@/lib/cbc-context'
 import { retrieveRelevantContext } from '@/lib/rag-pipeline'
+import { getCurriculumType } from '@/lib/curriculum-type-map'
+
+/** Competencies, values, PCIs, themes per curriculum family */
+const CURRICULUM_FRAMEWORKS: Record<string, { competencies: string[]; values: string[]; pcis: string[]; themes: string[] }> = {
+  cbc: {
+    competencies: CBC_CORE_COMPETENCIES,
+    values: CBC_VALUES,
+    pcis: CBC_PCIS,
+    themes: CBC_THEMES,
+  },
+  // US frameworks
+  'common-core': {
+    competencies: ['Critical thinking', 'Problem solving', 'Creativity', 'Communication', 'Collaboration', 'Information literacy', 'Media literacy', 'Technology literacy'],
+    values: ['Responsibility', 'Respect', 'Integrity', 'Citizenship', 'Perseverance', 'Growth mindset'],
+    pcis: ['Digital citizenship', 'Social-emotional learning', 'Financial literacy', 'Career readiness', 'Cultural awareness', 'Environmental stewardship'],
+    themes: ['College and career readiness', 'Civic engagement', 'Health and wellness', 'Environmental sustainability', 'Economic literacy', 'Global awareness'],
+  },
+  ngss: {
+    competencies: ['Science and engineering practices', 'Disciplinary core ideas', 'Crosscutting concepts', 'Systems thinking', 'Modeling', 'Argument from evidence'],
+    values: ['Curiosity', 'Environmental stewardship', 'Scientific integrity', 'Ethical reasoning', 'Collaboration'],
+    pcis: ['Climate change', 'Biotechnology', 'Energy sustainability', 'Public health', 'Space exploration', 'Ethics in science'],
+    themes: ['Earth systems', 'Human impact', 'Technology and society', 'Patterns and change', 'Energy and matter'],
+  },
+  ged: {
+    competencies: ['Reasoning through language arts', 'Mathematical reasoning', 'Scientific reasoning', 'Social studies reasoning', 'Critical analysis'],
+    values: ['Lifelong learning', 'Self-reliance', 'Civic responsibility', 'Workplace readiness', 'Personal accountability'],
+    pcis: ['Workplace literacy', 'Financial planning', 'Civic participation', 'Health and wellness', 'Digital literacy'],
+    themes: ['Adult learner empowerment', 'Real-world application', 'Workforce preparation', 'Community engagement'],
+  },
+  cambridge: {
+    competencies: ['Critical thinking', 'Problem solving', 'Creativity', 'Communication', 'Collaboration', 'Research skills'],
+    values: ['Academic integrity', 'Respect', 'Responsibility', 'International mindedness'],
+    pcis: ['Global citizenship', 'Environmental awareness', 'Digital literacy', 'Cultural understanding'],
+    themes: ['Academic excellence', 'Global perspectives', 'Independent thinking'],
+  },
+  'a-level': {
+    competencies: ['Analytical thinking', 'Independent research', 'Extended writing', 'Quantitative reasoning', 'Evaluation'],
+    values: ['Academic integrity', 'Intellectual curiosity', 'Resilience', 'Precision'],
+    pcis: ['Higher education preparation', 'Specialized knowledge', 'Research methodology'],
+    themes: ['Deep subject knowledge', 'Critical analysis', 'Synoptic understanding'],
+  },
+  general: {
+    competencies: ['Critical thinking', 'Communication', 'Collaboration', 'Creativity', 'Digital literacy'],
+    values: ['Respect', 'Responsibility', 'Integrity', 'Perseverance'],
+    pcis: ['21st century skills', 'Global awareness', 'Digital citizenship'],
+    themes: ['Academic excellence', 'Personal growth', 'Community engagement'],
+  },
+}
+
+/** Get the framework for a given curriculum ID, with fallback to general */
+function getFramework(curriculumId?: string | null) {
+  const id = (curriculumId || 'cbc').toLowerCase()
+  return CURRICULUM_FRAMEWORKS[id] || CURRICULUM_FRAMEWORKS.general
+}
 
 export interface CurriculumContext {
   grade: string
@@ -58,13 +112,14 @@ const SUBJECT_ALIASES: Record<string, string[]> = {
 export async function getCurriculumContext(
   grade: string,
   subject: string,
-  options?: { topic?: string; strandName?: string }
+  options?: { topic?: string; strandName?: string; curriculum?: string }
 ): Promise<CurriculumContext | null> {
   const aliases = SUBJECT_ALIASES[subject] || [subject]
+  const curriculumType = getCurriculumType(options?.curriculum)
 
   const curriculum = await prisma.curriculum.findFirst({
     where: {
-      type: 'CBC',
+      type: curriculumType,
       grade,
       isActive: true,
       OR: [{ subject }, { subject: { in: aliases } }, { subject: { contains: subject } }],
@@ -101,7 +156,10 @@ export async function getCurriculumContext(
   })
 
   const totalOutcomes = substrands.reduce((sum, s) => sum + (s.learningOutcomes?.length || 0), 0)
-  const lessonsPerWeek = CBC_SUBJECT_LESSON_ALLOCATION[subject] || 5
+  const framework = getFramework(options?.curriculum)
+  const lessonsPerWeek = framework === CURRICULUM_FRAMEWORKS.cbc
+    ? (CBC_SUBJECT_LESSON_ALLOCATION[subject] || 5)
+    : 5
 
   return {
     grade,
@@ -119,10 +177,10 @@ export async function getCurriculumContext(
           activities: ss.activities || [],
         })),
     })),
-    competencies: CBC_CORE_COMPETENCIES,
-    values: CBC_VALUES,
-    pcis: CBC_PCIS,
-    themes: CBC_THEMES,
+    competencies: framework.competencies,
+    values: framework.values,
+    pcis: framework.pcis,
+    themes: framework.themes,
     lessonsPerWeek,
     totalOutcomes,
   }
@@ -232,7 +290,7 @@ export function buildDocumentExamplesSection(examples: DocumentExample[]): strin
 
   for (let i = 0; i < examples.length; i++) {
     const ex = examples[i]
-    const truncated = ex.content.slice(0, 4000)
+    const truncated = ex.content.slice(0, 2000)
     lines.push(`### Example ${i + 1}: ${ex.title} (${ex.grade} ${ex.subject})`)
     lines.push('```')
     lines.push(truncated)
@@ -251,6 +309,7 @@ export async function buildFullGenerationContext(
     strandName?: string
     generationType: 'scheme_of_work' | 'lesson_plan'
     teacherId?: string
+    curriculum?: string
   }
 ): Promise<{
   curriculumSection: string
@@ -261,6 +320,7 @@ export async function buildFullGenerationContext(
   const context = await getCurriculumContext(grade, subject, {
     topic: options.topic,
     strandName: options.strandName,
+    curriculum: options.curriculum,
   })
 
   const curriculumSection = context

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LessonCompletionCelebration } from "@/components/ui/lesson-completion-celebration"
+import { getCurriculum } from "@/lib/curricula"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import {
@@ -47,6 +48,20 @@ export default function AITutorPage() {
 
   const name = session?.user?.name?.split(' ')[0] || 'Student'
 
+  const [curriculum, setCurriculum] = useState('')
+  const [country, setCountry] = useState('')
+
+  useEffect(() => {
+    fetch('/api/user-preferences').then(r => r.json()).then(d => {
+      setCurriculum(d.curriculum || '')
+      setCountry(d.country || '')
+    }).catch(() => {})
+  }, [])
+
+  const curriculumLabel = curriculum
+    ? (getCurriculum(curriculum)?.name?.split(' (')[0] || curriculum)
+    : 'Personalized'
+
   const loadCurrentTask = async () => {
     setIsLoadingTask(true)
     try {
@@ -69,7 +84,7 @@ export default function AITutorPage() {
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMsg.content, history: messages.map(m => ({ role: m.role, content: m.content })), context: 'student_tutor', studentName: name, subject: currentTask?.subject || 'CBC', topic: currentTask?.topic || '', messages: messages.map(m => ({ role: m.role, content: m.content })) }),
+        body: JSON.stringify({ message: userMsg.content, history: messages.map(m => ({ role: m.role, content: m.content })), context: 'student_tutor', studentName: name, subject: currentTask?.subject || curriculumLabel, topic: currentTask?.topic || '', curriculum, country, messages: messages.map(m => ({ role: m.role, content: m.content })) }),
       })
       if (!res.ok) throw new Error('Failed')
       const data = await res.json()
@@ -126,7 +141,7 @@ export default function AITutorPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-xl font-extrabold flex items-center gap-2"><Sparkles className="h-5 w-5" />Hope AI Workspace</h1>
-            <p className="text-purple-200 text-sm">Personalized CBC Tutoring for {name}{currentTask ? ` · ${currentTask.subject}: ${currentTask.topic}` : ''}</p>
+            <p className="text-purple-200 text-sm">Personalized {curriculumLabel} Tutoring for {name}{currentTask ? ` · ${currentTask.subject}: ${currentTask.topic}` : ''}</p>
           </div>
           <div className="flex gap-2">
             <div className="bg-white/10 rounded-xl px-3 py-1.5 text-sm"><Zap className="h-4 w-4 inline mr-1 text-amber-300" />{stats.xp} XP</div>

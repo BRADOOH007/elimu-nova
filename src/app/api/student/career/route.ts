@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { route } from '@/lib/api-middleware'
+import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const POST = route({ auth: ['STUDENT', 'SUPER_ADMIN'] }, async (request, { user }) => {
   const { strengths, interests, grade, skills, goals } = await request.json()
@@ -72,15 +73,15 @@ Provide exactly 4 top careers and 3 subject recommendations.`
 
   const raw = await OpenAIService.generateText(
     [{ role: 'user', content: prompt }],
-    { maxTokens: 1200, temperature: 0.7 }
+    { maxTokens: 1200, temperature: 0.7, responseFormat: 'json_object' }
   )
 
-  // Extract JSON
-  const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+  // Extract JSON (json_object mode + cleanAiJson repair for robustness)
   let result: any = {}
-  if (start !== -1 && end > start) {
-    try { result = JSON.parse(raw.slice(start, end + 1)) } catch (e) { console.warn('[Career] AI JSON parse failed:', e) }
-  }
+  try {
+    const json = cleanAiJson(raw)
+    if (json) result = JSON.parse(json)
+  } catch (e) { console.warn('[Career] AI JSON parse failed:', e) }
 
   return NextResponse.json({
     ...result,

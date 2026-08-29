@@ -147,7 +147,7 @@ export async function retrieveRelevantContext(
     grade,
     subject,
     documentType,
-    limit: maxChunks,
+    limit: Math.min(maxChunks, 2),
   })
 
   if (chunks.length === 0) return ''
@@ -162,7 +162,7 @@ export async function retrieveRelevantContext(
     const sim = chunk.similarity ? Math.round(chunk.similarity * 100) : 0
     lines.push(`### Reference ${i + 1} (${sim}% match)`)
     lines.push('```')
-    lines.push(chunk.content.slice(0, 1500))
+    lines.push(chunk.content.slice(0, 1000))
     lines.push('```')
     lines.push('')
   }

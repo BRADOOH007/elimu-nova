@@ -5,6 +5,10 @@ import { route } from '@/lib/api-middleware'
 import { CloudinaryStorage } from '@/lib/cloudinary-storage'
 import { intelligentCacheLookup, intelligentCacheSave } from '@/lib/lesson-cache'
 import { buildCurriculumLessonContext } from '@/lib/curriculum-prompt'
+import { buildFullGenerationContext } from '@/lib/curriculum-intelligence'
+import { buildSubjectPedagogySection } from '@/lib/subject-pedagogy'
+import { buildGradeBandSection } from '@/lib/grade-bands'
+import { getContentWordLimit } from '@/lib/grade-bands'
 
 interface ActiveLessonImage {
   sectionTitle: string
@@ -48,15 +52,28 @@ async function persistImage(imageUrl: string, prompt: string, topic: string, use
 
 function fallbackSvg(title: string, prompt: string): string {
   const safeTitle = (title || 'Visual').slice(0, 60).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const safePrompt = (prompt || '').slice(0, 80).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const svg = `<svg width="1024" height="640" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="#eef6ff"/>
-  <rect x="24" y="24" width="976" height="592" rx="18" fill="none" stroke="#7fb4e6" stroke-width="4"/>
-  <circle cx="512" cy="250" r="84" fill="#cfe6fb" opacity="0.8"/>
-  <text x="512" y="240" text-anchor="middle" font-family="Arial,sans-serif" font-size="44" fill="#2c6e9e" font-weight="bold">🖼️ ${safeTitle}</text>
-  <text x="512" y="300" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#5a93bd">ElimuNova AI illustration</text>
-  <text x="512" y="420" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" fill="#7f9fb8">${safePrompt}</text>
-  <text x="512" y="560" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" fill="#a0bccf">Image prompt received — generate to replace this placeholder</text>
+  const words = safeTitle.split(/\s+/).slice(0, 6)
+  const line1 = words.slice(0, 3).join(' ')
+  const line2 = words.slice(3).join(' ')
+  const svg = `<svg width="1024" height="520" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f0f4ff"/>
+      <stop offset="100%" style="stop-color:#e8f0fe"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <rect x="40" y="40" width="944" height="440" rx="16" fill="white" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="40" y="40" width="944" height="6" rx="3" fill="url(#accent)"/>
+  <circle cx="512" cy="200" r="56" fill="#eef2ff" stroke="#c7d2fe" stroke-width="2"/>
+  <text x="512" y="212" text-anchor="middle" font-family="system-ui,sans-serif" font-size="40" fill="#6366f1">&#x1F4D6;</text>
+  <text x="512" y="290" text-anchor="middle" font-family="system-ui,sans-serif" font-size="26" font-weight="700" fill="#1e293b">${line1}</text>
+  ${line2 ? `<text x="512" y="324" text-anchor="middle" font-family="system-ui,sans-serif" font-size="26" font-weight="700" fill="#1e293b">${line2}</text>` : ''}
+  <text x="512" y="380" text-anchor="middle" font-family="system-ui,sans-serif" font-size="14" fill="#94a3b8">Visual concept illustration</text>
 </svg>`
   return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`
 }
@@ -82,11 +99,10 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
   }
 
   const gradeStr = grade || 'Grade 8'
-  const curCtx = curriculum && curriculum !== 'cbc' ? buildCurriculumLessonContext({ curriculum, grade }) : ''
+  const curCtx = buildCurriculumLessonContext({ curriculum, grade, subject })
   const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
 
   // Fast path: serve an existing lesson for this subject/topic/grade from cache.
-  // Matches exact keys, canonical curriculum topics, and near-duplicate phrasings.
   const cached = await intelligentCacheLookup(subject, topic, gradeStr, curriculum)
   if (cached) {
     return NextResponse.json({
@@ -97,8 +113,27 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
     })
   }
 
+  // Build curriculum intelligence — official outcomes + teacher examples + RAG
+  let curriculumSection = ''
+  try {
+      const { curriculumSection: cs } = await buildFullGenerationContext(
+        gradeStr, subject, { generationType: 'lesson_plan', topic, curriculum: curriculum as string }
+    )
+    curriculumSection = cs
+  } catch { /* curriculum intelligence unavailable */ }
+
+  // Subject-specific pedagogy
+  const pedagogySection = buildSubjectPedagogySection(subject)
+
+  // Grade-band adaptations
+  const gradeBandSection = buildGradeBandSection(gradeStr)
+  const wordLimit = getContentWordLimit(gradeStr)
+
   const prompt = `Create a study lesson for a ${gradeStr} ${curriculum === 'ged-hiset' || grade === 'Adult' ? 'adult GED learner' : 'student'} learning ${subject} about "${topic}".
 ${curCtx}
+${curriculumSection}
+${pedagogySection}
+${gradeBandSection}
 ${curriculum === 'ged-hiset' || grade === 'Adult' ? `This is an ADULT LEARNER preparing for the GED high-school equivalency exam. Make the lesson genuinely beneficial for an adult:
 - Write in plain, respectful, jargon-free language; introduce technical terms only after explaining the idea.
 - Include at least one step-by-step worked example inside the "content" markdown.
@@ -111,15 +146,23 @@ You MUST return valid JSON. Escape all double quotes inside strings with backsla
     "whatYoullLearn": "In one short sentence, what the student will understand after this lesson",
     "concepts": ["First concept", "Second concept", "Third concept"]
   },
-  "content": "Write as markdown with ## headings, one per concept. 2-3 short paragraphs per concept. Keep it conversational and friendly. Max 600 words total. Do NOT use any special characters that break JSON.
-    REQUIREMENTS — every concept section MUST contain:
-    1. A comparison or feature table (GitHub-flavored markdown table with | columns |) that contrasts or summarises the key concepts/features.
-    2. A text/ASCII/emoji visual model of the concept inside a fenced code block (e.g. a flow diagram using arrows =>, boxes, emojis) that shows how the concept works visually.
-    3. A blockquote real-world scenario callout that starts exactly with '> **Real-World Example:** ' and describes how this concept appears in everyday life.",
+  "content": "Write as MARKDOWN with these exact rules. The content will be rendered by a student-facing markdown renderer that supports headings, bold, italic, tables, code blocks, lists, and blockquotes.\n\nFORMAT RULES:\n- Use ## for concept headings (4-6 concepts, one per section)\n- Use ### for sub-sections within a concept\n- Use **bold** for key terms and definitions\n- Use > blockquotes for real-world examples\n- Use pipe tables for comparisons and summaries\n- Use triple-backtick fenced code blocks for visual diagrams (ASCII art, flow charts with arrows, emoji diagrams)\n- Use dash bullet lists for key points and steps\n- Use numbered lists for sequential steps\n- Keep paragraphs SHORT: 2-3 sentences max\n- Write in a friendly, conversational tone like a cool teacher\n\nSTRUCTURE for EACH concept section:\n1. Start with a **bold key term** and its clear definition\n2. Explain it in depth with 3-4 short paragraphs — use analogies, compare to everyday life\n3. Include a **worked example** — walk through it step by step in a numbered list\n4. Include a comparison table summarizing key points vs related concepts\n5. Include a visual diagram in a code block (ASCII art, flow chart, or emoji model)\n6. End with a real-world application blockquote showing where this matters outside school\n7. Add a **Common Mistakes** bullet list — 1-2 things students typically get wrong and how to avoid them\n\nAfter all concepts, add these sections:\n- **Quick Review** — bullet list of ALL key takeaways from every concept (5-8 bullets)\n- **Try It Yourself** — 3-4 practice challenges with increasing difficulty, each with a hint\n- **Think Deeper** — 2 thought-provoking questions that connect concepts together\n\nTarget approximately ${wordLimit} words. Use age-appropriate language for ${gradeStr} students. Make it fun with emojis in diagrams but NOT in regular text. Do NOT use any special characters that break JSON.",
   "images": [
     { "sectionTitle": "Exact ## heading of first concept", "imagePrompt": "Detailed image-generation prompt for this section: subject, key objects to show, labels, style (flat, textbook, colorful, age-appropriate, no text in image)" },
     { "sectionTitle": "Exact ## heading of second concept", "imagePrompt": "Detailed image-generation prompt for this section" },
     { "sectionTitle": "Exact ## heading of third concept", "imagePrompt": "Detailed image-generation prompt for this section" }
+  ],
+  "vocabulary": [
+    { "term": "Key term 1", "definition": "Clear, concise definition", "example": "How it's used in context" },
+    { "term": "Key term 2", "definition": "Clear, concise definition", "example": "How it's used in context" }
+  ],
+  "keyTakeaways": ["Takeaway 1", "Takeaway 2", "Takeaway 3"],
+  "tryItYourself": [
+    { "challenge": "Description of the challenge", "hint": "Helpful hint" },
+    { "challenge": "Description of the challenge", "hint": "Helpful hint" }
+  ],
+  "misconceptions": [
+    { "statement": "Common wrong belief students have", "correction": "The correct understanding", "tip": "How to remember the right way" }
   ],
   "recall": [
     {
@@ -163,7 +206,7 @@ You MUST return valid JSON. Escape all double quotes inside strings with backsla
 RULES:
 - Only return the JSON object. No markdown. No explanation. No backticks.
 - Escape all double quotes inside text fields with backslash
-- The content field must be valid JSON string (escape newlines as \\n, double quotes as \\\")
+- The content field must be valid JSON string (escape newlines as \\n, double quotes as \\")
 - Make questions test real understanding, not memorization
 - Request: ${requestId}`
 
@@ -174,7 +217,7 @@ RULES:
         content: 'You are an AI that returns ONLY valid, parseable JSON. Never wrap in backticks. Escape all double quotes inside strings. Your entire output must be a single JSON object.',
       },
       { role: 'user', content: prompt },
-    ], { maxTokens: 4000, temperature: 0.3 })
+    ],     { maxTokens: 16000, temperature: 0.3 })
 
     const json = cleanJson(raw)
     if (!json) {
@@ -202,7 +245,8 @@ RULES:
       })
       if (hero?.url) {
         const durableUrl = await persistImage(hero.url, heroPrompt, topic, user?.id || 'system')
-        lesson.content = `![${topic} illustration](${durableUrl})\n\n${lesson.content}`
+        const heroImage: ActiveLessonImage = { sectionTitle: topic, imagePrompt: heroPrompt, imageUrl: durableUrl }
+        lesson.images = [heroImage, ...(lesson.images || [])]
       }
     } catch (e) {
       console.warn('[ActiveLesson] Hero image generation failed:', e)
@@ -221,11 +265,12 @@ RULES:
           const durableUrl = img?.url
             ? await persistImage(img.url, meta.imagePrompt || '', meta.sectionTitle, user?.id || 'system')
             : null
-          return durableUrl ? { ...meta, imageUrl: durableUrl } : null
+          if (durableUrl) return { ...meta, imageUrl: durableUrl }
         } catch (e) {
-          console.warn(`[ActiveLesson] Section image ${i} failed, skipping`)
-          return null
+          console.warn(`[ActiveLesson] Section image ${i} failed, using placeholder`)
         }
+        // Fallback: styled SVG placeholder so the lesson always has a visual
+        return { ...meta, imageUrl: fallbackSvg(meta.sectionTitle, meta.imagePrompt || '') }
       })
     )
     lesson.images = rawImages.filter(Boolean) as unknown as ActiveLessonImage[]

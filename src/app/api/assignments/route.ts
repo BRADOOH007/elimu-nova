@@ -2,21 +2,33 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-// Strip grader-only keys (correctAnswer/answer) from question objects embedded
-// in content before it reaches students (protects legacy exams).
+// Strip grader-only keys (correctAnswer/answer and variants) from question
+// objects embedded in content, and drop top-level answer-key containers before
+// it reaches students (protects legacy exams).
+const GRADER_KEYS = new Set(['correctAnswer', 'answer', 'correct', 'correct_option', 'correctOption', 'correctIndex', 'answerKey', 'solution', 'marked_answer', 'keyAns'])
+
+function stripAnswerFields(q: any): any {
+  const safe: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(q)) {
+    if (GRADER_KEYS.has(k)) continue
+    safe[k] = v
+  }
+  return safe
+}
+
 function sanitizeContentForStudent(content: string | null): string | null {
   if (!content) return content
   try {
     const parsed = JSON.parse(content)
-    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.questions)) {
-      parsed.questions = parsed.questions.map((q: any) => {
-        const safe: Record<string, unknown> = {}
-        for (const [k, v] of Object.entries(q)) {
-          if (k === 'correctAnswer' || k === 'answer') continue
-          safe[k] = v
-        }
-        return safe
-      })
+    if (parsed && typeof parsed === 'object') {
+      for (const k of ['answerKey', 'markingScheme', 'answers']) {
+        if (k in parsed && k !== 'questions') delete parsed[k]
+      }
+      if (Array.isArray(parsed.questions)) {
+        parsed.questions = parsed.questions.map(stripAnswerFields)
+      } else if (Array.isArray(parsed)) {
+        return content
+      }
       return JSON.stringify(parsed)
     }
   } catch { /* not JSON — leave as-is */ }

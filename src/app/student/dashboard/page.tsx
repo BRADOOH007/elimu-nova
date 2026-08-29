@@ -43,18 +43,22 @@ const fallbackData: DashboardData = {
 
 import { getSubjectsForStudent } from '@/lib/constants/cbc-curriculum'
 import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
+import { resolveEffectiveCurriculum, resolveStudentGradeAndCurriculum } from '@/lib/student-curriculum-resolver'
 import { formatTeacherName, formatDate, formatDuration, formatTime } from '@/lib/utils/formatters'
 
 const SUBJECT_ICONS: Record<string, LucideIcon> = {
   Mathematics: Calculator, Math: Calculator, English: BookOpen, 'English Language Arts': BookOpen, Science: FlaskConical, 'Social Studies': Globe, History: Globe, Geography: Globe, 'Religious Education': Church, 'Creative Arts': Palette, 'Agriculture & Nutrition': Leaf, Agriculture: Leaf, 'Pre-Technical Studies': Brain, 'Computer Science': Brain, 'Computer Studies': Brain, 'Business Studies': TrendingUp, 'Physical Education': Activity, 'Health & PE': Activity, 'Health Education': Activity, Physics: Zap, Chemistry: FlaskConical, Biology: Leaf, Kiswahili: Languages, 'Kiswahili / KSL': Languages, Economics: TrendingUp, 'Visual & Performing Arts': Palette, 'Fine Arts': Palette, Art: Palette, Music: Music, 'World Languages': Languages, 'Foreign Languages': Languages, French: Languages, Spanish: Languages, 'Environmental Science': FlaskConical, 'Life Science': FlaskConical, 'Physical Science': FlaskConical, 'Earth & Space Science': FlaskConical,
 }
 const SUBJECT_COLORS: Record<string, string[]> = {
-  Mathematics: ['text-blue-600','bg-blue-50','bg-blue-500'], English: ['text-emerald-600','bg-emerald-50','bg-emerald-500'], 'English Language Arts': ['text-emerald-600','bg-emerald-50','bg-emerald-500'], Kiswahili: ['text-amber-600','bg-amber-50','bg-amber-500'], 'Kiswahili / KSL': ['text-amber-600','bg-amber-50','bg-amber-500'], 'Science & Technology': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Integrated Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], Science: ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Social Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Religious Education': ['text-purple-600','bg-purple-50','bg-purple-500'], 'Creative Arts': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Creative Arts & Sports': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Agriculture & Nutrition': ['text-green-600','bg-green-50','bg-green-500'], Agriculture: ['text-green-600','bg-green-50','bg-green-500'], 'Pre-Technical Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Business Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Computer Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Computer Science': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Physical Education': ['text-lime-600','bg-lime-50','bg-lime-500'], 'Health & PE': ['text-lime-600','bg-lime-50','bg-lime-500'], 'Health Education': ['text-lime-600','bg-lime-50','bg-lime-500'],
+  Mathematics: ['text-blue-600','bg-blue-50','bg-blue-500'], English: ['text-emerald-600','bg-emerald-50','bg-emerald-500'], 'English Language Arts': ['text-emerald-600','bg-emerald-50','bg-emerald-500'], Kiswahili: ['text-amber-600','bg-amber-50','bg-amber-500'], 'Kiswahili / KSL': ['text-amber-600','bg-amber-50','bg-amber-500'], 'Science & Technology': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Integrated Science': ['text-cyan-600','bg-cyan-50','bg-cyan-500'], Science: ['text-cyan-600','bg-cyan-50','bg-cyan-500'], 'Social Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Religious Education': ['text-purple-600','bg-purple-50','bg-purple-500'], CRE: ['text-purple-600','bg-purple-50','bg-purple-500'], 'Creative Arts': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Creative Arts & Sports': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Agriculture & Nutrition': ['text-green-600','bg-green-50','bg-green-500'], Agriculture: ['text-green-600','bg-green-50','bg-green-500'], 'Pre-Technical Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Business Studies': ['text-orange-600','bg-orange-50','bg-orange-500'], 'Computer Studies': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Computer Science': ['text-indigo-600','bg-indigo-50','bg-indigo-500'], 'Physical Education': ['text-lime-600','bg-lime-50','bg-lime-500'], 'Health & PE': ['text-lime-600','bg-lime-50','bg-lime-500'], 'Health Education': ['text-lime-600','bg-lime-50','bg-lime-500'], 'Indigenous Language': ['text-teal-600','bg-teal-50','bg-teal-500'], 'Environmental Activities': ['text-green-600','bg-green-50','bg-green-500'], 'Creative Activities': ['text-pink-600','bg-pink-50','bg-pink-500'], 'Physical & Health Education': ['text-lime-600','bg-lime-50','bg-lime-500'],   History: ['text-orange-600','bg-orange-50','bg-orange-500'], Geography: ['text-cyan-600','bg-cyan-50','bg-cyan-500'], Physics: ['text-blue-600','bg-blue-50','bg-blue-500'], Chemistry: ['text-purple-600','bg-purple-50','bg-purple-500'], Biology: ['text-green-600','bg-green-50','bg-green-500'], 'Home Science': ['text-pink-600','bg-pink-50','bg-pink-500'],
 }
 
-function getSubjectCards(grade: string, curriculumId?: string | null) {
-  const subjects = curriculumId && curriculumId !== 'cbc'
-    ? getSubjectsForCurriculum(curriculumId, grade)
+function getSubjectCards(grade: string, curriculumId?: string | null, country?: string | null) {
+  // Country-aware: resolve the effective curriculum so non-Kenyan students
+  // never fall back to CBC subjects just because no curriculum was saved.
+  const effective = resolveEffectiveCurriculum(country, curriculumId)
+  const subjects = effective !== 'cbc'
+    ? getSubjectsForCurriculum(effective, grade)
     : getSubjectsForStudent(grade)
   return subjects.slice(0, 8).map(name => {
     const c = SUBJECT_COLORS[name] || ['text-slate-600','bg-slate-50','bg-slate-500']
@@ -89,6 +93,8 @@ export default function StudentDashboard() {
     return r.json()
   })
 
+  const { data: prefsData } = useSWR<{ curriculum?: string; country?: string; grade?: string; createdAt?: string; updatedAt?: string }>('/api/user-preferences', fetcher)
+
   // Dashboard data cached in memory by SWR (staleTime 5min). Returning to this
   // page renders the cached state instantly without the skeleton loader while
   // revalidating in the background.
@@ -99,7 +105,7 @@ export default function StudentDashboard() {
 
   // Learning path for Continue CTA
   const { data: pathData } = useSWR<{ resumeTopic?: { subject: string; topicName: string } }>(
-    "/api/student/learning-path?limit=1",
+    `/api/student/learning-path?limit=1&curriculum=${prefsData?.curriculum || ''}&grade=${encodeURIComponent(prefsData?.grade || '')}`,
     fetcher,
   )
   const resumeTopic = pathData?.resumeTopic
@@ -148,8 +154,20 @@ export default function StudentDashboard() {
   const todayStr = new Date().toISOString().split('T')[0]
   const dailyDone = !!localStorage.getItem(`daily_done_${todayStr}`)
 
-  // Grade + recent subjects for the "What to learn next?" sidebar widget
-  const studentGrade = /Grade|Form/i.test(d.student.class) ? d.student.class : 'Grade 4'
+  // Grade + recent subjects for the "What to learn next?" sidebar widget.
+  // Country-aware & year-aware: the effective curriculum never falls back to CBC
+  // for non-Kenyan students, and the grade auto-advances each calendar year.
+  const classGrade = /Grade|Form/i.test(d.student.class) ? d.student.class : null
+  const resolved = resolveStudentGradeAndCurriculum({
+    grade: prefsData?.grade,
+    country: prefsData?.country,
+    curriculum: prefsData?.curriculum,
+    createdAt: prefsData?.createdAt,
+    updatedAt: prefsData?.updatedAt,
+    classGrade,
+  })
+  const studentGrade = resolved.grade
+  const effectiveCurriculum = resolved.curriculum
   const recentSubjects = Array.from(new Set((d.studySessions || []).map(s => s.subject).filter(Boolean)))
 
   const dueReviews = (() => {
@@ -185,7 +203,7 @@ export default function StudentDashboard() {
           <div className="flex flex-col sm:items-end gap-3">
             <div className="flex items-center gap-2">
               <div className="bg-white/10 rounded-full px-3 py-1.5 text-sm font-bold">{levelName}</div>
-              <Button size="sm" className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold border-0" onClick={() => window.location.href = '/student/learn'}>
+              <Button size="sm" className="bg-white text-indigo-700 hover:bg-indigo-50 font-semibold border-0" onClick={() => router.push('/student/learn')}>
                 {resumeTopic ? <><Play className="h-4 w-4 mr-1.5" />Continue Learning</> : <><BookOpen className="h-4 w-4 mr-1.5" />Start Learning</>}
               </Button>
               <button onClick={() => openAITutor(undefined, resumeTopic?.subject || '')} className="w-9 h-9 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors" aria-label="Chat with AI Tutor">
@@ -266,15 +284,13 @@ export default function StudentDashboard() {
               <Link href="/student/learn" className="text-xs text-teal-600 font-semibold hover:underline flex items-center gap-1">View all <ArrowRight className="h-3 w-3" /></Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {getSubjectCards(d.student.class || 'Grade 4').map((subject) => (
-                <Link key={subject.name} href={`/student/learn?subject=${encodeURIComponent(subject.name.toLowerCase())}`}
+              {getSubjectCards(studentGrade, effectiveCurriculum).map((subject) => (
+                <Link key={subject.name} href={`/student/learn?subject=${encodeURIComponent(subject.name)}`}
                   className={`${subject.bg} rounded-xl p-3 border border-slate-100 hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer group`}>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm"><subject.icon className={`h-4 w-4 ${subject.color}`} /></div>
                     <span className="text-xs font-semibold text-slate-700 truncate">{subject.name}</span>
                   </div>
-                  <div className="bg-white/60 rounded-full h-1.5 overflow-hidden"><div className={`h-full ${subject.bar} rounded-full transition-all duration-500`} style={{ width: `${Math.min(100, Math.round((d.analytics.completedAssignments / Math.max(1, d.analytics.completedAssignments + d.analytics.pendingAssignments)) * 100))}%` }} /></div>
-                  <p className="text-[10px] text-slate-400 mt-1">Tap to study</p>
                 </Link>
               ))}
               <Link href="/student/learn" className="rounded-xl border-2 border-dashed border-slate-200 p-3 flex flex-col items-center justify-center gap-1.5 hover:border-teal-300 hover:bg-teal-50/50 transition-all cursor-pointer group">
@@ -315,7 +331,7 @@ export default function StudentDashboard() {
           </div>
 
           {/* What do you want to learn next? */}
-          <WhatToLearnNext grade={studentGrade} recentSubjects={recentSubjects} dueReviews={dueReviews} />
+          <WhatToLearnNext grade={studentGrade} recentSubjects={recentSubjects} dueReviews={dueReviews} curriculum={prefsData?.curriculum} />
 
           {/* Recent Activity */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">

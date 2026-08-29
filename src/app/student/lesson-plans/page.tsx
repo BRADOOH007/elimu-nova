@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { useToast } from '@/hooks/use-toast'
+import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -133,6 +134,7 @@ interface StudySession {
 
 export default function StudentLessonPlansPage() {
   const { toast } = useToast()
+  const router = useRouter()
   const { openAITutor } = useAITutor()
   const [sharedLessonPlans, setSharedLessonPlans] = useState<SharedLessonPlan[]>([])
   const [aiLessons, setAiLessons] = useState<AILesson[]>([])
@@ -147,8 +149,8 @@ export default function StudentLessonPlansPage() {
   const [filterSubject, setFilterSubject] = useState('all')
   const [filterType, setFilterType] = useState('all')
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState<'shared' | 'ai' | 'recommended' | 'quizzes'>(() => {
-    return (searchParams.get('tab') as any) || 'ai'
+  const [activeTab, setActiveTab] = useState<'quizzes' | 'shared' | 'recommended'>(() => {
+    return (searchParams.get('tab') as any) || 'quizzes'
   })
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiInsights, setAiInsights] = useState<any>(null)
@@ -619,10 +621,9 @@ export default function StudentLessonPlansPage() {
       <div className="mb-6">
         <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
           {[
-            { id: 'ai', label: 'AI Lessons', icon: Brain },
+            { id: 'quizzes', label: 'Quizzes', icon: Target },
             { id: 'shared', label: 'Teacher Shared', icon: BookOpen },
             { id: 'recommended', label: 'Recommended', icon: Star },
-            { id: 'quizzes', label: 'Quizzes', icon: Target }
           ].map((tab) => {
             const Icon = tab.icon
             return (
@@ -665,175 +666,10 @@ export default function StudentLessonPlansPage() {
               <option key={subject} value={subject}>{subject}</option>
             ))}
           </select>
-          {activeTab === 'ai' && (
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 border-0 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Types</option>
-              {lessonTypes.map(type => (
-                <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-              ))}
-            </select>
-          )}
         </div>
       </div>
 
       {/* Content based on active tab */}
-      {activeTab === 'ai' && (
-        <div className="space-y-6">
-          {/* AI Lessons Grid */}
-          {filteredAILessons.length === 0 ? (
-            <Card className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm border-0">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Brain className="w-16 h-16 text-gray-400 mb-4" />
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">No AI Lessons Found</h3>
-                <p className="text-gray-500 text-center mb-4">
-                  {searchTerm || filterSubject !== 'all' || filterType !== 'all'
-                    ? 'No lessons match your search criteria.' 
-                    : 'Generate your first AI lesson to get started!'}
-                </p>
-                <Button 
-                  onClick={() => handleGenerateAILesson('Mathematics', 'Algebra')}
-                  disabled={isGenerating}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                >
-                  {isGenerating ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Zap className="w-4 h-4 mr-2" />
-                  )}
-                  Generate AI Lesson
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAILessons.map((lesson) => {
-                const SubjectIcon = getSubjectIcon(lesson.subject)
-                const TypeIcon = getTypeIcon(lesson.type)
-                
-                return (
-                  <Card key={lesson.id} className="bg-gradient-to-br from-white via-blue-50 to-purple-50 shadow-lg backdrop-blur-sm group hover:scale-105 transition-all duration-300 border-0">
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <SubjectIcon className="w-5 h-5 text-blue-600" />
-                            <TypeIcon className="w-4 h-4 text-purple-600" />
-                            {lesson.customGenerated && (
-                              <Badge variant="outline" className="text-xs bg-purple-100 text-purple-800 border-purple-200">
-                                <Wand2 className="w-3 h-3 mr-1" />
-                                Custom
-                              </Badge>
-                            )}
-                            {lesson.aiGenerated && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Zap className="w-3 h-3 mr-1" />
-                                AI Enhanced
-                              </Badge>
-                            )}
-                            {lesson.personalized && (
-                              <Badge variant="outline" className="text-xs">
-                                <Star className="w-3 h-3 mr-1" />
-                                Personalized
-                              </Badge>
-                            )}
-                          </div>
-                          <CardTitle className="text-lg mb-2 line-clamp-2">
-                            {lesson.title}
-                          </CardTitle>
-                          <CardDescription className="mt-2">
-                            <span className="flex items-center space-x-2 text-sm text-gray-600">
-                              <GraduationCap className="h-4 w-4" />
-                              <span>{lesson.grade}</span>
-                              <span>•</span>
-                              <span>{lesson.subject}</span>
-                              <span>•</span>
-                              <span className="capitalize">{lesson.difficulty}</span>
-                            </span>
-                          </CardDescription>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleViewAILesson(lesson)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStartAILesson(lesson)}>
-                              <Play className="mr-2 h-4 w-4" />
-                              Start Lesson
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleCompleteLesson(lesson)}>
-                              <CheckCircle className="mr-2 h-4 w-4" />
-                              Mark Complete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Progress</span>
-                          <span className="font-medium">{lesson.progress}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${lesson.progress}%` }}
-                          ></div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-sm text-gray-600">
-                          <span className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {lesson.estimatedTime}
-                          </span>
-                          <span className="flex items-center">
-                            <Star className="h-4 w-4 mr-1" />
-                            {lesson.rating || 'Not rated'}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2 pt-2">
-                          <Button 
-                            onClick={() => handleStartAILesson(lesson)}
-                            disabled={isGenerating}
-                            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                          >
-                            {isGenerating ? (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            ) : (
-                              <Play className="w-4 h-4 mr-2" />
-                            )}
-                            Start
-                          </Button>
-                          <Button 
-                            onClick={() => handleViewAILesson(lesson)}
-                            variant="outline"
-                            className="bg-white/70 hover:bg-white/90"
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
       {activeTab === 'shared' && (
         <div className="space-y-6">
           {/* Shared Lesson Plans Grid */}
@@ -946,7 +782,7 @@ export default function StudentLessonPlansPage() {
                               variant={rec.type === 'danger' ? 'destructive' : 'outline'}
                               onClick={() => {
                                 if (rec.subject) handleGenerateAILesson(rec.subject, rec.title)
-                                else if (rec.href) window.location.href = rec.href
+                                else if (rec.href) router.push(rec.href)
                               }}
                             >
                               {rec.action}

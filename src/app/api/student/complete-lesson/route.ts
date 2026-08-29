@@ -16,12 +16,28 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
-  // Update or create analytics
-  const analytics = await prisma.studentAnalytics.upsert({
+  // Read previous analytics BEFORE upsert so streak calculation uses the real lastActiveDate
+  const previousAnalytics = await prisma.studentAnalytics.findUnique({
+    where: { studentId: student.id },
+    select: { lastActiveDate: true, streakDays: true, longestStreak: true },
+  })
+
+  // Calculate streak from previous state
+  const previousLastActive = previousAnalytics?.lastActiveDate ? new Date(previousAnalytics.lastActiveDate) : null
+  const diffDays = previousLastActive
+    ? Math.floor((today.getTime() - previousLastActive.getTime()) / (1000 * 60 * 60 * 24))
+    : 999
+  const newStreak = diffDays <= 1 ? (previousAnalytics?.streakDays || 0) + 1 : 1
+  const newLongest = Math.max(previousAnalytics?.longestStreak || 0, newStreak)
+
+  // Update or create analytics with correct streak
+  await prisma.studentAnalytics.upsert({
     where: { studentId: student.id },
     update: {
       completedAssignments: { increment: 1 },
       lastActiveDate: now,
+      streakDays: newStreak,
+      longestStreak: newLongest,
       totalStudyTime: { increment: 30 },
     },
     create: {
@@ -29,22 +45,10 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
       completedAssignments: 1,
       totalStudyTime: 30,
       lastActiveDate: now,
-      streakDays: 1,
-      longestStreak: 1,
+      streakDays: newStreak,
+      longestStreak: newLongest,
     }
   })
-
-  // Calculate streak
-  if (analytics.lastActiveDate) {
-    const lastDate = new Date(analytics.lastActiveDate)
-    const diffDays = Math.floor((today.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
-    const newStreak = diffDays <= 1 ? analytics.streakDays + 1 : 1
-    const newLongest = Math.max(analytics.longestStreak, newStreak)
-    await prisma.studentAnalytics.update({
-      where: { studentId: student.id },
-      data: { streakDays: newStreak, longestStreak: newLongest, lastActiveDate: now }
-    })
-  }
 
   // Create study session record
   await prisma.studySession.create({

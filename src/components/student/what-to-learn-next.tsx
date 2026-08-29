@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { Compass, ArrowRight, ArrowUpRight, Sparkles } from 'lucide-react'
+import { getSubjectsForCurriculum } from '@/lib/curriculum-subjects'
 
 type Status = 'In Progress' | 'Up Next' | 'Needs Review'
 
@@ -17,6 +18,7 @@ interface WhatToLearnNextProps {
   grade?: string
   recentSubjects?: string[]
   dueReviews?: Array<{ subject?: string; topic: string }>
+  curriculum?: string
 }
 
 interface SubjectPath {
@@ -25,7 +27,6 @@ interface SubjectPath {
 }
 
 const DEFAULT_SUBJECTS = ['Mathematics', 'Science', 'Kiswahili']
-
 const STATUS_STYLE: Record<Status, string> = {
   'In Progress': 'bg-amber-50 text-amber-700',
   'Up Next': 'bg-blue-50 text-blue-700',
@@ -36,11 +37,11 @@ function topicHref(subject: string, topic: string) {
   return `/student/learn?subject=${encodeURIComponent(subject)}&topic=${encodeURIComponent(topic)}`
 }
 
-async function loadPaths(grade: string, subjects: string[]): Promise<SubjectPath[]> {
+async function loadPaths(grade: string, subjects: string[], curriculum: string): Promise<SubjectPath[]> {
   return Promise.all(
     subjects.map(async subject => {
       try {
-        const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}`)
+        const res = await fetch(`/api/student/learning-path?grade=${encodeURIComponent(grade)}&subject=${encodeURIComponent(subject)}&curriculum=${encodeURIComponent(curriculum)}`)
         if (!res.ok) return { subject, topics: [] }
         const data = await res.json()
         return { subject, topics: (data.topics || []) as SubjectPath['topics'] }
@@ -87,16 +88,23 @@ function buildSuggestions(results: SubjectPath[] | undefined, dueReviews: WhatTo
   return next
 }
 
-export default function WhatToLearnNext({ grade = 'Grade 4', recentSubjects = [], dueReviews = [] }: WhatToLearnNextProps) {
-  const subjects = useMemo(
-    () => Array.from(new Set([...recentSubjects, ...DEFAULT_SUBJECTS].filter(Boolean))).slice(0, 3),
-    [recentSubjects.join(',')], // eslint-disable-line react-hooks/exhaustive-deps
+export default function WhatToLearnNext({ grade = 'Grade 4', recentSubjects = [], dueReviews = [], curriculum = '' }: WhatToLearnNextProps) {
+  const curriculumDefaults = useMemo(
+    () => (curriculum && curriculum !== 'cbc'
+      ? getSubjectsForCurriculum(curriculum, grade).slice(0, 3)
+      : DEFAULT_SUBJECTS),
+    [curriculum, grade],
   )
 
-  const key = `what-to-learn-next|${grade}|${subjects.join(',')}`
+  const subjects = useMemo(
+    () => Array.from(new Set([...recentSubjects, ...curriculumDefaults].filter(Boolean))).slice(0, 3),
+    [recentSubjects.join(','), curriculumDefaults.join(',')], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
+  const key = `what-to-learn-next|${grade}|${subjects.join(',')}|${curriculum}`
   const { data, isLoading } = useSWR<SubjectPath[]>(
     key,
-    () => loadPaths(grade, subjects),
+    () => loadPaths(grade, subjects, curriculum),
     { revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 5 * 60 * 1000 },
   )
 

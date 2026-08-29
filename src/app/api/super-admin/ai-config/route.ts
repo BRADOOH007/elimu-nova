@@ -35,9 +35,10 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
     const config: Record<string, string> = {}
     settings.forEach((s: any) => {
       if (s.key.includes('_key') && s.value) {
-        // Decrypt then mask — show first 12 chars + **** (never show the encrypted blob)
+        // Decrypt then mask each comma-separated key individually — show first
+        // 12 chars + **** per key (never show the encrypted blob or full keys)
         const plain = decryptPassword(s.value) || s.value
-        config[s.key] = plain.length > 12 ? plain.substring(0, 12) + '****' : '****'
+        config[s.key] = splitKeys(plain).map(maskKey).join(',')
       } else {
         config[s.key] = s.value || ''
       }
@@ -56,10 +57,10 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B',         provider: 'openrouter', cost: 'Free',speed: 'Fast'  },
       { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B',      provider: 'openrouter', cost: 'Free',speed: 'Medium'},
       { id: 'gemini-2.5-flash',               name: 'Gemini 2.5 Flash',       provider: 'gemini',     cost: 'Free',speed: 'Fast'  },
-      { id: 'llama-3.1-8b-instant',           name: 'Llama 3.1 8B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
-      { id: 'llama-3.3-70b-versatile',        name: 'Llama 3.3 70B (Groq)',   provider: 'groq',       cost: 'Free',speed: 'Ultra' },
-      { id: 'gemma2-9b-it',                   name: 'Gemma 2 9B (Groq)',      provider: 'groq',       cost: 'Free',speed: 'Ultra' },
-      { id: 'mixtral-8x7b-32768',             name: 'Mixtral 8x7B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
+      { id: 'gemini-3.6-flash',               name: 'Gemini 3.6 Flash',       provider: 'gemini',     cost: 'Free',speed: 'Fast'  },
+      { id: 'openai/gpt-oss-120b',            name: 'GPT-OSS 120B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
+      { id: 'openai/gpt-oss-20b',             name: 'GPT-OSS 20B (Groq)',     provider: 'groq',       cost: 'Free',speed: 'Ultra' },
+      { id: 'qwen/qwen3.6-27b',               name: 'Qwen 3.6 27B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
       { id: 'gpt-4o-mini',                    name: 'GPT-4o Mini (Direct)',    provider: 'openai',     cost: '$',   speed: 'Fast'  },
       { id: 'gpt-4o',                         name: 'GPT-4o (Direct)',         provider: 'openai',     cost: '$$$', speed: 'Medium'},
     ]
@@ -73,17 +74,53 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
 
 export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   try {
-    const updates: Record<string, string> = await req.json()
+    const updates: Record<string, unknown> = await req.json()
 
-    for (const [key, value] of Object.entries(updates)) {
-      if (!AI_CONFIG_KEYS.includes(key)) continue
-      if (!value || value.trim() === '') continue
+    // Split the payload into key-field updates and their "__drop" companions.
+    // "<field>__drop" holds comma-separated indexes of stored keys to remove;
+    // the matching "<field>" value holds newly typed keys to append. Presence of
+    // a "__drop" companion (even empty) selects MERGE mode: stored keys are kept,
+    // dropped indexes removed, new keys appended. Without it, a non-empty
+    // <field> value fully replaces what is stored (legacy behaviour).
+    const drops:     Record<string, number[]> = {}
+    const dropSeen:  Record<string, boolean>  = {}
+    const values:    Record<string, string>   = {}
+    for (const [rawKey, rawValue] of Object.entries(updates)) {
+      const v = typeof rawValue === 'string' ? rawValue.trim() : ''
+      if (rawKey.endsWith('__drop')) {
+        const parent = rawKey.slice(0, -'__drop'.length)
+        if (!AI_CONFIG_KEYS.includes(parent)) continue
+        dropSeen[parent] = true
+        drops[parent] = v ? v.split(',').map(s => parseInt(s, 10)).filter(n => Number.isInteger(n) && n >= 0) : []
+        continue
+      }
+      if (!AI_CONFIG_KEYS.includes(rawKey)) continue
+      values[rawKey] = v
+    }
 
-      // Skip masked values — if the value ends with '****', the user didn't change it
-      // Saving a masked value would corrupt the stored key
-      if (value.endsWith('****')) continue
+    const fieldKeys = new Set([...Object.keys(values), ...Object.keys(drops)])
+    for (const key of fieldKeys) {
+      let value    = values[key] || ''
+      const wantsMerge = !!dropSeen[key]
 
-      let toSave = value.trim()
+      // Skip masked values — if the value ends with '****', the user didn't change it.
+      // Saving a masked value would corrupt the stored key.
+      if (value.endsWith('****')) value = ''
+      if (!value && !wantsMerge) continue
+
+      let toSave = value
+
+      if (wantsMerge) {
+        // Merge mode: remove dropped indexes from the stored keys, append new ones.
+        const kept = (await readStoredKeys(key)).filter((_, i) => !(drops[key] || []).includes(i))
+        toSave = [...kept, ...splitKeys(value)].join(',')
+      }
+
+      if (!toSave) {
+        // Every key was removed — delete the setting entirely.
+        await (prisma as any).systemSettings.deleteMany({ where: { key } })
+        continue
+      }
 
       // Encrypt API keys at rest (skip values that are already encrypted)
       const isKey = key.endsWith('_key')
@@ -141,6 +178,24 @@ export const POST = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
   }
 })
 
+// Split a stored key value into its individual keys (rotation list format).
+function splitKeys(raw: string): string[] {
+  return String(raw || '').split(',').map(k => k.trim()).filter(Boolean)
+}
+
+// Mask a single key for display: first 12 chars + **** (never the full secret).
+function maskKey(key: string): string {
+  return key.length > 12 ? key.substring(0, 12) + '****' : '****'
+}
+
+// Read + decrypt a stored key setting into its individual keys.
+async function readStoredKeys(key: string): Promise<string[]> {
+  const row = await (prisma as any).systemSettings.findUnique({ where: { key } })
+  if (!row?.value) return []
+  const plain = decryptPassword(row.value) || row.value
+  return splitKeys(plain)
+}
+
 // Test each provider with a minimal request
 async function testProviders() {
   const results: Record<string, { ok: boolean; latencyMs?: number; error?: string }> = {}
@@ -150,14 +205,16 @@ async function testProviders() {
   })
   const dbMap = new Map(dbKeys.map((s: any) => [s.key.replace('ai_provider_', '').replace('_key', ''), decryptPassword(s.value) || s.value]))
 
-  const GEMINI_KEY     = String(process.env.GEMINI_API_KEY     || dbMap.get('gemini') || '')
-  const GROQ_KEY       = String(process.env.GROQ_API_KEY       || dbMap.get('groq') || '')
-  const OPENROUTER_KEY = String(process.env.OPENROUTER_API_KEY || dbMap.get('openrouter') || '')
-  const OPENAI_KEY     = String(process.env.OPENAI_API_KEY     || dbMap.get('openai') || '')
-  const CEREBRAS_KEY   = String(process.env.CEREBRAS_API_KEY   || dbMap.get('cerebras') || '')
-  const DEEPSEEK_KEY   = String(process.env.DEEPSEEK_API_KEY   || dbMap.get('deepseek') || '')
-  const DALLE_KEY      = String(process.env.OPENAI_DALLE_API_KEY || dbMap.get('dalle') || '')
-  const STABILITY_KEY  = String(process.env.STABILITY_API_KEY    || dbMap.get('stability') || '')
+  // DB (system_settings) is authoritative for the app's actual AI calls, so test
+  // the DB key first and only fall back to env (matching getKey() in ai-provider).
+  const GEMINI_KEY     = String(dbMap.get('gemini')     || process.env.GEMINI_API_KEY || '')
+  const GROQ_KEY       = String(dbMap.get('groq')       || process.env.GROQ_API_KEY || '')
+  const OPENROUTER_KEY = String(dbMap.get('openrouter') || process.env.OPENROUTER_API_KEY || '')
+  const OPENAI_KEY     = String(dbMap.get('openai')     || process.env.OPENAI_API_KEY || '')
+  const CEREBRAS_KEY   = String(dbMap.get('cerebras')   || process.env.CEREBRAS_API_KEY || '')
+  const DEEPSEEK_KEY   = String(dbMap.get('deepseek')   || process.env.DEEPSEEK_API_KEY || '')
+  const DALLE_KEY      = String(dbMap.get('dalle')      || process.env.OPENAI_DALLE_API_KEY || '')
+  const STABILITY_KEY  = String(dbMap.get('stability')  || process.env.STABILITY_API_KEY || '')
 
   // Helper: get first valid key from comma-separated list
   const firstKey = (val?: string): string => {
@@ -167,19 +224,24 @@ async function testProviders() {
   }
 
   const testMsg = [{ role: 'user', content: 'Say "ok" in one word.' }]
+  // Use the model the app actually calls (GROQ_MODEL / default) — llama-3.1-8b-instant is deprecated.
+  const groqTestModel = process.env.GROQ_MODEL || 'openai/gpt-oss-120b'
+  // Gemini rotates model names aggressively — try newest first, fall back to older
+  const geminiTestModels = [process.env.GEMINI_MODEL || 'gemini-3.6-flash', 'gemini-2.0-flash', 'gemini-2.5-flash']
 
   if (GEMINI_KEY) {
     const start = Date.now()
+    let lastText = ''
     try {
-      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${firstKey(GEMINI_KEY)}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'gemini-2.5-flash', messages: testMsg, max_tokens: 5 }),
-      })
-      results.gemini = { ok: r.ok, latencyMs: Date.now() - start }
-      if (!r.ok) {
-        const text = await r.text()
-        results.gemini.error = text.slice(0, 200)
+      for (const model of geminiTestModels) {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${firstKey(GEMINI_KEY)}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, messages: testMsg, max_tokens: 5 }),
+        })
+        if (r.ok) { results.gemini = { ok: true, latencyMs: Date.now() - start }; break }
+        lastText = (await r.text()).slice(0, 200)
+        results.gemini = { ok: false, latencyMs: Date.now() - start, error: lastText }
       }
     } catch (e: any) { results.gemini = { ok: false, error: e.message } }
   } else { results.gemini = { ok: false, error: 'No key set' } }
@@ -190,7 +252,7 @@ async function testProviders() {
       const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${firstKey(GROQ_KEY)}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: testMsg, max_tokens: 5 }),
+        body: JSON.stringify({ model: groqTestModel, messages: testMsg, max_tokens: 5 }),
       })
       results.groq = { ok: r.ok, latencyMs: Date.now() - start }
       if (!r.ok) {

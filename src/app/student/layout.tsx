@@ -22,6 +22,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { icon: BarChart3,     label: 'Dashboard',  href: '/student/dashboard',    tourId: 'student-dashboard'    },
     { icon: GraduationCap, label: 'Learn',      href: '/student/learn',        tourId: 'student-learn'        },
     { icon: BookOpen,      label: 'Lessons',    href: '/student/lesson-plans', tourId: 'student-schedule'     },
+    { icon: BookMarked,    label: 'Library',    href: '/student/library',      tourId: 'student-library'     },
     { icon: ClipboardList, label: 'Assignments',href: '/student/assignments',  tourId: 'student-assignments' },
     { icon: Calendar,      label: 'Classes',    href: '/student/schedule',     tourId: 'student-classes'     },
     { icon: Trophy,        label: 'Progress',   href: '/student/progress',    tourId: 'student-progress'     },

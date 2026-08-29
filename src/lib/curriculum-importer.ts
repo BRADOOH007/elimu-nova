@@ -130,6 +130,7 @@ export interface ImportedCurriculum {
   term?: number | null
   description?: string
   strands: ImportedStrand[]
+  curriculumType?: string
 }
 
 const MAX_PROMPT_CHARS = 32000
@@ -360,7 +361,7 @@ export async function saveImportedCurriculum(data: ImportedCurriculum): Promise<
   const name = data.name || `CBC ${grade} ${subject}`
 
   const existing = await prisma.curriculum.findFirst({
-    where: { type: 'CBC', grade, subject, term },
+    where: { type: (data.curriculumType || 'CBC') as any, grade, subject, term },
     orderBy: { createdAt: 'desc' },
   })
 
@@ -372,7 +373,7 @@ export async function saveImportedCurriculum(data: ImportedCurriculum): Promise<
     : await prisma.curriculum.create({
         data: {
           name,
-          type: 'CBC',
+          type: (data.curriculumType || 'CBC') as any,
           subject,
           grade,
           term,

@@ -11,7 +11,6 @@ import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { useExamLockdown } from '@/hooks/use-exam-lockdown'
 import { LockdownOverlay } from '@/components/exam/lockdown-overlay'
 import ExamSplitPane from '@/components/exam/exam-split-pane'
-import AnswerGuide from '@/components/answer-guide'
 
 interface Question {
   id: number | string
@@ -84,6 +83,29 @@ function parseAnswerKey(raw: string | null | undefined): Record<string, string> 
   } catch {
     return {}
   }
+}
+
+function normalizeText(a: string): string {
+  return String(a || '').trim().replace(/[.。,，:：;；]+$/g, '').replace(/\s+/g, ' ').toLowerCase()
+}
+
+function resolveOptionText(q: any, value: string): string {
+  const v = String(value ?? '').trim()
+  const options = Array.isArray(q.options) ? q.options : []
+  if (!v || options.length === 0) return v
+  if (/^\d+$/.test(v)) {
+    const idx = parseInt(v, 10)
+    if (idx >= 0 && idx < options.length) return String(options[idx])
+    return v
+  }
+  const nv = normalizeText(v)
+  const byText = options.find((o: string) => normalizeText(o) === nv)
+  if (byText !== undefined) return String(byText)
+  if (/^[a-z]$/i.test(v)) {
+    const idx = v.toUpperCase().charCodeAt(0) - 65
+    if (idx >= 0 && idx < options.length) return String(options[idx])
+  }
+  return v
 }
 
 export default function StudentAssignmentDetailPage() {
@@ -408,9 +430,10 @@ export default function StudentAssignmentDetailPage() {
                       {q.options && (
                         <div className="mt-2 space-y-1">
                           {q.options.map((opt, oi) => {
-                            const optLetter = opt.charAt(0)
-                            const isSelected = studentAns === optLetter
-                            const isAns = correctAns === optLetter
+                            const resolvedStudent = resolveOptionText(q, studentAns)
+                            const resolvedCorrect = resolveOptionText(q, correctAns)
+                            const isSelected = normalizeText(resolvedStudent) === normalizeText(opt)
+                            const isAns = normalizeText(resolvedCorrect) === normalizeText(opt)
                             return (
                               <div key={oi} className={`text-sm px-3 py-1 rounded ${
                                 isAns && isSelected ? 'bg-green-200 text-green-800' :
@@ -511,7 +534,6 @@ export default function StudentAssignmentDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <AnswerGuide type={assignment.isTimed ? 'exam' : 'assignment'} hasVideo={!!assignment.videoUrl} />
               <Badge>{assignment.status}</Badge>
             </div>
           </div>
@@ -607,8 +629,7 @@ export default function StudentAssignmentDetailPage() {
                           {q.type === 'multiple_choice' && q.options && (
                             <div className="space-y-2">
                               {q.options.map((opt, oi) => {
-                                const letter = opt.charAt(0)
-                                const isSelected = answers[String(q.id)] === letter
+                                const isSelected = answers[String(q.id)] === String(oi)
                                 return (
                                   <label key={oi} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${
                                     isSelected ? 'border-blue-500 bg-blue-50' : 'border-slate-200 hover:border-blue-300 bg-white'
@@ -619,8 +640,8 @@ export default function StudentAssignmentDetailPage() {
                                       {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
                                     </div>
                                     <span className="text-sm text-gray-700">{opt}</span>
-                                    <input type="radio" name={`ans_${q.id}`} value={letter} checked={isSelected}
-                                      onChange={() => handleSelectAndContinue(q.id, letter)} className="hidden" />
+                                    <input type="radio" name={`ans_${q.id}`} value={String(oi)} checked={isSelected}
+                                      onChange={() => handleSelectAndContinue(q.id, String(oi))} className="hidden" />
                                   </label>
                                 )
                               })}
