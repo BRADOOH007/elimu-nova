@@ -57,7 +57,7 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B',         provider: 'openrouter', cost: 'Free',speed: 'Fast'  },
       { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B',      provider: 'openrouter', cost: 'Free',speed: 'Medium'},
       { id: 'gemini-2.5-flash',               name: 'Gemini 2.5 Flash',       provider: 'gemini',     cost: 'Free',speed: 'Fast'  },
-      { id: 'gemini-3.6-flash',               name: 'Gemini 3.6 Flash',       provider: 'gemini',     cost: 'Free',speed: 'Fast'  },
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash',       provider: 'gemini',     cost: 'Free',speed: 'Fast'  },
       { id: 'openai/gpt-oss-120b',            name: 'GPT-OSS 120B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
       { id: 'openai/gpt-oss-20b',             name: 'GPT-OSS 20B (Groq)',     provider: 'groq',       cost: 'Free',speed: 'Ultra' },
       { id: 'qwen/qwen3.6-27b',               name: 'Qwen 3.6 27B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
@@ -225,9 +225,9 @@ async function testProviders() {
 
   const testMsg = [{ role: 'user', content: 'Say "ok" in one word.' }]
   // Use the model the app actually calls (GROQ_MODEL / default) — llama-3.1-8b-instant is deprecated.
-  const groqTestModel = process.env.GROQ_MODEL || 'openai/gpt-oss-120b'
+  const groqTestModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
   // Gemini rotates model names aggressively — try newest first, fall back to older
-  const geminiTestModels = [process.env.GEMINI_MODEL || 'gemini-3.6-flash', 'gemini-2.0-flash', 'gemini-2.5-flash']
+  const geminiTestModels = [process.env.GEMINI_MODEL || 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
 
   if (GEMINI_KEY) {
     const start = Date.now()

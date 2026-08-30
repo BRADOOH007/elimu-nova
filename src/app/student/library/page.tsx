@@ -105,6 +105,10 @@ export default function StudentLibraryPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to load library')
       setBooks(data.books || [])
       setCategories(data.categories || [])
+      // Use first 12 results as featured if no search term
+      if (!query && !category) {
+        setFeatured((data.books || []).slice(0, 12))
+      }
     } catch (e: any) {
       setError(e.message || 'Failed to load library')
     } finally {
@@ -114,13 +118,8 @@ export default function StudentLibraryPage() {
 
   const loadExtras = useCallback(async (readingLevel?: string) => {
     try {
-      const rlParam = readingLevel ? `&readingLevel=${readingLevel}` : ''
-      const [featRes, progRes] = await Promise.all([
-        fetch(`/api/library?featured=1&limit=12${rlParam}`),
-        fetch('/api/library/progress'),
-      ])
-      const feat = await featRes.json()
-      if (featRes.ok) setFeatured(feat.books || [])
+      // Only load progress — featured now comes from main load
+      const progRes = await fetch('/api/library/progress')
       if (progRes.ok) {
         const prog = await progRes.json()
         setProgress((prog.progress || []).filter((p: ProgressItem) => !p.completed))
@@ -133,7 +132,8 @@ export default function StudentLibraryPage() {
   useEffect(() => { loadExtras(activeAgeCategory || undefined) }, [loadExtras, activeAgeCategory])
 
   useEffect(() => {
-    const t = setTimeout(() => load(search, activeCategory, activeAgeCategory || undefined), 300)
+    // Increase debounce to 500ms — library calls are heavy (Open Library + DB)
+    const t = setTimeout(() => load(search, activeCategory, activeAgeCategory || undefined), 500)
     return () => clearTimeout(t)
   }, [search, activeCategory, activeAgeCategory, load])
 

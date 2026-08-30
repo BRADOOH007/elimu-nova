@@ -202,12 +202,12 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     responseFormat,
     cerebrasModel        = process.env.CEREBRAS_MODEL        || 'gemma-4-31b',
     deepseekModel        = useReasoner ? 'deepseek-reasoner' : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
-    geminiModel          = process.env.GEMINI_MODEL          || 'gemini-3.6-flash',
-    groqModel            = process.env.GROQ_MODEL            || 'openai/gpt-oss-120b',
+    geminiModel          = process.env.GEMINI_MODEL          || 'gemini-2.0-flash',
+    groqModel            = process.env.GROQ_MODEL            || 'llama-3.3-70b-versatile',
     openrouterModel      = process.env.OPENROUTER_MODEL      || 'openai/gpt-4o-mini',
     openaiModel          = process.env.OPENAI_MODEL          || 'gpt-4o-mini',
     premiumOpenaiModel   = process.env.PREMIUM_OPENAI_MODEL  || 'gpt-4o',
-    premiumGeminiModel   = process.env.PREMIUM_GEMINI_MODEL  || 'gemini-2.0-flash',
+    premiumGeminiModel   = process.env.PREMIUM_GEMINI_MODEL  || 'gemini-1.5-pro',
   } = opts
 
   const [CEREBRAS_KEY, DEEPSEEK_KEY, GEMINI_KEY, GROQ_KEY, OPENROUTER_KEY, OPENAI_KEY] = await Promise.all([
