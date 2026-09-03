@@ -39,23 +39,58 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
   }
 
   const enroll = async () => {
-    await fetch('/api/senior-student/enroll', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId }),
-    })
-    await mutate()
+    setBusy('enroll')
+    try {
+      const res = await fetch('/api/senior-student/enroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId }),
+      })
+      if (res.ok) {
+        await mutate(
+          (current) =>
+            current ? { ...current, enrollment: { progress: 0, status: 'ACTIVE' } } : current,
+          { revalidate: false }
+        )
+      } else {
+        await mutate()
+      }
+    } finally {
+      setBusy(null)
+    }
   }
 
   const completeLesson = async (lessonId: string) => {
     setBusy(lessonId)
-    await fetch('/api/senior-student/course-progress', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ courseId, lessonId }),
-    })
-    await mutate()
-    setBusy(null)
+    try {
+      const res = await fetch('/api/senior-student/course-progress', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId, lessonId }),
+      })
+      if (res.ok) {
+        const { progress } = await res.json()
+        await mutate(
+          (current) =>
+            current
+              ? {
+                  ...current,
+                  lessons: current.lessons.map((l) =>
+                    l.id === lessonId ? { ...l, completed: true } : l
+                  ),
+                  enrollment: current.enrollment
+                    ? { ...current.enrollment, progress }
+                    : current.enrollment,
+                }
+              : current,
+          { revalidate: false }
+        )
+      } else {
+        await mutate()
+      }
+    } finally {
+      setBusy(null)
+    }
   }
 
   const done = data.lessons.filter((l) => l.completed).length
@@ -97,7 +132,10 @@ export function CourseView({ courseId, onBack }: { courseId: string; onBack: () 
         <Card className="border-0 shadow-sm">
           <CardContent className="p-5 text-center">
             <p className="text-sm text-slate-600 mb-3">Enroll in this course to track your progress.</p>
-            <Button onClick={enroll}>Enroll in this course</Button>
+            <Button onClick={enroll} disabled={busy === 'enroll'}>
+              {busy === 'enroll' ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : null}
+              Enroll in this course
+            </Button>
           </CardContent>
         </Card>
       )}
