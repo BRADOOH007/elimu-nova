@@ -68,7 +68,15 @@ export default function SeniorStudentsPage() {
         body: JSON.stringify({ userId, action }),
       })
       if (res.ok) {
+        const data = await res.json()
         await fetchSeniors()
+        setSeniors((prev) =>
+          prev.map((s) =>
+            s.userId === userId && data.approvalStatus
+              ? { ...s, approvalStatus: data.approvalStatus, approvedAt: data.approvedAt }
+              : s
+          )
+        )
         const label = action === 'approve' ? 'approved (freemium issued)' : action === 'activate' ? 'activated (cash paid)' : action === 'lock' ? 'locked' : 'reset to pending'
         toast({ title: 'Updated', description: `Senior student ${label}` })
       } else {
