@@ -106,6 +106,7 @@ export default function BroadcastPage() {
   const [messageType, setMessageType] = useState<'info' | 'warning' | 'success' | 'error'>('info')
   const [audience, setAudience] = useState<string[]>(['all'])
   const [sendEmail, setSendEmail] = useState(false)
+  const [bannerExpiresAt, setBannerExpiresAt] = useState('')
   const [sending, setSending] = useState(false)
   const [history, setHistory] = useState<SentBroadcast[]>([])
   const [historyLoading, setHistoryLoading] = useState(true)
@@ -177,6 +178,7 @@ export default function BroadcastPage() {
           title,
           message,
           type: messageType,
+          expiresAt: bannerExpiresAt ? new Date(bannerExpiresAt).toISOString() : null,
           target: { roles },
         }),
       })
@@ -203,6 +205,7 @@ export default function BroadcastPage() {
       setMessageType('info')
       setAudience(['all'])
       setSendEmail(false)
+      setBannerExpiresAt('')
       setStep('history')
       fetchHistory()
     } catch (err) {
@@ -431,6 +434,21 @@ export default function BroadcastPage() {
                     <p className="text-xs text-gray-500">Requires SMTP configuration</p>
                   </div>
                 </label>
+                <div className="p-3 bg-amber-50 rounded-lg">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800">Banner auto-dismiss</p>
+                      <p className="text-xs text-gray-500">Optional. After this date/time, the banner stops showing. Ideal for maintenance windows.</p>
+                    </div>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={bannerExpiresAt}
+                    onChange={e => setBannerExpiresAt(e.target.value)}
+                    className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+                  />
+                </div>
               </CardContent>
             </Card>
 

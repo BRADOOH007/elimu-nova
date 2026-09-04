@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import dynamic from 'next/dynamic'
 
 const LessonNotesTab = dynamic(() => import('@/app/teacher/lesson-notes/page'), { ssr: false, loading: () => <div className="flex justify-center py-12"><span className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-500"/></div> })
+import { TermPlanner } from '@/components/teacher/term-planner'
 import DocumentUploadButton from '@/components/teacher/document-upload-button'
 import { 
   BookOpen, 
@@ -52,6 +53,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
 import { LessonPlanViewer } from '@/components/lesson-plan/lesson-plan-viewer'
+import { parseLessonPlanContent, getLessonPlanFiles } from '@/lib/lesson-plan-files'
+import { getSchemeOfWorkFiles } from '@/lib/scheme-of-work-files'
 
 interface LessonPlan {
   id: string
@@ -540,7 +543,7 @@ export default function PlanningPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full sm:w-auto grid-cols-3">
+        <TabsList className="grid w-full sm:w-auto grid-cols-2 lg:grid-cols-4">
           <TabsTrigger value="lesson-plans">
             <BookOpen className="w-4 h-4 mr-2" />
             Lesson Plans
@@ -552,6 +555,10 @@ export default function PlanningPage() {
           <TabsTrigger value="lesson-notes">
             <BookOpen className="w-4 h-4 mr-2" />
             Lesson Notes
+          </TabsTrigger>
+          <TabsTrigger value="term-planner">
+            <Calendar className="w-4 h-4 mr-2" />
+            Term Planner
           </TabsTrigger>
         </TabsList>
 
@@ -708,6 +715,42 @@ export default function PlanningPage() {
                           Notes
                         </Button>
                       </div>
+
+                      {/* Stored generated files (from Supabase) */}
+                      {(() => {
+                        const files = getLessonPlanFiles(lp.content)
+                        if (!files.hasFiles) return null
+                        return (
+                          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+                            <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
+                              <CheckCircle className="h-3 w-3" /> Generated files
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {files.pdfUrl && (
+                                <Button asChild size="sm" className="h-7 bg-emerald-600 text-xs hover:bg-emerald-700">
+                                  <a href={files.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                    <Eye className="h-3 w-3 mr-1" /> PDF
+                                  </a>
+                                </Button>
+                              )}
+                              {files.wordUrl && (
+                                <Button asChild size="sm" variant="outline" className="h-7 border-emerald-300 text-emerald-700 text-xs">
+                                  <a href={files.wordUrl} target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-3 w-3 mr-1" /> Word
+                                  </a>
+                                </Button>
+                              )}
+                              {files.pptxUrl && (
+                                <Button asChild size="sm" variant="outline" className="h-7 border-purple-300 text-purple-700 text-xs">
+                                  <a href={files.pptxUrl} target="_blank" rel="noopener noreferrer">
+                                    <Presentation className="h-3 w-3 mr-1" /> PPTX
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
                   </CardContent>
                 </Card>
@@ -872,6 +915,35 @@ export default function PlanningPage() {
                           <Share2 className="w-4 h-4 mr-2" /> Share
                         </Button>
                       </div>
+
+                      {/* Stored generated files (from Supabase) */}
+                      {(() => {
+                        const files = getSchemeOfWorkFiles(sw.content)
+                        if (!files.hasFiles) return null
+                        return (
+                          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+                            <div className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
+                              <CheckCircle className="h-3 w-3" /> Generated files
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {files.pdfUrl && (
+                                <Button asChild size="sm" className="h-7 bg-emerald-600 text-xs hover:bg-emerald-700">
+                                  <a href={files.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                    <Eye className="h-3 w-3 mr-1" /> PDF
+                                  </a>
+                                </Button>
+                              )}
+                              {files.wordUrl && (
+                                <Button asChild size="sm" variant="outline" className="h-7 border-emerald-300 text-emerald-700 text-xs">
+                                  <a href={files.wordUrl} target="_blank" rel="noopener noreferrer">
+                                    <Download className="h-3 w-3 mr-1" /> Word
+                                  </a>
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
                   </CardContent>
                 </Card>
@@ -880,6 +952,7 @@ export default function PlanningPage() {
           )}
         </TabsContent>
         <TabsContent value="lesson-notes"><LessonNotesTab /></TabsContent>
+        <TabsContent value="term-planner"><TermPlanner /></TabsContent>
       </Tabs>
 
       {/* View Modal */}
@@ -914,6 +987,66 @@ export default function PlanningPage() {
                 date={currentDate || undefined}
               />
             </div>
+            {selectedLessonPlan && (() => {
+              const files = getLessonPlanFiles(selectedLessonPlan.content)
+              if (!files.hasFiles) return null
+              const label = selectedLessonPlan.subject || ''
+              const grade = selectedLessonPlan.grade || ''
+              return (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <h4 className="font-semibold text-emerald-800 mb-2">💾 Generated Files</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {files.pdfUrl && (
+                      <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                        <a href={files.pdfUrl} target="_blank" rel="noopener noreferrer">
+                          <Eye className="h-4 w-4 mr-1" /> Preview PDF
+                        </a>
+                      </Button>
+                    )}
+                    {files.wordUrl && (
+                      <Button asChild size="sm" variant="outline" className="border-emerald-300 text-emerald-700">
+                        <a href={files.wordUrl} target="_blank" rel="noopener noreferrer" download>
+                          <Download className="h-4 w-4 mr-1" /> Download Word
+                        </a>
+                      </Button>
+                    )}
+                    {files.pptxUrl && (
+                      <Button asChild size="sm" variant="outline" className="border-purple-300 text-purple-700">
+                        <a href={files.pptxUrl} target="_blank" rel="noopener noreferrer" download>
+                          <Presentation className="h-4 w-4 mr-1" /> Download PPTX
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                  {label && <p className="mt-2 text-xs text-emerald-600">{label} • {grade}</p>}
+                </div>
+              )
+            })()}
+            {selectedScheme && (() => {
+              const files = getSchemeOfWorkFiles(selectedScheme.content)
+              if (!files.hasFiles) return null
+              return (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <h4 className="font-semibold text-emerald-800 mb-2">💾 Generated Files</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {files.pdfUrl && (
+                      <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700">
+                        <a href={files.pdfUrl} target="_blank" rel="noopener noreferrer">
+                          <Eye className="h-4 w-4 mr-1" /> Preview PDF
+                        </a>
+                      </Button>
+                    )}
+                    {files.wordUrl && (
+                      <Button asChild size="sm" variant="outline" className="border-emerald-300 text-emerald-700">
+                        <a href={files.wordUrl} target="_blank" rel="noopener noreferrer" download>
+                          <Download className="h-4 w-4 mr-1" /> Download Word
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
           </DialogBody>
           <DialogFooter>
             {selectedLessonPlan && (

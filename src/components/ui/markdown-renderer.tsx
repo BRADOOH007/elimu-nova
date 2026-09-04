@@ -139,6 +139,8 @@ export function MarkdownRenderer({ content, className = '' }: Props) {
           ),
 
           // ── Images ────────────────────────────────────────────────────
+          // Inline content images are constrained, centred, and aligned with
+          // the text flow so they never dominate the lesson.
           img: ({ src, alt, ...props }: any) => {
             if (!src || !src.trim()) {
               return alt
@@ -146,16 +148,20 @@ export function MarkdownRenderer({ content, className = '' }: Props) {
                 : null
             }
             return (
-              <div className="my-4 rounded-xl overflow-hidden border border-slate-200 bg-white">
+              <figure className="my-5 flex flex-col items-center">
                 <img
                   src={src}
                   alt={alt || 'illustration'}
-                  className="w-full h-auto object-contain max-h-[360px]"
+                  className="mx-auto w-auto max-w-full max-h-[220px] rounded-lg border border-slate-200 object-contain bg-white px-2 py-1 shadow-sm"
                   loading="lazy"
                   {...props}
                 />
-                {alt && <span className="block text-center text-xs text-slate-400 py-1.5 px-3 bg-slate-50 border-t border-slate-100">{alt}</span>}
-              </div>
+                {alt && (
+                  <figcaption className="mt-2 max-w-md text-center text-xs text-slate-400">
+                    {alt}
+                  </figcaption>
+                )}
+              </figure>
             )
           },
 

@@ -8,15 +8,16 @@ function todayStr(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-async function resolveStudent(userId: string) {
-  return prisma.student.findUnique({ where: { userId } })
+async function resolveStudent(user: { id: string; role: string } | undefined) {
+  if (!user) return null
+  return prisma.student.findUnique({ where: { userId: user.id } })
 }
 
 // POST /api/library/reading-log { bookId, minutes } — upsert today's reading minutes
-export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
+export const POST = route({ auth: ['STUDENT', 'SENIOR_STUDENT'] }, async (request, { user }) => {
   try {
-    const student = await resolveStudent(user.id)
-    if (!student) return NextResponse.json({ error: 'Student profile not found' }, { status: 404 })
+    const student = await resolveStudent(user)
+    if (!student) return NextResponse.json({ log: null })
 
     const { bookId, minutes } = await request.json()
     const mins = Math.max(0, Math.round(Number(minutes) || 0))
@@ -37,10 +38,10 @@ export const POST = route({ auth: 'STUDENT' }, async (request, { user }) => {
 })
 
 // GET /api/library/reading-stats — today's minutes, streak, total
-export const GET = route({ auth: 'STUDENT' }, async (request, { user }) => {
+export const GET = route({ auth: ['STUDENT', 'SENIOR_STUDENT'] }, async (request, { user }) => {
   try {
-    const student = await resolveStudent(user.id)
-    if (!student) return NextResponse.json({ error: 'Student profile not found' }, { status: 404 })
+    const student = await resolveStudent(user)
+    if (!student) return NextResponse.json({ todayMinutes: 0, totalMinutes: 0, streak: 0 })
 
     const logs = await prisma.readingLog.findMany({
       where: { studentId: student.id },

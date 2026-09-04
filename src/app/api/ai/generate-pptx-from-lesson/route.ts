@@ -18,6 +18,7 @@ import { prisma } from '@/lib/prisma'
 import { OpenAIService } from '@/lib/openai-service'
 import { simplePresentationGenerator } from '@/lib/simple-presentation-generator'
 import { uploadFile, BUCKETS } from '@/lib/supabase'
+import { saveLessonPlanFiles } from '@/lib/lesson-plan-files'
 import { route } from '@/lib/api-middleware'
 
 export const POST = route({ auth: 'TEACHER' }, async (request, { user }) => {
@@ -139,16 +140,7 @@ For each slide:
 
     // Save reference to DB if we have a lesson plan
     if (lessonPlanId && publicUrl) {
-      try {
-        const existing = await prisma.lessonPlan.findUnique({ where: { id: lessonPlanId } })
-        if (existing) {
-          const existingContent = typeof existing.content === 'string' ? JSON.parse(existing.content) : existing.content
-          await prisma.lessonPlan.update({
-            where: { id: lessonPlanId },
-            data:  { content: JSON.stringify({ ...existingContent, pptxUrl: publicUrl }) },
-          })
-        }
-      } catch { /* non-fatal */ }
+      await saveLessonPlanFiles(lessonPlanId, { pptxUrl: publicUrl })
     }
 
     // Return file

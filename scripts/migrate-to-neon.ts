@@ -1,328 +1,363 @@
 /**
- * Migrate Local Database to Neon Production
- * 
- * This script copies all data from your local database to Neon
+ * Neon-to-Neon Database Migration
+ *
+ * Copies ALL data from the old Neon database (OLD_DATABASE_URL) to the new
+ * Neon database (DATABASE_URL). Tables are migrated in foreign-key order so
+ * that parent rows always exist before children reference them.
+ *
+ * Usage:
+ *   npm run migrate:neon
+ *
+ * Requires OLD_DATABASE_URL and DATABASE_URL in .env.
  */
 
 import { PrismaClient } from '@prisma/client'
 
-// Local database
-const localDb = new PrismaClient({
-    datasources: {
-        db: {
-            url: process.env.LOCAL_DATABASE_URL
-        }
-    }
+const oldDb = new PrismaClient({
+  datasources: { db: { url: process.env.OLD_DATABASE_URL } },
+})
+const newDb = new PrismaClient({
+  datasources: { db: { url: process.env.DATABASE_URL } },
 })
 
-// Production database (Neon)
-const prodDb = new PrismaClient({
-    datasources: {
-        db: {
-            url: process.env.DATABASE_URL
-        }
-    }
-})
+// ── helpers ──────────────────────────────────────────────────────
 
-async function checkLocalData() {
-    console.log('\n📊 Checking local database...')
-
-    const users = await localDb.user.count()
-    const schools = await localDb.school.count()
-    const teachers = await localDb.teacher.count()
-    const students = await localDb.student.count()
-    const classes = await localDb.class.count()
-    const packages = await localDb.package.count()
-    const messages = await localDb.message.count()
-
-    console.log(`   Users: ${users}`)
-    console.log(`   Schools: ${schools}`)
-    console.log(`   Teachers: ${teachers}`)
-    console.log(`   Students: ${students}`)
-    console.log(`   Classes: ${classes}`)
-    console.log(`   Packages: ${packages}`)
-    console.log(`   Messages: ${messages}`)
-
-    return { users, schools, teachers, students, classes, packages, messages }
+async function count(client: PrismaClient, model: string) {
+  const accessor = (client as any)[model]
+  if (!accessor || typeof accessor.count !== 'function') return 0
+  return accessor.count()
 }
 
-async function checkProdData() {
-    console.log('\n📊 Checking production database...')
+// Batched insert with skipDuplicates. Rows are inserted in chunks of 500
+// to avoid huge single statements, and duplicates are silently skipped so
+// a re-run is idempotent and resumable.
+const BATCH = 500
 
-    const users = await prodDb.user.count()
-    const schools = await prodDb.school.count()
-    const teachers = await prodDb.teacher.count()
-    const students = await prodDb.student.count()
-    const classes = await prodDb.class.count()
-    const packages = await prodDb.package.count()
-    const messages = await prodDb.message.count()
-
-    console.log(`   Users: ${users}`)
-    console.log(`   Schools: ${schools}`)
-    console.log(`   Teachers: ${teachers}`)
-    console.log(`   Students: ${students}`)
-    console.log(`   Classes: ${classes}`)
-    console.log(`   Packages: ${packages}`)
-    console.log(`   Messages: ${messages}`)
-
-    return { users, schools, teachers, students, classes, packages, messages }
+async function migrate<T extends { id: string }>(
+  label: string,
+  oldClient: PrismaClient,
+  newClient: PrismaClient,
+  model: string,
+) {
+  const accessor = (oldClient as any)[model]
+  if (!accessor || typeof accessor.findMany !== 'function') {
+    console.log(`  ${label}: model not in client (skipped)`)
+    return 0
+  }
+  const rows: T[] = await accessor.findMany()
+  if (rows.length === 0) {
+    console.log(`  ${label}: 0 rows (skipped)`)
+    return 0
+  }
+  const target = (newClient as any)[model]
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH)
+    await target.createMany({ data: chunk, skipDuplicates: true })
+  }
+  console.log(`  ${label}: ${rows.length} rows`)
+  return rows.length
 }
 
-async function migrateData() {
-    console.log('\n🚀 Starting data migration...\n')
-
-    try {
-        // 1. Migrate Users
-        console.log('1️⃣  Migrating users...')
-        const users = await localDb.user.findMany({
-            include: {
-                superAdmin: true,
-                preferences: true
-            }
-        })
-
-        for (const user of users) {
-            const { superAdmin, preferences, ...userData } = user
-
-            await prodDb.user.upsert({
-                where: { id: user.id },
-                update: userData,
-                create: userData
-            })
-
-            if (superAdmin) {
-                await prodDb.superAdmin.upsert({
-                    where: { userId: user.id },
-                    update: {},
-                    create: { userId: user.id }
-                })
-            }
-
-            if (preferences) {
-                await prodDb.userPreference.upsert({
-                    where: { userId: user.id },
-                    update: {
-                        theme: preferences.theme,
-                        language: preferences.language,
-                        timezone: preferences.timezone,
-                        emailNotifications: preferences.emailNotifications,
-                        pushNotifications: preferences.pushNotifications
-                    },
-                    create: {
-                        userId: user.id,
-                        theme: preferences.theme,
-                        language: preferences.language,
-                        timezone: preferences.timezone,
-                        emailNotifications: preferences.emailNotifications,
-                        pushNotifications: preferences.pushNotifications
-                    }
-                })
-            }
-        }
-        console.log(`   ✅ Migrated ${users.length} users`)
-
-        // 2. Migrate Schools
-        console.log('2️⃣  Migrating schools...')
-        const schools = await localDb.school.findMany()
-        for (const school of schools) {
-            await prodDb.school.upsert({
-                where: { id: school.id },
-                update: school,
-                create: school
-            })
-        }
-        console.log(`   ✅ Migrated ${schools.length} schools`)
-
-        // 3. Migrate School Admins
-        console.log('3️⃣  Migrating school admins...')
-        const schoolAdmins = await localDb.schoolAdmin.findMany()
-        for (const admin of schoolAdmins) {
-            await prodDb.schoolAdmin.upsert({
-                where: { userId: admin.userId },
-                update: admin,
-                create: admin
-            })
-        }
-        console.log(`   ✅ Migrated ${schoolAdmins.length} school admins`)
-
-        // 4. Migrate Teachers
-        console.log('4️⃣  Migrating teachers...')
-        const teachers = await localDb.teacher.findMany()
-        for (const teacher of teachers) {
-            await prodDb.teacher.upsert({
-                where: { userId: teacher.userId },
-                update: teacher,
-                create: teacher
-            })
-        }
-        console.log(`   ✅ Migrated ${teachers.length} teachers`)
-
-        // 5. Migrate Classes
-        console.log('5️⃣  Migrating classes...')
-        const classes = await localDb.class.findMany()
-        for (const cls of classes) {
-            await prodDb.class.upsert({
-                where: { id: cls.id },
-                update: cls,
-                create: cls
-            })
-        }
-        console.log(`   ✅ Migrated ${classes.length} classes`)
-
-        // 6. Migrate Students
-        console.log('6️⃣  Migrating students...')
-        const students = await localDb.student.findMany()
-        for (const student of students) {
-            await prodDb.student.upsert({
-                where: { userId: student.userId },
-                update: student,
-                create: student
-            })
-        }
-        console.log(`   ✅ Migrated ${students.length} students`)
-
-        // 7. Migrate Packages
-        console.log('7️⃣  Migrating packages...')
-        const packages = await localDb.package.findMany()
-        for (const pkg of packages) {
-            await prodDb.package.upsert({
-                where: { id: pkg.id },
-                update: pkg,
-                create: pkg
-            })
-        }
-        console.log(`   ✅ Migrated ${packages.length} packages`)
-
-        // 8. Migrate Payment Methods
-        console.log('8️⃣  Migrating payment methods...')
-        const paymentMethods = await localDb.paymentMethod.findMany()
-        for (const method of paymentMethods) {
-            await prodDb.paymentMethod.upsert({
-                where: { id: method.id },
-                update: method,
-                create: method
-            })
-        }
-        console.log(`   ✅ Migrated ${paymentMethods.length} payment methods`)
-
-        // 9. Migrate Subscriptions
-        console.log('9️⃣  Migrating subscriptions...')
-        const subscriptions = await localDb.subscription.findMany()
-        for (const sub of subscriptions) {
-            await prodDb.subscription.upsert({
-                where: { id: sub.id },
-                update: sub,
-                create: sub
-            })
-        }
-        console.log(`   ✅ Migrated ${subscriptions.length} subscriptions`)
-
-        // 10. Migrate Messages
-        console.log('🔟 Migrating messages...')
-        const messages = await localDb.message.findMany()
-        for (const message of messages) {
-            await prodDb.message.upsert({
-                where: { id: message.id },
-                update: message,
-                create: message
-            })
-        }
-        console.log(`   ✅ Migrated ${messages.length} messages`)
-
-        // 11. Migrate Schemes of Work
-        console.log('1️⃣1️⃣  Migrating schemes of work...')
-        const schemes = await localDb.schemeOfWork.findMany()
-        for (const scheme of schemes) {
-            await prodDb.schemeOfWork.upsert({
-                where: { id: scheme.id },
-                update: scheme,
-                create: scheme
-            })
-        }
-        console.log(`   ✅ Migrated ${schemes.length} schemes of work`)
-
-        // 12. Migrate Lesson Plans
-        console.log('1️⃣2️⃣  Migrating lesson plans...')
-        const lessonPlans = await localDb.lessonPlan.findMany()
-        for (const plan of lessonPlans) {
-            await prodDb.lessonPlan.upsert({
-                where: { id: plan.id },
-                update: plan,
-                create: plan
-            })
-        }
-        console.log(`   ✅ Migrated ${lessonPlans.length} lesson plans`)
-
-        // 13. Migrate Assignments
-        console.log('1️⃣3️⃣  Migrating assignments...')
-        const assignments = await localDb.assignment.findMany()
-        for (const assignment of assignments) {
-            await prodDb.assignment.upsert({
-                where: { id: assignment.id },
-                update: assignment,
-                create: assignment
-            })
-        }
-        console.log(`   ✅ Migrated ${assignments.length} assignments`)
-
-        // 14. Migrate Notifications
-        console.log('1️⃣4️⃣  Migrating notifications...')
-        const notifications = await localDb.notification.findMany()
-        for (const notification of notifications) {
-            await prodDb.notification.upsert({
-                where: { id: notification.id },
-                update: notification,
-                create: notification
-            })
-        }
-        console.log(`   ✅ Migrated ${notifications.length} notifications`)
-
-        console.log('\n✅ Migration completed successfully!')
-
-    } catch (error) {
-        console.error('\n❌ Migration failed:', error)
-        throw error
-    }
+// Like migrate but uses a unique field other than `id` (e.g. userId).
+// Because skipDuplicates skips on ANY unique-constraint violation, passing
+// the full row is safe: the PK and secondary unique keys are both honored.
+async function migrateByUnique(
+  label: string,
+  oldClient: PrismaClient,
+  newClient: PrismaClient,
+  model: string,
+  _uniqueField: string,
+) {
+  const accessor = (oldClient as any)[model]
+  if (!accessor || typeof accessor.findMany !== 'function') {
+    console.log(`  ${label}: model not in client (skipped)`)
+    return 0
+  }
+  const rows: any[] = await accessor.findMany()
+  if (rows.length === 0) {
+    console.log(`  ${label}: 0 rows (skipped)`)
+    return 0
+  }
+  const target = (newClient as any)[model]
+  for (let i = 0; i < rows.length; i += BATCH) {
+    const chunk = rows.slice(i, i + BATCH)
+    await target.createMany({ data: chunk, skipDuplicates: true })
+  }
+  console.log(`  ${label}: ${rows.length} rows`)
+  return rows.length
 }
+
+// ── main migration tiers ─────────────────────────────────────────
+
+async function migrateAll() {
+  let total = 0
+  const t = async (
+    label: string,
+    model: string,
+    fn?: () => Promise<number>,
+  ) => {
+    const n = fn ? await fn() : await migrate(label, oldDb, newDb, model)
+    total += n
+  }
+
+  // ━━━ TIER 0: No foreign-key dependencies ━━━
+  console.log('\n━━━ Tier 0: Independent tables ━━━')
+  await t('District', 'district')
+  await t('School', 'school')
+  await t('Package', 'package')
+  await t('PaymentMethod', 'paymentMethod')
+
+  // ━━━ TIER 1: Core users & auth ━━━
+  console.log('\n━━━ Tier 1: Core users ━━━')
+  await t('User', 'user')
+  await t('SuperAdmin', 'superAdmin')
+  await t('SeniorStudent', 'seniorStudent')
+  await t('SeniorTeacher', 'seniorTeacher')
+
+  // ━━━ TIER 2: School-linked roles ━━━
+  console.log('\n━━━ Tier 2: School-linked roles ━━━')
+  await t('SchoolAdmin', 'schoolAdmin', async () =>
+    migrateByUnique('SchoolAdmin', oldDb, newDb, 'schoolAdmin', 'userId'),
+  )
+  await t('Teacher', 'teacher', async () =>
+    migrateByUnique('Teacher', oldDb, newDb, 'teacher', 'userId'),
+  )
+  await t('Class', 'class')
+  await t('Student', 'student', async () =>
+    migrateByUnique('Student', oldDb, newDb, 'student', 'userId'),
+  )
+  await t('Parent', 'parent', async () =>
+    migrateByUnique('Parent', oldDb, newDb, 'parent', 'userId'),
+  )
+
+  // ━━━ TIER 3: Junction / link tables ━━━
+  console.log('\n━━━ Tier 3: Junction tables ━━━')
+  await t('TeacherSubjectAssignment', 'teacherSubjectAssignment')
+  await t('ParentStudent', 'parentStudent')
+  await t('UserPreference', 'userPreference', async () =>
+    migrateByUnique('UserPreference', oldDb, newDb, 'userPreference', 'userId'),
+  )
+  await t('SearchHistory', 'searchHistory')
+
+  // ━━━ TIER 4: NextAuth models ━━━
+  console.log('\n━━━ Tier 4: NextAuth (auth sessions) ━━━')
+  await t('Account', 'account')
+  await t('Session', 'session')
+  await t('VerificationToken', 'verificationToken')
+
+  // ━━━ TIER 5: Packages, subscriptions ━━━
+  console.log('\n━━━ Tier 5: Billing ━━━')
+  await t('Subscription', 'subscription')
+  await t('Invoice', 'invoice')
+
+  // ━━━ TIER 6: School settings & security ━━━
+  console.log('\n━━━ Tier 6: Settings & security ━━━')
+  await t('SystemSettings', 'systemSettings')
+  await t('SchoolSettings', 'schoolSettings')
+  await t('SecurityLog', 'securityLog')
+  await t('SecurityPolicy', 'securityPolicy')
+  await t('SystemIncident', 'systemIncident')
+  await t('ApiLog', 'apiLog')
+
+  // ━━━ TIER 7: Reports & audit ━━━
+  console.log('\n━━━ Tier 7: Reports & audit ━━━')
+  await t('Report', 'report')
+  await t('AdminAuditLog', 'adminAuditLog')
+
+  // ━━━ TIER 8: Curriculum ━━━
+  console.log('\n━━━ Tier 8: Curriculum ━━━')
+  await t('Curriculum', 'curriculum')
+  await t('CurriculumStrand', 'curriculumStrand')
+  await t('CurriculumSubstrand', 'curriculumSubstrand')
+  await t('CurriculumLesson', 'curriculumLesson')
+  await t('CurriculumIngestionLog', 'curriculumIngestionLog')
+
+  // ━━━ TIER 9: Courses ━━━
+  console.log('\n━━━ Tier 9: Courses ━━━')
+  await t('Course', 'course')
+  await t('CourseLesson', 'courseLesson')
+  await t('CourseAssignment', 'courseAssignment')
+  await t('TeacherCourseAssignment', 'teacherCourseAssignment')
+  await t('CourseEnrollment', 'courseEnrollment')
+  await t('SeniorCourseEnrollment', 'seniorCourseEnrollment')
+  await t('LearningArea', 'learningArea')
+
+  // ━━━ TIER 10: Teaching content ━━━
+  console.log('\n━━━ Tier 10: Teaching content ━━━')
+  await t('SchemeOfWork', 'schemeOfWork')
+  await t('SchemeTopic', 'schemeTopic')
+  await t('SharedSchemeOfWork', 'sharedSchemeOfWork')
+  await t('LessonPlan', 'lessonPlan')
+  await t('SharedLessonPlan', 'sharedLessonPlan')
+  await t('Assignment', 'assignment')
+  await t('Submission', 'submission')
+  await t('Resource', 'resource')
+  await t('TeacherNote', 'teacherNote')
+  await t('DocumentLibrary', 'documentLibrary')
+
+  // ━━━ TIER 11: Student progress & analytics ━━━
+  console.log('\n━━━ Tier 11: Student progress ━━━')
+  await t('StudentProgress', 'studentProgress')
+  await t('SkillMastery', 'skillMastery')
+  await t('StudySession', 'studySession')
+  await t('StudentAnalytics', 'studentAnalytics')
+
+  // ━━━ TIER 12: AI tutor ━━━
+  console.log('\n━━━ Tier 12: AI tutor ━━━')
+  await t('AITutorSession', 'aiTutorSession')
+  await t('TutorSession', 'tutorSession')
+  await t('TutorQuestion', 'tutorQuestion')
+  await t('StudentMemory', 'studentMemory')
+
+  // ━━━ TIER 13: Wellness ━━━
+  console.log('\n━━━ Tier 13: Wellness ━━━')
+  await t('WellnessCheckIn', 'wellnessCheckIn')
+
+  // ━━━ TIER 14: Messaging & notifications ━━━
+  console.log('\n━━━ Tier 14: Messaging ━━━')
+  await t('Message', 'message')
+  await t('Notification', 'notification')
+  await t('ContactMessage', 'contactMessage')
+
+  // ━━━ TIER 15: Meetings & schedules ━━━
+  console.log('\n━━━ Tier 15: Meetings & schedules ━━━')
+  await t('Meeting', 'meeting')
+  await t('Schedule', 'schedule')
+  await t('AcademicCalendar', 'academicCalendar')
+  await t('AcademicCalendarEvent', 'academicCalendarEvent')
+  await t('TimetableSlot', 'timetableSlot')
+  await t('ClassSchedule', 'classSchedule')
+
+  // ━━━ TIER 16: Activities ━━━
+  console.log('\n━━━ Tier 16: Activities ━━━')
+  await t('Activity', 'activity')
+
+  // ━━━ TIER 17: AI generated content & images ━━━
+  console.log('\n━━━ Tier 17: AI content ━━━')
+  await t('AIGeneratedContent', 'aiGeneratedContent')
+  await t('SharedAIContent', 'sharedAIContent')
+  await t('SharedAIContentWithClass', 'sharedAIContentWithClass')
+  await t('AIGeneratedImage', 'aiGeneratedImage')
+  await t('AIImageUsage', 'aiImageUsage')
+
+  // ━━━ TIER 18: Caches ━━━
+  console.log('\n━━━ Tier 18: Caches ━━━')
+  await t('LessonCache', 'lessonCache')
+  await t('LessonPlanCache', 'lessonPlanCache')
+  await t('LessonContentCache', 'lessonContentCache')
+
+  // ━━━ TIER 19: Mastery & spaced repetition ━━━
+  console.log('\n━━━ Tier 19: Mastery & spaced repetition ━━━')
+  await t('UnitMastery', 'unitMastery')
+  await t('SkillPrerequisite', 'skillPrerequisite')
+  await t('ReviewSchedule', 'reviewSchedule')
+  await t('TopicProgress', 'topicProgress')
+  await t('CourseChallenge', 'courseChallenge')
+
+  // ━━━ TIER 20: Writing ━━━
+  console.log('\n━━━ Tier 20: Writing ━━━')
+  await t('WritingSubmission', 'writingSubmission')
+  await t('SeniorWritingSubmission', 'seniorWritingSubmission')
+
+  // ━━━ TIER 21: Exams & lockdown ━━━
+  console.log('\n━━━ Tier 21: Exams ━━━')
+  await t('ExamSession', 'examSession')
+  await t('LockdownViolation', 'lockdownViolation')
+
+  // ━━━ TIER 22: GED ━━━
+  console.log('\n━━━ Tier 22: GED ━━━')
+  await t('GEDSubjectProgress', 'gedSubjectProgress')
+  await t('GEDCertificate', 'gedCertificate')
+
+  // ━━━ TIER 23: Quiz & practice ━━━
+  console.log('\n━━━ Tier 23: Quiz & practice ━━━')
+  await t('QuizResult', 'quizResult')
+  await t('PracticeAttempt', 'practiceAttempt')
+
+  // ━━━ TIER 24: Library ━━━
+  console.log('\n━━━ Tier 24: Library ━━━')
+  await t('Book', 'book')
+  await t('BookProgress', 'bookProgress')
+  await t('BookRating', 'bookRating')
+  await t('ReadingLog', 'readingLog')
+
+  // ━━━ TIER 25: External infra ━━━
+  console.log('\n━━━ Tier 25: External infra ━━━')
+  await t('ExternalDatabase', 'externalDatabase')
+  await t('CommunicationService', 'communicationService')
+  await t('RedisConfig', 'redisConfig')
+
+  return total
+}
+
+// ── report ───────────────────────────────────────────────────────
+
+async function report(label: string, client: PrismaClient) {
+  console.log(`\n📊 ${label}:`)
+  const models = [
+    'user', 'superAdmin', 'school', 'schoolAdmin', 'teacher', 'class',
+    'student', 'parent', 'parentStudent', 'seniorStudent', 'seniorTeacher',
+    'package', 'subscription', 'paymentMethod', 'invoice',
+    'account', 'session', 'verificationToken',
+    'systemSettings', 'schoolSettings', 'securityLog', 'securityPolicy',
+    'systemIncident', 'apiLog', 'report', 'adminAuditLog',
+    'curriculum', 'curriculumStrand', 'curriculumSubstrand', 'curriculumLesson',
+    'course', 'courseLesson', 'courseAssignment', 'teacherCourseAssignment',
+    'courseEnrollment', 'seniorCourseEnrollment', 'learningArea',
+    'schemeOfWork', 'schemeTopic', 'sharedSchemeOfWork',
+    'lessonPlan', 'sharedLessonPlan', 'assignment', 'submission',
+    'resource', 'teacherNote', 'documentLibrary',
+    'studentProgress', 'skillMastery', 'studySession', 'studentAnalytics',
+    'aiTutorSession', 'tutorSession', 'tutorQuestion', 'studentMemory',
+    'wellnessCheckIn', 'message', 'notification', 'contactMessage',
+    'meeting', 'schedule', 'academicCalendar', 'academicCalendarEvent',
+    'timetableSlot', 'classSchedule', 'activity',
+    'aiGeneratedContent', 'sharedAIContent', 'sharedAIContentWithClass',
+    'aiGeneratedImage', 'aiImageUsage',
+    'lessonCache', 'lessonPlanCache', 'lessonContentCache',
+    'unitMastery', 'skillPrerequisite', 'reviewSchedule', 'topicProgress', 'courseChallenge',
+    'writingSubmission', 'seniorWritingSubmission',
+    'examSession', 'lockdownViolation',
+    'gedSubjectProgress', 'gedCertificate',
+    'quizResult', 'practiceAttempt',
+    'book', 'bookProgress', 'bookRating', 'readingLog',
+    'externalDatabase', 'communicationService', 'redisConfig',
+  ]
+  for (const m of models) {
+    const n = await count(client, m)
+    if (n > 0) console.log(`  ${m}: ${n}`)
+  }
+}
+
+// ── entry point ──────────────────────────────────────────────────
 
 async function main() {
-    console.log('🔄 Database Migration Tool')
-    console.log('==========================')
+  console.log('🔄 Neon → Neon Migration')
+  console.log('========================')
+  console.log(`Source: ${process.env.OLD_DATABASE_URL?.split('@')[1]?.split('/')[0]}`)
+  console.log(`Target: ${process.env.DATABASE_URL?.split('@')[1]?.split('/')[0]}`)
 
-    try {
-        // Check local data
-        const localData = await checkLocalData()
+  if (!process.env.OLD_DATABASE_URL) {
+    console.error('❌ OLD_DATABASE_URL not set in .env')
+    process.exit(1)
+  }
 
-        // Check production data
-        const prodData = await checkProdData()
+  try {
+    await report('Source (old) database', oldDb)
+    await report('Target (new) database — before migration', newDb)
 
-        if (localData.users === 0) {
-            console.log('\n⚠️  No data found in local database. Nothing to migrate.')
-            return
-        }
+    console.log('\n🚀 Starting migration...\n')
+    const total = await migrateAll()
 
-        if (prodData.users > 0) {
-            console.log('\n⚠️  Production database already has data.')
-            console.log('This will update/merge data. Continue? (Ctrl+C to cancel)')
-            await new Promise(resolve => setTimeout(resolve, 3000))
-        }
-
-        // Migrate
-        await migrateData()
-
-        // Verify
-        console.log('\n🔍 Verifying migration...')
-        await checkProdData()
-
-        console.log('\n🎉 All done! Your data is now in Neon.')
-
-    } catch (error) {
-        console.error('Error:', error)
-        process.exit(1)
-    } finally {
-        await localDb.$disconnect()
-        await prodDb.$disconnect()
-    }
+    console.log(`\n✅ Migration complete — ${total} total rows migrated`)
+    await report('Target (new) database — after migration', newDb)
+  } catch (error) {
+    console.error('\n❌ Migration failed:', error)
+    process.exit(1)
+  } finally {
+    await oldDb.$disconnect()
+    await newDb.$disconnect()
+  }
 }
 
 main()

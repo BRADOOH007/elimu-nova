@@ -42,8 +42,10 @@ export const POST = route({ auth: ['STUDENT', 'TEACHER', 'SUPER_ADMIN'] }, async
 
     // Grade-band adaptations
     const gradeBandSection = buildGradeBandSection(lessonGrade)
+    const wordLimit = getContentWordLimit(lessonGrade)
+    const isAdvanced = wordLimit >= 1000 // senior secondary / adult learners
 
-    const systemPrompt = `You are an AI lesson notes generator for ElimuNova. Generate comprehensive student-ready notes from lesson plans.
+    const systemPrompt = `You are an AI lesson notes generator for ElimuNova. Generate comprehensive, exam-worthy student notes from lesson plans.
 ${curriculumSection}
 ${pedagogySection}
 ${gradeBandSection}
@@ -54,6 +56,12 @@ NOTE TYPES:
 3. study-guide  — Organised for exam preparation, includes practice questions
 4. quick-reference — Brief, easy-to-scan format with bullet points
 5. interactive  — Questions and activities for self-testing
+
+DEPTH REQUIREMENT (CRITICAL):
+- The "sections" array must contain at least 4 substantive sections for ${noteType === 'summary' || noteType === 'quick-reference' ? 'this note type' : 'this grade level'}.
+- Each section's "content" must be a full explanatory paragraph (3-6 sentences) that teaches the idea, not a one-line summary.
+- Include realistic worked examples, and step-by-step working where the topic involves procedures.
+${isAdvanced ? `- This is for advanced learners (${wordLimit}+ words expected). Use precise technical vocabulary, deeper analysis, and explicitly connect ideas across concepts. Do NOT oversimplify.` : `- Aim for approximately ${wordLimit} words of total content across all sections.`}
 
 REQUIREMENTS:
 - Use clear, student-friendly language appropriate for the grade level
@@ -108,13 +116,10 @@ ${contentStr || 'Generate appropriate notes for this subject and grade level.'}`
     // Robust JSON extraction
     let notesData: any
     try {
-      const start = raw.indexOf('{')
-      const end   = raw.lastIndexOf('}')
-      if (start !== -1 && end > start) {
-        notesData = JSON.parse(raw.slice(start, end + 1))
-      } else {
-        throw new Error('No JSON object in response')
-      }
+      const { cleanAiJson } = await import('@/lib/ai-generation-utils')
+      const cleaned = cleanAiJson(raw)
+      if (!cleaned) throw new Error('No JSON object in response')
+      notesData = JSON.parse(cleaned)
     } catch (e) {
       console.warn('[LessonNotes] AI returned invalid JSON:', e, 'Raw:', raw.slice(0, 200))
       notesData = {

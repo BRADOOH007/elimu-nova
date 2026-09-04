@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { invalidateSubscriptionCache } from '@/lib/subscription-service'
+import { createPaidInvoice } from '@/lib/payment-notifications'
 
 /**
  * POST /api/billing/activate
@@ -61,21 +63,18 @@ export const POST = route({ auth: 'SUPER_ADMIN', skipSubscriptionCheck: true }, 
     })
   }
 
-  // Record payment
+  // Unblock immediately (invalidates the 60s access cache) so the manual
+  // activation takes effect on the very next request.
   try {
-    await (prisma as any).payment.create({
-      data: {
-        userId,
-        amount: amount || 0,
-        currency: currency || 'USD',
-        method: method || 'CARD',
-        status: 'COMPLETED',
-        transactionId: `manual_${Date.now()}`,
-        notes: `Subscription activated via ${method || 'CARD'}`,
-      },
-    })
+    await invalidateSubscriptionCache(userId, undefined)
+  } catch (e) { console.warn('activate: cache invalidation failed', e) }
+
+  // Record a PAID invoice (correct model) for the audit trail. Uses a distinct
+  // receipt so repeated activations don't create duplicates.
+  try {
+    await createPaidInvoice(subscription.id, amount || subscription.amount, method || 'CARD', `manual-${Date.now()}`)
   } catch (e) {
-    console.warn('Failed to record payment:', e)
+    console.warn('activate: failed to record invoice:', e)
   }
 
   return NextResponse.json({ success: true, subscription })

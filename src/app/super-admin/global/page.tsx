@@ -47,8 +47,8 @@ const DATE_FORMATS = [
 ]
 
 const AI_MODELS = [
-  'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'claude-3-opus', 'claude-3-sonnet',
-  'gemini-1.5-pro', 'gemini-1.5-flash', 'deepseek-chat', 'cerebras-cybertron',
+  'gpt-4o', 'gpt-4o-mini', 'claude-3-5-sonnet', 'claude-3-haiku',
+  'gemini-3.6-flash', 'gemini-3.6-flash-lite', 'deepseek-chat',
 ]
 
 export default function GlobalSettingsPage() {
@@ -168,9 +168,9 @@ export default function GlobalSettingsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold mb-2">
-            <span className="edugenius-text-gradient">Global Settings</span>
+            <span className="edugenius-text-gradient">Platform Settings</span>
           </h1>
-          <p className="text-gray-600">Platform-wide defaults, feature flags, and regional configuration.</p>
+          <p className="text-gray-600">Platform-wide defaults, feature flags, regional configuration and maintenance.</p>
         </div>
       </div>
 
@@ -187,9 +187,6 @@ export default function GlobalSettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="all" className="flex items-center gap-2">
             <Settings className="w-4 h-4" /> All Settings
-          </TabsTrigger>
-          <TabsTrigger value="integrations" className="flex items-center gap-2">
-            <Video className="w-4 h-4" /> Integrations
           </TabsTrigger>
           <TabsTrigger value="maintenance" className="flex items-center gap-2">
             <Wrench className="w-4 h-4" /> Maintenance
@@ -412,11 +409,6 @@ export default function GlobalSettingsPage() {
               />
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* ── Integrations ─────────────────────────────────────────────── */}
-        <TabsContent value="integrations" className="space-y-4">
-          <ZoomConfigSection />
         </TabsContent>
 
         {/* ── Maintenance ──────────────────────────────────────────────── */}

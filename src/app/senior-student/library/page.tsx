@@ -1,10 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import {
-  Search, BookOpen, Loader2, X, ArrowLeft, Sparkles,
+  Search, BookOpen, Loader2, Sparkles,
 } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 
@@ -25,10 +25,6 @@ interface Book {
   source: string
   createdAt: string
   rating: { average: number | null; count: number }
-}
-
-interface BookDetail extends Book {
-  content?: string
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -59,9 +55,6 @@ export default function SeniorLibraryPage() {
   const [category, setCategory] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selected, setSelected] = useState<BookDetail | null>(null)
-  const [readerLoading, setReaderLoading] = useState(false)
-  const [related, setRelated] = useState<Book[]>([])
 
   const loadBooks = useCallback(async () => {
     setLoading(true)
@@ -90,24 +83,6 @@ export default function SeniorLibraryPage() {
       .catch(() => {})
   }, [])
 
-  const openBook = async (id: string) => {
-    setSelected(null)
-    setReaderLoading(true)
-    setRelated([])
-    try {
-      const [detail, relatedData] = await Promise.all([
-        fetcher(`/api/library/${id}`),
-        fetcher(`/api/library/${id}/related`).catch(() => ({ books: [] })),
-      ])
-      setSelected(detail.book)
-      setRelated(relatedData.books || [])
-    } catch {
-      setError('Unable to open this book.')
-    } finally {
-      setReaderLoading(false)
-    }
-  }
-
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
       {/* Hero */}
@@ -118,7 +93,7 @@ export default function SeniorLibraryPage() {
         </div>
         <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Reading Library</h1>
         <p className="text-emerald-100/90 text-sm mt-1 max-w-2xl">
-          Explore books to strengthen your reading skills �?�— a key part of Reasoning Through
+          Explore books to strengthen your reading skills — a key part of Reasoning Through
           Language Arts and everyday life. Read at your own pace.
         </p>
         <div className="mt-4 max-w-md">
@@ -167,9 +142,9 @@ export default function SeniorLibraryPage() {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {featured.map((b) => (
-              <button
+              <Link
                 key={b.id}
-                onClick={() => openBook(b.id)}
+                href={`/senior-student/library/${b.id}`}
                 className="group text-left"
               >
                 <div className={`aspect-[2/3] rounded-xl overflow-hidden shadow-md bg-gradient-to-br ${coverGradient(b.category)}`}>
@@ -180,7 +155,7 @@ export default function SeniorLibraryPage() {
                   )}
                 </div>
                 <p className="text-xs font-semibold text-slate-700 mt-1.5 line-clamp-2 leading-tight">{b.title}</p>
-              </button>
+              </Link>
             ))}
           </div>
         </section>
@@ -205,7 +180,7 @@ export default function SeniorLibraryPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {books.map((b) => (
-              <button key={b.id} onClick={() => openBook(b.id)} className="group text-left">
+              <Link key={b.id} href={`/senior-student/library/${b.id}`} className="group text-left">
                 <div className={`aspect-[2/3] rounded-xl overflow-hidden shadow-md bg-gradient-to-br ${coverGradient(b.category)}`}>
                   {b.coverUrl ? (
                     <img src={b.coverUrl} alt={b.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -218,90 +193,11 @@ export default function SeniorLibraryPage() {
                 <div className="mt-1">
                   <Badge className="text-[10px] bg-slate-100 text-slate-500">{b.category}</Badge>
                 </div>
-              </button>
+              </Link>
             ))}
           </div>
         )}
       </section>
-
-      {/* Reader modal */}
-      {selected && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/60 p-4 md:p-8" onClick={() => setSelected(null)}>
-          <Card className="w-full max-w-3xl bg-white max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <CardContent className="p-0">
-              <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
-                <button
-                  onClick={() => setSelected(null)}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800"
-                >
-                  <ArrowLeft className="h-4 w-4" /> Back to Library
-                </button>
-                <button onClick={() => setSelected(null)} className="text-slate-400 hover:text-slate-700">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="p-5">
-                <div className="flex gap-5">
-                  <div className={`w-32 h-48 shrink-0 rounded-lg overflow-hidden shadow bg-gradient-to-br ${coverGradient(selected.category)}`}>
-                    {selected.coverUrl ? (
-                      <img src={selected.coverUrl} alt={selected.title} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-4xl text-white/80">{selected.title[0]}</div>
-                    )}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-extrabold text-slate-900 leading-tight">{selected.title}</h2>
-                    {selected.author && <p className="text-sm text-slate-500 mt-1">by {selected.author}</p>}
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">{selected.category}</Badge>
-                      {selected.readingLevel && <Badge className="bg-slate-100 text-slate-500">{selected.readingLevel}</Badge>}
-                      {selected.source === 'ai-generated' && <Badge className="bg-teal-50 text-teal-700 border-teal-200">ElimuNova Original</Badge>}
-                    </div>
-                    {selected.description && (
-                      <p className="text-sm text-slate-600 mt-3">{selected.description}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="border-t border-slate-100 mt-5 pt-5">
-                  {readerLoading ? (
-                    <div className="flex items-center gap-2 text-slate-500 text-sm py-8 justify-center">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Opening book...
-                    </div>
-                  ) : selected.content ? (
-                    <article className="prose prose-sm max-w-none text-slate-700 leading-relaxed whitespace-pre-line">
-                      {selected.content}
-                    </article>
-                  ) : (
-                    <p className="text-sm text-slate-400">No preview is available for this title yet.</p>
-                  )}
-                </div>
-
-                {related.length > 0 && (
-                  <div className="border-t border-slate-100 mt-5 pt-5">
-                    <h3 className="text-sm font-bold text-slate-700 mb-3">You may also like</h3>
-                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
-                      {related.map((r) => (
-                        <button key={r.id} onClick={() => openBook(r.id)} className="text-left">
-                          <div className={`aspect-[2/3] rounded-lg overflow-hidden shadow bg-gradient-to-br ${coverGradient(r.category)}`}>
-                            {r.coverUrl ? (
-                              <img src={r.coverUrl} alt={r.title} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-3xl text-white/80">{r.title[0]}</div>
-                            )}
-                          </div>
-                          <p className="text-[11px] font-medium text-slate-600 mt-1 line-clamp-2">{r.title}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
     </div>
   )
 }

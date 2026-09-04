@@ -24,6 +24,8 @@ export const GET = route({ auth: 'TEACHER' }, async (req, { user }) => {
         title: true,
         subject: true,
         grade: true,
+        content: true,
+        isShared: true,
         createdAt: true
       },
       orderBy: {

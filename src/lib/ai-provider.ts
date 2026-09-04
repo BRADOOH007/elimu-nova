@@ -4,19 +4,23 @@
  * Waterfall:
  *   1. Active provider (configurable via ai_provider_active in system_settings)
  *   2. Premium OpenAI — gpt-4o (best quality)
- *   3. Premium Gemini — gemini-1.5-pro
- *   4. Groq           — llama-3.3-70b-versatile
+ *   3. Premium Gemini — gemini-3.6-flash
+ *   4. Groq           — qwen/qwen3.8-27b
  *   5. Cerebras       — gemma-4-31b (2,000 tok/sec — FASTEST)
  *   6. DeepSeek       — deepseek-chat / deepseek-reasoner
- *   7. Gemini Flash   — gemini-2.0-flash (free quota)
+ *   7. Gemini Flash   — gemini-3.6-flash (free quota)
  *   8. OpenRouter     — gpt-4o-mini (paid fallback)
  *   9. OpenAI direct  — gpt-4o-mini (last resort)
  *
- * Models per task type (configured via super-admin AI config page):
- *   ai_model_default, ai_model_teacher, ai_model_student, ai_model_presentation
- *
- * Keys are read from process.env first, then fall back to the
- * system_settings DB table (configured via super-admin AI config page).
+ * Key rotation & resilience:
+ *   - Multiple comma-separated keys per provider are rotated (round-robin).
+ *   - Keys that return auth/quota errors (401/403/429) or truncated output
+ *     (finish_reason=length) are parked on a short cooldown and skipped on
+ *     subsequent calls, so a dead key doesn't slow every request down.
+ *   - Models per task type (configured via super-admin AI config page):
+ *     ai_model_default, ai_model_teacher, ai_model_student, ai_model_presentation
+ *   - Keys are read from process.env first, then fall back to the
+ *     system_settings DB table (configured via super-admin AI config page).
  */
 
 import Cerebras from '@cerebras/cerebras_cloud_sdk'
@@ -66,7 +70,16 @@ async function refreshDbCache(): Promise<void> {
       })
     )
     dbKeysCache = {}
-    for (const s of settings as Array<{ key: string; value: string }>) dbKeysCache[s.key] = decryptPassword(s.value) || s.value
+    for (const s of settings as Array<{ key: string; value: string }>) {
+      let value = s.value
+      // If the stored value is encrypted but fails to decrypt (e.g. the secret
+      // changed after a DB/environment migration), treat it as absent so the
+      // env-var fallback can be used instead of sending ciphertext as an API key.
+      if (value?.startsWith('PWD_ENC:')) {
+        value = decryptPassword(value) || ''
+      }
+      dbKeysCache[s.key] = value
+    }
     dbKeysCacheTime = Date.now()
   } catch { console.warn('[AI] DB cache refresh failed — using env vars only') }
 }
@@ -159,8 +172,29 @@ async function callHTTP(
   allKeys?: string[], responseFormat?: 'json_object',
 ): Promise<{ content: string; tokensUsed?: number }> {
   const keys = allKeys && allKeys.length > 0 ? allKeys : [apiKey]
+  const now = Date.now()
+
+  // Round-robin start so load spreads evenly across keys instead of always
+  // hammering the first one (which is what makes "only one key is working"
+  // appear — the rest are never even reached on healthy requests).
+  const startIdx = roundRobinIndex(url, keys.length)
+
+  // Skip keys that recently failed with auth/quota/truncation errors so we
+  // don't waste a request + latency on a known-bad key every single call.
+  const dead = deadKeyCooldown.get(url) || new Map<string, number>()
+  const candidates: Array<{ key: string; idx: number }> = []
+  for (let i = 0; i < keys.length; i++) {
+    const idx = (startIdx + i) % keys.length
+    const key = keys[idx]
+    const coolUntil = dead.get(key) || 0
+    if (coolUntil > now) continue // skip dead key during cooldown
+    candidates.push({ key, idx })
+  }
+  // If every key is in cooldown, fell through to checking none — allow all.
+  const pool = candidates.length > 0 ? candidates : keys.map((key, idx) => ({ key, idx }))
+
   let lastError: string = ''
-  for (const key of keys) {
+  for (const { key } of pool) {
     try {
       const res = await fetchWithTimeout(url, {
         method: 'POST',
@@ -177,11 +211,29 @@ async function callHTTP(
       }, TIMEOUTS.AI)
       if (!res.ok) {
         lastError = `${url} ${res.status}`
+        // Auth/quota errors: the key is likely dead — park it for a cooldown.
+        if ([401, 403, 429].includes(res.status)) parkDeadKey(url, key, res.status)
         continue // try next key
       }
       const data = await res.json()
+      const content = data?.choices?.[0]?.message?.content || ''
+      const finishReason = data?.choices?.[0]?.finish_reason
+
+      // Some providers (notably gemini-3.6-flash via the OpenAI-compat endpoint)
+      // impose a tiny hidden output cap and return `finish_reason: "length"`
+      // with truncated content even when max_tokens is set higher. Treating
+      // truncated output as a failure lets the waterfall fall through to a
+      // provider that can produce the full response, instead of returning
+      // broken/partial JSON to callers.
+      if (finishReason === 'length') {
+        lastError = `${url} truncated output (finish_reason=length, ${content.length} chars)`
+        parkDeadKey(url, key, 0) // 0 => treat as temporarily degraded
+        continue // try next key / provider
+      }
+
+      markKeyHealthy(url, key)
       return {
-        content: data?.choices?.[0]?.message?.content || '',
+        content,
         tokensUsed: data?.usage?.total_tokens,
       }
     } catch (e: any) {
@@ -191,6 +243,36 @@ async function callHTTP(
   }
   throw new Error(`All keys failed for ${url}: ${lastError}`)
 }
+
+// --- Dead-key memory + round-robin rotation helpers -------------------------
+// A light in-process cache (per endpoint) so a key that keeps returning auth /
+// quota / truncated responses is skipped for a short cooldown instead of being
+// retried on every request. Marking a key healthy clears its cooldown.
+const deadKeyCooldown = new Map<string, Map<string, number>>()
+
+function parkDeadKey(url: string, key: string, status: number) {
+  let m = deadKeyCooldown.get(url)
+  if (!m) { m = new Map(); deadKeyCooldown.set(url, m) }
+  // 429 = rate limited (transient, short cooldown); 401/403 = invalid key
+  // (longer); status 0 = truncated output from the broken flash model (long).
+  const cooldownMs = status === 429 ? 60_000 : status === 0 ? 120_000 : 300_000
+  m.set(key, Date.now() + cooldownMs)
+}
+
+function markKeyHealthy(url: string, key: string) {
+  deadKeyCooldown.get(url)?.delete(key)
+}
+
+function roundRobinIndex(url: string, len: number): number {
+  if (len <= 1) return 0
+  // A cheap persistent counter per endpoint so each request starts at a
+  // different key, spreading load across the pool.
+  const n = (roundRobinStep.get(url) || 0)
+  roundRobinStep.set(url, (n + 1) % len)
+  return n % len
+}
+const roundRobinStep = new Map<string, number>()
+
 
 export async function callAI(opts: AICallOptions): Promise<AICallResult> {
   const {
@@ -202,12 +284,12 @@ export async function callAI(opts: AICallOptions): Promise<AICallResult> {
     responseFormat,
     cerebrasModel        = process.env.CEREBRAS_MODEL        || 'gemma-4-31b',
     deepseekModel        = useReasoner ? 'deepseek-reasoner' : (process.env.DEEPSEEK_MODEL || 'deepseek-chat'),
-    geminiModel          = process.env.GEMINI_MODEL          || 'gemini-2.0-flash',
-    groqModel            = process.env.GROQ_MODEL            || 'llama-3.3-70b-versatile',
+    geminiModel          = process.env.GEMINI_MODEL          || 'gemini-3.6-flash',
+    groqModel            = process.env.GROQ_MODEL            || 'qwen/qwen3.8-27b',
     openrouterModel      = process.env.OPENROUTER_MODEL      || 'openai/gpt-4o-mini',
     openaiModel          = process.env.OPENAI_MODEL          || 'gpt-4o-mini',
     premiumOpenaiModel   = process.env.PREMIUM_OPENAI_MODEL  || 'gpt-4o',
-    premiumGeminiModel   = process.env.PREMIUM_GEMINI_MODEL  || 'gemini-1.5-pro',
+    premiumGeminiModel   = process.env.PREMIUM_GEMINI_MODEL  || 'gemini-3.6-flash',
   } = opts
 
   const [CEREBRAS_KEY, DEEPSEEK_KEY, GEMINI_KEY, GROQ_KEY, OPENROUTER_KEY, OPENAI_KEY] = await Promise.all([

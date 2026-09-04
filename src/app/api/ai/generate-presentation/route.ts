@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { simplePresentationGenerator } from '@/lib/simple-presentation-generator'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
+import { getGradeBand } from '@/lib/grade-bands'
 
 export const POST = route({}, async (request, { user }) => {
     const { 
@@ -197,11 +198,13 @@ Requirements:
 
 CRITICAL: Each slide MUST include specific, detailed visual suggestions for AI image generation.
 
+${['adult', 'senior_secondary'].includes(getGradeBand(grade)) ? `AUDIENCE: This is for ADVANCED ${getGradeBand(grade) === 'adult' ? 'adult GED' : 'senior secondary'} learners. Make every slide substantive and exam-worthy: real examples, data, application, and connections across concepts. Each bullet must be a complete, informative point — not a fragment.` : ''}
+
 Please generate a detailed presentation with the following EXACT structure for each slide:
 
 # Slide [number]: [Title]
 **Content:**
-[Detailed bullet points explaining the concept - make it engaging and age-appropriate]
+[Detailed bullet points explaining the concept - 4-6 substantive points - make it engaging and age-appropriate]
 
 **Speaker Notes:**
 [Detailed notes for the teacher including explanations, examples, and teaching tips]
@@ -222,6 +225,7 @@ Make sure to:
 5. End with a summary slide
 6. EVERY slide must have a detailed Image Prompt
 7. Make content age-appropriate for ${grade} level
+8. Each content bullet must be a COMPLETE, informative point (not a heading fragment)
 
 Generate exactly ${slideCount} slides.`
 
@@ -229,7 +233,7 @@ Generate exactly ${slideCount} slides.`
     const { OpenAIService } = await import('@/lib/openai-service')
     const generatedContent = await OpenAIService.generateLongContent(
       [{ role: 'user', content: prompt }],
-      { maxTokens: 4000, temperature: 0.7 }
+      { maxTokens: 6000, temperature: 0.7 }
     )
 
     if (!generatedContent) throw new Error('No content generated from AI')

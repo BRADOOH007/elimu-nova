@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { uploadFile, BUCKETS } from '@/lib/supabase'
+import { saveSchemeOfWorkFiles } from '@/lib/scheme-of-work-files'
 import { route } from '@/lib/api-middleware'
 
 export const POST = route({}, async (req, { user }) => {
@@ -194,6 +195,7 @@ export const POST = route({}, async (req, { user }) => {
       try {
         htmlUrl = await uploadFile(BUCKETS.SCHEMES, `${user.id}/scheme-${safeTitle}.html`, htmlBuffer, 'text/html') || ''
       } catch { /* non-fatal */ }
+      if (schemeOfWorkId && htmlUrl) await saveSchemeOfWorkFiles(schemeOfWorkId, { pdfUrl: htmlUrl })
 
       return new NextResponse(htmlBuffer, {
         headers: {
@@ -210,6 +212,7 @@ export const POST = route({}, async (req, { user }) => {
       try {
         wordUrl = await uploadFile(BUCKETS.SCHEMES, `${user.id}/scheme-${safeTitle}.doc`, wordBuffer, 'application/msword') || ''
       } catch { /* non-fatal */ }
+      if (schemeOfWorkId && wordUrl) await saveSchemeOfWorkFiles(schemeOfWorkId, { wordUrl })
 
       return new NextResponse(wordBuffer, {
         headers: {

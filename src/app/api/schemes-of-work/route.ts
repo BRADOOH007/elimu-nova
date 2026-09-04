@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { prisma, withRetry } from '@/lib/prisma';
 import { logSchemeOfWorkCreated } from '@/lib/activity-logger';
 import { route } from '@/lib/api-middleware';
@@ -107,6 +108,37 @@ export const POST = route({ auth: 'TEACHER' }, async (req, { user }) => {
     schoolId: teacher.schoolId,
     contentLength: contentString.length
   });
+
+  // ── Dedup: don't save duplicate generations ──
+  // If the same teacher already has a scheme of work with the exact same
+  // title + subject + grade + content, return the existing one instead of
+  // creating a duplicate.
+  const contentHash = crypto.createHash('sha256').update(contentString).digest('hex').slice(0, 24);
+  const existing = await prisma.schemeOfWork.findFirst({
+    where: { teacherId: teacher.id, subject, grade, title },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, content: true },
+  });
+
+  if (existing) {
+    let existingHash = '';
+    try {
+      existingHash = crypto.createHash('sha256').update(
+        typeof existing.content === 'string' ? existing.content : JSON.stringify(existing.content)
+      ).digest('hex').slice(0, 24);
+    } catch {
+      existingHash = crypto.createHash('sha256').update(String(existing.content)).digest('hex').slice(0, 24);
+    }
+
+    if (existingHash === contentHash) {
+      return NextResponse.json({
+        success: true,
+        existing: true,
+        schemeOfWork: existing,
+        message: 'Scheme of work already exists — no duplicate created'
+      });
+    }
+  }
 
   const schemeOfWork = await prisma.schemeOfWork.create({
     data: {

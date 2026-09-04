@@ -53,14 +53,12 @@ export const GET = route({ auth: 'SUPER_ADMIN' }, async (req, { user }) => {
       { id: 'openai/gpt-4o',                  name: 'GPT-4o',                 provider: 'openrouter', cost: '$$$', speed: 'Medium'},
       { id: 'anthropic/claude-3.5-sonnet',    name: 'Claude 3.5 Sonnet',      provider: 'openrouter', cost: '$$$', speed: 'Medium'},
       { id: 'anthropic/claude-3-haiku',       name: 'Claude 3 Haiku',         provider: 'openrouter', cost: '$',   speed: 'Fast'  },
-      { id: 'google/gemini-flash-1.5',        name: 'Gemini Flash 1.5',       provider: 'openrouter', cost: '$',   speed: 'Fast'  },
-      { id: 'meta-llama/llama-3.1-8b-instruct', name: 'Llama 3.1 8B',         provider: 'openrouter', cost: 'Free',speed: 'Fast'  },
       { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B',      provider: 'openrouter', cost: 'Free',speed: 'Medium'},
-      { id: 'gemini-2.5-flash',               name: 'Gemini 2.5 Flash',       provider: 'gemini',     cost: 'Free',speed: 'Fast'  },
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash',       provider: 'gemini',     cost: 'Free',speed: 'Fast'  },
+      { id: 'gemini-3.6-flash',               name: 'Gemini 3.6 Flash (Gemini API)',  provider: 'gemini', cost: 'Free', speed: 'Fast'  },
+      { id: 'gemini-3.6-flash-lite',          name: 'Gemini 3.6 Flash Lite (Gemini API)', provider: 'gemini', cost: 'Free', speed: 'Fast'  },
       { id: 'openai/gpt-oss-120b',            name: 'GPT-OSS 120B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
       { id: 'openai/gpt-oss-20b',             name: 'GPT-OSS 20B (Groq)',     provider: 'groq',       cost: 'Free',speed: 'Ultra' },
-      { id: 'qwen/qwen3.6-27b',               name: 'Qwen 3.6 27B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
+      { id: 'qwen/qwen3.8-27b',               name: 'Qwen 3.8 27B (Groq)',    provider: 'groq',       cost: 'Free',speed: 'Ultra' },
       { id: 'gpt-4o-mini',                    name: 'GPT-4o Mini (Direct)',    provider: 'openai',     cost: '$',   speed: 'Fast'  },
       { id: 'gpt-4o',                         name: 'GPT-4o (Direct)',         provider: 'openai',     cost: '$$$', speed: 'Medium'},
     ]
@@ -224,10 +222,13 @@ async function testProviders() {
   }
 
   const testMsg = [{ role: 'user', content: 'Say "ok" in one word.' }]
-  // Use the model the app actually calls (GROQ_MODEL / default) — llama-3.1-8b-instant is deprecated.
-  const groqTestModel = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
-  // Gemini rotates model names aggressively — try newest first, fall back to older
-  const geminiTestModels = [process.env.GEMINI_MODEL || 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+  // Use the model the app actually calls (GROQ_MODEL / default). llama-3.3-70b-versatile
+  // is no longer available on Groq — default to a current, working model.
+  const groqTestModel = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b'
+  // Gemini rotates model names aggressively — default to the current stable
+  // model, then fall back to the previous stable one. Avoid deprecated names
+  // (gemini-2.0/2.5-flash no longer exist) so a valid key never falsely fails.
+  const geminiTestModels = [process.env.GEMINI_MODEL || 'gemini-3.6-flash', 'gemini-3.6-flash-lite']
 
   if (GEMINI_KEY) {
     const start = Date.now()

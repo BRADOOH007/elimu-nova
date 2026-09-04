@@ -93,13 +93,42 @@ interface Props {
   role: Role
   userName: string
   visible: boolean
+  /** Country (e.g. 'Kenya', 'US') — used to pick a locale-appropriate title prefix */
+  country?: string
+  /** Curriculum (e.g. 'cbc', 'us', 'ged-hiset') — used to pick a locale-appropriate title prefix */
+  curriculum?: string
 }
 
-const DISMISS_MS   = 5000
+const DISMISS_MS   = 7000   // total visible time
 const FADE_MS      = 600
-const DOM_PURGE_MS = DISMISS_MS + FADE_MS + 500
+// A short delay before the auto-dismiss countdown begins, so the splash is
+// actually painted/visible before its timer starts. Prevents slow first-loads
+// (dev compile, heavy dashboards) from eating the entire display window.
+const PAINT_DELAY_MS = 800
+const DOM_PURGE_MS = PAINT_DELAY_MS + DISMISS_MS + FADE_MS + 800
 
-export function DashboardSplash({ role, userName, visible }: Props) {
+/**
+ * Choose a locale-appropriate honorific prefix for the splash greeting.
+ * - Kenya / CBC teacher  → "Mwalimu" (respectful Kenyan term of address)
+ * - US-style teacher     → "Instructor" (as commonly used in US education)
+ * - Everyone else        → the role label (no honorific)
+ */
+function greetingTitle(role: Role, country?: string, curriculum?: string): string | null {
+  if (role !== 'TEACHER' && role !== 'SENIOR_TEACHER') return null
+
+  const c = (country || '').toLowerCase()
+  const cur = (curriculum || '').toLowerCase()
+
+  const isKenya  = c === 'kenya' || c.includes('kenya') || cur === 'cbc' || cur.startsWith('cbc')
+  const isUS     = c === 'us' || c === 'usa' || c === 'united states' ||
+                   cur === 'us' || cur === 'ged' || cur === 'ged-hiset' || cur.includes('ged') || cur === 'cambridge'
+
+  if (isKenya) return 'Mwalimu'
+  if (isUS)    return 'Instructor'
+  return 'Teacher'
+}
+
+export function DashboardSplash({ role, userName, visible, country, curriculum }: Props) {
   const [gone, setGone]       = useState(false)
   const [opacity, setOpacity] = useState(1)
   const [progress, setProgress] = useState(0)
@@ -110,6 +139,7 @@ export function DashboardSplash({ role, userName, visible }: Props) {
 
   const cfg       = ROLE_CONFIG[role] || ROLE_CONFIG.STUDENT
   const firstName = userName?.split(' ')[0] || 'there'
+  const honorific = greetingTitle(role, country, curriculum)
 
   const schedule = (fn: () => void, ms: number) => {
     const id = setTimeout(fn, ms)
@@ -148,9 +178,9 @@ export function DashboardSplash({ role, userName, visible }: Props) {
     return () => clearInterval(iv)
   }, [cfg.tips.length])
 
-  /* ── Hard dismiss — fires after DISMISS_MS no matter what ── */
+  /* ── Hard dismiss — fires after a short paint delay + DISMISS_MS ── */
   useEffect(() => {
-    schedule(dismiss, DISMISS_MS)
+    schedule(dismiss, PAINT_DELAY_MS + DISMISS_MS)
     return clearAll
   }, [])
 
@@ -221,10 +251,10 @@ export function DashboardSplash({ role, userName, visible }: Props) {
 
         {/* Greeting */}
         <p style={{ color: '#64748b', fontSize: 11, fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
-          Welcome back
+          Welcome back{honorific ? `, ${honorific}` : ''}
         </p>
         <h1 style={{ color: '#fff', fontSize: 56, fontWeight: 900, lineHeight: 1, marginBottom: 16, letterSpacing: -1 }}>
-          {firstName}
+          {honorific ? `${honorific} ${firstName}` : firstName}
         </h1>
         <p style={{ color: '#94a3b8', fontSize: 15, lineHeight: 1.6, marginBottom: 40, maxWidth: 360, margin: '0 auto 40px' }}>
           {cfg.subline}

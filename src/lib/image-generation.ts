@@ -19,6 +19,19 @@ export class ImageGenerationService {
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
     const provider = request.provider || 'auto'
 
+    // 0. Pollinations — free, no API key, no quota, always available. Tried
+    // first so the platform always produces a real image quickly and at no
+    // cost, then falls back to premium/paid providers when higher quality is
+    // needed, then to an SVG placeholder as a last resort.
+    try {
+      const { PollinationsService } = await import('./pollinations-service')
+      const poll = await PollinationsService.generateImage(request.prompt, { size: request.size })
+      if (poll?.url) return poll as ImageGenerationResponse
+    } catch (e: any) {
+      console.warn('[ImageGen] Pollinations failed:', e.message)
+    }
+
+    // Explicit provider selection (only relevant when a non-auto provider is requested)
     if (provider === 'stability') {
       const result = await this.generateStability(request)
       if (result.provider !== 'placeholder') return result

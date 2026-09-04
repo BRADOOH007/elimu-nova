@@ -1,6 +1,7 @@
 'use client'
 
 import { useToast } from '@/hooks/use-toast'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -435,10 +436,8 @@ export default function StudentSchemesOfWorkPage() {
             {selectedSchemeOfWork?.schemeOfWork.content?.generatedContent ? (
               <div className="bg-gray-50 rounded-lg p-4">
                 <h4 className="font-semibold text-gray-900 mb-2">Scheme of Work Content</h4>
-                <div className="prose prose-sm max-w-none">
-                  <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
-                    {selectedSchemeOfWork.schemeOfWork.content.generatedContent}
-                  </div>
+                <div className="lesson-content">
+                  <MarkdownRenderer content={selectedSchemeOfWork.schemeOfWork.content.generatedContent} />
                 </div>
               </div>
             ) : (

@@ -553,12 +553,12 @@ function LearnPageContent() {
                   {studyPhase === 'learn' && (
                     <div className="space-y-5">
                       {activeLesson.images && activeLesson.images.length > 0 && (
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           {activeLesson.images.filter(img => img.imageUrl).map((img, i) => (
                             <figure key={i} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                              <div className="relative aspect-video bg-slate-100">
+                              <div className="relative aspect-[4/3] bg-slate-100">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={img.imageUrl!} alt={img.sectionTitle} className="h-full w-full object-cover" loading="lazy" />
+                                <img src={img.imageUrl!} alt={img.sectionTitle} className="h-full w-full object-contain p-2" loading="lazy" />
                               </div>
                               {img.sectionTitle && (
                                 <figcaption className="border-t border-slate-100 bg-slate-50 px-3 py-2">

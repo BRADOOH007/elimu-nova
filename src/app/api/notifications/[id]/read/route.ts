@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
 /** PATCH /api/notifications/:id/read — mark a single notification as read */
-export const PATCH = route({}, async (req, { user, params }) => {
+export const PATCH = route({ rateLimit: false }, async (req, { user, params }) => {
   const id = params.id
   if (!id) return NextResponse.json({ error: 'Missing notification id' }, { status: 400 })
 

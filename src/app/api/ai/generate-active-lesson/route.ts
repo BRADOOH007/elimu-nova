@@ -90,6 +90,26 @@ function cleanJson(raw: string): string {
   return cleaned
 }
 
+/**
+ * Strip any embedded images (markdown image or data-URI) from the lesson's
+ * markdown content. Visuals are supplied separately via the images array, so
+ * a giant base64 SVG inline in the content only bloats the payload and blows
+ * up the layout. ASCII/emoji diagrams in fenced code blocks are preserved.
+ */
+function stripEmbeddedImages(md: string): string {
+  if (!md) return md
+  return md
+    // remove ![alt](data:image/...), ![alt](http...) — entire markdown image tag
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    // remove stray raw <img ...> tags
+    .replace(/<img[^>]*>/gi, '')
+    // remove any bare data-URI image that leaked without markdown
+    .replace(/!\[\]?\(data:image\/[^)]*\)/g, '')
+    // collapse 3+ blank lines to 1
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 export const POST = route({ skipSubscriptionCheck: true }, async (req, { user }) => {
   const body = await req.json()
   const { subject, topic, grade, curriculum } = body
@@ -105,8 +125,11 @@ export const POST = route({ skipSubscriptionCheck: true }, async (req, { user })
   // Fast path: serve an existing lesson for this subject/topic/grade from cache.
   const cached = await intelligentCacheLookup(subject, topic, gradeStr, curriculum)
   if (cached) {
+    const cachedLesson = cached.content as unknown as ActiveLesson
+    // Clean any embedded images that may have been duplicated into cached content
+    if (cachedLesson?.content) cachedLesson.content = stripEmbeddedImages(cachedLesson.content)
     return NextResponse.json({
-      ...(cached.content as unknown as ActiveLesson),
+      ...cachedLesson,
       fromCache: true,
       matchedVia: cached.matchedVia,
       canonicalTopic: cached.canonicalTopic ?? null,
@@ -146,7 +169,7 @@ You MUST return valid JSON. Escape all double quotes inside strings with backsla
     "whatYoullLearn": "In one short sentence, what the student will understand after this lesson",
     "concepts": ["First concept", "Second concept", "Third concept"]
   },
-  "content": "Write as MARKDOWN with these exact rules. The content will be rendered by a student-facing markdown renderer that supports headings, bold, italic, tables, code blocks, lists, and blockquotes.\n\nFORMAT RULES:\n- Use ## for concept headings (4-6 concepts, one per section)\n- Use ### for sub-sections within a concept\n- Use **bold** for key terms and definitions\n- Use > blockquotes for real-world examples\n- Use pipe tables for comparisons and summaries\n- Use triple-backtick fenced code blocks for visual diagrams (ASCII art, flow charts with arrows, emoji diagrams)\n- Use dash bullet lists for key points and steps\n- Use numbered lists for sequential steps\n- Keep paragraphs SHORT: 2-3 sentences max\n- Write in a friendly, conversational tone like a cool teacher\n\nSTRUCTURE for EACH concept section:\n1. Start with a **bold key term** and its clear definition\n2. Explain it in depth with 3-4 short paragraphs — use analogies, compare to everyday life\n3. Include a **worked example** — walk through it step by step in a numbered list\n4. Include a comparison table summarizing key points vs related concepts\n5. Include a visual diagram in a code block (ASCII art, flow chart, or emoji model)\n6. End with a real-world application blockquote showing where this matters outside school\n7. Add a **Common Mistakes** bullet list — 1-2 things students typically get wrong and how to avoid them\n\nAfter all concepts, add these sections:\n- **Quick Review** — bullet list of ALL key takeaways from every concept (5-8 bullets)\n- **Try It Yourself** — 3-4 practice challenges with increasing difficulty, each with a hint\n- **Think Deeper** — 2 thought-provoking questions that connect concepts together\n\nTarget approximately ${wordLimit} words. Use age-appropriate language for ${gradeStr} students. Make it fun with emojis in diagrams but NOT in regular text. Do NOT use any special characters that break JSON.",
+  "content": "Write as MARKDOWN with these exact rules. The content will be rendered by a student-facing markdown renderer that supports headings, bold, italic, tables, code blocks, lists, and blockquotes.\n\nLENGTH REQUIREMENT (CRITICAL):\n- The 'content' field MUST contain at least ${wordLimit} words of genuine teaching material. This is a HARD MINIMUM — before returning, count the words in 'content' and if it is under ${wordLimit}, expand it with more explanatory paragraphs, examples, and practice.\n- Target ${Math.round(wordLimit * 1.2)} words so there is ample, helpful material.\n\nFORMAT RULES:\n- Use ## for concept headings (4-6 concepts, one per section)\n- Use ### for sub-sections within a concept\n- Use **bold** for key terms and definitions\n- Use _italic_ for emphasis sparingly\n- Use > blockquotes for real-world examples\n- Use pipe tables for comparisons and summaries\n- Use triple-backtick fenced code blocks for visual diagrams (ASCII art, flow charts with arrows, emoji diagrams)\n- Use dash bullet lists for key points and steps\n- Use numbered lists for sequential steps\n- Write substantive paragraphs of 3-5 sentences each — do NOT skimp. Explain fully.\n- Write in a friendly, conversational tone like a cool teacher\n\nSTRUCTURE for EACH concept section:\n1. Start with a **bold key term** and its clear definition\n2. Explain it in depth with 3-5 rich paragraphs — use analogies, compare to everyday life\n3. Include a **worked example** — walk through it step by step in a numbered list\n4. Include a comparison table summarizing key points vs related concepts\n5. Include a visual diagram in a code block (ASCII art, flow chart, or emoji model)\n6. End with a real-world application blockquote showing where this matters outside school\n7. Add a **Common Mistakes** bullet list — 1-2 things students typically get wrong and how to avoid them\n\nAfter all concepts, add these sections:\n- **Quick Review** — bullet list of ALL key takeaways from every concept (5-8 bullets)\n- **Try It Yourself** — 3-4 practice challenges with increasing difficulty, each with a hint\n- **Think Deeper** — 2 thought-provoking questions that connect concepts together\n\nRemember: the content MUST be at least ${wordLimit} words. Use age-appropriate language for ${gradeStr} students. Make it fun with emojis in diagrams but NOT in regular text. IMPORTANT: Do NOT embed any images or base64 data in the content — text, tables, and ASCII diagrams only. Do NOT use any special characters that break JSON.",
   "images": [
     { "sectionTitle": "Exact ## heading of first concept", "imagePrompt": "Detailed image-generation prompt for this section: subject, key objects to show, labels, style (flat, textbook, colorful, age-appropriate, no text in image)" },
     { "sectionTitle": "Exact ## heading of second concept", "imagePrompt": "Detailed image-generation prompt for this section" },
@@ -230,6 +253,9 @@ RULES:
     lesson.subject = subject
     lesson.grade = gradeStr
     lesson.generatedAt = new Date().toISOString()
+    // Remove embedded image blobs from the markdown content — visuals come
+    // from the images array instead, keeping the content text-focused.
+    if (lesson.content) lesson.content = stripEmbeddedImages(lesson.content)
 
     // Section visuals: metadata required by the model, imageUrl generated best-effort
     const imageMeta: ActiveLessonImage[] = Array.isArray(lesson.images) ? lesson.images : []

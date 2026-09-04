@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { uploadFile } from '@/lib/supabase'
 import { route } from '@/lib/api-middleware'
-import { v2 as cloudinary } from 'cloudinary'
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-})
 
 export const dynamic = 'force-dynamic'
 
@@ -21,16 +15,11 @@ const USER_AGENT = 'ElimuNova/1.0 (contact@elimunova.com)'
 async function uploadCoverToCloudinary(imageUrl: string, bookTitle: string): Promise<string | null> {
   try {
     const slug = bookTitle.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 40)
-    const result = await cloudinary.uploader.upload(imageUrl, {
-      folder: 'elimunova/library_covers',
-      public_id: slug,
-      resource_type: 'image',
-      format: 'jpg',
-      quality: 'auto',
-      fetch_format: 'auto',
-      overwrite: false,
-    })
-    return result.secure_url
+    // Store covers in Supabase (always configured) — robust and offline-friendly.
+    const buf = await fetch(imageUrl, { signal: AbortSignal.timeout(12000), headers: { 'User-Agent': USER_AGENT } })
+      .then(r => r.ok ? r.arrayBuffer() : null)
+    if (!buf) return null
+    return await uploadFile('library-covers', `${slug}.jpg`, Buffer.from(buf), 'image/jpeg') || null
   } catch {
     return null
   }

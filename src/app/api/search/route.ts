@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const GET = route({}, async (req, { user }) => {
+export const GET = route({ rateLimit: false }, async (req, { user }) => {
   const { searchParams } = new URL(req.url)
   const query = searchParams.get('q')
   const role = searchParams.get('role') || user.role
@@ -18,6 +18,10 @@ export const GET = route({}, async (req, { user }) => {
     schools: [],
     users: [],
     packages: [],
+    books: [],
+    lessonPlans: [],
+    schemes: [],
+    resources: [],
     total: 0
   }
 
@@ -214,6 +218,58 @@ export const GET = route({}, async (req, { user }) => {
 
       results.total = results.users.length
     }
+  }
+
+  // ── Content search (all roles) ─────────────────────────────────────────
+  // Books, lesson plans, schemes of work and resources — the content students
+  // and teachers look up day-to-day. Results are appended to the response.
+  try {
+    const [books, lessonPlans, schemes, resources] = await Promise.all([
+      prisma.book.findMany({
+        where: { isPublished: true, OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { author: { contains: searchTerm, mode: 'insensitive' } },
+          { category: { contains: searchTerm, mode: 'insensitive' } },
+        ]},
+        select: { id: true, title: true, author: true, category: true, coverUrl: true },
+        take: 8,
+      }),
+      prisma.lessonPlan.findMany({
+        where: { OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { subject: { contains: searchTerm, mode: 'insensitive' } },
+          { grade: { contains: searchTerm, mode: 'insensitive' } },
+        ]},
+        select: { id: true, title: true, subject: true, grade: true },
+        take: 8,
+      }),
+      prisma.schemeOfWork.findMany({
+        where: { OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { subject: { contains: searchTerm, mode: 'insensitive' } },
+          { grade: { contains: searchTerm, mode: 'insensitive' } },
+        ]},
+        select: { id: true, title: true, subject: true, grade: true },
+        take: 8,
+      }),
+      prisma.resource.findMany({
+        where: { OR: [
+          { title: { contains: searchTerm, mode: 'insensitive' } },
+          { subject: { contains: searchTerm, mode: 'insensitive' } },
+          { grade: { contains: searchTerm, mode: 'insensitive' } },
+        ]},
+        select: { id: true, title: true, subject: true, grade: true, type: true },
+        take: 8,
+      }),
+    ])
+
+    results.books = books.map(b => ({ id: b.id, name: b.title, subtitle: b.author || b.category, kind: 'book', href: `/student/library/${b.id}` }))
+    results.lessonPlans = lessonPlans.map(lp => ({ id: lp.id, name: lp.title, subtitle: `${lp.subject} · ${lp.grade}`, kind: 'lesson_plan', href: `/teacher/lesson-plans/?search=${encodeURIComponent(lp.title)}` }))
+    results.schemes = schemes.map(sw => ({ id: sw.id, name: sw.title, subtitle: `${sw.subject} · ${sw.grade}`, kind: 'scheme', href: `/teacher/schemes-of-work/?search=${encodeURIComponent(sw.title)}` }))
+    results.resources = resources.map(r => ({ id: r.id, name: r.title, subtitle: `${r.subject} · ${r.grade}`, kind: 'resource', href: `/student/resources` }))
+    results.total += results.books.length + results.lessonPlans.length + results.schemes.length + results.resources.length
+  } catch {
+    // best-effort — content search must never break admin search
   }
 
   return NextResponse.json({

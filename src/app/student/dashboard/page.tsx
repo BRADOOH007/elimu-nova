@@ -6,9 +6,11 @@ import { SubscriptionAlert } from "@/components/subscription/subscription-alert"
 import SmartRecommendations from "@/components/student/smart-recommendations"
 import WhatToLearnNext from "@/components/student/what-to-learn-next"
 import DashboardSkeleton from "@/components/dashboard-skeleton"
+import { SpacedRepetitionWidget } from "@/components/student/spaced-repetition-widget"
 import { useSession } from "next-auth/react"
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import useSWR from "swr"
@@ -73,6 +75,7 @@ function fmtTime(totalMinutes: number): string {
 
 export default function StudentDashboard() {
   const { data: session } = useSession()
+  const router = useRouter()
   const { schoolInfo, loading: schoolInfoLoading } = useSchoolInfo()
   const isIndependent = !schoolInfo?.school?.id && !session?.user?.schoolId
 
@@ -332,6 +335,15 @@ export default function StudentDashboard() {
 
           {/* What do you want to learn next? */}
           <WhatToLearnNext grade={studentGrade} recentSubjects={recentSubjects} dueReviews={dueReviews} curriculum={prefsData?.curriculum} />
+
+          {/* Spaced Repetition — due reviews surfaced on the dashboard */}
+          <SpacedRepetitionWidget
+            subject={recentSubjects?.[0]}
+            onStartReview={(topic) => {
+              const subj = recentSubjects?.[0] || 'Mathematics'
+              router.push(`/student/learn?subject=${encodeURIComponent(subj)}&topic=${encodeURIComponent(topic)}`)
+            }}
+          />
 
           {/* Recent Activity */}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">

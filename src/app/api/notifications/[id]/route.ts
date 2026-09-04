@@ -2,23 +2,31 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const PATCH = route({}, async (req, { params, user }) => {
+export const PATCH = route({ rateLimit: false }, async (req, { params, user }) => {
+  const { id } = params
+  if (!id) return NextResponse.json({ error: 'Missing notification id' }, { status: 400 })
 
-    const { id } = params
-    const notification = await prisma.notification.update({
-      where: { id, userId: user.id },
-      data: { isRead: true }
-    })
+  // Only mark the user's OWN notification as read — scope safely via findFirst.
+  const owned = await prisma.notification.findFirst({ where: { id, userId: user.id } })
+  if (!owned) return NextResponse.json({ error: 'Notification not found' }, { status: 404 })
 
-    return NextResponse.json(notification)
+  const notification = await prisma.notification.update({
+    where: { id },
+    data: { isRead: true },
+  })
+
+  return NextResponse.json(notification)
 })
 
-export const DELETE = route({}, async (req, { params, user }) => {
+export const DELETE = route({ rateLimit: false }, async (req, { params, user }) => {
+  const { id } = params
+  if (!id) return NextResponse.json({ error: 'Missing notification id' }, { status: 400 })
 
-    const { id } = params
-    await prisma.notification.delete({
-      where: { id, userId: user.id }
-    })
+  // Only allow deleting the user's OWN notification.
+  const owned = await prisma.notification.findFirst({ where: { id, userId: user.id } })
+  if (!owned) return NextResponse.json({ error: 'Notification not found' }, { status: 404 })
 
-    return NextResponse.json({ success: true })
+  await prisma.notification.delete({ where: { id } })
+
+  return NextResponse.json({ success: true })
 })

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useNotificationSound } from './use-notification-sound'
+import { useSSE } from './use-sse'
 
 export function useUnreadMessages() {
   const { data: session } = useSession()
@@ -47,16 +48,26 @@ export function useUnreadMessages() {
     } catch (e) { console.warn('[UnreadMessages] fetchNotificationCount failed:', e) }
   }, [session])
 
+  // ⚡ Realtime — refetch instantly when a new notification arrives for this user,
+  // instead of waiting for the polling interval. Uses per-user channel.
+  useSSE(session?.user?.id ? `notifications:${session.user.id}` : null, {
+    'new-notification': () => {
+      fetchCount()
+      fetchNotificationCount()
+    },
+  })
+
   useEffect(() => {
     fetchCount()
     fetchNotificationCount()
 
+    // Fallback polling (realtime is opportunistic; poll keeps badges fresh).
     const interval = setInterval(() => {
       if (!document.hidden) {
         fetchCount()
         fetchNotificationCount()
       }
-    }, 30_000)
+    }, 60_000)
 
     const onVisible = () => {
       if (!document.hidden) {
