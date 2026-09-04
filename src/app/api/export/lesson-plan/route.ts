@@ -16,6 +16,7 @@ import { uploadFile, BUCKETS } from '@/lib/supabase'
 import { route } from '@/lib/api-middleware'
 import { generateLessonPlanPDF } from '@/lib/kicd-lesson-plan-pdf'
 import { normalizeLessonContent } from '@/lib/lesson-plan-content'
+import { saveLessonPlanFiles } from '@/lib/lesson-plan-files'
 
 export const POST = route({}, async (req, { user }) => {
   const body = await req.json()
@@ -62,6 +63,7 @@ export const POST = route({}, async (req, { user }) => {
     try {
       wordUrl = await uploadFile(BUCKETS.LESSON_PLANS, `${user.id}/lesson-${safeName}.doc`, wordBuffer, 'application/msword') || ''
     } catch { /* non-fatal */ }
+    if (lessonPlanId && wordUrl) await saveLessonPlanFiles(lessonPlanId, { wordUrl })
     return new NextResponse(wordBuffer, {
       headers: {
         'Content-Type':        'application/msword; charset=utf-8',
@@ -80,6 +82,7 @@ export const POST = route({}, async (req, { user }) => {
       try {
         pdfUrl = await uploadFile(BUCKETS.LESSON_PLANS, `${user.id}/lesson-${safeName}.pdf`, buffer, 'application/pdf') || ''
       } catch { /* non-fatal */ }
+      if (lessonPlanId && pdfUrl) await saveLessonPlanFiles(lessonPlanId, { pdfUrl })
       return new NextResponse(new Uint8Array(buffer), {
         headers: {
           'Content-Type':        'application/pdf',
@@ -100,6 +103,7 @@ export const POST = route({}, async (req, { user }) => {
   try {
     htmlUrl = await uploadFile(BUCKETS.LESSON_PLANS, `${user.id}/lesson-${safeName}.html`, htmlBuffer, 'text/html') || ''
   } catch { /* non-fatal */ }
+  if (lessonPlanId && htmlUrl) await saveLessonPlanFiles(lessonPlanId, { pdfUrl: htmlUrl })
   return new NextResponse(htmlBuffer, {
     headers: {
       'Content-Type':        'text/html; charset=utf-8',

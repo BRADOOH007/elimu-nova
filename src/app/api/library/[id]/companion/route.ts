@@ -6,7 +6,7 @@ import { cleanAiJson } from '@/lib/ai-generation-utils'
 
 export const dynamic = 'force-dynamic'
 
-export const POST = route({ auth: ['STUDENT', 'TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { params }) => {
+export const POST = route({ auth: ['STUDENT', 'SENIOR_STUDENT', 'TEACHER', 'SCHOOL_ADMIN', 'SUPER_ADMIN'] }, async (request, { params }) => {
   try {
     const { id } = params
     const book = await prisma.book.findUnique({ where: { id } })

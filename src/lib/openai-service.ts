@@ -278,9 +278,9 @@ Remember: Be warm, encouraging, and make the student feel supported!`
   }
 
   /**
-   * Generate an image using DALL-E 3 (direct — no waterfall alternative exists for images).
-   * Falls back to an AI-generated SVG diagram via the text waterfall when DALL-E unavailable.
-   * This mirrors TutorBot's approach: OpenAI gpt-image-1 → DALL-E 3 → SVG via Gemini/AI.
+   * Generate an image using a cost-aware waterfall:
+   *   Pollinations (free, no key) → DALL-E 3 → Google Imagen → Stability → Groq SVG → placeholder
+   * Pollinations is tried first so the platform always renders a visual reliably at no cost.
    */
    /**
     * Grade a student submission using AI.
@@ -378,7 +378,18 @@ ${curCtx ? '' : '- Use examples and references appropriate for the student\'s gr
                  : (openaiKey && !openaiKey.startsWith('sk-or-')) ? openaiKey
                  : ''
 
-    // Try DALL-E if we have a real OpenAI key
+    // 1. Pollinations — free, no API key, no quota, always available. Tried
+    // first so the platform always produces an image quickly and at no cost,
+    // then falls back to premium/paid providers when higher quality is needed.
+    try {
+      const { PollinationsService } = await import('./pollinations-service')
+      const poll = await PollinationsService.generateImage(options.prompt, { size: options.size })
+      if (poll?.url) return { ...poll }
+    } catch (e: any) {
+      console.warn('[AI] Pollinations failed:', e.message)
+    }
+
+    // 2. Try DALL-E if we have a real OpenAI key
     if (apiKey) {
       try {
         const { OpenAI } = await import('openai')
@@ -399,7 +410,20 @@ ${curCtx ? '' : '- Use examples and references appropriate for the student\'s gr
       }
     }
 
-    // Fallback: try Stability AI
+    // Google Imagen — high-quality educational illustrations. Uses the same
+    // Gemini/Google AI key; no extra credentials required.
+    try {
+      const { ImagenService } = await import('./imagen-service')
+      const imagen = await ImagenService.generateImage(options.prompt, {
+        quality: options.quality,
+        size:    options.size,
+      })
+      if (imagen?.url) return { ...imagen }
+    } catch (e: any) {
+      console.warn('[AI] Imagen failed:', e.message)
+    }
+
+    // 3. Fallback: try Stability AI
     try {
       const stabilityKey = await getKey('STABILITY_API_KEY')
       if (stabilityKey) {

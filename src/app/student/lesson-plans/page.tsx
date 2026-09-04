@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { sanitizeHtml } from '@/lib/sanitize'
 import { useToast } from '@/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
@@ -15,6 +14,7 @@ import { Badge } from '@/components/ui/badge'
 import CustomLessonModal from '@/components/custom-lesson-modal'
 import { useAITutor } from '@/components/ai-tutor-provider'
 import { StudentQuiz } from '@/components/student/student-quiz'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { 
   BookOpen, 
   Search,
@@ -954,13 +954,8 @@ export default function StudentLessonPlansPage() {
           </DialogHeader>
           <DialogBody className="space-y-4 mt-1">
             {selectedLessonPlan?.lessonPlan.content?.generatedContent ? (
-              <div className="prose max-w-none">
-                <div 
-                  className="whitespace-pre-wrap text-sm leading-relaxed"
-                  dangerouslySetInnerHTML={{ 
-                    __html: sanitizeHtml(selectedLessonPlan.lessonPlan.content.generatedContent.replace(/\n/g, '<br>')) 
-                  }}
-                />
+              <div className="lesson-content">
+                <MarkdownRenderer content={cleanAIText(selectedLessonPlan.lessonPlan.content.generatedContent)} />
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">

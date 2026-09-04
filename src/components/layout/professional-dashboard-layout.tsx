@@ -12,7 +12,9 @@ import {
   User,
   PanelLeftClose,
   PanelLeftOpen,
-  Leaf
+  Leaf,
+  Inbox,
+  Search
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -20,6 +22,7 @@ import { signOut, useSession } from "next-auth/react"
 import { NotificationsModal } from "@/components/modals/notifications-modal"
 import { SettingsModal } from "@/components/modals/settings-modal"
 import { UserProfileModal } from "@/components/modals/user-profile-modal"
+import { SearchResultsModal } from "@/components/modals/search-results-modal"
 import { DashboardSplash } from "@/components/ui/dashboard-splash"
 import { IdleLogoutWarning } from "@/components/ui/idle-logout-warning"
 import { ErrorBoundary } from "@/components/ui/error-boundary"
@@ -97,6 +100,7 @@ export function ProfessionalDashboardLayout({
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [settingsOpen,   setSettingsOpen]   = useState(false)
   const [profileOpen,    setProfileOpen]    = useState(false)
+  const [searchOpen,     setSearchOpen]     = useState(false)
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === 'undefined') return false
     return !sessionStorage.getItem(`splash-shown-${userRole}`)
@@ -110,14 +114,17 @@ export function ProfessionalDashboardLayout({
     avatar?: string
   }>({ firstName: userName, lastName: '', avatar: undefined })
   const [avatarError, setAvatarError] = useState(false)
+  // Locale for the splash greeting ("Mwalimu" for CBC/Kenya, "Instructor" for US)
+  const [userCountry, setUserCountry] = useState<string>('')
+  const [userCurriculum, setUserCurriculum] = useState<string>('')
 
-  /* ── Splash min-timer — splash shows for exactly 5 s then auto-dismisses ── */
+  /* ── Splash min-timer — splash shows, then auto-dismisses after ~7s ── */
   useEffect(() => {
     if (!showSplash) return
     const t = setTimeout(() => {
       setShowSplash(false)
       sessionStorage.setItem(`splash-shown-${userRole}`, '1')
-    }, 5000)
+    }, 7800) // 800ms paint delay + 7000ms visible
     return () => clearTimeout(t)
   }, [])
 
@@ -125,13 +132,21 @@ export function ProfessionalDashboardLayout({
   const fetchUserProfile = async () => {
     if (!session?.user?.id) return
     try {
-      const res = await fetch(`/api/user-profile?userId=${session.user.id}`)
-      if (res.ok) {
-        const p = await res.json()
+      const [profileRes, prefsRes] = await Promise.all([
+        fetch(`/api/user-profile?userId=${session.user.id}`),
+        fetch(`/api/user-preferences`),
+      ])
+      if (profileRes.ok) {
+        const p = await profileRes.json()
         setUserProfile({ firstName: p.firstName, lastName: p.lastName, avatar: p.avatar })
         setAvatarError(false)
       } else {
-        console.warn('[Dashboard] Profile fetch failed:', res.status)
+        console.warn('[Dashboard] Profile fetch failed:', profileRes.status)
+      }
+      if (prefsRes.ok) {
+        const prefs = await prefsRes.json()
+        setUserCountry(prefs.country || '')
+        setUserCurriculum(prefs.curriculum || '')
       }
     } catch (e) { console.warn('[Dashboard] Profile fetch failed:', e) }
   }
@@ -143,7 +158,7 @@ export function ProfessionalDashboardLayout({
   }, [session?.user?.id])
 
   /* ── Broadcast banner ── */
-  const [broadcasts, setBroadcasts] = useState<Array<{ id: string; title: string; message: string; type: string; createdAt: string }>>([])
+  const [broadcasts, setBroadcasts] = useState<Array<{ id: string; title: string; message: string; type: string; createdAt: string; expiresAt?: string | null }>>([])
   const [dismissedBroadcasts, setDismissedBroadcasts] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set()
     try { return new Set(JSON.parse(localStorage.getItem('dismissed-broadcasts') || '[]')) }
@@ -158,7 +173,17 @@ export function ProfessionalDashboardLayout({
         .then(r => r.ok ? r.json() as Promise<any> : [])
         .then((data: any) => {
           const arr = Array.isArray(data) ? data : (data.notifications || [])
-          setBroadcasts(arr.filter((n: any) => n.senderId && n.senderId !== session.user.id))
+          const now = Date.now()
+          // Show as a banner any broadcast that isn't the user's own message.
+          // A broadcast may be: sent by someone else (senderId present), OR a
+          // role/school-wide announcement with no personal sender (system).
+          // Only hide notifications the user sent to themselves, plus any that
+          // have already expired (defensive; the server also filters these).
+          setBroadcasts(arr.filter((n: any) => {
+            if (n.senderId && n.senderId === session.user.id) return false
+            if (n.expiresAt && new Date(n.expiresAt).getTime() <= now) return false
+            return true
+          }))
         })
         .catch(() => {})
     }
@@ -245,6 +270,8 @@ export function ProfessionalDashboardLayout({
         role={userRole as any}
         userName={userProfile.firstName || userName}
         visible={showSplash}
+        country={userCountry}
+        curriculum={userCurriculum}
       />
 
       {/* ── ACCESSIBILITY / INFRA ── */}
@@ -295,6 +322,22 @@ export function ProfessionalDashboardLayout({
                   {totalUnread > 99 ? '99+' : totalUnread}
                 </span>
               )}
+            </button>
+
+            <Link
+              href="/notifications"
+              className="hidden md:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              aria-label="View all notifications"
+            >
+              <Inbox className="w-4 h-4" /> Inbox
+            </Link>
+
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="hidden md:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-500 border border-slate-200 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              aria-label="Global search"
+            >
+              <Search className="w-4 h-4" /> Search
             </button>
 
             {hasAccess && daysLeft > 0 && daysLeft <= 10 && (
@@ -444,6 +487,10 @@ export function ProfessionalDashboardLayout({
       {/* ── MODALS ── */}
       {session?.user?.id && (
         <>
+          <SearchResultsModal
+            isOpen={searchOpen}
+            onClose={() => setSearchOpen(false)}
+          />
           <NotificationsModal
             isOpen={notificationsOpen}
             onClose={() => setNotificationsOpen(false)}

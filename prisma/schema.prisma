@@ -459,8 +459,10 @@ model SeniorStudent {
 
   // Relationships
   gedSubjectProgress GEDSubjectProgress[]
+  gedPracticeTests   GEDPracticeTest[]
   courseEnrollments  SeniorCourseEnrollment[]
   certificates       GEDCertificate[]
+  essays             SeniorWritingSubmission[]
 
   @@map("senior_students")
 }
@@ -482,6 +484,32 @@ model GEDSubjectProgress {
 
   @@unique([seniorStudentId, subject])
   @@map("ged_subject_progress")
+}
+
+// A timed GED-style practice test attempt for one subject. The score (100-200
+// official GED scale) is written back to GEDSubjectProgress.practiceScore and a
+// passing result flags the subject as GED-ready, giving students measurable,
+// visible progress toward exam readiness.
+model GEDPracticeTest {
+  id              String    @id @default(cuid())
+  seniorStudentId String
+  subject         String // one of the 4 GED subjects
+  questions       Json
+  answers         Json?
+  score           Int? // official 100-200 scale (null until completed)
+  correctAnswers  Int       @default(0)
+  totalQuestions  Int       @default(0)
+  passed          Boolean   @default(false)
+  timeLimitMins   Int?
+  timeTakenMins   Int?
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+
+  seniorStudent SeniorStudent @relation(fields: [seniorStudentId], references: [id], onDelete: Cascade)
+
+  @@index([seniorStudentId, subject])
+  @@index([completedAt])
+  @@map("ged_practice_tests")
 }
 
 // Enrollment of a senior student in a supplemental course (computer literacy,
@@ -910,6 +938,39 @@ model SharedSchemeOfWork {
   @@map("shared_schemes_of_work")
 }
 
+// ── KICD content library ─────────────────────────────────────────────────
+// Structured store for CBC/CBE termly schemes-of-work and lesson plans in the
+// official KICD format. Each row is one week's lesson within a term. Supports
+// both imported documents (from Supabase Storage / document_library) and
+// AI-generated schemes, so teachers can generate KICD-compliant lesson plans
+// for any grade/subject/term without re-entering data.
+model KICDContent {
+  id                 String   @id @default(cuid())
+  grade              String   // e.g. "Grade 5"
+  subject            String   // e.g. "Creative Arts", "Mathematics"
+  term               Int      // 1, 2 or 3
+  week               Int      // Week number within the term
+  lesson             Int      // Lesson number within the week
+  strand             String   // e.g. "PERFORMANCE AND DISPLAY"
+  subStrand          String   // e.g. "Performing a Kenyan Folk Dance"
+  learningOutcomes   String[] // Specific Learning Outcomes (SLOs)
+  learningExperiences String[] // Learner experiences / activities
+  keyInquiryQuestions String[] // Key inquiry questions
+  resources          String[] // Learning resources
+  assessment         String?  // Assessment methods (optional)
+  values             String[] @default([]) // Core values (KICD)
+  competencies       String[] @default([]) // Core competencies (CBC)
+  source             String   @default("generated") // "generated" | "imported" | "manual"
+  sourceUrl          String?  // Original document / storage URL
+  isVerified         Boolean  @default(false) // Reviewed as KICD-compliant
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([grade, subject, term])
+  @@index([grade, subject, term, week])
+  @@map("kicd_content")
+}
+
 model LessonPlan {
   id             String   @id @default(cuid())
   title          String
@@ -1240,6 +1301,7 @@ model Notification {
   senderId   String? // Who sent the notification
   targetRole UserRole? // Role this notification is targeting
   schoolId   String? // For school-wide notifications
+  expiresAt  DateTime? // Optional: when this notification's banner should stop showing
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
@@ -1300,6 +1362,7 @@ model UserPreference {
   timezone           String   @default("UTC")
   country            String   @default("")
   curriculum         String   @default("")
+  grade              String   @default("")
   emailNotifications Boolean  @default(true)
   pushNotifications  Boolean  @default(true)
   tourCompletion     Json?
@@ -1645,6 +1708,37 @@ model LessonCache {
   @@map("lesson_cache")
 }
 
+model LessonPlanCache {
+  id        String   @id @default(cuid())
+  subject   String
+  topic     String
+  grade     String
+  mode      String   @default("single") // single | term
+  content   Json     // Full lesson plan JSON
+  aliases   String[] @default([])
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subject, topic, grade, mode])
+  @@map("lesson_plan_cache")
+}
+
+model LessonContentCache {
+  id        String   @id @default(cuid())
+  subject   String
+  topic     String
+  grade     String
+  content   String   @db.Text // Markdown content
+  aliases   String[] @default([])
+  hits      Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subject, topic, grade])
+  @@map("lesson_content_cache")
+}
+
 enum ResourceType {
   NOTE
   SUMMARY
@@ -1840,11 +1934,27 @@ enum DifficultyLevel {
 
 enum CurriculumType {
   CBC // Kenya Competency-Based Curriculum
-  CAMBRIDGE
+  EIGHT_FOUR_FOUR // Kenya legacy 8-4-4
+  CAMBRIDGE // UK / international
+  GCSE // UK GCSE
+  A_LEVEL // UK A-Levels
   IGCSE
-  IB
+  IB // International Baccalaureate
+  COMMON_CORE // US Common Core State Standards
+  NGSS // US Next Generation Science Standards
+  TEKS // Texas Essential Knowledge and Skills
+  FLORIDA_BEST // Florida B.E.S.T. Standards
+  CALIFORNIA // California Content Standards
+  NY_STATE // New York State Next Generation Learning Standards
+  AP // US Advanced Placement
   GED // US General Education Diploma (high-school equivalency)
-  OTHER
+  US_HOMESCHOOL // US homeschool / custom
+  CAPS // South Africa CAPS
+  IEB // South Africa Independent Examinations Board
+  NERDC // Nigeria NERDC / UBE
+  CBSE // India CBSE
+  ICSE // India ICSE
+  OTHER // Fallback / general
 }
 
 enum CourseType {
@@ -1930,9 +2040,10 @@ model CurriculumSubstrand {
   strandId         String
   name             String // e.g., "Whole Numbers"
   description      String?
-  learningOutcomes String[] // Specific learning outcomes (SLOs) for this substrand
-  activities       String[] // Learning experiences / activities
-  order            Int      @default(0)
+  learningOutcomes     String[] // Specific learning outcomes (SLOs) for this substrand
+  activities           String[] // Learning experiences / activities
+  keyInquiryQuestions  String[] @default([]) // Key inquiry questions for this substrand
+  order                Int      @default(0)
 
   // Relationships
   strand  CurriculumStrand   @relation(fields: [strandId], references: [id], onDelete: Cascade)
@@ -2432,6 +2543,28 @@ model WritingSubmission {
   @@map("writing_submissions")
 }
 
+// Senior essay/Writing submissions (GED adult learners — RLA extended response
+// and adult literacy prompts). Mirrors WritingSubmission but scoped to seniors.
+model SeniorWritingSubmission {
+  id            String    @id @default(cuid())
+  seniorStudentId String
+  subject       String
+  topic         String
+  title         String?
+  content       String    @db.Text
+  wordCount     Int       @default(0)
+  feedback      Json?
+  score         Int?
+  status        String    @default("draft") // "draft", "submitted", "reviewed"
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+
+  seniorStudent SeniorStudent @relation(fields: [seniorStudentId], references: [id], onDelete: Cascade)
+
+  @@index([seniorStudentId, subject])
+  @@map("senior_writing_submissions")
+}
+
 // Curriculum Intelligence — Document Library for AI knowledge base
 model DocumentLibrary {
   id           String   @id @default(cuid())
@@ -2498,4 +2631,76 @@ model CurriculumIngestionLog {
   createdAt    DateTime @default(now())
 
   @@map("curriculum_ingestion_logs")
+}
+
+// ─── Digital Library (student-facing, curriculum-agnostic) ───
+
+model Book {
+  id           String   @id @default(cuid())
+  title        String
+  author       String?
+  description  String?  @db.Text
+  coverUrl     String?
+  content      String?  @db.Text // Full plain-text for the in-app reader + text-to-speech
+  fileUrl      String?           // Optional PDF/EPUB for download or embedded viewing
+  audioUrl     String?           // Optional narrated audio (premium listening)
+  category     String            // e.g. "Stories", "Science", "History", "Mathematics"
+  subjects     String[]          // Curriculum-agnostic subject tags
+  gradeMin     Int?
+  gradeMax     Int?
+  language     String   @default("English")
+  readingLevel String?           // Beginner | Intermediate | Advanced
+  isFeatured   Boolean  @default(false)
+  isPublished  Boolean  @default(false)
+  viewCount    Int      @default(0)
+  source       String   @default("upload") // upload | public-domain | ai-generated
+  addedBy      String?            // userId of the admin/teacher who added it
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPublished, isFeatured])
+  @@index([language])
+  @@map("books")
+}
+
+model BookProgress {
+  id          String   @id @default(cuid())
+  studentId   String   // Student.id (manual FK, consistent with QuizResult.userId)
+  bookId      String
+  position    Int      @default(0)  // paragraph/character offset
+  progressPct Float    @default(0)
+  completed   Boolean  @default(false)
+  lastReadAt  DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([studentId, bookId])
+  @@index([studentId])
+  @@index([bookId])
+  @@map("book_progress")
+}
+
+model BookRating {
+  id        String   @id @default(cuid())
+  studentId String   // Student.id (manual FK)
+  bookId    String
+  rating    Int      // 1-5
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, bookId])
+  @@index([bookId])
+  @@map("book_ratings")
+}
+
+model ReadingLog {
+  id        String   @id @default(cuid())
+  studentId String   // Student.id (manual FK)
+  bookId    String?
+  minutes   Int      @default(0)
+  date      String   // YYYY-MM-DD (UTC) for daily streak tracking
+  createdAt DateTime @default(now())
+
+  @@index([studentId, date])
+  @@map("reading_logs")
 }

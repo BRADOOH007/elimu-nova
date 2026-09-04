@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { route } from '@/lib/api-middleware'
 
-export const PATCH = route({}, async (req, { user }) => {
+export const PATCH = route({ rateLimit: false }, async (req, { user }) => {
 
     const body = await req.json()
     const { userId } = body

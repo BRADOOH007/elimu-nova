@@ -103,7 +103,7 @@ const PROVIDERS = [
 const PREMIUM_SETTINGS = [
   { key: 'ai_premium_enabled',     label: 'Enable Premium Models',     desc: 'When on, GPT-4o and Gemini Pro are tried first before free models', type: 'toggle', defaultVal: 'true' },
   { key: 'ai_premium_openai_model', label: 'Premium OpenAI Model',     desc: 'e.g. gpt-4o, gpt-4-turbo', type: 'text', defaultVal: 'gpt-4o' },
-  { key: 'ai_premium_gemini_model', label: 'Premium Gemini Model',     desc: 'e.g. gemini-1.5-pro, gemini-2.0-pro', type: 'text', defaultVal: 'gemini-1.5-pro' },
+  { key: 'ai_premium_gemini_model', label: 'Premium Gemini Model',     desc: 'e.g. gemini-3.6-flash', type: 'text', defaultVal: 'gemini-3.6-flash' },
 ]
 
 const MODEL_ASSIGNMENTS = [

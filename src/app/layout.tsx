@@ -63,7 +63,8 @@ export default function RootLayout({
         <meta name="msapplication-TileImage" content="/favicon.png" />
         <meta name="msapplication-TileColor" content="#667eea" />
         <link rel="manifest" href="/manifest.json" />
-        <script dangerouslySetInnerHTML={{__html:'(function(){var n=new MutationObserver(function(m){for(var i=0;i<m.length;i++){if(m[i].type==="attributes"){m[i].target.removeAttribute("rtrvr-ls");m[i].target.removeAttribute("rtrvr-hk")}}});n.observe(document.documentElement,{attributes:true,subtree:true,attributeFilter:["rtrvr-ls","rtrvr-hk"]})})()'}} />
+        <meta name="apple-mobile-web-app-title" content="ElimuNova" />
+        <link rel="canonical" href={metadataBase.toString()} />
       </head>
       <body
         suppressHydrationWarning

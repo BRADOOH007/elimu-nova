@@ -5,7 +5,7 @@
  * for four developmental bands.
  */
 
-export type GradeBand = 'early_childhood' | 'primary' | 'junior_secondary' | 'senior_secondary'
+export type GradeBand = 'early_childhood' | 'primary' | 'junior_secondary' | 'senior_secondary' | 'adult'
 
 export interface GradeBandProfile {
   id: GradeBand
@@ -132,11 +132,40 @@ const GRADE_BAND_PROFILES: Record<GradeBand, GradeBandProfile> = {
     contentWordLimit: 1500,
     bloomStartLevel: 'Analyse',
   },
+  adult: {
+    id: 'adult',
+    label: 'Adult Learner (GED / High-School Equivalency)',
+    gradeRange: 'Adult',
+    ageRange: '16+ (typically 18-65)',
+    maxLessonDuration: 60,
+    structurePhases: [
+      'Purpose / Why it matters (5 min)',
+      'Pre-assessment / GED-style prompt (5 min)',
+      'Direct Instruction / Worked Example (15 min)',
+      'Guided Practice (15 min)',
+      'Independent / Real-life Application (12 min)',
+      'Self-check & Next Steps (8 min)',
+    ],
+    cognitiveLevel: 'Formal operational to post-formal. Adults are autonomous, self-directed learners with rich life experience. They reason abstractly, value relevance and efficiency, and learn best when content connects directly to work, money, family, and civic life.',
+    readingLevel: 'Adult reading level. Can handle formal texts and GED-style passages. Respectful, plain language first, technical terms introduced with clear explanations. Premium on comprehension and application over memorisation.',
+    vocabularyLevel: 'Adult and discipline-specific terminology, taught in context. Define GED test vocabulary (e.g. "inference", "primary source", "variable"). 10-15 key terms per lesson, each with a plain-language definition and example.',
+    activityTypes: ['GED-style multiple choice', 'Worked examples', 'Real-life case studies', 'Budgeting / workplace applications', 'Extended response practice', 'Self-assessment checklists', 'Test-taking strategy practice', 'Discussion of real-world scenarios'],
+    assessmentMethods: ['Timed GED-style practice questions', 'Scored practice tests (100-200 scale)', 'Self-assessment against exam readiness', 'Application scenarios', 'Progress mastery tracking', 'Mock-exam readiness checks'],
+    avoid: ['Talking down or oversimplifying', 'Childish examples or fonts', 'Memorisation without application', 'Assuming prior school knowledge', 'Shame around learning gaps', 'Long unstructured lectures'],
+    considerations: ['Self-directed and goal-oriented — surface the "why" for every topic', 'Valuing prior life/work experience as an asset', 'May be returning to study after years away — reduce jargon and anxiety', 'Time-poor (work, family) — make lessons efficient and high-yield', 'GED exam is time-limited — build speed and test strategy', 'Confidence matters — give frequent, explicit wins'],
+    contentWordLimit: 1500,
+    bloomStartLevel: 'Apply',
+  },
 }
 
 /** Map grade string to grade band */
 export function getGradeBand(grade: string): GradeBand {
   const g = grade.toLowerCase().trim()
+
+  // Adult / GED / high-school-equivalency learners
+  if (g === 'adult' || g.includes('adult') || g.includes('ged') || g.includes('hiset') || g.includes('high school equivalency') || g === 'continuing education') {
+    return 'adult'
+  }
 
   // ECD
   if (g.includes('pp1') || g.includes('pp2') || g.includes('pre-primary') || g.includes('pre primary') || g.includes('kindergarten') || g.includes('kg')) {

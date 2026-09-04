@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogBody } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +16,11 @@ import {
   Calendar,
   Eye,
   Loader2,
-  X
+  X,
+  BookOpen,
+  ClipboardList,
+  FileText,
+  FolderOpen
 } from 'lucide-react'
 
 interface SearchResult {
@@ -36,7 +41,19 @@ interface SearchResults {
   schools: SearchResult[]
   users: SearchResult[]
   packages: SearchResult[]
+  books: ContentResult[]
+  lessonPlans: ContentResult[]
+  schemes: ContentResult[]
+  resources: ContentResult[]
   total: number
+}
+
+interface ContentResult {
+  id: string
+  name: string
+  subtitle?: string
+  kind?: string
+  href?: string
 }
 
 interface SearchResultsModalProps {
@@ -51,6 +68,10 @@ export function SearchResultsModal({ isOpen, onClose, initialQuery = '' }: Searc
     schools: [],
     users: [],
     packages: [],
+    books: [],
+    lessonPlans: [],
+    schemes: [],
+    resources: [],
     total: 0
   })
   const [isLoading, setIsLoading] = useState(false)
@@ -65,7 +86,7 @@ export function SearchResultsModal({ isOpen, onClose, initialQuery = '' }: Searc
 
   const handleSearch = async (searchQuery: string) => {
     if (!searchQuery.trim() || searchQuery.length < 2) {
-      setResults({ schools: [], users: [], packages: [], total: 0 })
+      setResults({ schools: [], users: [], packages: [], books: [], lessonPlans: [], schemes: [], resources: [], total: 0 })
       return
     }
 
@@ -291,6 +312,40 @@ export function SearchResultsModal({ isOpen, onClose, initialQuery = '' }: Searc
                         </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Content Results — books, lesson plans, schemes, resources */}
+            {(results.books.length > 0 || results.lessonPlans.length > 0 || results.schemes.length > 0 || results.resources.length > 0) && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center space-x-2">
+                  <BookOpen className="w-5 h-5 text-indigo-600" />
+                  <span>Content ({results.books.length + results.lessonPlans.length + results.schemes.length + results.resources.length})</span>
+                </h3>
+                <div className="space-y-2">
+                  {[
+                    ...results.books.map((r) => ({ ...r, icon: <BookOpen className="w-4 h-4" />, bg: 'from-indigo-500 to-violet-600' })),
+                    ...results.lessonPlans.map((r) => ({ ...r, icon: <ClipboardList className="w-4 h-4" />, bg: 'from-blue-500 to-cyan-600' })),
+                    ...results.schemes.map((r) => ({ ...r, icon: <FileText className="w-4 h-4" />, bg: 'from-emerald-500 to-green-600' })),
+                    ...results.resources.map((r) => ({ ...r, icon: <FolderOpen className="w-4 h-4" />, bg: 'from-amber-500 to-orange-600' })),
+                  ].map((item) => (
+                    <Link
+                      key={`${item.kind}-${item.id}`}
+                      href={item.href || '#'}
+                      onClick={onClose}
+                      className="group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg hover:border-indigo-200 hover:shadow-sm transition-all"
+                    >
+                      <div className={`h-9 w-9 shrink-0 rounded-lg bg-gradient-to-br ${item.bg} flex items-center justify-center text-white`}>
+                        {item.icon}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-slate-800 truncate">{item.name}</p>
+                        {item.subtitle && <p className="text-xs text-slate-400 truncate">{item.subtitle}</p>}
+                      </div>
+                      <Eye className="h-4 w-4 text-slate-300 group-hover:text-indigo-500" />
+                    </Link>
                   ))}
                 </div>
               </div>

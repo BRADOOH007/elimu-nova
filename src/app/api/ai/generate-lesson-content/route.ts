@@ -92,7 +92,7 @@ Explain where this topic appears in everyday life or future careers. Make it rel
 ## Practice Questions
 4-5 questions with brief answers the student can check. Include a mix of difficulty levels.
 
-Keep it well-organised and easy to read. Target approximately ${wordLimit} words. Rich, structured study content covering the learning objectives.`
+LENGTH REQUIREMENT (CRITICAL): The lesson MUST contain at least ${wordLimit} words of genuine teaching material. Target ${Math.round(wordLimit * 1.2)} words. If under the minimum, expand each section with more explanatory text, examples, and detail. Rich, structured study content covering the learning objectives. Do NOT embed any images, base64 data, or image markdown — text, tables, and lists only.`
       },
     ], { maxTokens: 8000, temperature: 0.7 })
 

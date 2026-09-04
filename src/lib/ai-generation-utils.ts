@@ -23,6 +23,16 @@ export function cleanAiJson(raw: string): string {
   if (end <= start) return ''
   cleaned = cleaned.slice(start, end + 1)
 
+  // If the model returned valid JSON already, return it untouched. The repair
+  // transforms below are regex-based and NOT string-aware — running them on
+  // already-valid JSON can corrupt it (e.g. single-quote conversion firing
+  // inside an existing double-quoted string value). Only fall back to repair
+  // when the output is genuinely malformed.
+  try {
+    JSON.parse(cleaned)
+    return cleaned
+  } catch { /* fall through to repair */ }
+
   // Fix common AI JSON issues
   cleaned = fixJson(cleaned)
   return cleaned

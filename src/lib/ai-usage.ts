@@ -63,28 +63,34 @@ export async function getUsageLimits(userId: string): Promise<AIUsageLimits> {
       return unlimited
     }
 
-    // Find active subscription
+    // Find active subscription — school plan first, then the user's own plan
+    // (independent parents / senior students / freelancers subscribe by userId).
     let subscription: any = null
+
+    const schoolSub = async (schoolId: string | null | undefined) => {
+      if (!schoolId) return null
+      return prisma.subscription.findFirst({
+        where: { schoolId, status: 'ACTIVE' },
+        include: { package: true },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
+    const ownSub = async () => {
+      return prisma.subscription.findFirst({
+        where: { userId, status: 'ACTIVE' },
+        include: { package: true },
+        orderBy: { createdAt: 'desc' },
+      })
+    }
+
     if (user.role === 'TEACHER' || user.role === 'STUDENT' || user.role === 'PARENT' || user.role === 'SENIOR_STUDENT' || user.role === 'SENIOR_TEACHER') {
       const teacher = await prisma.teacher.findUnique({ where: { userId }, select: { schoolId: true } }).catch(() => null)
       const student = await prisma.student.findUnique({ where: { userId }, select: { schoolId: true } }).catch(() => null)
       const schoolId = teacher?.schoolId || student?.schoolId
-      if (schoolId) {
-        subscription = await prisma.subscription.findFirst({
-          where: { schoolId, status: 'ACTIVE' },
-          include: { package: true },
-          orderBy: { createdAt: 'desc' },
-        })
-      }
+      subscription = (await schoolSub(schoolId)) || (await ownSub())
     } else if (user.role === 'SCHOOL_ADMIN') {
       const sa = await prisma.schoolAdmin.findUnique({ where: { userId }, select: { schoolId: true } }).catch(() => null)
-      if (sa?.schoolId) {
-        subscription = await prisma.subscription.findFirst({
-          where: { schoolId: sa.schoolId, status: 'ACTIVE' },
-          include: { package: true },
-          orderBy: { createdAt: 'desc' },
-        })
-      }
+      subscription = (await schoolSub(sa?.schoolId)) || (await ownSub())
     }
 
     if (!subscription?.package) {
@@ -99,6 +105,19 @@ export async function getUsageLimits(userId: string): Promise<AIUsageLimits> {
         limits = value
         break
       }
+    }
+
+    // Custom plan names (e.g. "Senior GED Plan", "Single Child Plan", tutoring
+    // plans) don't contain a tier keyword. If the user is NOT on a free plan,
+    // give them at least the "basic" (paid) limits so a paying customer is
+    // never throttled to free-tier AI limits. Only purely-free plans (name or
+    // price 0) keep the default free limits.
+    if (limits === DEFAULT_LIMITS) {
+      const isFree =
+        packageName.includes('free') ||
+        packageName.includes('trial') ||
+        (subscription.package.price || 0) === 0
+      if (!isFree) limits = TIER_LIMITS.basic
     }
 
     await cache.set(`ai-limits:${userId}`, JSON.stringify(limits), 3600).catch(() => {})

@@ -1,46 +1,51 @@
 /**
  * Maps curriculum IDs to their database CurriculumType enum values.
  * Used by curriculum intelligence, auto-populate, and cache layers
- * so queries are no longer hardcoded to type: 'CBC'.
+ * so queries are no longer hardcoded to type: 'CBC' and so each
+ * curriculum is individually identifiable in the DB.
  */
 
-type CurriculumType = 'CBC' | 'CAMBRIDGE' | 'IGCSE' | 'IB' | 'GED' | 'OTHER'
+type CurriculumType =
+  | 'CBC' | 'EIGHT_FOUR_FOUR'
+  | 'CAMBRIDGE' | 'GCSE' | 'A_LEVEL' | 'IGCSE' | 'IB'
+  | 'COMMON_CORE' | 'NGSS' | 'TEKS' | 'FLORIDA_BEST' | 'CALIFORNIA'
+  | 'NY_STATE' | 'AP' | 'GED' | 'US_HOMESCHOOL'
+  | 'CAPS' | 'IEB' | 'NERDC' | 'CBSE' | 'ICSE'
+  | 'OTHER'
 
 const CURRICULUM_TYPE_MAP: Record<string, CurriculumType> = {
   // Kenya
   cbc: 'CBC',
-  '8-4-4': 'OTHER',
+  '8-4-4': 'EIGHT_FOUR_FOUR',
 
-  // UK
+  // UK / international
   cambridge: 'CAMBRIDGE',
-  gcse: 'CAMBRIDGE',
-  'a-level': 'CAMBRIDGE',
-
-  // International
+  gcse: 'GCSE',
+  'a-level': 'A_LEVEL',
   igcse: 'IGCSE',
   ib: 'IB',
 
   // US
-  'common-core': 'OTHER',
-  ngss: 'OTHER',
-  teks: 'OTHER',
-  'florida-best': 'OTHER',
-  california: 'OTHER',
-  'ny-state': 'OTHER',
-  ap: 'OTHER',
+  'common-core': 'COMMON_CORE',
+  ngss: 'NGSS',
+  teks: 'TEKS',
+  'florida-best': 'FLORIDA_BEST',
+  california: 'CALIFORNIA',
+  'ny-state': 'NY_STATE',
+  ap: 'AP',
   'ged-hiset': 'GED',
-  'us-homeschool': 'OTHER',
+  'us-homeschool': 'US_HOMESCHOOL',
 
   // South Africa
-  caps: 'OTHER',
-  ieb: 'OTHER',
+  caps: 'CAPS',
+  ieb: 'IEB',
 
   // Nigeria
-  nerdc: 'OTHER',
+  nerdc: 'NERDC',
 
   // India
-  cbse: 'OTHER',
-  icse: 'OTHER',
+  cbse: 'CBSE',
+  icse: 'ICSE',
 
   // Fallback
   general: 'OTHER',

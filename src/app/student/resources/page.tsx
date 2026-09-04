@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { confirmToast } from '@/lib/confirm-toast'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
@@ -548,10 +549,8 @@ export default function ResourcesPage() {
                   </Badge>
                 ))}
               </div>
-              <div className="prose max-w-none">
-                <div dangerouslySetInnerHTML={{ 
-                  __html: sanitizeHtml(selectedResource.content.replace(/\n/g, '<br>')) 
-                }} />
+              <div className="lesson-content">
+                <MarkdownRenderer content={selectedResource.content} />
               </div>
               {selectedResource.metadata && (
                 <div className="space-y-4">

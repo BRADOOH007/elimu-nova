@@ -384,7 +384,7 @@ export class SimplePresentationGenerator {
 
             // Save to DB (non-blocking)
             if ((userId || teacherId) && !result.provider.includes('placeholder')) {
-              this.saveImageToDatabase(result.url, slide.title, slide.imagePrompt || '', userId, teacherId)
+              this.saveImageToDatabase(result.url, slide.title, slide.imagePrompt || '', userId, teacherId, result.provider || 'pollinations')
                 .catch(() => {})
             }
           }
@@ -395,7 +395,7 @@ export class SimplePresentationGenerator {
     )
   }
 
-  private async saveImageToDatabase(url: string, title: string, prompt: string, userId?: string, teacherId?: string) {
+  private async saveImageToDatabase(url: string, title: string, prompt: string, userId?: string, teacherId?: string, provider?: string) {
     try {
       await ImageBank.save({
         imageUrl:   url,
@@ -406,7 +406,7 @@ export class SimplePresentationGenerator {
         quality:    'standard',
         userId:     userId || '',
         teacherId:  teacherId ?? undefined,
-        provider:   'openai-dalle-3',
+        provider:   provider || 'pollinations',
       })
     } catch (e) { console.error('[IMG_SAVE] Failed to save image to bank', e) }
   }

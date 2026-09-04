@@ -36,6 +36,19 @@ import {
   Heart,
   AlertCircle,
   Compass,
+  ShieldCheck,
+  Server,
+  Lock,
+  CreditCard,
+  Twitter,
+  Linkedin,
+  Youtube,
+  Instagram,
+  Facebook,
+  MapPin,
+  UserPlus,
+  Rocket,
+  Settings2,
 } from "lucide-react";
 import Link from "next/link"
 import ParentProgressMockup from "@/components/landing/ParentProgressMockup"
@@ -294,8 +307,8 @@ export default function Home() {
                 {/* Trust chips */}
                 <div className="flex flex-wrap gap-3">
                   {[
-                    { icon: CheckCircle, text: "Multi-curriculum" },
-                    { icon: CheckCircle, text: "23+ Schools" },
+                    { icon: Globe, text: "20+ Curricula" },
+                    { icon: CheckCircle, text: "Multi-region" },
                     { icon: CheckCircle, text: "50K+ Lessons" },
                     { icon: CheckCircle, text: "Free to start" },
                   ].map(({ icon: Icon, text }) => (
@@ -382,15 +395,84 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── TRUST BAR ── */}
-        <section className="bg-slate-900 border-y border-slate-800 py-6">
+        {/* ── TRUST BAR — regions & reach ── */}
+        <section className="bg-slate-900 border-y border-slate-800 py-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p className="text-center text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Trusted by schools worldwide</p>
-            <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-10">
-              {["Nairobi", "London", "USA", "Johannesburg"].map((city) => (
-                <span key={city} className="flex items-center gap-1.5 text-slate-400 text-sm font-medium">
-                  <Globe className="h-3.5 w-3.5 text-purple-500" />{city}
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-7">
+              Trusted by schools & educators worldwide
+            </p>
+            {/* Region chips */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <span className="text-[11px] uppercase tracking-[0.18em] text-slate-600 mr-1">Across</span>
+              {[
+                { code: "🇰🇪", label: "Kenya" },
+                { code: "🇬🇧", label: "United Kingdom" },
+                { code: "🇺🇸", label: "United States" },
+                { code: "🇿🇦", label: "South Africa" },
+                { code: "🇮🇳", label: "India" },
+              ].map((r) => (
+                <span key={r.label} className="inline-flex items-center gap-1.5 rounded-full border border-slate-800 bg-slate-950/50 px-3.5 py-1.5 text-xs text-slate-300">
+                  <span className="text-sm">{r.code}</span> {r.label}
                 </span>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── GLOBAL METRICS BAND ── */}
+        <section className="relative bg-[#0a0f1e] border-y border-white/5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 lg:py-14">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-0 lg:divide-x lg:divide-white/10">
+              {[
+                { v: "20+", label: "Curricula", sub: "CBC · Common Core · Cambridge · IGCSE · IB · CBSE · CAPS" },
+                { v: "5", label: "Countries", sub: "Kenya · US · UK · India · South Africa" },
+                { v: "50K+", label: "Lessons", sub: "Generated and growing daily" },
+                { v: "99.9%", label: "Uptime", sub: "Cloud-native, always available" },
+              ].map((s) => (
+                <div key={s.label} className="text-center lg:px-8 py-4">
+                  <div className="text-3xl md:text-4xl font-bold text-white tracking-tight tabular-nums">
+                    {s.v}
+                  </div>
+                  <div className="mt-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-purple-300/90">
+                    {s.label}
+                  </div>
+                  <div className="mt-2 text-xs text-slate-500 leading-snug max-w-[180px] mx-auto">{s.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── HOW IT WORKS ── */}
+        <section className="py-16 lg:py-20 bg-[#0f172a]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center max-w-2xl mx-auto mb-12">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="h-px w-8 bg-purple-500" />
+                <span className="text-purple-400 text-xs font-bold uppercase tracking-widest">How it works</span>
+                <div className="h-px w-8 bg-purple-500" />
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-3">A simpler classroom, <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">in three steps</span></h2>
+              <p className="text-slate-400 text-base">Whether you're a learner, teacher, parent or school — getting started is the same simple path.</p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-10 md:gap-6">
+              {[
+                { icon: UserPlus, step: "01", title: "Create your account", desc: "Pick your role and set up your profile. Schools onboard and import their whole class list in one go.", speed: "1 min" },
+                { icon: Settings2, step: "02", title: "Set your curriculum", desc: "Tell us your syllabus, grade and region. Lessons, exams and plans adapt automatically to your framework.", speed: "2 min" },
+                { icon: Rocket, step: "03", title: "Start learning & teaching", desc: "Generate lessons, mark work and track progress from day one. The AI gets smarter with every use.", speed: "Instant" },
+              ].map((s) => (
+                <div key={s.step} className="relative rounded-2xl border border-white/10 bg-slate-800/40 p-6 hover:border-purple-500/40 transition-colors">
+                  <div className="absolute -top-3 left-6 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-3 py-0.5 text-[11px] font-bold text-white">{s.step}</div>
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mb-4">
+                    <s.icon className="h-6 w-6 text-white" />
+                  </div>
+                  <h3 className="font-bold text-white text-base mb-2">{s.title}</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed">{s.desc}</p>
+                  <div className="mt-4 inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
+                    <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> {s.speed}</span>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -408,88 +490,97 @@ export default function Home() {
             <div className="max-w-2xl mb-16">
               <div className="flex items-center gap-2 mb-4">
                 <div className="h-px w-8 bg-purple-500" />
-                <span className="text-purple-400 text-xs font-bold uppercase tracking-widest">For Students</span>
+                <span className="text-purple-400 text-xs font-bold uppercase tracking-widest">For Learners, Worldwide</span>
               </div>
               <h2 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-[1.1] mb-5">
-                Everything you need<br />
-                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">to excel.</span>
+                One AI tutor.<br />
+                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Every curriculum.</span>
               </h2>
               <p className="text-slate-400 text-base leading-relaxed">
-                Our AI adapts to each learner's pace, fills knowledge gaps, and builds confidence through personalised 1-on-1 tutoring — available any time, anywhere.
+                From Nairobi to New York, the AI adapts to each learner's syllabus, pace and learning style —
+                with personalised 1:1 tutoring available any time, in any timezone.
               </p>
             </div>
 
-            {/* Feature cards grid */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Feature cards grid — bento layout for a distinctive, non-template look */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-6 gap-4">
               {[
                 {
                   icon: Sparkles,
-                  title: "AI Tutor",
-                  desc: "Personalised explanations that instantly answer any question, never get tired.",
+                  title: "Ask Anything, Anytime",
+                  desc: "A friendly tutor that turns any question into a clear, step-by-step explanation — day or night. Ask in class, at home, or on the bus and get an answer instantly.",
                   grad: "from-purple-500 to-violet-500",
                   glow: "group-hover:shadow-purple-500/20",
                   num: "01",
+                  span: "lg:col-span-3",
                 },
                 {
                   icon: BookOpen,
-                  title: "Curriculum Courses",
-                  desc: "CBC, 8-4-4, Cambridge and more — perfectly aligned to what learners need for exams.",
+                  title: "Every Curriculum, One Place",
+                  desc: "CBC, Cambridge, Common Core, NGSS, TEKS, GED, IGCSE, IB and more — lessons built for each framework.",
                   grad: "from-blue-500 to-cyan-500",
                   glow: "group-hover:shadow-blue-500/20",
                   num: "02",
+                  span: "lg:col-span-3",
                 },
                 {
                   icon: Code,
-                  title: "AI Coding Studio",
-                  desc: "Step-by-step programming with AI guidance. Build real projects ready for the digital economy.",
+                  title: "Learn to Build",
+                  desc: "From your first line of code to real projects, with a mentor that explains each step as you go.",
                   grad: "from-violet-500 to-purple-500",
                   glow: "group-hover:shadow-violet-500/20",
                   num: "03",
+                  span: "lg:col-span-2",
                 },
                 {
                   icon: TrendingUp,
-                  title: "Progress Analytics",
-                  desc: "Know your strengths and gaps. Track improvement over time with visual reports.",
+                  title: "See Your Growth",
+                  desc: "Clear, visual progress reports that show exactly what you've mastered and what's next.",
                   grad: "from-blue-500 to-purple-500",
                   glow: "group-hover:shadow-blue-500/20",
                   num: "04",
+                  span: "lg:col-span-2",
                 },
                 {
                   icon: Calendar,
-                  title: "Live Sessions",
-                  desc: "Join qualified teachers in real-time lessons. Ask questions and get instant feedback.",
+                  title: "Live Classrooms",
+                  desc: "Join real-time lessons and interact directly — with a tutor who answers your questions in the moment.",
                   grad: "from-pink-500 to-purple-500",
                   glow: "group-hover:shadow-pink-500/20",
                   num: "05",
+                  span: "lg:col-span-2",
                 },
                 {
                   icon: ClipboardList,
-                  title: "Smart Assignments",
-                  desc: "AI-generated homework matched to your level with instant marking and explanations.",
+                  title: "Practice That Adapts",
+                  desc: "Exercises tuned to your level, with instant feedback and hints the moment you get stuck.",
                   grad: "from-teal-500 to-emerald-500",
                   glow: "group-hover:shadow-teal-500/20",
                   num: "06",
+                  span: "lg:col-span-3",
                 },
                 {
                   icon: GraduationCap,
-                  title: "Career Pathways",
-                  desc: "Discover your ideal career based on strengths. University and subject guidance from Grade 9.",
+                  title: "Plan Your Path",
+                  desc: "Discover courses and subjects that match your strengths and what you want to achieve.",
                   grad: "from-purple-500 to-blue-500",
                   glow: "group-hover:shadow-purple-500/20",
                   num: "07",
+                  span: "lg:col-span-2",
                 },
                 {
                   icon: Brain,
-                  title: "Adaptive Learning",
-                  desc: "The more you use it, the smarter it gets about your learning style, pace and knowledge gaps.",
+                  title: "Remembers You",
+                  desc: "The more you learn, the better it tailors everything to how you think and what you need.",
                   grad: "from-fuchsia-500 to-pink-500",
                   glow: "group-hover:shadow-fuchsia-500/20",
                   num: "08",
+                  span: "lg:col-span-1",
                 },
               ].map((f, idx) => (
                 <div
                   key={f.title}
-                  className={"group relative bg-slate-800/50 border border-slate-700/60 rounded-2xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl " + f.glow + " hover:border-slate-600"}
+                  className={"group relative bg-slate-800/50 border border-slate-700/60 rounded-2xl p-6 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl " + f.glow + " hover:border-slate-600 " + f.span}
                   style={{ animationDelay: idx * 80 + "ms" }}
                 >
                   {/* Top gradient line */}
@@ -497,7 +588,7 @@ export default function Home() {
                   {/* Background glow on hover */}
                   <div className={"absolute inset-0 bg-gradient-to-br " + f.grad + " opacity-0 group-hover:opacity-[0.04] transition-opacity duration-300 rounded-2xl"} />
 
-                  <div className="relative">
+                  <div className="relative h-full flex flex-col">
                     {/* Number + icon row */}
                     <div className="flex items-start justify-between mb-5">
                       <div className={"w-11 h-11 rounded-xl bg-gradient-to-br " + f.grad + " flex items-center justify-center shadow-lg"}>
@@ -510,7 +601,7 @@ export default function Home() {
                     <p className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-300 transition-colors">{f.desc}</p>
 
                     {/* Arrow that appears on hover */}
-                    <div className="mt-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
+                    <div className="mt-auto pt-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
                       <span className={"text-xs font-semibold bg-gradient-to-r " + f.grad + " bg-clip-text text-transparent"}>Explore</span>
                       <ArrowRight className="h-3 w-3 text-purple-400" />
                     </div>
@@ -544,12 +635,14 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
               <div className="lg:sticky lg:top-24">
-                <span className="text-purple-400 text-xs font-bold uppercase tracking-widest">For Teachers</span>
-                <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight">
-                  Reduce prep work by <span className="text-purple-400">60%</span>.
+                <span className="text-purple-400 text-xs font-bold uppercase tracking-widest">For Educators</span>
+                <h2 className="mt-3 text-4xl sm:text-5xl font-extrabold leading-[1.1] tracking-tight text-white">
+                  Teach more.<br />
+                  <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Mark less.</span>
                 </h2>
                 <p className="mt-4 text-slate-400 text-base leading-relaxed">
-                  Schools report teachers saving 12+ hours weekly on lesson prep and marking. Elimu Nova handles the repetitive tasks so you can focus on inspiring learners.
+                  Teachers across every curriculum save hours weekly. Elimu Nova automates the repetitive
+                  work — planning, notes, exams and marking — so you can focus on what only a great teacher can do.
                 </p>
 
                 <div className="mt-8 grid grid-cols-3 gap-4">
@@ -573,12 +666,12 @@ export default function Home() {
 
               <div className="space-y-4">
                 {[
-                  { icon: Timer, title: "Clear Syllabus on Time", desc: "AI generates complete lesson plans with learning objectives, activities and assessments aligned to your curriculum in minutes." },
-                  { icon: PenTool, title: "Auto-Generate Notes & Slides", desc: "Create professional teaching notes and PowerPoint presentations in seconds. Export to PDF or present directly." },
-                  { icon: ClipboardCheck, title: "Instant Exam Generation", desc: "Curriculum-aligned exams with marking schemes in seconds. Supports structured, essay, and MCQ formats." },
-                  { icon: BarChart3, title: "AI Auto-Marking", desc: "Submit student papers and receive instant grading with detailed feedback. Hours of marking done in minutes." },
-                  { icon: Target, title: "Competency-Based Assessment", desc: "Built-in rubrics for authentic assessment. Track Exceeding, Meeting, Approaching and Beginning levels automatically." },
-                  { icon: Lightbulb, title: "AI Teaching Assistant", desc: "Real-time suggestions for differentiated instruction and remediation strategies based on class performance data." },
+                  { icon: Timer, title: "Planning, Done in Minutes", desc: "Draft lesson plans with objectives, activities and assessments built for your curriculum — no overnight prep." },
+                  { icon: PenTool, title: "Notes & Slides on Demand", desc: "Turn any lesson into polished notes or a presentation you can use right in class." },
+                  { icon: ClipboardCheck, title: "Exams in Seconds", desc: "Build exams with answer schemes, mixing structured, essay and multiple-choice formats." },
+                  { icon: BarChart3, title: "Grading That Helps", desc: "Mark submissions fast and get per-student feedback you can act on immediately." },
+                  { icon: Target, title: "Rubrics That Understand", desc: "Track achievement levels with built-in rubrics aligned to real classroom practice." },
+                  { icon: Lightbulb, title: "Ideas When You Need Them", desc: "Get suggestions for support, enrichment and revision based on how your class is doing." },
                 ].map((f) => (
                   <div key={f.title} className="flex gap-4 p-5 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-purple-700/50 transition-colors">
                     <div className="h-10 w-10 rounded-lg bg-purple-500/15 flex items-center justify-center flex-shrink-0">
@@ -606,15 +699,16 @@ export default function Home() {
 
             {/* Top label + headline */}
             <div className="max-w-xl mb-14">
-              <div className="inline-flex items-center gap-2 bg-pink-500/15 border border-pink-500/30 text-pink-400 text-xs font-bold px-4 py-1.5 rounded-full mb-5">
-                <Heart className="h-3.5 w-3.5" /> For Parents & Guardians
+              <div className="inline-flex items-center gap-2.5 bg-pink-500/20 border border-pink-500/40 text-pink-300 text-lg font-bold px-6 py-2.5 rounded-full mb-6">
+                <Heart className="h-5 w-5" /> For Parents & Guardians
               </div>
               <h2 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-[1.1] mb-4">
-                Never miss a moment<br />
-                <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">of your child's growth.</span>
+                See the whole picture,<br />
+                <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">not just report cards.</span>
               </h2>
               <p className="text-slate-400 text-base leading-relaxed">
-                Real-time insights and AI-powered alerts keep you connected to your child's education — not just at report time, but every single day.
+                Real-time insights and early alerts keep you connected to your child's learning — across every
+                subject, every day, wherever you are.
               </p>
             </div>
 
@@ -701,10 +795,11 @@ export default function Home() {
         <section id="schools" className="py-20 lg:py-28 bg-slate-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center max-w-2xl mx-auto mb-14">
-              <span className="text-purple-600 text-xs font-bold uppercase tracking-widest">For Schools</span>
-              <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Transform your school into a future-ready institution.</h2>
+              <span className="text-purple-600 text-xs font-bold uppercase tracking-widest">For Schools & Districts</span>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Run a modern school, anywhere in the world.</h2>
               <p className="mt-4 text-slate-500 text-base leading-relaxed">
-                Pilot schools have seen 35% improvement in mean scores and 40% reduction in administrative workload.
+                Automate timetables, teacher allocation and reporting with an operating system built for education —
+                from a single classroom to a national network.
               </p>
             </div>
 
@@ -756,8 +851,9 @@ export default function Home() {
         <section className="py-20 lg:py-28 bg-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Why Elimu Nova is different</h2>
-              <p className="mt-3 text-slate-500 text-base">The only AI platform built end-to-end for the modern classroom.</p>
+              <span className="text-purple-600 text-xs font-bold uppercase tracking-widest">The Difference</span>
+              <h2 className="mt-2 text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Built for every learner, globally</h2>
+              <p className="mt-3 text-slate-500 text-base">One platform that works from pre-primary to adult education — in any curriculum.</p>
             </div>
 
             <div className="grid md:grid-cols-3 gap-5">
@@ -823,7 +919,7 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 text-center text-white">
               {[
-                { v: "4+", l: "Curricula", s: "CBC · 8-4-4 · Cambridge · More" },
+                { v: "20+", l: "Curricula", s: "CBC · Cambridge · US · IGCSE · IB" },
                 { v: "15+", l: "Subjects", s: "Fully covered" },
                 { v: "24/7", l: "Available", s: "Learn anytime" },
                 { v: "100%", l: "Curriculum-aligned", s: "Contextual examples" },
@@ -868,7 +964,7 @@ export default function Home() {
                 },
                 {
                   q: "Which curricula does Elimu Nova support?",
-                  a: "We support CBC (PP1–Grade 12), 8-4-4 (Form 1–4), Cambridge International (Year 1–13), TVET/STEM programmes and more. Our AI is curriculum-trained for each framework, not just generic content.",
+                  a: "We support 20+ frameworks including Kenya's CBC (PP1–Grade 12), Cambridge International & GCSE (UK), Common Core, NGSS, TEKS, Florida B.E.S.T., California and New York State standards (US), GED/HiSET & AP, plus IGCSE, IB, CAPS, CBSE, NERDC and more. Lessons are built for each framework — never generic content.",
                 },
                 {
                   q: "How does the AI tutor work?",
@@ -918,10 +1014,10 @@ export default function Home() {
         <section className="py-20 lg:py-28 bg-gradient-to-br from-[#0f172a] via-indigo-950 to-[#0f172a]">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <div className="inline-flex items-center gap-2 bg-purple-500/15 border border-purple-500/30 text-purple-400 text-xs font-semibold px-3 py-1.5 rounded-full mb-6">
-              <Star className="h-3 w-3" /> Join 15,000+ learners worldwide
+              <Star className="h-3 w-3" /> Trusted across 6 countries
             </div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-4">Ready to transform learning?</h2>
-            <p className="text-slate-400 text-lg mb-8">Start free today. No credit card required.</p>
+            <p className="text-slate-400 text-lg mb-8">Start free today. No credit card required. Cancel anytime.</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link href="/auth">
                 <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-slate-900 font-bold rounded-full px-8 shadow-lg shadow-purple-500/30 text-white">
@@ -943,49 +1039,67 @@ export default function Home() {
         {/* Top border accent */}
         <div className="h-px w-full bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
 
-        {/* Subtle background glow */}
+        {/* Subtle background glows */}
         <div className="absolute top-0 left-1/4 w-96 h-64 bg-purple-600/5 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 right-1/4 w-72 h-48 bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Main footer grid */}
-          <div className="py-16 grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-12">
-
+          {/* Brand row */}
+          <div className="pt-14 grid md:grid-cols-[1.4fr_2fr] gap-10 items-start">
             {/* Brand column */}
             <div className="space-y-5">
               <Logo variant="black" size="md" />
               <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
-                The AI-powered cloud school platform built for teachers, school owners and learners worldwide.
+                The AI-powered cloud school platform for every learner — from pre-primary to adult
+                education, across 20+ curricula and 6 regions.
               </p>
-              <div className="flex items-center gap-1.5 mt-4">
-                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-slate-400 text-xs">Platform live · 24/7 uptime</span>
+              {/* Social links */}
+              <div className="flex items-center gap-2">
+                {[
+                  { icon: Facebook, label: "Facebook" },
+                  { icon: Twitter, label: "Twitter" },
+                  { icon: Linkedin, label: "LinkedIn" },
+                  { icon: Youtube, label: "YouTube" },
+                  { icon: Instagram, label: "Instagram" },
+                ].map((s) => (
+                  <a
+                    key={s.label}
+                    href="#"
+                    aria-label={s.label}
+                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:bg-purple-600 hover:border-purple-600 transition-all"
+                  >
+                    <s.icon className="h-4 w-4" />
+                  </a>
+                ))}
               </div>
-              <Link href="/auth/signup">
-                <Button className="mt-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-slate-900 font-bold rounded-xl px-5 h-10 text-sm shadow-lg shadow-purple-500/20 text-white">
-                  Get Started Free <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
-                </Button>
-              </Link>
+              {/* Live status */}
+              <div className="flex items-center gap-1.5">
+                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-slate-400 text-xs">All systems operational</span>
+              </div>
             </div>
 
-            {/* Nav columns */}
+            {/* Nav columns — 4-across */}
+            <div className="grid grid-cols-2 gap-10 md:grid-cols-4">
             {[
               {
                 title: "Platform",
                 links: [
-                  { label: "AI Tutor", to: "/auth" },
-                  { label: "AI Whiteboard", to: "/auth" },
-                  { label: "Exam Generator", to: "/auth" },
-                  { label: "Progress Analytics", to: "/auth" },
+                  { label: "For Learners", to: "/auth" },
+                  { label: "For Educators", to: "/auth" },
+                  { label: "For Schools", to: "/auth" },
+                  { label: "For Parents", to: "/auth" },
+                  { label: "Pricing", to: "/pricing" },
                 ],
               },
               {
                 title: "Curricula",
                 links: [
                   { label: "CBC (PP1–Grade 12)", to: "/contact" },
-                  { label: "8-4-4 (Form 1–4)", to: "/contact" },
-                  { label: "Cambridge Int'l", to: "/contact" },
-                  { label: "TVET & STEM", to: "/contact" },
+                  { label: "Cambridge & GCSE", to: "/contact" },
+                  { label: "US: Common Core · NGSS · TEKS", to: "/contact" },
+                  { label: "GED/HiSET & AP", to: "/contact" },
+                  { label: "IGCSE, IB & more", to: "/contact" },
                 ],
               },
               {
@@ -994,15 +1108,17 @@ export default function Home() {
                   { label: "FAQ", to: "#faq" },
                   { label: "About Us", to: "/about" },
                   { label: "Contact", to: "/contact" },
+                  { label: "Request a Demo", to: "/contact" },
                 ],
               },
               {
-                title: "Schools",
+                title: "Trust & Compliance",
                 links: [
-                  { label: "School Portal", to: "/auth" },
-                  { label: "Request Demo", to: "/contact" },
-                  { label: "Pricing", to: "/pricing" },
-                  { label: "Onboarding", to: "/contact" },
+                  { label: "Privacy Policy", to: "/privacy" },
+                  { label: "Terms of Service", to: "/terms" },
+                  { label: "Data Security", to: "/contact" },
+                  { label: "Accessibility", to: "/contact" },
+                  { label: "Trust Center", to: "/contact" },
                 ],
               },
             ].map((col) => (
@@ -1010,7 +1126,7 @@ export default function Home() {
                 <p className="text-white font-semibold text-xs uppercase tracking-widest mb-5">{col.title}</p>
                 <ul className="space-y-3">
                   {col.links.map((l) => (
-                  <li key={l.label}>
+                    <li key={l.label}>
                       <Link
                         href={l.to}
                         className="text-slate-400 hover:text-purple-400 text-sm transition-colors duration-200"
@@ -1022,11 +1138,27 @@ export default function Home() {
                 </ul>
               </div>
             ))}
+            </div>{/* close nav grid */}
+          </div>{/* close brand row */}
+
+          {/* Trust / compliance strip */}
+          <div className="border-t border-slate-800/60 py-6 grid grid-cols-2 sm:grid-cols-4 gap-6">
+            {[
+              { icon: ShieldCheck, text: "Privacy-first · GDPR ready" },
+              { icon: Lock, text: "Encrypted at rest & transit" },
+              { icon: Server, text: "99.9% uptime SLA" },
+              { icon: CreditCard, text: "Secure payments" },
+            ].map((t) => (
+              <div key={t.text} className="flex items-center gap-2.5 text-slate-400 text-xs">
+                <t.icon className="h-4 w-4 text-purple-400 shrink-0" />
+                <span>{t.text}</span>
+              </div>
+            ))}
           </div>
 
           {/* Bottom bar */}
           <div className="border-t border-slate-800 py-6">
-            <div className="py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <p className="text-slate-500 text-xs">© 2026 Elimu Nova. All rights reserved.</p>
                 <span className="text-slate-700">·</span>
@@ -1034,7 +1166,10 @@ export default function Home() {
                 <span className="text-slate-700">·</span>
                 <Link href="/terms" className="text-slate-500 hover:text-slate-300 text-xs transition-colors">Terms</Link>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-5">
+                <span className="flex items-center gap-1.5 text-slate-500 text-xs">
+                  <MapPin className="h-3.5 w-3.5" /> Nairobi · London · New York
+                </span>
                 <Link href="/contact" className="flex items-center gap-1.5 text-slate-500 hover:text-purple-400 text-xs transition-colors">
                   <Mail className="h-3.5 w-3.5" /> support@elimunova.com
                 </Link>

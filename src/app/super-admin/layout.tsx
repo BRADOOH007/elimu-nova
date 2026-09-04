@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { ProfessionalDashboardLayout } from '@/components/layout/professional-dashboard-layout'
-import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, ShieldAlert, Globe, MessageSquare, Inbox, Activity, ScrollText, Package, UploadCloud, Database, MessageCircle, Siren, Award } from 'lucide-react'
+import { BarChart3, School, Users, Settings, CreditCard, Brain, FlaskConical, FileText, Shield, ShieldAlert, Globe, MessageSquare, Inbox, Activity, ScrollText, Package, UploadCloud, Database, Siren, Award, Plug } from 'lucide-react'
 import { DashboardSessionGate } from '@/components/ui/dashboard-session-gate'
 
 export default function SuperAdminLayout({ children }: { children: React.ReactNode }) {
@@ -32,10 +32,10 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
     { icon: FileText,     label: "Reports",     href: "/super-admin/reports"        },
     { icon: Shield,       label: "Security",    href: "/super-admin/security"       },
     { icon: ShieldAlert,  label: "AI Safety",   href: "/super-admin/ai-safety"      },
-    { icon: Globe,        label: "Global",      href: "/super-admin/global"         },
-    { icon: MessageSquare, label: "Broadcast",   href: "/super-admin/broadcast"      },
-    { icon: MessageCircle, label: "WhatsApp",   href: "/super-admin/whatsapp-settings" },
-    { icon: Package,       label: "Packages",   href: "/super-admin/packages"        },
+{ icon: Globe,        label: "Platform Settings", href: "/super-admin/global"         },
+{ icon: Plug,         label: "Integrations",     href: "/super-admin/integrations"    },
+{ icon: MessageSquare, label: "Broadcast",   href: "/super-admin/broadcast"      },
+{ icon: Package,       label: "Packages",   href: "/super-admin/packages"        },
     { icon: UploadCloud,   label: "Bulk Import", href: "/super-admin/bulk-import"     },
     { icon: Activity,      label: "API Usage",  href: "/super-admin/api-usage"       },
     { icon: ScrollText,    label: "Audit Log",   href: "/super-admin/audit-log"       },

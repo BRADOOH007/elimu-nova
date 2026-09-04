@@ -1,11 +1,823 @@
 {
   "links": [
     {
-      "url": "https://drive.google.com/file/d/1js3mYj3X3dX5-WFTyaTGvPfJbPCywe_V/view",
-      "grade": "PP2",
-      "subject": "Language Activities",
+      "url": "https://drive.google.com/file/d/1vrC5cJO2MpDm9v4u3-qwCze9yPa9HcEZ/view",
+      "grade": "Grade 1",
+      "subject": "Creative Activities",
       "term": null,
-      "name": "PP2 Designs Revised - FINAL EDITION"
+      "name": "KICD Grade 1 Creative Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1YSXfOr81O2bn5t0ILvqDYkz3GchE9M3i/view",
+      "grade": "Grade 1",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 1 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/10KIOCSmh7CyDbjElisPQeeMTLu8AJI9z/view",
+      "grade": "Grade 1",
+      "subject": "English Activities",
+      "term": null,
+      "name": "KICD Grade 1 English Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1aw6VOZadfc1cFTa0x4o4ztzdorLY8xUS/view",
+      "grade": "Grade 1",
+      "subject": "Environmental Activities",
+      "term": null,
+      "name": "KICD Grade 1 Environmental Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1iLmA5Hxzgscln94VzP0n5EhrH4I12iDQ/view",
+      "grade": "Grade 1",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 1 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1toUw1LJYL23CAdEl-tUJwjqn7wu89JIb/view",
+      "grade": "Grade 1",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 1 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1xVa-cvQ3jSlfR4yNEL3DIXGmU-U7tHXk/view",
+      "grade": "Grade 1",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 1 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1YlwoCFAVxhjUo_V1A-89GRcho0r0Gq1u/view",
+      "grade": "Grade 1",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 1 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1vrC5cJO2MpDm9v4u3-qwCze9yPa9HcEZ/view",
+      "grade": "Grade 2",
+      "subject": "Creative Activities",
+      "term": null,
+      "name": "KICD Grade 2 Creative Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1YSXfOr81O2bn5t0ILvqDYkz3GchE9M3i/view",
+      "grade": "Grade 2",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 2 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/10KIOCSmh7CyDbjElisPQeeMTLu8AJI9z/view",
+      "grade": "Grade 2",
+      "subject": "English Activities",
+      "term": null,
+      "name": "KICD Grade 2 English Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1aw6VOZadfc1cFTa0x4o4ztzdorLY8xUS/view",
+      "grade": "Grade 2",
+      "subject": "Environmental Activities",
+      "term": null,
+      "name": "KICD Grade 2 Environmental Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1iLmA5Hxzgscln94VzP0n5EhrH4I12iDQ/view",
+      "grade": "Grade 2",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 2 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1toUw1LJYL23CAdEl-tUJwjqn7wu89JIb/view",
+      "grade": "Grade 2",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 2 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1xVa-cvQ3jSlfR4yNEL3DIXGmU-U7tHXk/view",
+      "grade": "Grade 2",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 2 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1YlwoCFAVxhjUo_V1A-89GRcho0r0Gq1u/view",
+      "grade": "Grade 2",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 2 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1vrC5cJO2MpDm9v4u3-qwCze9yPa9HcEZ/view",
+      "grade": "Grade 3",
+      "subject": "Creative Activities",
+      "term": null,
+      "name": "KICD Grade 3 Creative Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1YSXfOr81O2bn5t0ILvqDYkz3GchE9M3i/view",
+      "grade": "Grade 3",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 3 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/10KIOCSmh7CyDbjElisPQeeMTLu8AJI9z/view",
+      "grade": "Grade 3",
+      "subject": "English Activities",
+      "term": null,
+      "name": "KICD Grade 3 English Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1aw6VOZadfc1cFTa0x4o4ztzdorLY8xUS/view",
+      "grade": "Grade 3",
+      "subject": "Environmental Activities",
+      "term": null,
+      "name": "KICD Grade 3 Environmental Activities"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1iLmA5Hxzgscln94VzP0n5EhrH4I12iDQ/view",
+      "grade": "Grade 3",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 3 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1toUw1LJYL23CAdEl-tUJwjqn7wu89JIb/view",
+      "grade": "Grade 3",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 3 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1xVa-cvQ3jSlfR4yNEL3DIXGmU-U7tHXk/view",
+      "grade": "Grade 3",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 3 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1YlwoCFAVxhjUo_V1A-89GRcho0r0Gq1u/view",
+      "grade": "Grade 3",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 3 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1xfUKusjuRlNi22arhYCWy3IS_obPhcvL/view",
+      "grade": "Grade 4",
+      "subject": "Agriculture",
+      "term": null,
+      "name": "KICD Grade 4 Agriculture"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1rYeB-zhF68YnNBlozbm9qhwPnPI_i0UF/view",
+      "grade": "Grade 4",
+      "subject": "Arabic",
+      "term": null,
+      "name": "KICD Grade 4 Arabic"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1NhyGe8EsZLgubbxwEvva-sNUPxDHR8r1/view",
+      "grade": "Grade 4",
+      "subject": "Creative Arts",
+      "term": null,
+      "name": "KICD Grade 4 Creative Arts"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1vW3aipLZDPSkl2z29W7RbBEEUrCdEbt7/view",
+      "grade": "Grade 4",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 4 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1o3j3bJwiqJyerdZIFPDJaSprYdTp3Eu1/view",
+      "grade": "Grade 4",
+      "subject": "English",
+      "term": null,
+      "name": "KICD Grade 4 English"
+    },
+    {
+      "url": "https://drive.google.com/file/d/18qVRdnMqrdBkf6eGuIDdxHfoAwydu-wv/view",
+      "grade": "Grade 4",
+      "subject": "French",
+      "term": null,
+      "name": "KICD Grade 4 French"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1YtlkH6n9skVQqt1g15twi54mx8ZUGlDV/view",
+      "grade": "Grade 4",
+      "subject": "German",
+      "term": null,
+      "name": "KICD Grade 4 German"
+    },
+    {
+      "url": "https://drive.google.com/file/d/15TMyiOpDL71sr6ZLCn-M-w30XHksCdTy/view",
+      "grade": "Grade 4",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 4 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1687tUM9DvYbjUIryPMDU2Ve4cF--otB6/view",
+      "grade": "Grade 4",
+      "subject": "Indigenous Language",
+      "term": null,
+      "name": "KICD Grade 4 Indigenous Language"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ifDV-yVjmntZvnU-7WPLxLLDuborohUh/view",
+      "grade": "Grade 4",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 4 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1MO1ddc7tFvcpKYy7Trr4VBhllBmwKntW/view",
+      "grade": "Grade 4",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 4 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1zOfFS4neSdP_8LguOc1FaGPc5DUy80Oj/view",
+      "grade": "Grade 4",
+      "subject": "Mandarin",
+      "term": null,
+      "name": "KICD Grade 4 Mandarin"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1o5tDq16yC0Jj1h6zb9mo3dsxtjqXUk4G/view",
+      "grade": "Grade 4",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 4 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1jbAvVAWmif-toAfPShQm9UujN7bZ0luX/view",
+      "grade": "Grade 4",
+      "subject": "Science and Technology",
+      "term": null,
+      "name": "KICD Grade 4 Science and Technology"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1I81sEkJJz7zj2rp4thpUN3MOlHPK5-mG/view",
+      "grade": "Grade 4",
+      "subject": "Social Studies",
+      "term": null,
+      "name": "KICD Grade 4 Social Studies"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1jlMN272UeRa-FbyB5es488O5jI9llekn/view",
+      "grade": "Grade 5",
+      "subject": "Agriculture",
+      "term": null,
+      "name": "KICD Grade 5 Agriculture"
+    },
+    {
+      "url": "https://drive.google.com/file/d/12KOvt5WY9acj1wMbNox_dGYIKLY1eg-G/view",
+      "grade": "Grade 5",
+      "subject": "Arabic",
+      "term": null,
+      "name": "KICD Grade 5 Arabic"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1euaxMgHyMqSm4qVSzOeJ_-9LXYgj6jyS/view",
+      "grade": "Grade 5",
+      "subject": "Creative Arts",
+      "term": null,
+      "name": "KICD Grade 5 Creative Arts"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1unhtcU1tzdsPceoadKCovjFIkPTF1wP4/view",
+      "grade": "Grade 5",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 5 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ctDo-PB4W6AKbKV0Lb-1OobOC2-L3_e_/view",
+      "grade": "Grade 5",
+      "subject": "English",
+      "term": null,
+      "name": "KICD Grade 5 English"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1nM2fBafwuozVi1LsceBT54HIcya9KEuP/view",
+      "grade": "Grade 5",
+      "subject": "French",
+      "term": null,
+      "name": "KICD Grade 5 French"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1w0-eB6lY90dYvmfn-g5dAK2vGvghkGeC/view",
+      "grade": "Grade 5",
+      "subject": "German",
+      "term": null,
+      "name": "KICD Grade 5 German"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1O7MWGBaA5Iwl5HKmKrEw6XmI-qzFgU1c/view",
+      "grade": "Grade 5",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 5 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1PGfkAZOvmQxvE76gxDRReZDl5YFMfcXr/view",
+      "grade": "Grade 5",
+      "subject": "Indigenous Language",
+      "term": null,
+      "name": "KICD Grade 5 Indigenous Language"
+    },
+    {
+      "url": "https://drive.google.com/file/d/10RolK-hE8ylrhuNbq3fN6ZnPlgNM_VuB/view",
+      "grade": "Grade 5",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 5 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1aGnwbMdfKkwTBtVOcliEiyge6qAHpHhd/view",
+      "grade": "Grade 5",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 5 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1tpuL_OmDaPJ-54-hRqb8OLLMdZ1jV_4q/view",
+      "grade": "Grade 5",
+      "subject": "Mandarin",
+      "term": null,
+      "name": "KICD Grade 5 Mandarin"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ShOUex4qEQosDCvkKdaXIRvteOILPHTP/view",
+      "grade": "Grade 5",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 5 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1CituzlfluxqVvjExx7xHiV_j_ZDXwpja/view",
+      "grade": "Grade 5",
+      "subject": "Science and Technology",
+      "term": null,
+      "name": "KICD Grade 5 Science and Technology"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1uOCVkljUKcfMkRs1gwAbDZMj_p9cjbut/view",
+      "grade": "Grade 5",
+      "subject": "Social Studies",
+      "term": null,
+      "name": "KICD Grade 5 Social Studies"
+    },
+    {
+      "url": "https://drive.google.com/file/d/18PxeRHiqXx4I3uj71kxqspQn8za43YLO/view",
+      "grade": "Grade 6",
+      "subject": "Agriculture",
+      "term": null,
+      "name": "KICD Grade 6 Agriculture"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1o9VR546EOuq70ULiLGmN1FJzYX6ylbOP/view",
+      "grade": "Grade 6",
+      "subject": "Arabic",
+      "term": null,
+      "name": "KICD Grade 6 Arabic"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ar14Jn_EMuxsqbJ_evfZCNoHg66r4Fvv/view",
+      "grade": "Grade 6",
+      "subject": "Creative Arts",
+      "term": null,
+      "name": "KICD Grade 6 Creative Arts"
+    },
+    {
+      "url": "https://drive.google.com/file/d/11IpqIrMdTmPcoFRKhELKaUliB3IQw6oP/view",
+      "grade": "Grade 6",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 6 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1QR9nW3baakrHLIIpv-9UfQyMbOoDTcDX/view",
+      "grade": "Grade 6",
+      "subject": "English",
+      "term": null,
+      "name": "KICD Grade 6 English"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1JNkK1WNt85B6lxbHFBI4_TaLdDBZNyz4/view",
+      "grade": "Grade 6",
+      "subject": "French",
+      "term": null,
+      "name": "KICD Grade 6 French"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1r5mCofdUnDCDRh_PZS16bpgpm0GEF_p3/view",
+      "grade": "Grade 6",
+      "subject": "German",
+      "term": null,
+      "name": "KICD Grade 6 German"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1DkJ_S-CX54BWOBbunQNSvL4htQkXHdcz/view",
+      "grade": "Grade 6",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 6 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1EKntVjIlVnU37rMPP5ya60TVLPGv9Asl/view",
+      "grade": "Grade 6",
+      "subject": "Indigenous Language",
+      "term": null,
+      "name": "KICD Grade 6 Indigenous Language"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1EXqXIKZMzOu7GYtgNS6XB_Aoyv7Isncs/view",
+      "grade": "Grade 6",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 6 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1p4DSwvmGPzn3ZHCZhRTN88Zvju3XtgYf/view",
+      "grade": "Grade 6",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 6 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1NS6XW6s9aZS5iSxo_52BGj1A2A20T8V2/view",
+      "grade": "Grade 6",
+      "subject": "Mandarin",
+      "term": null,
+      "name": "KICD Grade 6 Mandarin"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ki1N1YnslIpZomG-0IoYogkzek7CKx0j/view",
+      "grade": "Grade 6",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 6 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1Cqoxx-afRo1d3DdjdCY8l5STD1lXJhJI/view",
+      "grade": "Grade 6",
+      "subject": "Science and Technology",
+      "term": null,
+      "name": "KICD Grade 6 Science and Technology"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1H1QZ6wgFPsEL6S4A7dFdjukr2jEG8sS2/view",
+      "grade": "Grade 6",
+      "subject": "Social Studies",
+      "term": null,
+      "name": "KICD Grade 6 Social Studies"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ShQA3XZmu_X2jKolAA_rGzbvFVHNe-FA/view",
+      "grade": "Grade 7",
+      "subject": "Agriculture",
+      "term": null,
+      "name": "KICD Grade 7 Agriculture"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1numDrwyg0qgWR0HOMNxwzZLN1WJcQyLf/view",
+      "grade": "Grade 7",
+      "subject": "Arabic",
+      "term": null,
+      "name": "KICD Grade 7 Arabic"
+    },
+    {
+      "url": "https://drive.google.com/file/d/13vhFpDNHHufpz__VRZ5lZUkARfIUra7L/view",
+      "grade": "Grade 7",
+      "subject": "Creative Arts",
+      "term": null,
+      "name": "KICD Grade 7 Creative Arts"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1Vx6Y8lWUiSpWO-MBO58nEOtPlFDM7JA3/view",
+      "grade": "Grade 7",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 7 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1HAU_WMYmdmfWmr4kAvZxjcgG0lizPHZv/view",
+      "grade": "Grade 7",
+      "subject": "English",
+      "term": null,
+      "name": "KICD Grade 7 English"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1XyzWUEmjBQ7h3rAWF2_plaSdVa5Mslxh/view",
+      "grade": "Grade 7",
+      "subject": "French",
+      "term": null,
+      "name": "KICD Grade 7 French"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1I2zlbTmFwaLjIzkLHHEPegCwi4QxWYtq/view",
+      "grade": "Grade 7",
+      "subject": "German",
+      "term": null,
+      "name": "KICD Grade 7 German"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1kdOYtnA1cJVgipZI2i8soM00d0jVW4io/view",
+      "grade": "Grade 7",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 7 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1yh_xr49uwn0ohXThoIDuyHh9J2lpUnh2/view",
+      "grade": "Grade 7",
+      "subject": "Indigenous Language",
+      "term": null,
+      "name": "KICD Grade 7 Indigenous Language"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1jbicj1qkLFEV_ZXwO8Kmlw7KzGhZD2ri/view",
+      "grade": "Grade 7",
+      "subject": "Integrated Science",
+      "term": null,
+      "name": "KICD Grade 7 Integrated Science"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1Po_NF_oEsMMYXukVcM82nVEqXS7yY2Zu/view",
+      "grade": "Grade 7",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 7 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1pZ3Q6EwKhyBSfpmbYCjF8yTDrJifUrJJ/view",
+      "grade": "Grade 7",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 7 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1DEYhWOkEzMRq78C-jAnFj1VzCh9efb-7/view",
+      "grade": "Grade 7",
+      "subject": "Mandarin",
+      "term": null,
+      "name": "KICD Grade 7 Mandarin"
+    },
+    {
+      "url": "https://drive.google.com/file/d/12Vb6W1_Vzn9BEH2MsM2WmUwWL5OKoucK/view",
+      "grade": "Grade 7",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 7 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1vBIF-5Z0-hpYxr2YWJIrg1ATzO9f4YRH/view",
+      "grade": "Grade 7",
+      "subject": "Pre-Technical Studies",
+      "term": null,
+      "name": "KICD Grade 7 Pre-Technical Studies"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1nr9z0Z11ue76h2odpYQJNeUU4jFJWbbB/view",
+      "grade": "Grade 7",
+      "subject": "Social Studies",
+      "term": null,
+      "name": "KICD Grade 7 Social Studies"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1MzOFhLc8kbRwvjg03q7oeDrbbvux75Wy/view",
+      "grade": "Grade 8",
+      "subject": "Agriculture",
+      "term": null,
+      "name": "KICD Grade 8 Agriculture"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1NfGYxAz5-4jS_uwouuhwT40ieEgQRs98/view",
+      "grade": "Grade 8",
+      "subject": "Arabic",
+      "term": null,
+      "name": "KICD Grade 8 Arabic"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ji89ZIdF9ZA5d6rkchqJJYa2G5ZQO5zP/view",
+      "grade": "Grade 8",
+      "subject": "Creative Arts",
+      "term": null,
+      "name": "KICD Grade 8 Creative Arts"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ZVqaVImBDLeGVUbLwA54C8zqWZMsr3V8/view",
+      "grade": "Grade 8",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 8 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1WmQXD4FTiFrInrCQMu1w-cjmPPaLEvw5/view",
+      "grade": "Grade 8",
+      "subject": "English",
+      "term": null,
+      "name": "KICD Grade 8 English"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1wLw_tfQGzPV-uu8Ept6eg8onLSoJAYyP/view",
+      "grade": "Grade 8",
+      "subject": "French",
+      "term": null,
+      "name": "KICD Grade 8 French"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1irJwC6GArXWf934-_xCDiaGQYJQZHv5m/view",
+      "grade": "Grade 8",
+      "subject": "German",
+      "term": null,
+      "name": "KICD Grade 8 German"
+    },
+    {
+      "url": "https://drive.google.com/file/d/17tep-A_DwMx7ZHQ_JTtCm6wH6HLISdIW/view",
+      "grade": "Grade 8",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 8 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1WEG5wJplprPae9blpB9oVyI1UaVrq-xj/view",
+      "grade": "Grade 8",
+      "subject": "Indigenous Language",
+      "term": null,
+      "name": "KICD Grade 8 Indigenous Language"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1RpqZRmeMywbc1Tya0_x-tNJBs75Gy0-v/view",
+      "grade": "Grade 8",
+      "subject": "Integrated Science",
+      "term": null,
+      "name": "KICD Grade 8 Integrated Science"
+    },
+    {
+      "url": "https://drive.google.com/file/d/10HXITblf3E9bwYFABlcbv_qA9ZGSSod1/view",
+      "grade": "Grade 8",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 8 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1l-TPHn7cSCasqwb7auMUX2Cbtcu2cWoI/view",
+      "grade": "Grade 8",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 8 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1KxyvR6lreOFJQ8LcdFuWCQteJvSUGJrI/view",
+      "grade": "Grade 8",
+      "subject": "Mandarin",
+      "term": null,
+      "name": "KICD Grade 8 Mandarin"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ttNvzuQbHUnABVcP-TAoix8-TVmehYph/view",
+      "grade": "Grade 8",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 8 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1Cvh2JSBlrHU4z4FKt7uVMgTMXEWq9jdu/view",
+      "grade": "Grade 8",
+      "subject": "Pre-Technical Studies",
+      "term": null,
+      "name": "KICD Grade 8 Pre-Technical Studies"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1yx30v28nVLKYSByRB9G2Omalh76-ZL6h/view",
+      "grade": "Grade 8",
+      "subject": "Social Studies",
+      "term": null,
+      "name": "KICD Grade 8 Social Studies"
+    },
+    {
+      "url": "https://drive.google.com/file/d/14lKcmhXxEMYRHLISkK8j-ZzcCmLE59hf/view",
+      "grade": "Grade 9",
+      "subject": "Agriculture",
+      "term": null,
+      "name": "KICD Grade 9 Agriculture"
+    },
+    {
+      "url": "https://drive.google.com/file/d/14N6beLZiLrDRAxvHQE-w7e7rf-2xaCkq/view",
+      "grade": "Grade 9",
+      "subject": "Arabic",
+      "term": null,
+      "name": "KICD Grade 9 Arabic"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1XONxUP98Z6I85bPKx7CYIsAkEucl_dm-/view",
+      "grade": "Grade 9",
+      "subject": "Creative Arts",
+      "term": null,
+      "name": "KICD Grade 9 Creative Arts"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1FBMLUxBo1q4dHUkXLidZeqCiZWDzRBNI/view",
+      "grade": "Grade 9",
+      "subject": "CRE",
+      "term": null,
+      "name": "KICD Grade 9 CRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ehe01q4q8G-ft1PsA0r7skcz6grZfiNQ/view",
+      "grade": "Grade 9",
+      "subject": "English",
+      "term": null,
+      "name": "KICD Grade 9 English"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1KM4ezz3BKbm3l3kdb9O6XWb-jDscdl4n/view",
+      "grade": "Grade 9",
+      "subject": "French",
+      "term": null,
+      "name": "KICD Grade 9 French"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1MDKVJH-QW5Qv7KcDzWU9VCCKD_CDCIrd/view",
+      "grade": "Grade 9",
+      "subject": "German",
+      "term": null,
+      "name": "KICD Grade 9 German"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1ePaw7pIrLG3AjX2mbTXIEimXTRnkdfuC/view",
+      "grade": "Grade 9",
+      "subject": "HRE",
+      "term": null,
+      "name": "KICD Grade 9 HRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1CS2EzUFDl3wJ_zJKWI302GsAkRF3KfP6/view",
+      "grade": "Grade 9",
+      "subject": "Indigenous Language",
+      "term": null,
+      "name": "KICD Grade 9 Indigenous Language"
+    },
+    {
+      "url": "https://drive.google.com/file/d/18QAC1qZzTWQv4vso-y1c5qaY9YxeSaUp/view",
+      "grade": "Grade 9",
+      "subject": "Integrated Science",
+      "term": null,
+      "name": "KICD Grade 9 Integrated Science"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1QAtDW4Pq0enTVPOb32TlfQzge2au4RRC/view",
+      "grade": "Grade 9",
+      "subject": "IRE",
+      "term": null,
+      "name": "KICD Grade 9 IRE"
+    },
+    {
+      "url": "https://drive.google.com/file/d/14r0D5u2jy79nZdcixJ2Gu3qTattpY0_Y/view",
+      "grade": "Grade 9",
+      "subject": "Kiswahili",
+      "term": null,
+      "name": "KICD Grade 9 Kiswahili"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1Qn8CsuytmDlsnmfaf89KAZ3Fg2y-bYe2/view",
+      "grade": "Grade 9",
+      "subject": "Mandarin",
+      "term": null,
+      "name": "KICD Grade 9 Mandarin"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1HgntYl8nS1zydy8k00KrjEt_zJiMqISL/view",
+      "grade": "Grade 9",
+      "subject": "Mathematics",
+      "term": null,
+      "name": "KICD Grade 9 Mathematics"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1sHIe4eN9oE8ojrjBPojqHj7YIdYdFWzP/view",
+      "grade": "Grade 9",
+      "subject": "Pre-Technical Studies",
+      "term": null,
+      "name": "KICD Grade 9 Pre-Technical Studies"
+    },
+    {
+      "url": "https://drive.google.com/file/d/1gMXIzQnV-F1a7n_dJ82QU2-BTtw3B-NW/view",
+      "grade": "Grade 9",
+      "subject": "Social Studies",
+      "term": null,
+      "name": "KICD Grade 9 Social Studies"
     }
   ]
 }

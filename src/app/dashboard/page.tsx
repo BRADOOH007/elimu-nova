@@ -1,55 +1,38 @@
-'use client'
-
-import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { redirect } from 'next/navigation'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { Loader2 } from 'lucide-react'
 
-export default function DashboardRedirect() {
-  const { data: session, status } = useSession()
-  const router = useRouter()
+const ROLE_PATH: Record<string, string> = {
+  SUPER_ADMIN: '/super-admin/dashboard',
+  SCHOOL_ADMIN: '/school-admin/dashboard',
+  TEACHER: '/teacher/dashboard',
+  STUDENT: '/student/dashboard',
+  PARENT: '/parent/dashboard',
+  SENIOR_STUDENT: '/senior-student/dashboard',
+  SENIOR_TEACHER: '/senior-teacher/dashboard',
+}
 
-  useEffect(() => {
-    if (status === 'loading') return
+export const dynamic = 'force-dynamic'
 
-    if (!session) {
-      router.push('/auth/signin')
-      return
-    }
+export default async function DashboardRedirect() {
+  const session = await getServerSession(authOptions)
 
-    switch (session.user.role) {
-      case 'SUPER_ADMIN':
-        router.push('/super-admin/dashboard')
-        break
-      case 'SCHOOL_ADMIN':
-        router.push('/school-admin/dashboard')
-        break
-      case 'TEACHER':
-        router.push('/teacher/dashboard')
-        break
-      case 'STUDENT':
-        router.push('/student/dashboard')
-        break
-      case 'PARENT':
-        router.push('/parent/dashboard')
-        break
-      case 'SENIOR_STUDENT':
-        router.push('/senior-student/dashboard')
-        break
-      case 'SENIOR_TEACHER':
-        router.push('/senior-teacher/dashboard')
-        break
-      default:
-        router.push('/auth/signin')
-    }
-  }, [session, status, router])
+  if (!session?.user) {
+    redirect('/auth/signin')
+  }
 
+  const role = session.user.role as string
+  const target = ROLE_PATH[role] || '/auth/signin'
+
+  // Server-side redirect — happens before any client render, so there's no
+  // "Redirecting..." flash. The user lands directly on their role dashboard.
+  redirect(target)
+
+  // This is unreachable; present only so the function signature returns a value.
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="text-center">
-        <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-        <p className="text-gray-600 text-lg">Redirecting to your dashboard...</p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
     </div>
   )
 }

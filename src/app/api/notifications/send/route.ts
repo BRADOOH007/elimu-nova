@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { checkRateLimit, getClientIdentifier, rateLimitAuth } from '@/lib/rate-limit'
+import { emitNewNotification } from '@/lib/notification-events'
 import { route } from '@/lib/api-middleware'
 
 export const POST = route({}, async (req, { user }) => {
@@ -15,6 +16,7 @@ export const POST = route({}, async (req, { user }) => {
       title,
       message,
       type,
+      expiresAt, // optional ISO datetime; banner stops showing after this
       target: {
         userIds = [], // Specific users to notify
         roles = [],   // Roles to notify (e.g., ["STUDENT", "PARENT"])
@@ -24,6 +26,16 @@ export const POST = route({}, async (req, { user }) => {
 
     if (!title || !message || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Validate expiresAt if provided
+    let expiresAtDate: Date | null = null
+    if (expiresAt) {
+      const d = new Date(expiresAt)
+      if (isNaN(d.getTime())) {
+        return NextResponse.json({ error: 'Invalid expiresAt date' }, { status: 400 })
+      }
+      expiresAtDate = d
     }
 
     // Determine which users to target
@@ -118,9 +130,15 @@ export const POST = route({}, async (req, { user }) => {
           type,
           userId,
           senderId: user.id,
+          expiresAt: expiresAtDate,
           ...(schoolId && { schoolId })
         }))
       })
+
+      // Push a realtime event so open dashboards refresh instantly.
+      for (const targetId of targetUserIds) {
+        emitNewNotification(targetId, { title, type })
+      }
     }
 
     return NextResponse.json({

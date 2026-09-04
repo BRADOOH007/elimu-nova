@@ -4,13 +4,14 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import {
-  Search, BookOpen, Headphones, Star, Loader2, BookMarked,
+  Search, BookOpen, Headphones, Star, Loader2,
   TrendingUp, ChevronRight, Library, SlidersHorizontal, Clock
 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
+import { BookCover } from '@/components/ui/book-cover'
 
 interface Book {
   id: string
@@ -208,10 +209,15 @@ export default function StudentLibraryPage() {
             {featured.map(b => (
               <Link key={b.id} href={`/student/library/${b.id}`}
                 className="shrink-0 w-44 group">
-                <div className={`aspect-[3/4] rounded-2xl bg-gradient-to-br ${coverGradient(b.category)} flex items-center justify-center shadow-sm group-hover:shadow-lg transition-shadow`}>
-                  {b.coverUrl
-                    ? <img src={b.coverUrl} alt={b.title} className="w-full h-full object-cover rounded-2xl" />
-                    : <BookMarked className="h-10 w-10 text-white/80" />}
+                <div className="h-40 w-full">
+                  <BookCover
+                    title={b.title}
+                    author={b.author}
+                    category={b.category}
+                    coverUrl={b.coverUrl}
+                    fallbackClassName="h-40"
+                    rounded="rounded-2xl"
+                  />
                 </div>
                 <p className="mt-2 font-semibold text-sm text-slate-800 line-clamp-1">{b.title}</p>
                 <p className="text-xs text-slate-400 truncate">{b.author || b.category}</p>
@@ -276,12 +282,17 @@ export default function StudentLibraryPage() {
             {books.map(b => (
               <Link key={b.id} href={`/student/library/${b.id}`}
                 className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-md transition-shadow group">
-                <div className={`aspect-[3/4] bg-gradient-to-br ${coverGradient(b.category)} flex items-center justify-center relative`}>
-                  {b.coverUrl
-                    ? <img src={b.coverUrl} alt={b.title} className="w-full h-full object-cover" />
-                    : <BookOpen className="h-10 w-10 text-white/80" />}
+                <div className="relative aspect-[3/4]">
+                  <BookCover
+                    title={b.title}
+                    author={b.author}
+                    category={b.category}
+                    coverUrl={b.coverUrl}
+                    fallbackClassName="aspect-[3/4]"
+                    rounded="rounded-none"
+                  />
                   {b.readingLevel && (
-                    <Badge className="absolute top-2 left-2 bg-white/90 text-slate-700 border-0 text-[10px]">
+                    <Badge className="absolute top-2 left-2 z-10 bg-white/90 text-slate-700 border-0 text-[10px]">
                       {b.readingLevel}
                     </Badge>
                   )}
